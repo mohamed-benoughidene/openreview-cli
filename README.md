@@ -27,7 +27,7 @@ git clone https://github.com/mohamed-benoughidene/openreview-cli
 cd openreview-cli
 git submodule update --init
 uv sync
-uv run python main.py
+uv run openreview --version
 ```
 
 ## Quick start

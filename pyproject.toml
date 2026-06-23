@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "openreview-cli"
 version = "0.1.0"
@@ -12,9 +16,76 @@ dependencies = [
     "typer>=0.26.7",
 ]
 
+[project.scripts]
+openreview = "openreview_cli.app:app"
+
 [dependency-groups]
 dev = [
     "mypy>=2.1.0",
     "pytest>=9.1.1",
     "ruff>=0.15.18",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/openreview_cli"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "W",
+    "F",
+    "I",
+    "N",
+    "UP",
+    "B",
+    "C4",
+    "SIM",
+    "TCH",
+    "RUF",
+    "PL",
+    "TRY",
+]
+ignore = [
+    "E501",
+    "PLR0913",
+    "PLR2004",
+]
+unfixable = ["B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402", "F401"]
+"tests/**" = ["PLR0913", "PLR2004", "S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_decorators = true
+disallow_incomplete_defs = true
+no_implicit_reexport = true
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+markers = [
+    "slow: marks tests as slow (deselected by default)",
+    "integration: marks integration tests (mocked APIs)",
+    "e2e: marks end-to-end tests (CLI invocation)",
+    "memory: marks memory profiling tests",
+]
+filterwarnings = ["ignore::DeprecationWarning"]
