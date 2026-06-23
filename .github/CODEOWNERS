@@ -1,0 +1,5 @@
+# Default: project owner reviews everything
+* @mohamed-benoughidene
+
+# CI/CD and GitHub config
+.github/ @mohamed-benoughidene
