@@ -20,7 +20,7 @@ jobs:
           enable-cache: true
       - run: uv sync --locked --no-dev
       - run: uv build
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: dist/*
       - run: uv publish
