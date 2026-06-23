@@ -1,0 +1,3 @@
+[submodule ".tools/ponytail"]
+	path = .tools/ponytail
+	url = https://github.com/DietrichGebert/ponytail.git

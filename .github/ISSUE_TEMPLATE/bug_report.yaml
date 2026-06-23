@@ -1,0 +1,40 @@
+name: Bug report
+description: Report unexpected behavior
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect and what actually happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Exact commands you ran
+      placeholder: |
+        openreview precheck review contract.pdf --client acme
+        ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Run `openreview --version`
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: OS
+      options: [Linux, macOS, Windows]
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: AI provider
+      options: [Ollama (local), OpenAI, Anthropic, Google, OpenRouter, Mixed]
