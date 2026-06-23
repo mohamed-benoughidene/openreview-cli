@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # Python dependencies (pyproject.toml, uv.lock)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels: ["dependencies"]
+
+  # GitHub Actions versions (checkout@v6, setup-uv@v8.1.0, etc.)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "ci(deps)"
+    labels: ["dependencies"]
