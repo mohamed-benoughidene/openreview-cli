@@ -181,10 +181,10 @@ description: "Task list for Config + Storage Foundation implementation"
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T053 Run quickstart.md validation scenarios end-to-end
-- [ ] T054 [P] Verify memory budget with `pytest -m memory` — peak < 110 MB
-- [ ] T055 [P] Add warm startup time measurement in `tests/unit/test_app.py` using `time.perf_counter()` — `openreview --version` on already-configured system must be <0.3s (constitution constraint)
-- [ ] T056 [P] Update AGENTS.md SPECKIT markers with implementation notes
+- [X] T053 Run quickstart.md validation scenarios end-to-end
+- [X] T054 [P] Verify memory budget with `pytest -m memory` — peak < 110 MB
+- [X] T055 [P] Add warm startup time measurement in `tests/unit/test_app.py` using `time.perf_counter()` — `openreview --version` on already-configured system must be <0.3s (constitution constraint)
+- [X] T056 [P] Update AGENTS.md SPECKIT markers with implementation notes
 
 ---
 
