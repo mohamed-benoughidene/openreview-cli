@@ -116,15 +116,15 @@ description: "Task list for Config + Storage Foundation implementation"
 
 ### Tests for User Story 3 (Write FIRST — must FAIL)
 
-- [ ] T032 [P] [US3] Write test for OPENREVIEW_* env var override in `tests/unit/test_config_loader.py` — expects `OPENREVIEW_PRIVACY_TIER=maximum` overrides file value
-- [ ] T033 [P] [US3] Write test for provider API key env var override in `tests/unit/test_auth.py` — expects `OPENAI_API_KEY` overrides `auth.json` value
-- [ ] T034 [P] [US3] Write test for config resolution priority hierarchy in `tests/unit/test_config_loader.py` — expects env var > config.yml > built-in defaults, missing keys fall through to next level
+- [X] T032 [P] [US3] Write test for OPENREVIEW_* env var override in `tests/unit/test_config_loader.py` — expects `OPENREVIEW_PRIVACY_TIER=maximum` overrides file value
+- [X] T033 [P] [US3] Write test for provider API key env var override in `tests/unit/test_auth.py` — expects `OPENAI_API_KEY` overrides `auth.json` value
+- [X] T034 [P] [US3] Write test for config resolution priority hierarchy in `tests/unit/test_config_loader.py` — expects env var > config.yml > built-in defaults, missing keys fall through to next level
 
 ### Implementation for User Story 3 (PASS the tests)
 
-- [ ] T035 [US3] Implement env var override logic for OPENREVIEW_* in `src/openreview_cli/config/loader.py` — scan `os.environ` for `OPENREVIEW_*` keys, apply after loading YAML
-- [ ] T036 [US3] Implement env var override for provider API keys in `src/openreview_cli/config/auth.py` — check `os.environ` for each provider key (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
-- [ ] T037 [US3] Integrate env var merging into config resolution in `src/openreview_cli/config/loader.py` — merge env vars into loaded config using priority: CLI > args > env > file > defaults, missing values fall through to next level
+- [X] T035 [US3] Implement env var override logic for OPENREVIEW_* in `src/openreview_cli/config/loader.py` — scan `os.environ` for `OPENREVIEW_*` keys, apply after loading YAML
+- [X] T036 [US3] Implement env var override for provider API keys in `src/openreview_cli/config/auth.py` — check `os.environ` for each provider key (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
+- [X] T037 [US3] Integrate env var merging into config resolution in `src/openreview_cli/config/loader.py` — merge env vars into loaded config using priority: CLI > args > env > file > defaults, missing values fall through to next level
 
 **Checkpoint**: `openreview config show` respects OPENREVIEW_* env vars over file values.
 

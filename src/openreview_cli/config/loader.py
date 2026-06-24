@@ -1,7 +1,32 @@
+import os
 from pathlib import Path
 from typing import Any
 
 from openreview_cli.config.defaults import DEFAULT_CONFIG
+
+
+def _env_to_config_path(env_key: str) -> str | None:
+    suffix = env_key[len("OPENREVIEW_") :].lower()
+    if "__" in suffix:
+        return ".".join(suffix.split("__"))
+    return suffix.replace("_", ".")
+
+
+def _get_env_overrides() -> dict[str, Any]:
+    overrides: dict[str, Any] = {}
+    prefix = "OPENREVIEW_"
+    for key, value in os.environ.items():
+        if not key.startswith(prefix):
+            continue
+        config_key = _env_to_config_path(key)
+        if not config_key:
+            continue
+        parts = config_key.split(".")
+        d = overrides
+        for part in parts[:-1]:
+            d = d.setdefault(part, {})
+        d[parts[-1]] = _parse_value(value)
+    return overrides
 
 
 def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[str, Any]:
@@ -195,4 +220,6 @@ def load_config(config_path: Path) -> dict[str, Any]:
 
     with open(config_path) as f:
         raw = yaml.safe_load(f) or {}
-    return _validate_and_merge(raw, dict(DEFAULT_CONFIG))
+    env_overrides = _get_env_overrides()
+    merged = _deep_merge(raw, env_overrides)
+    return _validate_and_merge(merged, dict(DEFAULT_CONFIG))

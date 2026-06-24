@@ -38,3 +38,11 @@ def test_load_auth_returns_empty_for_missing(tmp_path: Path) -> None:
     auth_path.write_text("{}")
     result = load_auth(auth_path)
     assert result == {}
+
+
+def test_provider_key_env_override(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-override")
+    auth_path = tmp_path / "auth.json"
+    auth_path.write_text('{"openai": "sk-file-value"}')
+    result = load_auth(auth_path)
+    assert result["openai"] == "sk-test-override"
