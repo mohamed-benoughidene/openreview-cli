@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           submodules: recursive
-      - uses: astral-sh/setup-uv@v8.1.0
+      - uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -45,7 +45,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           submodules: recursive
-      - uses: astral-sh/setup-uv@v8.1.0
+      - uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -58,7 +58,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           submodules: recursive
-      - uses: astral-sh/setup-uv@v8.1.0
+      - uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"

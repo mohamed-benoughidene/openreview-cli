@@ -79,27 +79,23 @@ src/openreview_cli/
 │   ├── __init__.py
 │   ├── loader.py          # Config model (Pydantic) + load from YAML
 │   ├── auth.py            # Auth JSON handler + permission check
-│   ├── paths.py           # platformdirs path resolution
-│   └── defaults.py        # Default config values table
+│   └── paths.py           # platformdirs path resolution
 ├── storage/
 │   ├── __init__.py
 │   ├── database.py        # SQLite connection + migration runner
-│   ├── migrations/
-│   │   └── 001_initial.sql
-│   └── models.py          # Dataclass models for DB entities
-└── logging_config.py      # Stdlib logging setup
+│   └── migrations/
+│       └── 001_initial.sql
+└── errors.py              # Exit-code helpers
 
 tests/
 ├── unit/
-│   ├── test_config_loader.py
+│   ├── test_app.py
 │   ├── test_auth.py
-│   ├── test_database.py
-│   └── test_cli_config.py
-├── integration/
-│   └── test_config_persistence.py
-└── fixtures/
-    ├── valid_config.yml
-    └── invalid_config.yml
+│   ├── test_cli_client.py
+│   ├── test_cli_config.py
+│   ├── test_config_loader.py
+│   └── test_database.py
+└── conftest.py
 ```
 
 **Structure Decision**: Single project with `src/` layout (already in place). Two new packages under `src/openreview_cli/`: `config/` (configuration handling) and `storage/` (database operations). Tests mirror the source structure — one test file per module.

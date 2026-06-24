@@ -1,8 +1,20 @@
 import logging
+import sys
 
 import typer
 
-from openreview_cli._version import __version__
+from openreview_cli import __version__
+from openreview_cli.config.auth import ensure_auth
+from openreview_cli.config.loader import get_config_value, load_config, set_config_value
+from openreview_cli.config.paths import get_config_dir, get_data_dir, get_log_dir
+from openreview_cli.errors import config_error
+from openreview_cli.storage.database import (
+    add_client,
+    client_has_reviews,
+    delete_client,
+    get_connection,
+    init_database,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,14 +34,17 @@ def _version_callback(value: bool) -> None:
 
 
 def _init(debug: bool = False) -> None:
-    from openreview_cli.config.auth import ensure_auth
-    from openreview_cli.config.loader import load_config
-    from openreview_cli.config.paths import get_config_dir, get_data_dir, get_log_dir
-    from openreview_cli.logging_config import setup_logging
-    from openreview_cli.storage.database import init_database
-
     log_dir = get_log_dir()
-    setup_logging(log_dir, debug=debug)
+    log_file = log_dir / "openreview.log"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    _level = logging.DEBUG if debug else logging.INFO
+    _fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    root = logging.getLogger()
+    root.setLevel(_level)
+    root.addHandler(logging.FileHandler(log_file, encoding="utf-8"))
+    _sh = logging.StreamHandler(sys.stderr)
+    _sh.setFormatter(_fmt)
+    root.addHandler(_sh)
 
     config_dir = get_config_dir()
     load_config(config_dir / "config.yml")
@@ -70,10 +85,6 @@ client_app = typer.Typer(
 
 @client_app.command("add")
 def client_add(id: str, name: str) -> None:
-    from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.errors import config_error
-    from openreview_cli.storage.database import add_client
-
     db_path = get_data_dir() / "openreview.db"
     try:
         add_client(db_path, id, name)
@@ -86,9 +97,6 @@ def client_add(id: str, name: str) -> None:
 def client_list() -> None:
     from rich.console import Console
     from rich.table import Table
-
-    from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import get_connection
 
     db_path = get_data_dir() / "openreview.db"
     conn = get_connection(db_path)
@@ -115,10 +123,6 @@ def client_delete(
     id: str,
     force: bool = typer.Option(False, "--force", help="Delete client and all associated reviews."),
 ) -> None:
-    from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.errors import config_error
-    from openreview_cli.storage.database import client_has_reviews, delete_client
-
     db_path = get_data_dir() / "openreview.db"
     if not force and client_has_reviews(db_path, id):
         config_error(f"client {id} has reviews; use --force to delete")
@@ -140,9 +144,6 @@ config_app = typer.Typer(
 def config_show() -> None:
     from rich.console import Console
     from rich.table import Table
-
-    from openreview_cli.config.loader import load_config
-    from openreview_cli.config.paths import get_config_dir
 
     config_path = get_config_dir() / "config.yml"
     config = load_config(config_path)
@@ -166,10 +167,6 @@ def config_show() -> None:
 
 @config_app.command("get")
 def config_get(key: str) -> None:
-    from openreview_cli.config.loader import get_config_value, load_config
-    from openreview_cli.config.paths import get_config_dir
-    from openreview_cli.errors import config_error
-
     config_path = get_config_dir() / "config.yml"
     config = load_config(config_path)
 
@@ -183,10 +180,6 @@ def config_get(key: str) -> None:
 @config_app.command("set")
 def config_set(key: str, value: str) -> None:
     from pydantic import ValidationError
-
-    from openreview_cli.config.loader import set_config_value
-    from openreview_cli.config.paths import get_config_dir
-    from openreview_cli.errors import config_error
 
     config_path = get_config_dir() / "config.yml"
 

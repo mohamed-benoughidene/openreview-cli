@@ -2,7 +2,54 @@ import os
 from pathlib import Path
 from typing import Any
 
-from openreview_cli.config.defaults import DEFAULT_CONFIG
+DEFAULT_CONFIG: dict[str, object] = {
+    "version": 1,
+    "privacy": {
+        "tier": "balanced",
+        "strip_pii": True,
+        "log_ttl_days": 30,
+    },
+    "gateway": {
+        "models": {
+            "reasoning": {
+                "primary": "ollama/qwen3:8b",
+                "fallback": None,
+                "params": {"temperature": 0.1, "max_tokens": 4000},
+            },
+            "extraction": {
+                "primary": "ollama/qwen3:4b",
+                "fallback": None,
+                "params": {"temperature": 0.0, "max_tokens": 2000},
+            },
+            "embedding": {
+                "primary": "ollama/nomic-embed-text",
+            },
+            "reranking": {
+                "primary": "ollama/qwen3-reranker-0.6b",
+            },
+            "graph": {
+                "primary": "ollama/qwen3:8b",
+                "fallback": None,
+                "params": {"temperature": 0.0, "max_tokens": 4000},
+            },
+        },
+        "fallback": {
+            "retries": 2,
+            "retry_delay": 1.0,
+            "timeout": 60,
+            "on_failure": "error",
+        },
+        "cost_limits": {
+            "per_review_cents": 100,
+            "daily_cents": 1000,
+        },
+        "model_registry_refresh_days": 7,
+    },
+    "storage": {
+        "reviews_keep_forever": True,
+        "logs_keep_days": 30,
+    },
+}
 
 
 def _env_to_config_path(env_key: str) -> str | None:
@@ -166,12 +213,10 @@ def _deep_set(d: dict[str, Any], key: str, value: Any) -> dict[str, Any]:
 
 
 def _parse_value(value: str) -> Any:
-    if value.lower() == "true":
-        return True
-    if value.lower() == "false":
-        return False
-    if value.lower() == "null":
-        return None
+    if value.lower() in ("true", "false", "null"):
+        import yaml
+
+        return yaml.safe_load(value)
     try:
         return int(value)
     except ValueError:

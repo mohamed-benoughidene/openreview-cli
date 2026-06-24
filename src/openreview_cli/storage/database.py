@@ -60,27 +60,20 @@ def log_cost(
     cost_cents: int,
 ) -> str:
     entry_id = str(uuid.uuid4())
-    conn = get_connection(db_path)
-    try:
+    with transaction(db_path) as conn:
         conn.execute(
             "INSERT INTO cost_logs (id, review_id, model, provider, prompt_tokens, completion_tokens, cost_cents) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (entry_id, review_id, model, provider, prompt_tokens, completion_tokens, cost_cents),
         )
-        conn.commit()
-    finally:
-        conn.close()
     return entry_id
 
 
 def check_daily_limit(db_path: Path, max_cents: int) -> bool:
-    conn = get_connection(db_path)
-    try:
+    with transaction(db_path) as conn:
         row = conn.execute(
             "SELECT COALESCE(SUM(cost_cents), 0) FROM cost_logs WHERE date(created_at) = date('now')"
         ).fetchone()
         return int(row[0]) < max_cents
-    finally:
-        conn.close()
 
 
 def add_client(db_path: Path, client_id: str, name: str) -> None:
@@ -109,23 +102,17 @@ def delete_client(db_path: Path, client_id: str, force: bool = False) -> bool:
 
 
 def client_has_reviews(db_path: Path, client_id: str) -> bool:
-    conn = get_connection(db_path)
-    try:
+    with transaction(db_path) as conn:
         row = conn.execute(
             "SELECT COUNT(*) FROM reviews WHERE client_id = ?", (client_id,)
         ).fetchone()
         return int(row[0]) > 0
-    finally:
-        conn.close()
 
 
 def check_review_limit(db_path: Path, review_id: str, max_cents: int) -> bool:
-    conn = get_connection(db_path)
-    try:
+    with transaction(db_path) as conn:
         row = conn.execute(
             "SELECT COALESCE(SUM(cost_cents), 0) FROM cost_logs WHERE review_id = ?",
             (review_id,),
         ).fetchone()
         return int(row[0]) < max_cents
-    finally:
-        conn.close()

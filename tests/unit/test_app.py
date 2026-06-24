@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from openreview_cli._version import __version__
+from openreview_cli import __version__
 from openreview_cli.app import app
 
 runner = CliRunner()
