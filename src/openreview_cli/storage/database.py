@@ -1,4 +1,5 @@
 import sqlite3
+import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
@@ -45,5 +46,50 @@ def run_migrations(db_path: Path) -> None:
     except Exception:
         conn.rollback()
         raise
+    finally:
+        conn.close()
+
+
+def log_cost(
+    db_path: Path,
+    review_id: str,
+    model: str,
+    provider: str,
+    prompt_tokens: int,
+    completion_tokens: int,
+    cost_cents: int,
+) -> str:
+    entry_id = str(uuid.uuid4())
+    conn = get_connection(db_path)
+    try:
+        conn.execute(
+            "INSERT INTO cost_logs (id, review_id, model, provider, prompt_tokens, completion_tokens, cost_cents) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (entry_id, review_id, model, provider, prompt_tokens, completion_tokens, cost_cents),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return entry_id
+
+
+def check_daily_limit(db_path: Path, max_cents: int) -> bool:
+    conn = get_connection(db_path)
+    try:
+        row = conn.execute(
+            "SELECT COALESCE(SUM(cost_cents), 0) FROM cost_logs WHERE date(created_at) = date('now')"
+        ).fetchone()
+        return int(row[0]) < max_cents
+    finally:
+        conn.close()
+
+
+def check_review_limit(db_path: Path, review_id: str, max_cents: int) -> bool:
+    conn = get_connection(db_path)
+    try:
+        row = conn.execute(
+            "SELECT COALESCE(SUM(cost_cents), 0) FROM cost_logs WHERE review_id = ?",
+            (review_id,),
+        ).fetchone()
+        return int(row[0]) < max_cents
     finally:
         conn.close()

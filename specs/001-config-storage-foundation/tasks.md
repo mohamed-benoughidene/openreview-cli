@@ -138,16 +138,16 @@ description: "Task list for Config + Storage Foundation implementation"
 
 ### Tests for User Story 4 (Write FIRST — must FAIL)
 
-- [ ] T038 [P] [US4] Write test for cost log insertion in `tests/unit/test_database.py` — expects row inserted into `cost_logs` table with correct values
-- [ ] T039 [P] [US4] Write test for daily cost limit in `tests/unit/test_database.py` — expects `check_daily_limit(1000)` returns False when today's total >= limit
-- [ ] T040 [P] [US4] Write test for per-review cost limit in `tests/unit/test_database.py` — expects `check_review_limit("review_id", 100)` returns False when review total >= limit
+- [X] T038 [P] [US4] Write test for cost log insertion in `tests/unit/test_database.py` — expects row inserted into `cost_logs` table with correct values
+- [X] T039 [P] [US4] Write test for daily cost limit in `tests/unit/test_database.py` — expects `check_daily_limit(1000)` returns False when today's total >= limit
+- [X] T040 [P] [US4] Write test for per-review cost limit in `tests/unit/test_database.py` — expects `check_review_limit("review_id", 100)` returns False when review total >= limit
 
 ### Implementation for User Story 4 (PASS the tests)
 
-- [ ] T041 [US4] Implement cost log insertion in `src/openreview_cli/storage/database.py` — function `log_cost(review_id, model, provider, prompt_tokens, completion_tokens, cost_cents)` inserts into `cost_logs`
-- [ ] T042 [US4] Implement daily cost limit check in `src/openreview_cli/storage/database.py` — function `check_daily_limit(max_cents)` sums today's `cost_logs`, compares to limit, exit code 6 on breach
-- [ ] T043 [US4] Implement per-review cost limit check in `src/openreview_cli/storage/database.py` — function `check_review_limit(review_id, max_cents)` sums review's cost_logs, compares to limit, exit code 6 on breach
-- [ ] T044 [US4] Add performance test for cost log insertion latency (<100ms) in `tests/unit/test_database.py` using `time.perf_counter()` — asserts SC-004
+- [X] T041 [US4] Implement cost log insertion in `src/openreview_cli/storage/database.py` — function `log_cost(review_id, model, provider, prompt_tokens, completion_tokens, cost_cents)` inserts into `cost_logs`
+- [X] T042 [US4] Implement daily cost limit check in `src/openreview_cli/storage/database.py` — function `check_daily_limit(max_cents)` sums today's `cost_logs`, compares to limit, exit code 6 on breach
+- [X] T043 [US4] Implement per-review cost limit check in `src/openreview_cli/storage/database.py` — function `check_review_limit(review_id, max_cents)` sums review's cost_logs, compares to limit, exit code 6 on breach
+- [X] T044 [US4] Add performance test for cost log insertion latency (<100ms) in `tests/unit/test_database.py` using `time.perf_counter()` — asserts SC-004
 
 **Checkpoint**: Cost tracking and limit enforcement work. Exit code 6 on limit breach.
 
