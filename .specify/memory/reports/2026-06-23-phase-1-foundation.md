@@ -1,7 +1,7 @@
 # Phase 1 — Foundation
 
 **Date:** 2026-06-23
-**Commit:** `742a8dc`
+**Commit:** `018c4ba` (reports folder) | `742a8dc` (Phase 1 foundation)
 **Audience:** non-technical stakeholder
 
 ## What this phase was
