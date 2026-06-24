@@ -1,0 +1,52 @@
+# openreview Config Schema — Contract
+# Phase 1: Config + Storage Foundation
+#
+# This is the authoritative schema for config.yml.
+# The Pydantic model in src/openreview_cli/config/loader.py MUST validate
+# against this schema. Any deviation between the code and this contract
+# is a bug in the code.
+
+version: 1
+
+privacy:
+  tier: "balanced"           # Enum: maximum | balanced | performance
+  strip_pii: true            # bool
+  log_ttl_days: 30           # int >= 1
+
+gateway:
+  models:
+    reasoning:
+      primary: "ollama/qwen3:8b"       # str: provider/model-name
+      fallback: null                    # str or null
+      params:
+        temperature: 0.1                # float 0.0-2.0
+        max_tokens: 4000                # int >= 1
+    extraction:
+      primary: "ollama/qwen3:4b"
+      fallback: null
+      params:
+        temperature: 0.0
+        max_tokens: 2000
+    embedding:
+      primary: "ollama/nomic-embed-text"
+    reranking:
+      primary: "ollama/qwen3-reranker-0.6b"
+    graph:
+      primary: "ollama/qwen3:8b"
+      fallback: null
+      params:
+        temperature: 0.0
+        max_tokens: 4000
+  fallback:
+    retries: 2                # int >= 0
+    retry_delay: 1.0          # float >= 0
+    timeout: 60               # int >= 1
+    on_failure: "error"       # Enum: error | skip | warn
+  cost_limits:
+    per_review_cents: 100     # int >= 1
+    daily_cents: 1000         # int >= 1
+  model_registry_refresh_days: 7  # int, inactive until Phase 4
+
+storage:
+  reviews_keep_forever: true  # bool
+  logs_keep_days: 30          # int >= 1

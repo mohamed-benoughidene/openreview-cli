@@ -11,7 +11,8 @@ wheels/
 
 # Local agent/tooling state (regenerable, may contain secrets)
 AGENTS.md
-
+.drafts
+.specify
 
 # Working drafts (not part of the public product)
 products/
