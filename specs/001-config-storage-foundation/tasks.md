@@ -161,17 +161,17 @@ description: "Task list for Config + Storage Foundation implementation"
 
 ### Tests for User Story 5 (Write FIRST — must FAIL)
 
-- [ ] T045 [P] [US5] Write test for `client add` command in `tests/unit/test_cli_client.py` — expects client row inserted into `clients` table
-- [ ] T046 [P] [US5] Write test for `client list` command in `tests/unit/test_cli_client.py` — expects formatted output with client id, name, dates
-- [ ] T047 [P] [US5] Write test for `client delete` command (no reviews) in `tests/unit/test_cli_client.py` — expects client row deleted
-- [ ] T048 [P] [US5] Write test for `client delete` with reviews (requires --force) in `tests/unit/test_cli_client.py` — expects error without --force, success with --force
+- [X] T045 [P] [US5] Write test for `client add` command in `tests/unit/test_cli_client.py` — expects client row inserted into `clients` table
+- [X] T046 [P] [US5] Write test for `client list` command in `tests/unit/test_cli_client.py` — expects formatted output with client id, name, dates
+- [X] T047 [P] [US5] Write test for `client delete` command (no reviews) in `tests/unit/test_cli_client.py` — expects client row deleted
+- [X] T048 [P] [US5] Write test for `client delete` with reviews (requires --force) in `tests/unit/test_cli_client.py` — expects error without --force, success with --force
 
 ### Implementation for User Story 5 (PASS the tests)
 
-- [ ] T049 [US5] Implement `client add` command in `src/openreview_cli/app.py` — Typer command with `id: str` and `name: str` arguments, inserts into DB
-- [ ] T050 [US5] Implement `client list` command in `src/openreview_cli/app.py` — Typer command that queries `clients` table and renders via Rich
-- [ ] T051 [US5] Implement `client delete` command in `src/openreview_cli/app.py` — Typer command with `id: str` argument, checks for reviews, deletes row
-- [ ] T052 [US5] Implement `--force` flag for client delete in `src/openreview_cli/app.py` — Typer `force: bool = typer.Option(False, "--force")`, bypasses review check
+- [X] T049 [US5] Implement `client add` command in `src/openreview_cli/app.py` — Typer command with `id: str` and `name: str` arguments, inserts into DB
+- [X] T050 [US5] Implement `client list` command in `src/openreview_cli/app.py` — Typer command that queries `clients` table and renders via Rich
+- [X] T051 [US5] Implement `client delete` command in `src/openreview_cli/app.py` — Typer command with `id: str` argument, checks for reviews, deletes row
+- [X] T052 [US5] Implement `--force` flag for client delete in `src/openreview_cli/app.py` — Typer `force: bool = typer.Option(False, "--force")`, bypasses review check
 
 **Checkpoint**: Client CRUD works. `--force` deletes client + all associated reviews.
 

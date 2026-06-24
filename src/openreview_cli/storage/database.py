@@ -83,6 +83,42 @@ def check_daily_limit(db_path: Path, max_cents: int) -> bool:
         conn.close()
 
 
+def add_client(db_path: Path, client_id: str, name: str) -> None:
+    with transaction(db_path) as conn:
+        conn.execute(
+            "INSERT INTO clients (id, name) VALUES (?, ?)",
+            (client_id, name),
+        )
+
+
+def delete_client(db_path: Path, client_id: str, force: bool = False) -> bool:
+    """Delete a client and optionally its reviews. Returns True if deleted."""
+    with transaction(db_path) as conn:
+        if force:
+            conn.execute(
+                "DELETE FROM cost_logs WHERE review_id IN (SELECT id FROM reviews WHERE client_id = ?)",
+                (client_id,),
+            )
+            conn.execute(
+                "DELETE FROM review_diffs WHERE review_id IN (SELECT id FROM reviews WHERE client_id = ?)",
+                (client_id,),
+            )
+            conn.execute("DELETE FROM reviews WHERE client_id = ?", (client_id,))
+        cursor = conn.execute("DELETE FROM clients WHERE id = ?", (client_id,))
+        return cursor.rowcount > 0
+
+
+def client_has_reviews(db_path: Path, client_id: str) -> bool:
+    conn = get_connection(db_path)
+    try:
+        row = conn.execute(
+            "SELECT COUNT(*) FROM reviews WHERE client_id = ?", (client_id,)
+        ).fetchone()
+        return int(row[0]) > 0
+    finally:
+        conn.close()
+
+
 def check_review_limit(db_path: Path, review_id: str, max_cents: int) -> bool:
     conn = get_connection(db_path)
     try:

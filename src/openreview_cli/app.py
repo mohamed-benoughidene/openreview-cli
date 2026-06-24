@@ -61,6 +61,74 @@ def _root(
     _init(debug=debug)
 
 
+client_app = typer.Typer(
+    name="client",
+    help="Manage clients.",
+    no_args_is_help=True,
+)
+
+
+@client_app.command("add")
+def client_add(id: str, name: str) -> None:
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.errors import config_error
+    from openreview_cli.storage.database import add_client
+
+    db_path = get_data_dir() / "openreview.db"
+    try:
+        add_client(db_path, id, name)
+        typer.echo(f"added client {id}")
+    except Exception as e:
+        config_error(str(e))
+
+
+@client_app.command("list")
+def client_list() -> None:
+    from rich.console import Console
+    from rich.table import Table
+
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.storage.database import get_connection
+
+    db_path = get_data_dir() / "openreview.db"
+    conn = get_connection(db_path)
+    try:
+        rows = conn.execute(
+            "SELECT id, name, created_at, updated_at FROM clients ORDER BY created_at"
+        ).fetchall()
+    finally:
+        conn.close()
+
+    console = Console()
+    table = Table(title="Clients")
+    table.add_column("ID", style="cyan")
+    table.add_column("Name", style="green")
+    table.add_column("Created", style="white")
+    table.add_column("Updated", style="white")
+    for row in rows:
+        table.add_row(row["id"], row["name"], row["created_at"], row["updated_at"])
+    console.print(table)
+
+
+@client_app.command("delete")
+def client_delete(
+    id: str,
+    force: bool = typer.Option(False, "--force", help="Delete client and all associated reviews."),
+) -> None:
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.errors import config_error
+    from openreview_cli.storage.database import client_has_reviews, delete_client
+
+    db_path = get_data_dir() / "openreview.db"
+    if not force and client_has_reviews(db_path, id):
+        config_error(f"client {id} has reviews; use --force to delete")
+    if not delete_client(db_path, id, force=force):
+        config_error(f"client {id} not found")
+    typer.echo(f"deleted client {id}")
+
+
+app.add_typer(client_app)
+
 config_app = typer.Typer(
     name="config",
     help="View and modify configuration.",
