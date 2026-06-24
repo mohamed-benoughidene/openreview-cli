@@ -89,20 +89,20 @@ description: "Task list for Config + Storage Foundation implementation"
 
 ### Tests for User Story 2 (Write FIRST — must FAIL)
 
-- [ ] T021 [P] [US2] Write test for `config show` command output in `tests/unit/test_cli_config.py` — expects Rich-rendered table with all config values
-- [ ] T022 [P] [US2] Write test for `config get <key>` command in `tests/unit/test_cli_config.py` — expects single value output for dot-notation key
-- [ ] T023 [P] [US2] Write test for `config set <key> <value>` command in `tests/unit/test_cli_config.py` — expects file updated and success message
-- [ ] T024 [P] [US2] Write test for config.yml backup creation before set in `tests/unit/test_config_loader.py` — expects `config.yml.bak` exists after set
-- [ ] T025 [P] [US2] Write test for config validation on invalid set value in `tests/unit/test_config_loader.py` — expects error for `config set privacy.tier invalid`
+- [X] T021 [P] [US2] Write test for `config show` command output in `tests/unit/test_cli_config.py` — expects Rich-rendered table with all config values
+- [X] T022 [P] [US2] Write test for `config get <key>` command in `tests/unit/test_cli_config.py` — expects single value output for dot-notation key
+- [X] T023 [P] [US2] Write test for `config set <key> <value>` command in `tests/unit/test_cli_config.py` — expects file updated and success message
+- [X] T024 [P] [US2] Write test for config.yml backup creation before set in `tests/unit/test_config_loader.py` — expects `config.yml.bak` exists after set
+- [X] T025 [P] [US2] Write test for config validation on invalid set value in `tests/unit/test_config_loader.py` — expects error for `config set privacy.tier invalid`
 
 ### Implementation for User Story 2 (PASS the tests)
 
-- [ ] T026 [US2] Implement `config show` command in `src/openreview_cli/app.py` — Typer command that loads merged config and renders via Rich
-- [ ] T027 [US2] Implement `config get <key>` command in `src/openreview_cli/app.py` — Typer command with `key: str` argument, dot-notation lookup
-- [ ] T028 [US2] Implement `config set <key> <value>` command in `src/openreview_cli/app.py` — Typer command with `key: str` and `value: str` arguments
-- [ ] T029 [US2] Implement config.yml backup before set in `src/openreview_cli/config/loader.py` — copy `config.yml` to `config.yml.bak` before writing
-- [ ] T030 [US2] Implement config validation on set in `src/openreview_cli/config/loader.py` — validate against Pydantic model, reject invalid values with error message using error module from T012
-- [ ] T031 [US2] Add performance test for config operation latency (<500ms) in `tests/unit/test_cli_config.py` using `time.perf_counter()` — asserts SC-006
+- [X] T026 [US2] Implement `config show` command in `src/openreview_cli/app.py` — Typer command that loads merged config and renders via Rich
+- [X] T027 [US2] Implement `config get <key>` command in `src/openreview_cli/app.py` — Typer command with `key: str` argument, dot-notation lookup
+- [X] T028 [US2] Implement `config set <key> <value>` command in `src/openreview_cli/app.py` — Typer command with `key: str` and `value: str` arguments
+- [X] T029 [US2] Implement config.yml backup before set in `src/openreview_cli/config/loader.py` — copy `config.yml` to `config.yml.bak` before writing
+- [X] T030 [US2] Implement config validation on set in `src/openreview_cli/config/loader.py` — validate against Pydantic model, reject invalid values with error message using error module from T012
+- [X] T031 [US2] Add performance test for config operation latency (<500ms) in `tests/unit/test_cli_config.py` using `time.perf_counter()` — asserts SC-006
 
 **Checkpoint**: `openreview config show/get/set` all work correctly.
 

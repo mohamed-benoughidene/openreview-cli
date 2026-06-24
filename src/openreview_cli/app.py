@@ -61,5 +61,75 @@ def _root(
     _init(debug=debug)
 
 
+config_app = typer.Typer(
+    name="config",
+    help="View and modify configuration.",
+    no_args_is_help=True,
+)
+
+
+@config_app.command("show")
+def config_show() -> None:
+    from rich.console import Console
+    from rich.table import Table
+
+    from openreview_cli.config.loader import load_config
+    from openreview_cli.config.paths import get_config_dir
+
+    config_path = get_config_dir() / "config.yml"
+    config = load_config(config_path)
+
+    console = Console()
+    table = Table(title="OpenReview Configuration")
+    table.add_column("Key", style="cyan")
+    table.add_column("Value", style="green")
+
+    def _flatten(d: dict[str, object], prefix: str = "") -> None:
+        for k, v in d.items():
+            key = f"{prefix}.{k}" if prefix else k
+            if isinstance(v, dict):
+                _flatten(v, key)
+            else:
+                table.add_row(key, str(v))
+
+    _flatten(config)
+    console.print(table)
+
+
+@config_app.command("get")
+def config_get(key: str) -> None:
+    from openreview_cli.config.loader import get_config_value, load_config
+    from openreview_cli.config.paths import get_config_dir
+    from openreview_cli.errors import config_error
+
+    config_path = get_config_dir() / "config.yml"
+    config = load_config(config_path)
+
+    try:
+        value = get_config_value(config, key)
+        typer.echo(str(value))
+    except KeyError:
+        config_error(f"Unknown config key: {key}")
+
+
+@config_app.command("set")
+def config_set(key: str, value: str) -> None:
+    from pydantic import ValidationError
+
+    from openreview_cli.config.loader import set_config_value
+    from openreview_cli.config.paths import get_config_dir
+    from openreview_cli.errors import config_error
+
+    config_path = get_config_dir() / "config.yml"
+
+    try:
+        set_config_value(config_path, key, value)
+        typer.echo(f"updated {key} = {value}")
+    except (KeyError, ValidationError) as e:
+        config_error(str(e))
+
+
+app.add_typer(config_app)
+
 if __name__ == "__main__":
     app()
