@@ -192,5 +192,35 @@ def config_set(key: str, value: str) -> None:
 
 app.add_typer(config_app)
 
+
+@app.command()
+def parse(
+    path: str = typer.Argument(..., help="Path to a PDF or DOCX contract file."),
+    format: str = typer.Option("text", "--format", help="Output format: text, json"),
+    summary: bool = typer.Option(False, "--summary", help="Show one-line summary only"),
+) -> None:
+    from openreview_cli.parsing.models import ParseError
+    from openreview_cli.parsing.stream import (
+        format_json,
+        format_summary,
+        format_text,
+        parse_document,
+    )
+
+    try:
+        doc, clauses = parse_document(path)
+    except ParseError as e:
+        typer.echo(f"Error: {e.message}", err=True)
+        typer.echo(f"What to do: {e.action}", err=True)
+        raise typer.Exit(code=8) from None
+
+    if summary:
+        typer.echo(format_summary(doc))
+    elif format == "json":
+        typer.echo(format_json(clauses))
+    else:
+        typer.echo(format_text(clauses, doc))
+
+
 if __name__ == "__main__":
     app()

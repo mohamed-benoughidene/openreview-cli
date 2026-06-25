@@ -17,3 +17,13 @@ AGENTS.md
 # Working drafts (not part of the public product)
 products/
 Papers/
+
+# Python caches and tooling
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

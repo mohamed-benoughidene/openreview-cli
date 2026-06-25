@@ -13,20 +13,39 @@ a custom playbook, and produces a structured memo of findings.
 
 ## Status
 
-Pre-alpha. 56 spec tasks implemented across the config + storage foundation.
-The package is not yet on PyPI. APIs and the underlying spec are preliminary
-and will change.
+Pre-alpha. 102 spec tasks implemented across the config + storage foundation
+and document parsing engine. The package is not yet on PyPI. APIs and the
+underlying spec are preliminary and will change.
 
-| Metric              | Value                    |
-|---------------------|--------------------------|
-| Unit tests          | 36 (1.8 s)               |
-| CLI commands        | 8                        |
-| SQLite tables       | 5                        |
-| CI jobs             | 4 (lint, types, test, memory) |
-| Memory budget       | < 110 MB                 |
-| Startup (warm)      | < 0.3 s                  |
-| Spec tasks tracked  | 56 (all complete)        |
-| Dead code cut       | −120 lines, −5 files     |
+| Metric                      | Value                     |
+|-----------------------------|---------------------------|
+| Unit + integration tests    | 139 (18.6 s)              |
+| CLI commands                | 9                         |
+| SQLite tables               | 5                         |
+| CI jobs                     | 4 (lint, types, test, memory) |
+| Memory budget               | < 110 MB                  |
+| Startup (warm)              | < 0.3 s                   |
+| Spec tasks tracked          | 102 (all complete)        |
+| Dead code cut               | −137 lines, −6 files      |
+
+### Parsing performance (real-world benchmark)
+
+Tested against 860 real legal documents — both native PDFs and text-derived contracts:
+
+| Metric                      | LegalBench-RAG (text→PDF) | CUAD v1 (native PDFs) | CUAD v1 (converted DOCX) |
+|-----------------------------|---------------------------|-----------------------|--------------------------|
+| Contracts parsed            | 661                       | 199                   | 100                      |
+| Success rate                | **100%**                  | **100%**              | **100%**                 |
+| Total clauses detected      | 50,378                    | 21,954                | 4,759                    |
+| Avg clauses per contract    | 76.2                      | 110.3                 | 47.6                     |
+| Avg parse time (warm)       | 0.052 s                   | 0.088 s               | 0.322 s                  |
+| Total parse time            | 34.6 s                    | 17.5 s                | 32.2 s                   |
+| Avg throughput              | 1.66 M chars/sec          | 2.28 M chars/sec      | —                        |
+| Peak RSS                    | 362 MB                    | 362 MB                | 344 MB                   |
+| Errors                      | 0                         | 0                     | 0                        |
+
+- **LegalBench-RAG:** 661 contracts from [github.com/zeroentropy-ai/legalbenchrag](https://github.com/zeroentropy-ai/legalbenchrag) (CUAD + MAUD + ContractNLI). Text files converted to PDF for testing.
+- **CUAD v1:** 199 native PDF contracts from [zenodo.org/records/4595826](https://zenodo.org/records/4595826) (SEC EDGAR filings — hosting/employment/service/license agreements). Native PDFs, no conversion step.
 
 ## Installation
 
@@ -50,13 +69,14 @@ uv run openreview --version
 |-----------------------------------------------------|--------------------------------------------|
 | `src/openreview_cli/__init__.py`                    | Exposes `__version__`                      |
 | `src/openreview_cli/__main__.py`                    | Entry point: `python -m openreview_cli`    |
-| `src/openreview_cli/app.py`                         | Typer app — `config` + `client` commands   |
+| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse` commands |
 | `src/openreview_cli/config/paths.py`                | platformdirs paths (config, data, log)     |
 | `src/openreview_cli/config/loader.py`               | Pydantic model, YAML r/w, env merge        |
 | `src/openreview_cli/config/auth.py`                 | `auth.json` handler, chmod 600             |
 | `src/openreview_cli/storage/database.py`            | SQLite, migrations, cost tracking, clients |
 | `src/openreview_cli/storage/migrations/001_initial.sql` | 5 tables DDL                           |
-| `src/openreview_cli/errors.py`                      | Exit codes (5 = config, 6 = cost limit)    |
+| `src/openreview_cli/errors.py`                      | Exit codes (5 = config, 6 = cost limit, 8 = parse error) |
+| `src/openreview_cli/parsing/`                       | Document parser — PDF, DOCX, clause detection |
 | `tests/unit/test_app.py`                            | 5 tests (import, version, help, memory)    |
 | `tests/unit/test_config_loader.py`                  | 6 tests (create, merge, env override)      |
 | `tests/unit/test_auth.py`                           | 5 tests (create, load, perms, providers)   |
@@ -79,6 +99,9 @@ openreview config set privacy.tier balanced  # Change a setting
 openreview client add acme-corp "Acme Corp"  # Register a client
 openreview client list                # List clients
 openreview client delete acme-corp --force   # Remove client
+openreview parse contract.pdf         # Parse a contract into clauses
+openreview parse contract.pdf --summary    # One-line summary
+openreview parse contract.pdf --format json  # JSON output
 ```
 
 | Command                                    | What it does                               |
@@ -91,6 +114,9 @@ openreview client delete acme-corp --force   # Remove client
 | `openreview client add <id> <name>`        | Register an API client                     |
 | `openreview client list`                   | List all registered clients                |
 | `openreview client delete <id> [--force]`  | Remove a client (`--force` = cascade)      |
+| `openreview parse <path>`              | Parse a PDF or DOCX into numbered clauses  |
+| `openreview parse <path> --summary`    | One-line parse summary                     |
+| `openreview parse <path> --format json`| JSON output with all metadata              |
 
 ## Configuration
 
@@ -142,10 +168,29 @@ uvx pre-commit install
 |------------------|---------------------------------|
 | Tests            | `uv run pytest tests/unit/ -q`  |
 | Memory budget    | `uv run pytest -m memory`       |
+| Benchmark        | `uv run python scripts/benchmark_legalbenchrag.py` |
 | Lint             | `uv run ruff check .`           |
 | Format           | `uv run ruff format --check .`  |
 | Types            | `uv run mypy src/ tests/`       |
 | All hooks        | `uvx pre-commit run --all-files`|
+
+## Benchmarks
+
+The parsing performance numbers in the table above are reproducible:
+
+```bash
+# 1. Clone the benchmark corpus
+git clone --depth 1 https://github.com/zeroentropy-ai/legalbenchrag.git /tmp/legalbenchrag
+wget -qO /tmp/lbr.zip "https://www.dropbox.com/scl/fo/r7xfa5i3hdsbxex1w6amw/AID389Olvtm-ZLTKAPrw6k4?rlkey=5n8zrbk4c08lbit3iiexofmwg&st=0hu354cq&dl=1"
+unzip -qo /tmp/lbr.zip -d /tmp/legalbenchrag
+
+# 2. Convert .txt to .pdf (one-time ~30s) and run the benchmark
+uv run python scripts/benchmark_legalbenchrag.py
+```
+
+The script downloads the corpus, converts each text file to PDF via pymupdf,
+runs the parser against every contract, and writes `metrics-v0.1.0.json` with
+per-file timing, clause counts, and peak memory.
 
 ## Contributing
 

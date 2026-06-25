@@ -11,8 +11,11 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.28.1",
+    "nupunkt>=0.6.0",
     "platformdirs>=4.10.0",
     "pydantic>=2.13.4",
+    "pymupdf>=1.27.2.3",
+    "python-docx>=1.2.0",
     "pyyaml>=6.0.3",
     "rich>=15.0.0",
     "typer>=0.26.7",
@@ -92,5 +95,7 @@ markers = [
     "integration: marks integration tests (mocked APIs)",
     "e2e: marks end-to-end tests (CLI invocation)",
     "memory: marks memory profiling tests",
+    "benchmark: marks benchmark tests",
+    "accuracy: marks clause boundary accuracy tests",
 ]
 filterwarnings = ["ignore::DeprecationWarning"]
