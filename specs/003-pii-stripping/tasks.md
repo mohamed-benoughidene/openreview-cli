@@ -18,12 +18,12 @@
 
 **Purpose**: Add dependencies, download NLP model, create module skeleton
 
-- [ ] T001 Install PII dependencies via `uv add presidio-analyzer presidio-anonymizer`
-- [ ] T002 [P] Download spaCy model: `uv run python -m spacy download en_core_web_lg`
-- [ ] T003 Create `src/openreview_cli/pii/` module with `__init__.py` exporting `strip_pii`, `PiiResult`, `PiiEntity`, `PiiError`
-- [ ] T004 [P] Create test fixture directories: `tests/fixtures/pii/seeded_contracts/`, add `no_pii_document.txt`, `multi_occurrence.txt`, `non_english_mixed.txt`
-- [ ] T004a [P] Generate 25 auto-generated seeded PII documents using Presidio's synthetic PII generator in `tests/fixtures/pii/seeded_contracts/auto/` and annotate 25 manually annotated documents from Phase 2 test corpus in `tests/fixtures/pii/seeded_contracts/manual/` per SC-001/SC-002/SC-003
-- [ ] T005 [P] Add `pii_error()` constant to `src/openreview_cli/errors.py` with exit code 9
+- [x] T001 Install PII dependencies via `uv add presidio-analyzer presidio-anonymizer`
+- [x] T002 [P] Download spaCy model: `uv run python -m spacy download en_core_web_lg`
+- [x] T003 Create `src/openreview_cli/pii/` module with `__init__.py` exporting `strip_pii`, `PiiResult`, `PiiEntity`, `PiiError`
+- [x] T004 [P] Create test fixture directories: `tests/fixtures/pii/seeded_contracts/`, add `no_pii_document.txt`, `multi_occurrence.txt`, `non_english_mixed.txt`
+- [x] T004a [P] Generate 25 auto-generated seeded PII documents using Presidio's synthetic PII generator in `tests/fixtures/pii/seeded_contracts/auto/` and annotate 25 manually annotated documents from Phase 2 test corpus in `tests/fixtures/pii/seeded_contracts/manual/` per SC-001/SC-002/SC-003
+- [x] T005 [P] Add `pii_error()` constant to `src/openreview_cli/errors.py` with exit code 9
 
 ---
 
@@ -31,12 +31,12 @@
 
 **Purpose**: Dataclasses, error types, config fields — MUST be complete before any user story
 
-- [ ] T006 [P] Create `PiiEntity` dataclass (`@dataclass(slots=True)`) in `src/openreview_cli/pii/models.py` with fields: `entity_type`, `original_value`, `start`, `end`, `score`, `placeholder`, `source`
-- [ ] T007 [P] Create `PiiResult` dataclass (`@dataclass(slots=True)`) in `src/openreview_cli/pii/models.py` with fields: `stripped_text`, `mapping`, `entities`, `page_count`, `duration_seconds`, `warnings`
-- [ ] T008 [P] Create `PiiAudit` dataclass and `EntityTypeStats` nested dataclass in `src/openreview_cli/pii/models.py` with validation rules (no PII values, counts match)
-- [ ] T009 [P] Create `PiiError(Exception)` in `src/openreview_cli/pii/models.py` with fields: `exit_code=9`, `category`, `clause_heading`, `phase`, `message`, `action`
-- [ ] T010 Add `privacy.pii_threshold` field (default 0.7) and `privacy.pii_encryption_key` field to `src/openreview_cli/config/loader.py`
-- [ ] T011 [P] Add `get_review_dir(review_id)` helper to `src/openreview_cli/config/paths.py` returning `~/.local/share/openreview/reviews/{review_id}/`
+- [x] T006 [P] Create `PiiEntity` dataclass (`@dataclass(slots=True)`) in `src/openreview_cli/pii/models.py` with fields: `entity_type`, `original_value`, `start`, `end`, `score`, `placeholder`, `source`
+- [x] T007 [P] Create `PiiResult` dataclass (`@dataclass(slots=True)`) in `src/openreview_cli/pii/models.py` with fields: `stripped_text`, `mapping`, `entities`, `page_count`, `duration_seconds`, `warnings`
+- [x] T008 [P] Create `PiiAudit` dataclass and `EntityTypeStats` nested dataclass in `src/openreview_cli/pii/models.py` with validation rules (no PII values, counts match)
+- [x] T009 [P] Create `PiiError(Exception)` in `src/openreview_cli/pii/models.py` with fields: `exit_code=9`, `category`, `clause_heading`, `phase`, `message`, `action`
+- [x] T010 Add `privacy.pii_threshold` field (default 0.7) and `privacy.pii_encryption_key` field to `src/openreview_cli/config/loader.py`
+- [x] T011 [P] Add `get_review_dir(review_id)` helper to `src/openreview_cli/config/paths.py` returning `~/.local/share/openreview/reviews/{review_id}/`
 
 **Checkpoint**: Foundation ready — dataclasses, config fields, error types exist
 
@@ -50,21 +50,21 @@
 
 ### Tests for User Story 1 (TDD: write first, they FAIL)
 
-- [ ] T012 [P] [US1] Unit test for `PiiEntity`, `PiiResult`, `PiiAudit`, `PiiError` dataclasses in `tests/unit/test_pii_models.py`
-- [ ] T013 [P] [US1] Unit test for custom `AMOUNT` recognizer regex in `tests/unit/test_pii_recognizers.py` — test `$5,000,000`, `$1M`, `$500` patterns
-- [ ] T014 [P] [US1] Unit test for custom `TAX_ID` recognizer regex in `tests/unit/test_pii_recognizers.py` — test EIN `12-3456789`, SSN patterns
-- [ ] T015 [P] [US1] Unit test for custom `ID_DOCUMENT` and `REG_NUMBER` recognizers in `tests/unit/test_pii_recognizers.py`
+- [x] T012 [P] [US1] Unit test for `PiiEntity`, `PiiResult`, `PiiAudit`, `PiiError` dataclasses in `tests/unit/test_pii_models.py`
+- [x] T013 [P] [US1] Unit test for custom `AMOUNT` recognizer regex in `tests/unit/test_pii_recognizers.py` — test `$5,000,000`, `$1M`, `$500` patterns
+- [x] T014 [P] [US1] Unit test for custom `TAX_ID` recognizer regex in `tests/unit/test_pii_recognizers.py` — test EIN `12-3456789`, SSN patterns
+- [x] T015 [P] [US1] Unit test for custom `ID_DOCUMENT` and `REG_NUMBER` recognizers in `tests/unit/test_pii_recognizers.py`
 
 ### Implementation for User Story 1
 
-- [ ] T016 [P] [US1] Implement custom regex recognizers in `src/openreview_cli/pii/recognizers.py` — `AmountRecognizer`, `TaxIdRecognizer`, `IdDocumentRecognizer`, `RegNumberRecognizer`
-- [ ] T017 [US1] Implement `PiiEngine` class in `src/openreview_cli/pii/engine.py` — wraps Presidio `AnalyzerEngine` with spaCy `en_core_web_lg` backend, lazy imports, `score_threshold=0.7`
-- [ ] T018 [US1] [after T016, T017] Implement custom recognizer registration in `PiiEngine.__init__()` — register all custom recognizers via `analyzer.registry.add_recognizer()`
-- [ ] T019 [US1] Implement `detect_on_page(text, threshold)` method in `PiiEngine` — call `analyzer.analyze(score_threshold=threshold)`, return list of entity spans with NLP scores plus regex-only handling for non-English sections
-- [ ] T020 [P] [US1] Implement placeholder assignment in `src/openreview_cli/pii/placeholders.py` — group by entity type → sort unique values alphabetically → assign `[TYPE_N]` or `[PARTY_X]`, build mapping dict
-- [ ] T021 [US1] Implement metadata redaction in `src/openreview_cli/pii/engine.py` — parse filename, author, title, company into `[FILENAME_N]`, `[AUTHOR_1]`, `[TITLE_1]`, `[COMPANY_1]`, add to mapping
-- [ ] T022 [US1] Implement `strip_pii()` public function in `src/openreview_cli/pii/__init__.py` — orchestrates: metadata redaction → page-sequential detection → placeholder assignment → text replacement (longest-first)
-- [ ] T023 [US1] Implement page-sequential processing with 50-character overlap buffer in `PiiEngine.detect_all_pages()` — only emit entities whose start is ≥ overlap length
+- [x] T016 [P] [US1] Implement custom regex recognizers in `src/openreview_cli/pii/recognizers.py` — `AmountRecognizer`, `TaxIdRecognizer`, `IdDocumentRecognizer`, `RegNumberRecognizer`
+- [x] T017 [US1] Implement `PiiEngine` class in `src/openreview_cli/pii/engine.py` — wraps Presidio `AnalyzerEngine` with spaCy `en_core_web_lg` backend, lazy imports, `score_threshold=0.7`
+- [x] T018 [US1] [after T016, T017] Implement custom recognizer registration in `PiiEngine.__init__()` — register all custom recognizers via `analyzer.registry.add_recognizer()`
+- [x] T019 [US1] Implement `detect_on_page(text, threshold)` method in `PiiEngine` — call `analyzer.analyze(score_threshold=threshold)`, return list of entity spans with NLP scores plus regex-only handling for non-English sections
+- [x] T020 [P] [US1] Implement placeholder assignment in `src/openreview_cli/pii/placeholders.py` — group by entity type → sort unique values alphabetically → assign `[TYPE_N]` or `[PARTY_X]`, build mapping dict
+- [x] T021 [US1] Implement metadata redaction in `src/openreview_cli/pii/engine.py` — parse filename, author, title, company into `[FILENAME_N]`, `[AUTHOR_1]`, `[TITLE_1]`, `[COMPANY_1]`, add to mapping
+- [x] T022 [US1] Implement `strip_pii()` public function in `src/openreview_cli/pii/__init__.py` — orchestrates: metadata redaction → page-sequential detection → placeholder assignment → text replacement (longest-first)
+- [x] T023 [US1] Implement page-sequential processing with 50-character overlap buffer in `PiiEngine.detect_all_pages()` — only emit entities whose start is ≥ overlap length
 
 **Checkpoint**: Core stripping works — parsed text goes in, stripped text + mapping + entities come out
 
@@ -78,17 +78,17 @@
 
 ### Tests for User Story 2 (TDD: write first, they FAIL)
 
-- [ ] T024 [P] [US2] Unit test for `write_pii_mapping()` in `tests/unit/test_pii_mapping.py` — write encrypted JSON, verify chmod 600, verify version key exists
-- [ ] T025 [P] [US2] Unit test for `read_pii_mapping()` — read back same file, decrypt, verify original values; test wrong key raises `PiiError`
-- [ ] T026 [P] [US2] Unit test for `write_pii_audit()` in `tests/unit/test_pii_audit.py` — verify JSON structure, zero PII values assertion
+- [x] T024 [P] [US2] Unit test for `write_pii_mapping()` in `tests/unit/test_pii_mapping.py` — write encrypted JSON, verify chmod 600, verify version key exists
+- [x] T025 [P] [US2] Unit test for `read_pii_mapping()` — read back same file, decrypt, verify original values; test wrong key raises `PiiError`
+- [x] T026 [P] [US2] Unit test for `write_pii_audit()` in `tests/unit/test_pii_audit.py` — verify JSON structure, zero PII values assertion
 - [ ] T027 [P] [US2] Integration test for end-to-end strip flow in `tests/integration/test_pii_strip_command.py` — parsed document → stripped text + encrypted mapping + audit, round-trip validation, and performance assertion (warm stripping of 50-page document <3s per SC-004). Also assert mapping file path is never included in any HTTP request payload (architectural invariant per FR-012).
 
 ### Implementation for User Story 2
 
-- [ ] T028 [US2] Implement `write_pii_mapping()` in `src/openreview_cli/pii/mapping.py` — serialize mapping dict, encrypt each value via Presidio `AnonymizerEngine` with `OperatorConfig("encrypt", {"key": crypto_key})`, write JSON with chmod 600
-- [ ] T029 [US2] Implement `read_pii_mapping()` in `src/openreview_cli/pii/mapping.py` — read JSON, decrypt each value via Presidio `DeanonymizeEngine` with same key, return dict
-- [ ] T030 [US2] Implement `write_pii_audit()` in `src/openreview_cli/pii/audit.py` — derive `PiiAudit` from entity list, serialize to JSON, write alongside mapping
-- [ ] T031 [US2] Implement encryption key management in `PiiEngine` — check config for key on init, auto-generate random 256-bit key with `secrets.token_urlsafe(32)[:32]` if missing, write to config
+- [x] T028 [US2] Implement `write_pii_mapping()` in `src/openreview_cli/pii/mapping.py` — serialize mapping dict, encrypt each value via Presidio `AnonymizerEngine` with `OperatorConfig("encrypt", {"key": crypto_key})`, write JSON with chmod 600
+- [x] T029 [US2] Implement `read_pii_mapping()` in `src/openreview_cli/pii/mapping.py` — read JSON, decrypt each value via Presidio `DeanonymizeEngine` with same key, return dict
+- [x] T030 [US2] Implement `write_pii_audit()` in `src/openreview_cli/pii/audit.py` — derive `PiiAudit` from entity list, serialize to JSON, write alongside mapping
+- [x] T031 [US2] Implement encryption key management in `PiiEngine` — check config for key on init, auto-generate random 256-bit key with `secrets.token_urlsafe(32)[:32]` if missing, write to config
 - [ ] T031a [P] [US2] Create integration test skeleton in `tests/integration/test_pii_accuracy.py` — define test corpus fixtures, recall/precision calculation, 90%/95% thresholds per SC-001/SC-002/SC-003
 - [ ] T031b [P] [US2] Create integration test skeleton in `tests/integration/test_pii_memory.py` — `tracemalloc` start/stop, 50-page seeded document, assert peak <100 MB (excluding model baseline) per SC-005
 
@@ -148,7 +148,7 @@
 
 - [ ] T046 [P] Implement Rich progress display in `PiiEngine.detect_all_pages()` — show `"Stripping PII... page 12/50"` with `rich.progress.Progress`
 - [ ] T047 [US2] Implement `pii_map.json` deletion on review deletion — wire into existing review-deletion path in `src/openreview_cli/app.py`
-- [ ] T048 [US1] Add `__all__` exports to `src/openreview_cli/pii/__init__.py` — export `strip_pii`, `PiiResult`, `PiiEntity`, `PiiAudit`, `PiiError`, `write_pii_mapping`, `read_pii_mapping`
+- [x] T048 [US1] Add `__all__` exports to `src/openreview_cli/pii/__init__.py` — export `strip_pii`, `PiiResult`, `PiiEntity`, `PiiAudit`, `PiiError`, `write_pii_mapping`, `read_pii_mapping`
 - [ ] T049 Run accuracy validation: `uv run pytest tests/integration/test_pii_accuracy.py -v`
 - [ ] T050 Run memory validation: `uv run pytest tests/integration/test_pii_memory.py -v -m memory`
 - [ ] T051 Run full test suite and pre-commit: `uv run pytest tests/; uvx pre-commit run --all-files`

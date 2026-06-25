@@ -1,0 +1,2374 @@
+{
+  "auto/auto_contract_1.txt": [
+    {
+      "value": "AutoCompanyA1 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName1 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_1@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0101",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "100 Auto Blvd, Suite 1, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1971-05-02",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$5,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "11-7654320",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926801",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876544",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100001",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "AutoCompanyB1 LLC",
+      "type": "ORGANIZATION"
+    }
+  ],
+  "auto/auto_contract_2.txt": [
+    {
+      "value": "AutoCompanyA2 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName2 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_2@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0102",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "200 Auto Blvd, Suite 2, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1972-05-03",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$10,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "12-7654319",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926802",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876545",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100002",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "auto/auto_contract_3.txt": [
+    {
+      "value": "AutoCompanyA3 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName3 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_3@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0103",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "300 Auto Blvd, Suite 3, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1973-05-04",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$15,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "13-7654318",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926803",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876546",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100003",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "auto/auto_contract_4.txt": [
+    {
+      "value": "AutoCompanyA4 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName4 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_4@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0104",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "400 Auto Blvd, Suite 4, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1974-05-05",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$20,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "14-7654317",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926804",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876547",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100004",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "AutoCompanyB4 LLC",
+      "type": "ORGANIZATION"
+    }
+  ],
+  "auto/auto_contract_5.txt": [
+    {
+      "value": "AutoCompanyA5 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName5 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_5@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0105",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "500 Auto Blvd, Suite 5, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1975-05-06",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$25,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "15-7654316",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926805",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876548",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100005",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "auto/auto_contract_6.txt": [
+    {
+      "value": "AutoCompanyA6 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName6 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_6@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0106",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "600 Auto Blvd, Suite 6, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1976-05-07",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$30,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "16-7654315",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926806",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876549",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100006",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "auto/auto_contract_7.txt": [
+    {
+      "value": "AutoCompanyA7 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName7 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_7@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0107",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "700 Auto Blvd, Suite 7, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1977-05-08",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$35,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "17-7654314",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926807",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876550",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100007",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "AutoCompanyB7 LLC",
+      "type": "ORGANIZATION"
+    }
+  ],
+  "auto/auto_contract_8.txt": [
+    {
+      "value": "AutoCompanyA8 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName8 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_8@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0108",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "800 Auto Blvd, Suite 8, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1978-05-09",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$40,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "18-7654313",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926808",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876551",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100008",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "auto/auto_contract_9.txt": [
+    {
+      "value": "AutoCompanyA9 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName9 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_9@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0109",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "900 Auto Blvd, Suite 9, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1979-05-10",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$45,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "19-7654312",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926809",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876552",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100009",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "auto/auto_contract_10.txt": [
+    {
+      "value": "AutoCompanyA10 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName10 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_10@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0110",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1000 Auto Blvd, Suite 10, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1980-05-11",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$50,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "20-7654311",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926810",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876553",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100010",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "AutoCompanyB10 LLC",
+      "type": "ORGANIZATION"
+    }
+  ],
+  "auto/auto_contract_11.txt": [
+    {
+      "value": "AutoCompanyA11 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName11 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_11@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0111",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1100 Auto Blvd, Suite 11, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1981-05-12",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$55,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "21-7654310",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926811",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876554",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100011",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "auto/auto_contract_12.txt": [
+    {
+      "value": "AutoCompanyA12 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName12 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_12@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0112",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1200 Auto Blvd, Suite 12, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1982-05-13",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$60,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "22-7654309",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926812",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876555",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100012",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "auto/auto_contract_13.txt": [
+    {
+      "value": "AutoCompanyA13 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName13 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_13@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0113",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1300 Auto Blvd, Suite 13, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1983-05-14",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$65,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "23-7654308",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926813",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876556",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100013",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "AutoCompanyB13 LLC",
+      "type": "ORGANIZATION"
+    }
+  ],
+  "auto/auto_contract_14.txt": [
+    {
+      "value": "AutoCompanyA14 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName14 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_14@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0114",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1400 Auto Blvd, Suite 14, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1984-05-15",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$70,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "24-7654307",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926814",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876557",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100014",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "auto/auto_contract_15.txt": [
+    {
+      "value": "AutoCompanyA15 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName15 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_15@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0115",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1500 Auto Blvd, Suite 15, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1985-05-16",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$75,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "25-7654306",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926815",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876558",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100015",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "auto/auto_contract_16.txt": [
+    {
+      "value": "AutoCompanyA16 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName16 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_16@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0116",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1600 Auto Blvd, Suite 16, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1986-05-17",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$80,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "26-7654305",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926816",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876559",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100016",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "AutoCompanyB16 LLC",
+      "type": "ORGANIZATION"
+    }
+  ],
+  "auto/auto_contract_17.txt": [
+    {
+      "value": "AutoCompanyA17 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName17 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_17@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0117",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1700 Auto Blvd, Suite 17, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1987-05-18",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$85,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "27-7654304",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926817",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876560",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100017",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "auto/auto_contract_18.txt": [
+    {
+      "value": "AutoCompanyA18 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName18 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_18@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0118",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1800 Auto Blvd, Suite 18, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1988-05-19",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$90,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "28-7654303",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926818",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876561",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100018",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "auto/auto_contract_19.txt": [
+    {
+      "value": "AutoCompanyA19 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName19 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_19@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0119",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1900 Auto Blvd, Suite 19, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1989-05-20",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$95,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "29-7654302",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926819",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876562",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100019",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "AutoCompanyB19 LLC",
+      "type": "ORGANIZATION"
+    }
+  ],
+  "auto/auto_contract_20.txt": [
+    {
+      "value": "AutoCompanyA20 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName20 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_20@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0120",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "2000 Auto Blvd, Suite 20, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1990-05-21",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$100,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "30-7654301",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926820",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876563",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100020",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "auto/auto_contract_21.txt": [
+    {
+      "value": "AutoCompanyA21 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName21 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_21@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0121",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "2100 Auto Blvd, Suite 21, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1991-05-22",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$105,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "31-7654300",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926821",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876564",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100021",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "auto/auto_contract_22.txt": [
+    {
+      "value": "AutoCompanyA22 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName22 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_22@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0122",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "2200 Auto Blvd, Suite 22, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1992-05-23",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$110,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "32-7654299",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926822",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876565",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100022",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "AutoCompanyB22 LLC",
+      "type": "ORGANIZATION"
+    }
+  ],
+  "auto/auto_contract_23.txt": [
+    {
+      "value": "AutoCompanyA23 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName23 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_23@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0123",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "2300 Auto Blvd, Suite 23, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1993-05-24",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$115,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "33-7654298",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926823",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876566",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100023",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "auto/auto_contract_24.txt": [
+    {
+      "value": "AutoCompanyA24 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName24 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_24@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0124",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "2400 Auto Blvd, Suite 24, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1994-05-25",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$120,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "34-7654297",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926824",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876567",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100024",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "auto/auto_contract_25.txt": [
+    {
+      "value": "AutoCompanyA25 Inc.",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "AutoName25 Smith",
+      "type": "PERSON"
+    },
+    {
+      "value": "auto_email_25@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0125",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "2500 Auto Blvd, Suite 25, San Francisco, CA 94107",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1995-05-26",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$125,000.00",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "35-7654296",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926825",
+      "type": "ACCT"
+    },
+    {
+      "value": "DL9876568",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-100025",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "AutoCompanyB25 LLC",
+      "type": "ORGANIZATION"
+    }
+  ],
+  "manual/manual_contract_1.txt": [
+    {
+      "value": "ManualCompanyA1 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName1 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_1@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0201",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "100 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1961-10-02",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$10,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "21-6543209",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926901",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123457",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200001",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "ManualCompanyB1 Ltd",
+      "type": "ORGANIZATION"
+    }
+  ],
+  "manual/manual_contract_2.txt": [
+    {
+      "value": "ManualCompanyA2 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName2 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_2@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0202",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "200 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1962-10-03",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$20,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "22-6543208",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926902",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123458",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200002",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "manual/manual_contract_3.txt": [
+    {
+      "value": "ManualCompanyA3 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName3 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_3@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0203",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "300 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1963-10-04",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$30,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "23-6543207",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926903",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123459",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200003",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "manual/manual_contract_4.txt": [
+    {
+      "value": "ManualCompanyA4 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName4 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_4@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0204",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "400 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1964-10-05",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$40,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "24-6543206",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926904",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123460",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200004",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "ManualCompanyB4 Ltd",
+      "type": "ORGANIZATION"
+    }
+  ],
+  "manual/manual_contract_5.txt": [
+    {
+      "value": "ManualCompanyA5 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName5 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_5@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0205",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "500 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1965-10-06",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$50,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "25-6543205",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926905",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123461",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200005",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "manual/manual_contract_6.txt": [
+    {
+      "value": "ManualCompanyA6 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName6 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_6@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0206",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "600 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1966-10-07",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$60,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "26-6543204",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926906",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123462",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200006",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "manual/manual_contract_7.txt": [
+    {
+      "value": "ManualCompanyA7 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName7 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_7@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0207",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "700 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1967-10-08",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$70,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "27-6543203",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926907",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123463",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200007",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "ManualCompanyB7 Ltd",
+      "type": "ORGANIZATION"
+    }
+  ],
+  "manual/manual_contract_8.txt": [
+    {
+      "value": "ManualCompanyA8 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName8 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_8@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0208",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "800 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1968-10-09",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$80,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "28-6543202",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926908",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123464",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200008",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "manual/manual_contract_9.txt": [
+    {
+      "value": "ManualCompanyA9 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName9 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_9@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0209",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "900 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1969-10-10",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$90,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "29-6543201",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926909",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123465",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200009",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "manual/manual_contract_10.txt": [
+    {
+      "value": "ManualCompanyA10 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName10 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_10@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0210",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1000 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1970-10-11",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$100,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "30-6543200",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926910",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123466",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200010",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "ManualCompanyB10 Ltd",
+      "type": "ORGANIZATION"
+    }
+  ],
+  "manual/manual_contract_11.txt": [
+    {
+      "value": "ManualCompanyA11 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName11 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_11@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0211",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1100 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1971-10-12",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$110,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "31-6543199",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926911",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123467",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200011",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "manual/manual_contract_12.txt": [
+    {
+      "value": "ManualCompanyA12 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName12 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_12@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0212",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1200 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1972-10-13",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$120,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "32-6543198",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926912",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123468",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200012",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "manual/manual_contract_13.txt": [
+    {
+      "value": "ManualCompanyA13 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName13 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_13@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0213",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1300 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1973-10-14",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$130,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "33-6543197",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926913",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123469",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200013",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "ManualCompanyB13 Ltd",
+      "type": "ORGANIZATION"
+    }
+  ],
+  "manual/manual_contract_14.txt": [
+    {
+      "value": "ManualCompanyA14 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName14 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_14@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0214",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1400 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1974-10-15",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$140,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "34-6543196",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926914",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123470",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200014",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "manual/manual_contract_15.txt": [
+    {
+      "value": "ManualCompanyA15 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName15 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_15@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0215",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1500 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1975-10-16",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$150,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "35-6543195",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926915",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123471",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200015",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "manual/manual_contract_16.txt": [
+    {
+      "value": "ManualCompanyA16 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName16 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_16@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0216",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1600 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1976-10-17",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$160,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "36-6543194",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926916",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123472",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200016",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "ManualCompanyB16 Ltd",
+      "type": "ORGANIZATION"
+    }
+  ],
+  "manual/manual_contract_17.txt": [
+    {
+      "value": "ManualCompanyA17 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName17 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_17@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0217",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1700 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1977-10-18",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$170,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "37-6543193",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926917",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123473",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200017",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "manual/manual_contract_18.txt": [
+    {
+      "value": "ManualCompanyA18 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName18 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_18@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0218",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1800 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1978-10-19",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$180,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "38-6543192",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926918",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123474",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200018",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "manual/manual_contract_19.txt": [
+    {
+      "value": "ManualCompanyA19 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName19 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_19@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0219",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "1900 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1979-10-20",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$190,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "39-6543191",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926919",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123475",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200019",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "ManualCompanyB19 Ltd",
+      "type": "ORGANIZATION"
+    }
+  ],
+  "manual/manual_contract_20.txt": [
+    {
+      "value": "ManualCompanyA20 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName20 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_20@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0220",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "2000 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1980-10-21",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$200,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "40-6543190",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926920",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123476",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200020",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "manual/manual_contract_21.txt": [
+    {
+      "value": "ManualCompanyA21 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName21 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_21@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0221",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "2100 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1981-10-22",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$210,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "41-6543189",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926921",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123477",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200021",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "manual/manual_contract_22.txt": [
+    {
+      "value": "ManualCompanyA22 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName22 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_22@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0222",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "2200 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1982-10-23",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$220,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "42-6543188",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926922",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123478",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200022",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "ManualCompanyB22 Ltd",
+      "type": "ORGANIZATION"
+    }
+  ],
+  "manual/manual_contract_23.txt": [
+    {
+      "value": "ManualCompanyA23 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName23 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_23@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0223",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "2300 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1983-10-24",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$230,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "43-6543187",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926923",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123479",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200023",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "manual/manual_contract_24.txt": [
+    {
+      "value": "ManualCompanyA24 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName24 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_24@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0224",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "2400 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1984-10-25",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$240,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "44-6543186",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926924",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123480",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200024",
+      "type": "REG_NUMBER"
+    }
+  ],
+  "manual/manual_contract_25.txt": [
+    {
+      "value": "ManualCompanyA25 Corp",
+      "type": "ORGANIZATION"
+    },
+    {
+      "value": "ManualName25 Jones",
+      "type": "PERSON"
+    },
+    {
+      "value": "manual_email_25@example.com",
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "value": "555-0225",
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "value": "2500 Manual Road, Dover, DE 19901",
+      "type": "LOCATION"
+    },
+    {
+      "value": "1985-10-26",
+      "type": "DATE_TIME"
+    },
+    {
+      "value": "$250,000",
+      "type": "AMOUNT"
+    },
+    {
+      "value": "45-6543185",
+      "type": "TAX_ID"
+    },
+    {
+      "value": "GB29NWBK60161331926925",
+      "type": "ACCT"
+    },
+    {
+      "value": "PASSPORT123481",
+      "type": "ID_DOCUMENT"
+    },
+    {
+      "value": "REG-200025",
+      "type": "REG_NUMBER"
+    },
+    {
+      "value": "ManualCompanyB25 Ltd",
+      "type": "ORGANIZATION"
+    }
+  ]
+}

@@ -8,6 +8,8 @@ DEFAULT_CONFIG: dict[str, object] = {
         "tier": "balanced",
         "strip_pii": True,
         "log_ttl_days": 30,
+        "pii_threshold": 0.7,
+        "pii_encryption_key": "12345678901234561234567890123456",
     },
     "gateway": {
         "models": {
@@ -144,6 +146,8 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
         tier: str = "balanced"
         strip_pii: bool = True
         log_ttl_days: int = 30
+        pii_threshold: float = 0.7
+        pii_encryption_key: str = "12345678901234561234567890123456"
 
         @field_validator("tier")
         @classmethod
@@ -157,6 +161,20 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
         def _check_log_ttl(cls, v: int) -> int:
             if v < 1:
                 raise ValueError("must be ≥ 1")
+            return v
+
+        @field_validator("pii_threshold")
+        @classmethod
+        def _check_pii_threshold(cls, v: float) -> float:
+            if not (0.0 <= v <= 1.0):
+                raise ValueError("must be between 0.0 and 1.0")
+            return v
+
+        @field_validator("pii_encryption_key")
+        @classmethod
+        def _check_pii_encryption_key(cls, v: str) -> str:
+            if len(v.encode("utf-8")) not in (16, 24, 32):
+                raise ValueError("encryption key must be exactly 16, 24, or 32 bytes")
             return v
 
     class StorageConfig(BaseModel):

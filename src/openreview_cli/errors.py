@@ -10,3 +10,8 @@ def config_error(message: str) -> NoReturn:
 def cost_limit_error(message: str) -> NoReturn:
     print(f"Cost limit exceeded: {message}", file=sys.stderr)
     sys.exit(6)
+
+
+def pii_error(message: str) -> NoReturn:
+    print(f"PII error: {message}", file=sys.stderr)
+    sys.exit(9)
