@@ -7,7 +7,7 @@ from openreview_cli.pii.audit import build_audit, write_pii_audit
 from openreview_cli.pii.mapping import write_pii_mapping
 from openreview_cli.pii.models import PiiEntity, PiiError, PiiResult
 from openreview_cli.pii.placeholders import assign_placeholders
-from openreview_cli.pii.recognizers import CUSTOM_RECOGNIZERS
+from openreview_cli.pii.recognizers import get_custom_recognizers
 
 _TEMP_PH = "[TEMP_0]"  # ponytail: placeholder overwritten by assign_placeholders
 
@@ -40,7 +40,7 @@ class PiiEngine:
                 action="python -m spacy download en_core_web_lg",
             ) from err
 
-        for recognizer in CUSTOM_RECOGNIZERS:
+        for recognizer in get_custom_recognizers():
             self._analyzer.registry.add_recognizer(recognizer)
 
         return self._analyzer
