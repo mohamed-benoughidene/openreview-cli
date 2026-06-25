@@ -111,7 +111,7 @@ If the PII detection engine crashes or is unavailable (e.g., Presidio model not 
 - **FR-018**: System MUST write a PII audit file (`pii_audit.json`) alongside the mapping file, containing entity detection counts (per type), confidence ranges, processing duration, threshold used, and a count of non-English sections encountered. The audit file MUST NOT contain any actual PII values — only counts and metadata.
 - **FR-019**: PII stripping MUST process pages sequentially with a 50-character overlap buffer between consecutive pages (to catch entities that span page breaks). The system MUST display per-page progress: "Stripping PII... page 12/50".
 - **FR-020**: When a document is re-stripped (due to config change, threshold change, or explicit re-run), the system MUST process the original text from scratch, regenerate the mapping and audit files, and invalidate all downstream cached chunks (embeddings, comparisons). There is no incremental / append mode for stripping.
- 
+
 ### Key Entities
 
 - **PII Entity**: A detected piece of personally identifiable information, with attributes: entity type (name, email, amount, etc.), original value, start/end position in source text, and confidence score from the detection engine.

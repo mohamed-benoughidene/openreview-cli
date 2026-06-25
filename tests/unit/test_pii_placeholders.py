@@ -1,6 +1,5 @@
 """Unit tests for deterministic placeholder assignment."""
 
-
 from openreview_cli.pii.models import PiiEntity
 from openreview_cli.pii.placeholders import assign_placeholders
 

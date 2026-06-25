@@ -41,11 +41,15 @@ class TestPiiErrorHandling:
         from openreview_cli.pii.engine import PiiEngine
 
         clause = SimpleNamespace(
-            id="1", title="Non-English",
+            id="1",
+            title="Non-English",
             text="Contact info@foreign.com or call 555-9999.",
-            level=1, parent_id=None,
-            source_page=1, source_paragraph=None,
-            source_span=None, is_non_english=True,
+            level=1,
+            parent_id=None,
+            source_page=1,
+            source_paragraph=None,
+            source_span=None,
+            is_non_english=True,
         )
 
         engine = PiiEngine(threshold=0.0)

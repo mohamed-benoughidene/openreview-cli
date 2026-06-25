@@ -26,7 +26,7 @@ We have completed the Setup (Phase 1) and Foundational (Phase 2) tasks for the P
 ## Part 2 — Concepts: PII Mapping & Encryption
 
 ### 1. Pain
-Without PII stripping, raw contracts containing sensitive names, addresses, and transaction amounts would be sent to external LLMs. This violates privacy commitments. 
+Without PII stripping, raw contracts containing sensitive names, addresses, and transaction amounts would be sent to external LLMs. This violates privacy commitments.
 
 However, if we strip PII into placeholders like `[PARTY_A]` but don't save a mapping, the analysis output is unusable (the user will see "Party A must pay Party B" without knowing who they are). If we save this mapping in plain JSON, the raw PII remains readable by any process or user on the local machine, compromising security at rest.
 
@@ -41,7 +41,7 @@ from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
 
 # key must be exactly 16, 24, or 32 bytes (128, 192, or 256 bits)
-key = "1234567890123456" 
+key = "1234567890123456"
 anonymizer = AnonymizerEngine()
 
 # Encrypting "John Doe" using Presidio's built-in operator

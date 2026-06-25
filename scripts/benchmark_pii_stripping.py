@@ -17,9 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from openreview_cli.parsing.models import Clause, Document
 
-FIXTURES_DIR = (
-    Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "pii"
-)
+FIXTURES_DIR = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "pii"
 SEEDED_DIR = FIXTURES_DIR / "seeded_contracts"
 
 
@@ -40,9 +38,8 @@ def generate_50_page_benchmark() -> tuple[list[Clause], Document]:
             f"$1{page:02d},000.00",
             f"{10 + page % 89:02d}-{7654321 - page:07d}",
         ]
-        text = (
-            f"This is page {page} of the test document. "
-            + " ".join(f"The entity is {v}." for v in pii_items)
+        text = f"This is page {page} of the test document. " + " ".join(
+            f"The entity is {v}." for v in pii_items
         )
         clauses.append(
             Clause(
@@ -108,9 +105,7 @@ def main() -> None:
                     "file": str(fpath.relative_to(SEEDED_DIR)),
                     "text_size_kb": round(len(text) / 1024, 2),
                     "entity_count": len(entities),
-                    "entity_types": dict(
-                        sorted(type_counts.items(), key=lambda x: -x[1])
-                    ),
+                    "entity_types": dict(sorted(type_counts.items(), key=lambda x: -x[1])),
                     "duration_s": round(duration, 4),
                     "warnings": warnings,
                 }
@@ -145,9 +140,7 @@ def main() -> None:
     perf_result = {
         "test": "50-page synthetic document",
         "entity_count": len(entities_50),
-        "entity_types": dict(
-            sorted(type_counts_50.items(), key=lambda x: -x[1])
-        ),
+        "entity_types": dict(sorted(type_counts_50.items(), key=lambda x: -x[1])),
         "duration_s": round(duration_50, 4),
         "peak_memory_rss_mb": round(mem_mb_50, 1),
     }
@@ -163,18 +156,28 @@ def main() -> None:
     no_pii_path = SEEDED_DIR / "no_pii_document.txt"
     if no_pii_path.exists():
         text = no_pii_path.read_text()
-        nc = Clause(id="1", title="no_pii", text=text, level=1, parent_id=None,
-                     source_page=1, source_paragraph=None, source_span=(0, len(text)))
+        nc = Clause(
+            id="1",
+            title="no_pii",
+            text=text,
+            level=1,
+            parent_id=None,
+            source_page=1,
+            source_paragraph=None,
+            source_span=(0, len(text)),
+        )
         entities, w = engine.detect_all_pages([nc], threshold=0.7)
         print(f"  no_pii_document.txt: {len(entities)} entities, {w}", file=sys.stderr)
-        results.append({
-            "file": "seeded_contracts/no_pii_document.txt",
-            "text_size_kb": round(len(text) / 1024, 2),
-            "entity_count": len(entities),
-            "entity_types": {e.entity_type: 1 for e in entities},
-            "duration_s": 0.0,
-            "warnings": w,
-        })
+        results.append(
+            {
+                "file": "seeded_contracts/no_pii_document.txt",
+                "text_size_kb": round(len(text) / 1024, 2),
+                "entity_count": len(entities),
+                "entity_types": {e.entity_type: 1 for e in entities},
+                "duration_s": 0.0,
+                "warnings": w,
+            }
+        )
 
     engine.close()
 
@@ -196,9 +199,7 @@ def main() -> None:
         "failed": len(errors),
         "total_entities_detected": sum(r["entity_count"] for r in results),
         "total_duration_s": round(total_duration, 3),
-        "entity_type_distribution": dict(
-            sorted(global_type_counts.items(), key=lambda x: -x[1])
-        ),
+        "entity_type_distribution": dict(sorted(global_type_counts.items(), key=lambda x: -x[1])),
         "50_page_performance": perf_result,
         "peak_memory_rss_mb": round(mem_mb_50, 1),
         "peak_memory_tracemalloc_mb": round(peak_trace / 1024 / 1024, 1),

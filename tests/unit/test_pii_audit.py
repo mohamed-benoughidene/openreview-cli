@@ -33,7 +33,9 @@ def test_build_audit_aggregates_counts() -> None:
 
 
 def test_build_audit_metadata_counts() -> None:
-    audit = build_audit([], threshold=0.7, duration_seconds=0.5, page_count=1, metadata_fields_redacted=2)
+    audit = build_audit(
+        [], threshold=0.7, duration_seconds=0.5, page_count=1, metadata_fields_redacted=2
+    )
     assert audit.metadata_fields_redacted == 2
 
 

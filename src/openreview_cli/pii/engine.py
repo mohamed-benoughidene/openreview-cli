@@ -46,7 +46,11 @@ class PiiEngine:
         return self._analyzer
 
     def detect_on_page(
-        self, text: str, threshold: float | None = None, is_non_english: bool = False, clause_heading: str | None = None
+        self,
+        text: str,
+        threshold: float | None = None,
+        is_non_english: bool = False,
+        clause_heading: str | None = None,
     ) -> list[Any]:
         analyzer = self._ensure_analyzer()
         threshold = threshold if threshold is not None else self._threshold
@@ -99,11 +103,13 @@ class PiiEngine:
         sorted_clauses = sorted(
             clauses,
             key=lambda c: (
-                c.source_page or 0,
-                c.source_paragraph or 0,
-            )
-            if hasattr(c, "source_page")
-            else 0,
+                (
+                    c.source_page or 0,
+                    c.source_paragraph or 0,
+                )
+                if hasattr(c, "source_page")
+                else 0
+            ),
         )
 
         total_pages = page_count or max((c.source_page or 1 for c in sorted_clauses), default=1)
@@ -130,7 +136,9 @@ class PiiEngine:
                     )
 
                 entities = self.detect_on_page(
-                    combined, threshold=threshold, is_non_english=is_non_english,
+                    combined,
+                    threshold=threshold,
+                    is_non_english=is_non_english,
                     clause_heading=clause.title or "untitled",
                 )
 
@@ -141,9 +149,7 @@ class PiiEngine:
                         entity.end -= len(overlap_buffer)
                         all_entities.append(entity)
 
-                overlap_buffer = (
-                    clause.text[-50:] if len(clause.text) >= 50 else clause.text
-                )
+                overlap_buffer = clause.text[-50:] if len(clause.text) >= 50 else clause.text
 
                 clause_page = clause.source_page or (idx + 1)
                 if clause_page > current_page:
@@ -286,29 +292,27 @@ def strip_and_persist(
 
     if not strip_pii_enabled:
         return strip_pii(
-            clauses, document, threshold=threshold, strip_metadata=strip_metadata, strip_pii_enabled=False
+            clauses,
+            document,
+            threshold=threshold,
+            strip_metadata=strip_metadata,
+            strip_pii_enabled=False,
         )
 
-    result = strip_pii(
-        clauses, document, threshold=threshold, strip_metadata=strip_metadata
-    )
+    result = strip_pii(clauses, document, threshold=threshold, strip_metadata=strip_metadata)
 
     if result.mapping:
         review_dir = get_review_dir(review_id)
         write_pii_mapping(result.mapping, review_dir, encryption_key or "")
 
-        non_english_count = sum(
-            1 for e in result.entities if e.source == "regex"
-        )
+        non_english_count = sum(1 for e in result.entities if e.source == "regex")
 
         audit = build_audit(
             entities=result.entities,
             threshold=threshold,
             duration_seconds=result.duration_seconds,
             page_count=result.page_count,
-            metadata_fields_redacted=len(
-                [e for e in result.entities if e.source == "metadata"]
-            ),
+            metadata_fields_redacted=len([e for e in result.entities if e.source == "metadata"]),
             non_english_sections=non_english_count,
         )
         write_pii_audit(audit, review_dir)
