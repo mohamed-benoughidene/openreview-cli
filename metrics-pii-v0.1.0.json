@@ -1,0 +1,931 @@
+{
+  "summary": {
+    "timestamp": "2026-06-25T19:09:27Z",
+    "total_documents": 54,
+    "success": 54,
+    "failed": 0,
+    "total_entities_detected": 1730,
+    "total_duration_s": 21.286,
+    "entity_type_distribution": {
+      "PERSON": 1225,
+      "ORGANIZATION": 151,
+      "DATE_TIME": 72,
+      "LOCATION": 54,
+      "EMAIL_ADDRESS": 53,
+      "AMOUNT": 52,
+      "TAX_ID": 50,
+      "REG_NUMBER": 50,
+      "ID_DOCUMENT": 17,
+      "MEDICAL_LICENSE": 2,
+      "IBAN_CODE": 2,
+      "NRP": 2
+    },
+    "50_page_performance": {
+      "test": "50-page synthetic document",
+      "entity_count": 345,
+      "entity_types": {
+        "DATE_TIME": 75,
+        "EMAIL_ADDRESS": 50,
+        "AMOUNT": 50,
+        "TAX_ID": 50,
+        "LOCATION": 50,
+        "ORGANIZATION": 41,
+        "PERSON": 29
+      },
+      "duration_s": 3.8343,
+      "peak_memory_rss_mb": 1272.9
+    },
+    "peak_memory_rss_mb": 1272.9,
+    "peak_memory_tracemalloc_mb": 718.2
+  },
+  "results": [
+    {
+      "file": "auto/auto_contract_1.txt",
+      "text_size_kb": 0.41,
+      "entity_count": 15,
+      "entity_types": {
+        "ORGANIZATION": 6,
+        "DATE_TIME": 3,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1,
+        "ID_DOCUMENT": 1
+      },
+      "duration_s": 14.4824,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_10.txt",
+      "text_size_kb": 0.42,
+      "entity_count": 12,
+      "entity_types": {
+        "ORGANIZATION": 3,
+        "LOCATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "DATE_TIME": 1,
+        "PERSON": 1,
+        "ID_DOCUMENT": 1
+      },
+      "duration_s": 0.0883,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_11.txt",
+      "text_size_kb": 0.37,
+      "entity_count": 12,
+      "entity_types": {
+        "ORGANIZATION": 4,
+        "DATE_TIME": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1,
+        "ID_DOCUMENT": 1
+      },
+      "duration_s": 0.1072,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_12.txt",
+      "text_size_kb": 0.26,
+      "entity_count": 8,
+      "entity_types": {
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "REG_NUMBER": 1,
+        "TAX_ID": 1,
+        "PERSON": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0703,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_13.txt",
+      "text_size_kb": 0.42,
+      "entity_count": 13,
+      "entity_types": {
+        "ORGANIZATION": 4,
+        "DATE_TIME": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "PERSON": 1,
+        "LOCATION": 1,
+        "ID_DOCUMENT": 1
+      },
+      "duration_s": 0.1034,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_14.txt",
+      "text_size_kb": 0.37,
+      "entity_count": 11,
+      "entity_types": {
+        "ORGANIZATION": 3,
+        "DATE_TIME": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1,
+        "ID_DOCUMENT": 1
+      },
+      "duration_s": 0.0772,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_15.txt",
+      "text_size_kb": 0.26,
+      "entity_count": 8,
+      "entity_types": {
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "REG_NUMBER": 1,
+        "TAX_ID": 1,
+        "PERSON": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0737,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_16.txt",
+      "text_size_kb": 0.42,
+      "entity_count": 12,
+      "entity_types": {
+        "DATE_TIME": 2,
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "MEDICAL_LICENSE": 1,
+        "REG_NUMBER": 1,
+        "PERSON": 1,
+        "LOCATION": 1,
+        "ID_DOCUMENT": 1
+      },
+      "duration_s": 0.0924,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_17.txt",
+      "text_size_kb": 0.37,
+      "entity_count": 9,
+      "entity_types": {
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1,
+        "DATE_TIME": 1,
+        "ID_DOCUMENT": 1
+      },
+      "duration_s": 0.0979,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_18.txt",
+      "text_size_kb": 0.26,
+      "entity_count": 8,
+      "entity_types": {
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "REG_NUMBER": 1,
+        "TAX_ID": 1,
+        "PERSON": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0793,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_19.txt",
+      "text_size_kb": 0.42,
+      "entity_count": 12,
+      "entity_types": {
+        "ORGANIZATION": 3,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "IBAN_CODE": 1,
+        "REG_NUMBER": 1,
+        "DATE_TIME": 1,
+        "PERSON": 1,
+        "LOCATION": 1,
+        "ID_DOCUMENT": 1
+      },
+      "duration_s": 0.0988,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_2.txt",
+      "text_size_kb": 0.37,
+      "entity_count": 12,
+      "entity_types": {
+        "ORGANIZATION": 3,
+        "DATE_TIME": 3,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1,
+        "ID_DOCUMENT": 1
+      },
+      "duration_s": 0.0928,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_20.txt",
+      "text_size_kb": 0.37,
+      "entity_count": 12,
+      "entity_types": {
+        "ORGANIZATION": 3,
+        "DATE_TIME": 3,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1,
+        "ID_DOCUMENT": 1
+      },
+      "duration_s": 0.0836,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_21.txt",
+      "text_size_kb": 0.26,
+      "entity_count": 8,
+      "entity_types": {
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "REG_NUMBER": 1,
+        "TAX_ID": 1,
+        "PERSON": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0915,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_22.txt",
+      "text_size_kb": 0.42,
+      "entity_count": 13,
+      "entity_types": {
+        "ORGANIZATION": 4,
+        "DATE_TIME": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1,
+        "PERSON": 1,
+        "ID_DOCUMENT": 1
+      },
+      "duration_s": 0.1033,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_23.txt",
+      "text_size_kb": 0.37,
+      "entity_count": 10,
+      "entity_types": {
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1,
+        "DATE_TIME": 1,
+        "PERSON": 1,
+        "ID_DOCUMENT": 1
+      },
+      "duration_s": 0.0794,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_24.txt",
+      "text_size_kb": 0.26,
+      "entity_count": 10,
+      "entity_types": {
+        "ORGANIZATION": 3,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "REG_NUMBER": 1,
+        "TAX_ID": 1,
+        "PERSON": 1,
+        "LOCATION": 1,
+        "DATE_TIME": 1
+      },
+      "duration_s": 0.0773,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_25.txt",
+      "text_size_kb": 0.42,
+      "entity_count": 15,
+      "entity_types": {
+        "ORGANIZATION": 4,
+        "DATE_TIME": 3,
+        "LOCATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "PERSON": 1,
+        "ID_DOCUMENT": 1
+      },
+      "duration_s": 0.1033,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_3.txt",
+      "text_size_kb": 0.26,
+      "entity_count": 9,
+      "entity_types": {
+        "ORGANIZATION": 3,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "REG_NUMBER": 1,
+        "TAX_ID": 1,
+        "PERSON": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0848,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_4.txt",
+      "text_size_kb": 0.41,
+      "entity_count": 15,
+      "entity_types": {
+        "ORGANIZATION": 6,
+        "DATE_TIME": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "MEDICAL_LICENSE": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1,
+        "ID_DOCUMENT": 1
+      },
+      "duration_s": 0.0823,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_5.txt",
+      "text_size_kb": 0.37,
+      "entity_count": 11,
+      "entity_types": {
+        "ORGANIZATION": 4,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1,
+        "DATE_TIME": 1,
+        "ID_DOCUMENT": 1
+      },
+      "duration_s": 0.0799,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_6.txt",
+      "text_size_kb": 0.26,
+      "entity_count": 8,
+      "entity_types": {
+        "ORGANIZATION": 3,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "REG_NUMBER": 1,
+        "TAX_ID": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0708,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_7.txt",
+      "text_size_kb": 0.41,
+      "entity_count": 14,
+      "entity_types": {
+        "ORGANIZATION": 6,
+        "DATE_TIME": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1,
+        "ID_DOCUMENT": 1
+      },
+      "duration_s": 0.0958,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_8.txt",
+      "text_size_kb": 0.37,
+      "entity_count": 13,
+      "entity_types": {
+        "ORGANIZATION": 4,
+        "DATE_TIME": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1,
+        "PERSON": 1,
+        "ID_DOCUMENT": 1
+      },
+      "duration_s": 0.0959,
+      "warnings": []
+    },
+    {
+      "file": "auto/auto_contract_9.txt",
+      "text_size_kb": 0.26,
+      "entity_count": 8,
+      "entity_types": {
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "REG_NUMBER": 1,
+        "TAX_ID": 1,
+        "PERSON": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0686,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_1.txt",
+      "text_size_kb": 0.41,
+      "entity_count": 11,
+      "entity_types": {
+        "DATE_TIME": 2,
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "PERSON": 1,
+        "LOCATION": 1,
+        "NRP": 1
+      },
+      "duration_s": 0.0706,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_10.txt",
+      "text_size_kb": 0.41,
+      "entity_count": 11,
+      "entity_types": {
+        "ORGANIZATION": 3,
+        "DATE_TIME": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "PERSON": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0725,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_11.txt",
+      "text_size_kb": 0.37,
+      "entity_count": 10,
+      "entity_types": {
+        "ORGANIZATION": 3,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "PERSON": 1,
+        "LOCATION": 1,
+        "DATE_TIME": 1
+      },
+      "duration_s": 0.0873,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_12.txt",
+      "text_size_kb": 0.25,
+      "entity_count": 9,
+      "entity_types": {
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "REG_NUMBER": 1,
+        "TAX_ID": 1,
+        "PERSON": 1,
+        "LOCATION": 1,
+        "DATE_TIME": 1
+      },
+      "duration_s": 0.082,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_13.txt",
+      "text_size_kb": 0.41,
+      "entity_count": 10,
+      "entity_types": {
+        "DATE_TIME": 2,
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "PERSON": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0963,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_14.txt",
+      "text_size_kb": 0.37,
+      "entity_count": 10,
+      "entity_types": {
+        "ORGANIZATION": 3,
+        "DATE_TIME": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0888,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_15.txt",
+      "text_size_kb": 0.25,
+      "entity_count": 8,
+      "entity_types": {
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "REG_NUMBER": 1,
+        "TAX_ID": 1,
+        "PERSON": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0647,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_16.txt",
+      "text_size_kb": 0.41,
+      "entity_count": 12,
+      "entity_types": {
+        "ORGANIZATION": 3,
+        "DATE_TIME": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "IBAN_CODE": 1,
+        "REG_NUMBER": 1,
+        "PERSON": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0891,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_17.txt",
+      "text_size_kb": 0.37,
+      "entity_count": 11,
+      "entity_types": {
+        "ORGANIZATION": 4,
+        "DATE_TIME": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0845,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_18.txt",
+      "text_size_kb": 0.25,
+      "entity_count": 9,
+      "entity_types": {
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "REG_NUMBER": 1,
+        "TAX_ID": 1,
+        "PERSON": 1,
+        "LOCATION": 1,
+        "DATE_TIME": 1
+      },
+      "duration_s": 0.0642,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_19.txt",
+      "text_size_kb": 0.41,
+      "entity_count": 12,
+      "entity_types": {
+        "DATE_TIME": 3,
+        "ORGANIZATION": 3,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "PERSON": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.1,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_2.txt",
+      "text_size_kb": 0.36,
+      "entity_count": 10,
+      "entity_types": {
+        "ORGANIZATION": 3,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "PERSON": 1,
+        "LOCATION": 1,
+        "DATE_TIME": 1
+      },
+      "duration_s": 0.0822,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_20.txt",
+      "text_size_kb": 0.37,
+      "entity_count": 10,
+      "entity_types": {
+        "ORGANIZATION": 3,
+        "DATE_TIME": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0784,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_21.txt",
+      "text_size_kb": 0.25,
+      "entity_count": 9,
+      "entity_types": {
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "REG_NUMBER": 1,
+        "TAX_ID": 1,
+        "PERSON": 1,
+        "DATE_TIME": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0683,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_22.txt",
+      "text_size_kb": 0.41,
+      "entity_count": 11,
+      "entity_types": {
+        "ORGANIZATION": 3,
+        "DATE_TIME": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "PERSON": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0897,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_23.txt",
+      "text_size_kb": 0.37,
+      "entity_count": 10,
+      "entity_types": {
+        "ORGANIZATION": 3,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "PERSON": 1,
+        "LOCATION": 1,
+        "DATE_TIME": 1
+      },
+      "duration_s": 0.0848,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_24.txt",
+      "text_size_kb": 0.25,
+      "entity_count": 10,
+      "entity_types": {
+        "ORGANIZATION": 2,
+        "PERSON": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "REG_NUMBER": 1,
+        "TAX_ID": 1,
+        "LOCATION": 1,
+        "DATE_TIME": 1
+      },
+      "duration_s": 0.0733,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_25.txt",
+      "text_size_kb": 0.41,
+      "entity_count": 13,
+      "entity_types": {
+        "ORGANIZATION": 5,
+        "DATE_TIME": 3,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0924,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_3.txt",
+      "text_size_kb": 0.25,
+      "entity_count": 8,
+      "entity_types": {
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "REG_NUMBER": 1,
+        "TAX_ID": 1,
+        "PERSON": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0705,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_4.txt",
+      "text_size_kb": 0.41,
+      "entity_count": 10,
+      "entity_types": {
+        "DATE_TIME": 2,
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "PERSON": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0855,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_5.txt",
+      "text_size_kb": 0.36,
+      "entity_count": 12,
+      "entity_types": {
+        "ORGANIZATION": 3,
+        "PERSON": 2,
+        "DATE_TIME": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0872,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_6.txt",
+      "text_size_kb": 0.25,
+      "entity_count": 7,
+      "entity_types": {
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "REG_NUMBER": 1,
+        "TAX_ID": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0744,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_7.txt",
+      "text_size_kb": 0.41,
+      "entity_count": 11,
+      "entity_types": {
+        "DATE_TIME": 3,
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "PERSON": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0933,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_8.txt",
+      "text_size_kb": 0.36,
+      "entity_count": 10,
+      "entity_types": {
+        "ORGANIZATION": 4,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "TAX_ID": 1,
+        "REG_NUMBER": 1,
+        "LOCATION": 1,
+        "DATE_TIME": 1
+      },
+      "duration_s": 0.0696,
+      "warnings": []
+    },
+    {
+      "file": "manual/manual_contract_9.txt",
+      "text_size_kb": 0.25,
+      "entity_count": 8,
+      "entity_types": {
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 1,
+        "AMOUNT": 1,
+        "REG_NUMBER": 1,
+        "TAX_ID": 1,
+        "PERSON": 1,
+        "LOCATION": 1
+      },
+      "duration_s": 0.0652,
+      "warnings": []
+    },
+    {
+      "file": "multi_occurrence.txt",
+      "text_size_kb": 11.87,
+      "entity_count": 1186,
+      "entity_types": {
+        "PERSON": 1186
+      },
+      "duration_s": 2.4791,
+      "warnings": []
+    },
+    {
+      "file": "no_pii_document.txt",
+      "text_size_kb": 0.5,
+      "entity_count": 0,
+      "entity_types": {},
+      "duration_s": 0.087,
+      "warnings": []
+    },
+    {
+      "file": "non_english_mixed.txt",
+      "text_size_kb": 0.68,
+      "entity_count": 14,
+      "entity_types": {
+        "EMAIL_ADDRESS": 3,
+        "PERSON": 3,
+        "AMOUNT": 2,
+        "LOCATION": 2,
+        "ORGANIZATION": 2,
+        "NRP": 1,
+        "DATE_TIME": 1
+      },
+      "duration_s": 0.1252,
+      "warnings": []
+    },
+    {
+      "file": "seeded_contracts/no_pii_document.txt",
+      "text_size_kb": 0.5,
+      "entity_count": 0,
+      "entity_types": {},
+      "duration_s": 0.0,
+      "warnings": []
+    }
+  ],
+  "errors": []
+}
