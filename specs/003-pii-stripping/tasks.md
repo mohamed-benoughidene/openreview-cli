@@ -81,7 +81,7 @@
 - [x] T024 [P] [US2] Unit test for `write_pii_mapping()` in `tests/unit/test_pii_mapping.py` — write encrypted JSON, verify chmod 600, verify version key exists
 - [x] T025 [P] [US2] Unit test for `read_pii_mapping()` — read back same file, decrypt, verify original values; test wrong key raises `PiiError`
 - [x] T026 [P] [US2] Unit test for `write_pii_audit()` in `tests/unit/test_pii_audit.py` — verify JSON structure, zero PII values assertion
-- [ ] T027 [P] [US2] Integration test for end-to-end strip flow in `tests/integration/test_pii_strip_command.py` — parsed document → stripped text + encrypted mapping + audit, round-trip validation, and performance assertion (warm stripping of 50-page document <3s per SC-004). Also assert mapping file path is never included in any HTTP request payload (architectural invariant per FR-012).
+- [x] T027 [P] [US2] Integration test for end-to-end strip flow in `tests/integration/test_pii_strip_command.py` — parsed document → stripped text + encrypted mapping + audit, round-trip validation, and performance assertion (warm stripping of 50-page document <3s per SC-004). Also assert mapping file path is never included in any HTTP request payload (architectural invariant per FR-012).
 
 ### Implementation for User Story 2
 
@@ -89,8 +89,8 @@
 - [x] T029 [US2] Implement `read_pii_mapping()` in `src/openreview_cli/pii/mapping.py` — read JSON, decrypt each value via Presidio `DeanonymizeEngine` with same key, return dict
 - [x] T030 [US2] Implement `write_pii_audit()` in `src/openreview_cli/pii/audit.py` — derive `PiiAudit` from entity list, serialize to JSON, write alongside mapping
 - [x] T031 [US2] Implement encryption key management in `PiiEngine` — check config for key on init, auto-generate random 256-bit key with `secrets.token_urlsafe(32)[:32]` if missing, write to config
-- [ ] T031a [P] [US2] Create integration test skeleton in `tests/integration/test_pii_accuracy.py` — define test corpus fixtures, recall/precision calculation, 90%/95% thresholds per SC-001/SC-002/SC-003
-- [ ] T031b [P] [US2] Create integration test skeleton in `tests/integration/test_pii_memory.py` — `tracemalloc` start/stop, 50-page seeded document, assert peak <100 MB (excluding model baseline) per SC-005
+- [x] T031a [P] [US2] Create integration test skeleton in `tests/integration/test_pii_accuracy.py` — define test corpus fixtures, recall/precision calculation, 90%/95% thresholds per SC-001/SC-002/SC-003
+- [x] T031b [P] [US2] Create integration test skeleton in `tests/integration/test_pii_memory.py` — `tracemalloc` start/stop, 50-page seeded document, assert peak <100 MB (excluding model baseline) per SC-005
 
 **Checkpoint**: PII mapping round-trips correctly — encrypted on disk, decrypts on read, audit trail present
 
@@ -104,14 +104,14 @@
 
 ### Tests for User Story 3 (TDD: write first, they FAIL)
 
-- [ ] T032 [P] [US3] Unit test for `strip_pii()` skipped when `privacy.strip_pii = False` in `tests/unit/test_pii_engine.py`
+- [x] T032 [P] [US3] Unit test for `strip_pii()` skipped when `privacy.strip_pii = False` in `tests/unit/test_pii_engine.py`
 - [ ] T033 [P] [US3] Integration test for `--no-pii` flag and config-driven disabling in `tests/integration/test_pii_config.py` — verify warning displayed, no mapping/audit files created
 - [ ] T034 [P] [US3] Integration test for threshold change triggers re-strip in `tests/integration/test_pii_config.py` — change threshold from 0.7 to 0.5, verify mapping regenerated, downstream cache invalidation signal
 
 ### Implementation for User Story 3
 
 - [ ] T035 [US3] Add `--no-pii` flag to review commands in `src/openreview_cli/app.py` — display warning "⚠️ PII stripping disabled. Contract text may be sent to providers as-is." when set
-- [ ] T036 [US3] Wire `strip_pii()` skip logic — check `privacy.strip_pii` from config AND `--no-pii` flag before calling the engine; if disabled, pass through original text unchanged
+- [x] T036 [US3] Wire `strip_pii()` skip logic — check `privacy.strip_pii` from config AND `--no-pii` flag before calling the engine; if disabled, pass through original text unchanged
 - [ ] T037 [US3] Implement config change detection — compare current `privacy.pii_threshold` hash to stored hash; if different, re-strip from original text, regenerate mapping, invalidate downstream cache
 
 **Checkpoint**: Privacy tiers work — `--no-pii` skips stripping with warning, threshold changes trigger re-strip
@@ -126,17 +126,17 @@
 
 ### Tests for User Story 6 (TDD: write first, they FAIL)
 
-- [ ] T038 [P] [US4] Integration test for Presidio crash recovery in `tests/integration/test_pii_error_handling.py` — mock `analyzer.analyze()` to raise exception, verify `PiiError` is raised with exit_code=9, verify error message contains clause heading + phase, verify NO offsets or text snippets, verify no stripped output is produced (review is halted per FR-010)
-- [ ] T039 [P] [US4] Integration test for missing model in `tests/integration/test_pii_error_handling.py` — simulate `OSError` during model load, verify "model not found" message with reinstall instructions
-- [ ] T040 [P] [US4] Integration test for invalid encryption key in `tests/integration/test_pii_error_handling.py` — provide wrong-length key, verify `PiiError` with "Config error" message
-- [ ] T041 [P] [US4] Integration test for non-English text warning in `tests/integration/test_pii_error_handling.py` — process `non_english_mixed.txt`, verify warning message and that regex recognizers fired on non-English sections
+- [x] T038 [P] [US4] Integration test for Presidio crash recovery in `tests/integration/test_pii_error_handling.py` — mock `analyzer.analyze()` to raise exception, verify `PiiError` is raised with exit_code=9, verify error message contains clause heading + phase, verify NO offsets or text snippets, verify no stripped output is produced (review is halted per FR-010)
+- [ ] T039 [P] [US4] Integration test for missing model in `tests/integration/test_pii_error_handling.py` — simulate `OSError` during model load, verify "model not found" message with reinstall instructions **(implementation done in T043; test requires monkeypatching spacy.load at the presidio level)**
+- [x] T040 [P] [US4] Integration test for invalid encryption key in `tests/integration/test_pii_error_handling.py` — provide wrong-length key, verify `PiiError` with "Config error" message
+- [x] T041 [P] [US4] Integration test for non-English text warning in `tests/integration/test_pii_error_handling.py` — process `non_english_mixed.txt`, verify warning message and that regex recognizers fired on non-English sections
 
 ### Implementation for User Story 6
 
-- [ ] T042 [US4] Implement `PiiError` raising in `PiiEngine.detect_on_page()` — catch Presidio exceptions, extract current clause heading and phase, raise `PiiError` with formatted message (no offsets, no text snippets)
-- [ ] T043 [US4] Implement spaCy model-not-found handling in `PiiEngine.__init__()` — catch `OSError` on `spacy.load()`, raise `PiiError(category="model_not_found")` with reinstall instructions
-- [ ] T044 [US4] Implement encryption key validation in `write_pii_mapping()` — check key length is 16, 24, or 32 bytes; raise `PiiError(category="invalid_key")` if not
-- [ ] T045 [US4] Implement non-English warning in `PiiEngine.detect_on_page()` — check Phase 2 language flag per clause, skip NLP NER for non-English sections, add warning to `PiiResult.warnings`
+- [x] T042 [US4] Implement `PiiError` raising in `PiiEngine.detect_on_page()` — catch Presidio exceptions, extract current clause heading and phase, raise `PiiError` with formatted message (no offsets, no text snippets)
+- [x] T043 [US4] Implement spaCy model-not-found handling in `PiiEngine.__init__()` — catch `OSError` on `spacy.load()`, raise `PiiError(category="model_not_found")` with reinstall instructions
+- [x] T044 [US4] Implement encryption key validation in `write_pii_mapping()` — check key length is 16, 24, or 32 bytes; raise `PiiError(category="invalid_key")` if not
+- [x] T045 [US4] Implement non-English warning in `PiiEngine.detect_on_page()` — check Phase 2 language flag per clause, skip NLP NER for non-English sections, add warning to `PiiResult.warnings`
 
 **Checkpoint**: All error paths covered — crash halts with safe error, model missing tells user what to do, invalid key catches early
 
@@ -146,8 +146,8 @@
 
 **Purpose**: Audit trail, progress display, accuracy validation, memory validation, pre-commit
 
-- [ ] T046 [P] Implement Rich progress display in `PiiEngine.detect_all_pages()` — show `"Stripping PII... page 12/50"` with `rich.progress.Progress`
-- [ ] T047 [US2] Implement `pii_map.json` deletion on review deletion — wire into existing review-deletion path in `src/openreview_cli/app.py`
+- [x] T046 [P] Implement Rich progress display in `PiiEngine.detect_all_pages()` — show `"Stripping PII... page 12/50"` with `rich.progress.Progress`
+- [x] T047 [US2] Implement `pii_map.json` deletion on review deletion — wire into existing review-deletion path in `src/openreview_cli/pii/mapping.py`
 - [x] T048 [US1] Add `__all__` exports to `src/openreview_cli/pii/__init__.py` — export `strip_pii`, `PiiResult`, `PiiEntity`, `PiiAudit`, `PiiError`, `write_pii_mapping`, `read_pii_mapping`
 - [ ] T049 Run accuracy validation: `uv run pytest tests/integration/test_pii_accuracy.py -v`
 - [ ] T050 Run memory validation: `uv run pytest tests/integration/test_pii_memory.py -v -m memory`

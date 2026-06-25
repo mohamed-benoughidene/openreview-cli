@@ -46,7 +46,7 @@ class PiiEngine:
         return self._analyzer
 
     def detect_on_page(
-        self, text: str, threshold: float | None = None, is_non_english: bool = False
+        self, text: str, threshold: float | None = None, is_non_english: bool = False, clause_heading: str | None = None
     ) -> list[Any]:
         analyzer = self._ensure_analyzer()
         threshold = threshold if threshold is not None else self._threshold
@@ -57,13 +57,18 @@ class PiiEngine:
                 language="en",
                 score_threshold=threshold,
             )
+
+            if is_non_english:
+                results = [r for r in results if r.score >= 1.0]
         except Exception as exc:
+            phase = "regex phase" if is_non_english else "NER phase"
+            heading = clause_heading or "Unknown"
             raise PiiError(
                 exit_code=9,
                 category="engine_crash",
-                clause_heading=None,
-                phase="NER phase" if not is_non_english else "regex phase",
-                message="PII detection failed (NER phase). Run with --no-pii to skip stripping. Report this bug.",
+                clause_heading=heading,
+                phase=phase,
+                message=f"PII detection failed while processing clause '{heading}' ({phase}). Run with --no-pii to skip stripping. Report this bug.",
                 action="Run with --no-pii to skip stripping. Report this bug.",
             ) from exc
 
@@ -125,7 +130,8 @@ class PiiEngine:
                     )
 
                 entities = self.detect_on_page(
-                    combined, threshold=threshold, is_non_english=is_non_english
+                    combined, threshold=threshold, is_non_english=is_non_english,
+                    clause_heading=clause.title or "untitled",
                 )
 
                 # Filter out entities that fall entirely within the overlap region
@@ -197,6 +203,7 @@ def strip_pii(
     document: Any,
     *,
     threshold: float = 0.7,
+    strip_pii_enabled: bool = True,
     strip_metadata: bool = True,
     engine: PiiEngine | None = None,
 ) -> PiiResult:
@@ -204,6 +211,16 @@ def strip_pii(
 
     Returns a PiiResult with the stripped text, mapping, and audit data.
     """
+    if not strip_pii_enabled:
+        return PiiResult(
+            stripped_text=" ".join(c.text for c in clauses),
+            mapping={},
+            entities=[],
+            page_count=len(clauses),
+            duration_seconds=0.0,
+            warnings=["PII stripping disabled. Contract text may be sent to providers as-is."],
+        )
+
     start_time = time.perf_counter()
 
     own_engine = engine is None
@@ -260,11 +277,17 @@ def strip_and_persist(
     review_id: str,
     *,
     threshold: float = 0.7,
+    strip_pii_enabled: bool = True,
     encryption_key: str | None = None,
     strip_metadata: bool = True,
 ) -> PiiResult:
     """Strip PII and persist the mapping + audit to the review directory."""
     from openreview_cli.config.paths import get_review_dir
+
+    if not strip_pii_enabled:
+        return strip_pii(
+            clauses, document, threshold=threshold, strip_metadata=strip_metadata, strip_pii_enabled=False
+        )
 
     result = strip_pii(
         clauses, document, threshold=threshold, strip_metadata=strip_metadata

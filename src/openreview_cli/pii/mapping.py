@@ -126,4 +126,12 @@ def ensure_encryption_key(config: dict[str, Any], config_path: Path) -> str:
     return key
 
 
-__all__ = ["ensure_encryption_key", "read_pii_mapping", "write_pii_mapping"]
+def delete_pii_mapping(review_dir: Path) -> None:
+    """Delete PII mapping and audit files for a review."""
+    for name in ("pii_map.json", "pii_audit.json"):
+        path = review_dir / name
+        if path.exists():
+            path.unlink()
+
+
+__all__ = ["delete_pii_mapping", "ensure_encryption_key", "read_pii_mapping", "write_pii_mapping"]
