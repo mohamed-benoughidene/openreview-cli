@@ -9,20 +9,15 @@ from openreview_cli.pii.models import PiiEntity, PiiError, PiiResult
 from openreview_cli.pii.placeholders import assign_placeholders
 from openreview_cli.pii.recognizers import CUSTOM_RECOGNIZERS
 
-# Temporary placeholder valid under PiiEntity's PLACEHOLDER_REGEX;
-# overwritten by assign_placeholders before any consumer sees it.
-_TEMP_PH = "[TEMP_0]"
+_TEMP_PH = "[TEMP_0]"  # ponytail: placeholder overwritten by assign_placeholders
 
 
 class PiiEngine:
     """PII detection and stripping engine wrapping Presidio analyzer + anonymizer."""
 
-    def __init__(self, threshold: float = 0.7, encryption_key: str | None = None):
+    def __init__(self, threshold: float = 0.7):
         self._threshold = threshold
-        self._encryption_key = encryption_key
         self._analyzer: Any = None
-        self._anonymizer = None
-        self._model_loaded = False
 
     def _ensure_analyzer(self) -> Any:
         if self._analyzer is not None:
@@ -48,7 +43,6 @@ class PiiEngine:
         for recognizer in CUSTOM_RECOGNIZERS:
             self._analyzer.registry.add_recognizer(recognizer)
 
-        self._model_loaded = True
         return self._analyzer
 
     def detect_on_page(
@@ -151,7 +145,6 @@ class PiiEngine:
 
     def close(self) -> None:
         self._analyzer = None
-        self._model_loaded = False
 
 
 def _redact_metadata(document: Any) -> list[Any]:

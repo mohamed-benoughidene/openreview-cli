@@ -21,8 +21,7 @@ def test_write_mapping_creates_file(tmp_path: Path) -> None:
 def test_write_mapping_chmod_600(tmp_path: Path) -> None:
     mapping = {"PARTY_A": "ABC Corp."}
     path = write_pii_mapping(mapping, tmp_path, _ENCRYPTION_KEY)
-    perms = path.stat().st_mode & 0o777
-    assert perms == 0o600 or perms == 0o600
+    assert path.stat().st_mode & 0o777 == 0o600
 
 
 def test_write_mapping_contains_version_key(tmp_path: Path) -> None:
