@@ -47,6 +47,9 @@ class Document:
     clause_count: int
     parse_duration_seconds: float
     warnings: list[str]
+    author: str | None = None
+    title: str | None = None
+    company: str | None = None
 
     def __post_init__(self) -> None:
         if self.format not in ("pdf", "docx"):

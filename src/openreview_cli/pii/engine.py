@@ -83,7 +83,7 @@ class PiiEngine:
         return entities
 
     def detect_all_pages(
-        self, clauses: list[Any], threshold: float | None = None
+        self, clauses: list[Any], threshold: float | None = None, page_count: int | None = None
     ) -> tuple[list[Any], list[Any]]:
         threshold = threshold if threshold is not None else self._threshold
         all_entities: list[Any] = []
@@ -101,6 +101,8 @@ class PiiEngine:
             else 0,
         )
 
+        total_pages = page_count or max((c.source_page or 1 for c in sorted_clauses), default=1)
+
         overlap_buffer = ""
         with Progress(
             TextColumn("[bold]{task.description}"),
@@ -108,8 +110,9 @@ class PiiEngine:
             TextColumn("{task.completed}/{task.total} pages"),
             transient=True,
         ) as progress:
-            task = progress.add_task("Stripping PII...", total=len(sorted_clauses))
+            task = progress.add_task("Stripping PII...", total=total_pages)
 
+            current_page = 0
             for idx, clause in enumerate(sorted_clauses):
                 combined = overlap_buffer + clause.text
                 is_non_english = getattr(clause, "is_non_english", False)
@@ -135,11 +138,16 @@ class PiiEngine:
                 overlap_buffer = (
                     clause.text[-50:] if len(clause.text) >= 50 else clause.text
                 )
-                progress.update(
-                    task,
-                    description=f"Stripping PII... clause {idx + 1}/{len(sorted_clauses)}",
-                )
-                progress.advance(task)
+
+                clause_page = clause.source_page or (idx + 1)
+                if clause_page > current_page:
+                    current_page = clause_page
+                    progress.update(task, completed=current_page - 1)
+                    progress.update(
+                        task,
+                        description=f"Stripping PII... page {current_page}/{total_pages}",
+                    )
+                    progress.advance(task)
 
         return all_entities, warnings
 
@@ -148,18 +156,10 @@ class PiiEngine:
 
 
 def _redact_metadata(document: Any) -> list[Any]:
-    """Redact metadata fields from a document.
-
-    Returns a list of PiiEntity objects for metadata fields that should
-    be stripped from the document text.
-
-    ponytail: handles only FILENAME today; AUTHOR/TITLE/COMPANY added
-    when metadata fields are collected per-field rather than in body text.
-    """
+    """Redact metadata fields from a document."""
     from pathlib import Path
 
     entities = []
-
     source_path = Path(document.source_path)
     filename = source_path.name
 
@@ -173,6 +173,21 @@ def _redact_metadata(document: Any) -> list[Any]:
         source="metadata",
     )
     entities.append(metadata_entity)
+
+    for field, entity_type in [("author", "AUTHOR"), ("title", "TITLE"), ("company", "COMPANY")]:
+        value = getattr(document, field, None)
+        if value:
+            entities.append(
+                PiiEntity(
+                    entity_type=entity_type,
+                    original_value=str(value),
+                    start=0,
+                    end=len(str(value)),
+                    score=1.0,
+                    placeholder=_TEMP_PH,
+                    source="metadata",
+                )
+            )
 
     return entities
 
@@ -203,7 +218,9 @@ def strip_pii(
 
         # Page-sequential detection
         assert engine is not None
-        all_entities, warnings = engine.detect_all_pages(clauses, threshold=threshold)
+        all_entities, warnings = engine.detect_all_pages(
+            clauses, threshold=threshold, page_count=getattr(document, "page_count", None)
+        )
 
         # Placeholder assignment
         mapping, all_entities_with_placeholders = assign_placeholders(

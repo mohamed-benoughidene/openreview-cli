@@ -1,7 +1,9 @@
 """Encrypted PII mapping I/O."""
 
 import json
+import secrets
 from pathlib import Path
+from typing import Any
 
 from openreview_cli.pii.models import PiiError
 
@@ -99,4 +101,29 @@ def _decrypt_value(encrypted: str, key: str) -> str:
         return result.text
 
 
-__all__ = ["read_pii_mapping", "write_pii_mapping"]
+def ensure_encryption_key(config: dict[str, Any], config_path: Path) -> str:
+    """Get or generate a PII encryption key.
+
+    Checks config for ``privacy.pii_encryption_key``. If missing or
+    invalid, generates a random 256-bit key, writes it to config, and
+    returns it.
+    """
+    if "privacy" in config and "pii_encryption_key" in config["privacy"]:
+        existing = str(config["privacy"]["pii_encryption_key"])
+        try:
+            _validate_key(existing)
+        except PiiError:
+            pass
+        else:
+            return existing
+
+    key = secrets.token_urlsafe(32)[:32]
+    _validate_key(key)
+
+    from openreview_cli.config.loader import set_config_value
+
+    set_config_value(config_path, "privacy.pii_encryption_key", key)
+    return key
+
+
+__all__ = ["ensure_encryption_key", "read_pii_mapping", "write_pii_mapping"]

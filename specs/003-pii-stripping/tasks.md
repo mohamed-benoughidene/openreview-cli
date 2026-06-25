@@ -231,3 +231,13 @@ Task: "src/openreview_cli/pii/__init__.py"  ← after engine
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently
 - Avoid: vague tasks, same file conflicts, cross-story dependencies that break independence
+
+---
+
+## Phase 8: Convergence
+
+**Purpose**: Close gaps between spec requirements and current implementation
+
+- [x] T052 [FR-017] Complete metadata redaction — implement AUTHOR, TITLE, COMPANY placeholders in `_redact_metadata()` (partial — only FILENAME currently handled)
+- [x] T053 [T031] Implement encryption key auto-generation — check `privacy.pii_encryption_key` in config, auto-generate with `secrets.token_urlsafe(32)[:32]` if missing, write back to config (partial — validation exists, generation missing)
+- [x] T054 [T046] Refine Rich progress display vocabulary from "clause" to "page" in `PiiEngine.detect_all_pages()` to match spec FR-019 wording (partial)
