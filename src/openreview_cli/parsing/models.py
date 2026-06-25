@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
-from pathlib import Path
+from enum import StrEnum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
-class ParseErrorCategory(str, Enum):
+class ParseErrorCategory(StrEnum):
     file_not_found = "file_not_found"
     unsupported_format = "unsupported_format"
     corrupt = "corrupt"
@@ -53,7 +56,9 @@ class Document:
         if self.clause_count < 0:
             raise ValueError(f"clause_count must be >= 0, got {self.clause_count}")
         if self.parse_duration_seconds < 0:
-            raise ValueError(f"parse_duration_seconds must be >= 0, got {self.parse_duration_seconds}")
+            raise ValueError(
+                f"parse_duration_seconds must be >= 0, got {self.parse_duration_seconds}"
+            )
 
 
 @dataclass
@@ -69,7 +74,7 @@ class ParseError(Exception):
         try:
             ParseErrorCategory(self.category)
         except ValueError:
-            raise ValueError(f"invalid category: {self.category}")
+            raise ValueError(f"invalid category: {self.category}") from None
         if not self.message:
             raise ValueError("message must be non-empty")
         if not self.action:

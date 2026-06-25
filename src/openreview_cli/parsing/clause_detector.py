@@ -1,5 +1,5 @@
 import re
-from typing import Any, Iterator
+from typing import Any
 
 from openreview_cli.parsing.models import Clause
 
@@ -10,6 +10,7 @@ def _get_nupunkt() -> Any:
     global _NUPUNKT
     if _NUPUNKT is None:
         from nupunkt import sent_spans
+
         _NUPUNKT = sent_spans
     return _NUPUNKT
 
@@ -20,13 +21,13 @@ def nupunkt_detect_boundaries(text: str) -> list[Any]:
 
 
 _NUMBERING_PATTERNS = [
-    (r'^\s*(?:ARTICLE|Article|SECTION|Section)\s+(?:[IVXLCDM]+|\d+)[:\s.]', 0),
-    (r'^\s*(?:Clause|clause)\s+\d+', 0),
-    (r'^\s*\d+\.(?:\d+\.)*\s', 1),
-    (r'^\s*Section\s+\d+\.\d+', 1),
-    (r'^\s*\([a-z]\)', 2),
-    (r'^\s*\(\d+\)', 2),
-    (r'^\s*\([ivxlcdm]+\)', 2),
+    (r"^\s*(?:ARTICLE|Article|SECTION|Section)\s+(?:[IVXLCDM]+|\d+)[:\s.]", 0),
+    (r"^\s*(?:Clause|clause)\s+\d+", 0),
+    (r"^\s*\d+\.(?:\d+\.)*\s", 1),
+    (r"^\s*Section\s+\d+\.\d+", 1),
+    (r"^\s*\([a-z]\)", 2),
+    (r"^\s*\(\d+\)", 2),
+    (r"^\s*\([ivxlcdm]+\)", 2),
 ]
 
 
@@ -40,7 +41,7 @@ def detect_numbering_pattern(line: str) -> dict[str, Any] | None:
 def detect_clause_starts(text: str) -> list[tuple[int, dict[str, Any]]]:
     starts: list[tuple[int, dict[str, Any]]] = []
     for match in re.finditer(
-        r'(?m)^\s*(?:(?:ARTICLE|Article|SECTION|Section)\s+(?:[IVXLCDM]+|\d+)[:\s.]|(?:Clause|clause)\s+\d+|\d+\.(?:\d+\.)*\s|Section\s+\d+\.\d+|\([a-z]\)|\(\d+\)|\([ivxlcdm]+\))',
+        r"(?m)^\s*(?:(?:ARTICLE|Article|SECTION|Section)\s+(?:[IVXLCDM]+|\d+)[:\s.]|(?:Clause|clause)\s+\d+|\d+\.(?:\d+\.)*\s|Section\s+\d+\.\d+|\([a-z]\)|\(\d+\)|\([ivxlcdm]+\))",
         text,
     ):
         starts.append((match.start(), {"level": 1, "pattern": "auto"}))
@@ -69,7 +70,7 @@ def detect_non_english(text: str) -> str | None:
 
 
 def detect_tofu(text: str) -> bool:
-    return "\uFFFD" in text
+    return "\ufffd" in text
 
 
 def build_hierarchy(

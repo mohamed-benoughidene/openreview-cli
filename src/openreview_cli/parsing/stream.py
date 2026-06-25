@@ -1,5 +1,5 @@
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 from openreview_cli.parsing.models import Clause, Document, ParseError
 
@@ -54,9 +54,11 @@ def stream_clauses(path: str | Path) -> Iterator[Clause]:
 
     if ext == ".pdf":
         from openreview_cli.parsing.pdf_parser import PdfParser
+
         yield from PdfParser(path).parse()
     elif ext == ".docx":
         from openreview_cli.parsing.docx_parser import DocxParser
+
         yield from DocxParser(path).parse()
     else:
         raise ParseError(
@@ -69,6 +71,7 @@ def stream_clauses(path: str | Path) -> Iterator[Clause]:
 
 def parse_document(path: str | Path) -> tuple[Document, list[Clause]]:
     import time
+
     start = time.perf_counter()
     path = Path(path)
     clauses = list(stream_clauses(path))
@@ -106,17 +109,20 @@ def format_text(clauses: list[Clause], doc: Document | None = None) -> str:
 
 def format_json(clauses: list[Clause]) -> str:
     import json
+
     data = []
     for c in clauses:
-        data.append({
-            "id": c.id,
-            "title": c.title,
-            "text": c.text,
-            "level": c.level,
-            "parent_id": c.parent_id,
-            "source_page": c.source_page,
-            "source_paragraph": c.source_paragraph,
-        })
+        data.append(
+            {
+                "id": c.id,
+                "title": c.title,
+                "text": c.text,
+                "level": c.level,
+                "parent_id": c.parent_id,
+                "source_page": c.source_page,
+                "source_paragraph": c.source_paragraph,
+            }
+        )
     return json.dumps(data, indent=2, ensure_ascii=False)
 
 

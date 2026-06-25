@@ -120,7 +120,7 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
         @classmethod
         def _check_on_failure(cls, v: str) -> str:
             if v not in _valid_on_failure:
-                raise ValueError(f"must be one of: {', '.join(sorted(_valid_on_failure))}")  # noqa: TRY003
+                raise ValueError(f"must be one of: {', '.join(sorted(_valid_on_failure))}")
             return v
 
     class CostLimits(BaseModel):
@@ -131,7 +131,7 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
         @classmethod
         def _check_positive(cls, v: int) -> int:
             if v < 1:
-                raise ValueError("must be ≥ 1")  # noqa: TRY003
+                raise ValueError("must be ≥ 1")
             return v
 
     class GatewayConfig(BaseModel):
@@ -149,14 +149,14 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
         @classmethod
         def _check_tier(cls, v: str) -> str:
             if v not in _valid_tiers:
-                raise ValueError(f"must be one of: {', '.join(sorted(_valid_tiers))}")  # noqa: TRY003
+                raise ValueError(f"must be one of: {', '.join(sorted(_valid_tiers))}")
             return v
 
         @field_validator("log_ttl_days")
         @classmethod
         def _check_log_ttl(cls, v: int) -> int:
             if v < 1:
-                raise ValueError("must be ≥ 1")  # noqa: TRY003
+                raise ValueError("must be ≥ 1")
             return v
 
     class StorageConfig(BaseModel):
@@ -167,7 +167,7 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
         @classmethod
         def _check_logs_keep(cls, v: int) -> int:
             if v < 1:
-                raise ValueError("must be ≥ 1")  # noqa: TRY003
+                raise ValueError("must be ≥ 1")
             return v
 
     class OpenReviewConfig(BaseModel):
@@ -196,7 +196,7 @@ def _deep_get(d: dict[str, Any], key: str) -> Any:
     value: Any = d
     for k in keys:
         if not isinstance(value, dict) or k not in value:
-            raise KeyError(f"Unknown config key: {key}")  # noqa: TRY003
+            raise KeyError(f"Unknown config key: {key}")
         value = value[k]
     return value
 

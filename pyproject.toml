@@ -61,12 +61,16 @@ ignore = [
     "PLC0415",  # lazy imports per constitution Principle III
     "PLR0913",
     "PLR2004",
+    "TRY003",   # descriptive exception messages are fine in CLI tools
 ]
 unfixable = ["B", "SIM"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402", "F401"]
-"tests/**" = ["PLR0913", "PLR2004", "S101"]
+"tests/**" = ["PLR0913", "PLR2004", "S101", "PLR0912", "PLR0915", "TC001", "TC003", "RUF012", "RUF059", "SIM115", "N806", "PLW2901", "PLW1510", "F841"]
+"scripts/**" = ["PLR0912", "PLR0915", "RUF059"]
+"src/openreview_cli/parsing/pdf_parser.py" = ["PLR0912", "PLR0915"]
+"src/openreview_cli/parsing/clause_detector.py" = ["PLW0603"]
 
 [tool.ruff.format]
 quote-style = "double"

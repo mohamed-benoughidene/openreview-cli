@@ -17,4 +17,6 @@ def test_clause_boundary_accuracy() -> None:
 
     for fixture_path, expected_min in fixtures:
         clauses = list(stream_clauses(fixture_path))
-        assert len(clauses) >= expected_min, f"{fixture_path.name}: expected >= {expected_min} clauses, got {len(clauses)}"
+        assert len(clauses) >= expected_min, (
+            f"{fixture_path.name}: expected >= {expected_min} clauses, got {len(clauses)}"
+        )

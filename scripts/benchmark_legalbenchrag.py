@@ -146,27 +146,32 @@ def main() -> None:
             acc = accuracy_for_file(file_to_tests.get(relpath, []), clauses, relpath)
             page_count = max((c.source_page or 0) for c in clauses) + 1 if clauses else 0
 
-            results.append({
-                "file": relpath,
-                "text_size_kb": round(len(text) / 1024, 1),
-                "page_count": page_count,
-                "clause_count": len(clauses),
-                "parse_duration_s": round(duration, 4),
-                "peak_memory_mb": round(mem_mb, 1),
-                "chars_per_sec": round(len(text) / duration, 0) if duration > 0 else 0,
-                **{f"warn_{k}": v for k, v in w.items()},
-                **{f"acc_{k}": v for k, v in acc.items()},
-            })
+            results.append(
+                {
+                    "file": relpath,
+                    "text_size_kb": round(len(text) / 1024, 1),
+                    "page_count": page_count,
+                    "clause_count": len(clauses),
+                    "parse_duration_s": round(duration, 4),
+                    "peak_memory_mb": round(mem_mb, 1),
+                    "chars_per_sec": round(len(text) / duration, 0) if duration > 0 else 0,
+                    **{f"warn_{k}": v for k, v in w.items()},
+                    **{f"acc_{k}": v for k, v in acc.items()},
+                }
+            )
 
             if i % 100 == 0:
-                print(f"  [{i}/{len(text_files)}] {relpath} — {len(clauses)} cls in {duration:.2f}s", file=sys.stderr)
+                print(
+                    f"  [{i}/{len(text_files)}] {relpath} — {len(clauses)} cls in {duration:.2f}s",
+                    file=sys.stderr,
+                )
 
         except Exception as e:
             errors.append({"file": relpath, "error": str(e), "category": type(e).__name__})
             failed += 1
             print(f"  [ERR] {relpath}: {e}", file=sys.stderr)
 
-    current_mem, peak_trace = tracemalloc.get_traced_memory()
+    _current_mem, peak_trace = tracemalloc.get_traced_memory()
     tracemalloc.stop()
 
     acc_entries = [r for r in results if r.get("acc_total", 0) > 0]
@@ -183,7 +188,9 @@ def main() -> None:
         "total_duration_s": round(total_duration, 3),
         "avg_clauses_per_file": round(total_clauses / success, 1),
         "avg_duration_s": round(total_duration / success, 4),
-        "avg_chars_per_sec": round(sum(r["text_size_kb"] * 1024 for r in results) / total_duration, 0),
+        "avg_chars_per_sec": round(
+            sum(r["text_size_kb"] * 1024 for r in results) / total_duration, 0
+        ),
         "peak_memory_rss_mb": round(peak_mem, 1),
         "peak_memory_tracemalloc_mb": round(peak_trace / 1024 / 1024, 1),
         "warn_non_english_files": warn_counts["non_english"],
@@ -197,7 +204,9 @@ def main() -> None:
             "covered_queries": acc_covered,
             "overall_coverage": round(acc_covered / acc_total, 4) if acc_total > 0 else 0,
             "avg_file_coverage": round(
-                sum(r["acc_coverage"] for r in acc_entries if r["acc_coverage"] is not None) / len(acc_entries), 4
+                sum(r["acc_coverage"] for r in acc_entries if r["acc_coverage"] is not None)
+                / len(acc_entries),
+                4,
             ),
         }
 
@@ -208,7 +217,9 @@ def main() -> None:
 
     out_path = Path("metrics-v0.1.0.json")
     with open(out_path, "w") as f:
-        json.dump({"summary": summary, "results": results, "errors": errors}, f, indent=2, default=str)
+        json.dump(
+            {"summary": summary, "results": results, "errors": errors}, f, indent=2, default=str
+        )
 
     print(f"\nOutput: {out_path.resolve()}")
     print(json.dumps(summary, indent=2))

@@ -1,5 +1,6 @@
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 from openreview_cli.parsing.models import Clause
 
@@ -40,11 +41,20 @@ class DocxParser:
             doc = Document(str(self.path))
         except Exception:
             from openreview_cli.parsing.models import ParseError
-            raise ParseError(exit_code=8, category="corrupt", message="The file appears to be corrupt or truncated.", action="Provide a valid DOCX file.")
 
-        from openreview_cli.parsing.clause_detector import build_hierarchy, detect_clause_starts, nupunkt_detect_boundaries
+            raise ParseError(
+                exit_code=8,
+                category="corrupt",
+                message="The file appears to be corrupt or truncated.",
+                action="Provide a valid DOCX file.",
+            ) from None
 
-        tracked = detect_tracked_changes(doc)
+        from openreview_cli.parsing.clause_detector import (
+            detect_clause_starts,
+            nupunkt_detect_boundaries,
+        )
+
+        detect_tracked_changes(doc)
         paras = list(skip_embedded_images(doc.paragraphs))
 
         all_text = ""
@@ -63,7 +73,7 @@ class DocxParser:
                 para_offsets.append((offset, text, para_idx))
                 all_text += text + "\n"
 
-            boundaries = nupunkt_detect_boundaries(all_text)
+            nupunkt_detect_boundaries(all_text)
             clause_starts = detect_clause_starts(all_text)
 
             if not clause_starts and not heading_boundaries:

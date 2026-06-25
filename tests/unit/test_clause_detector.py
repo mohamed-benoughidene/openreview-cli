@@ -1,5 +1,3 @@
-import pytest
-
 from openreview_cli.parsing.clause_detector import (
     build_hierarchy,
     detect_clause_starts,

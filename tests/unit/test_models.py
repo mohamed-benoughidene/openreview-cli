@@ -38,19 +38,55 @@ class TestClause:
 
     def test_empty_id_raises(self) -> None:
         with pytest.raises(ValueError, match="non-empty"):
-            Clause(id="", title=None, text="text", level=0, parent_id=None, source_page=None, source_paragraph=None, source_span=None)
+            Clause(
+                id="",
+                title=None,
+                text="text",
+                level=0,
+                parent_id=None,
+                source_page=None,
+                source_paragraph=None,
+                source_span=None,
+            )
 
     def test_negative_level_raises(self) -> None:
         with pytest.raises(ValueError, match=">= 0"):
-            Clause(id="c-0", title=None, text="text", level=-1, parent_id=None, source_page=None, source_paragraph=None, source_span=None)
+            Clause(
+                id="c-0",
+                title=None,
+                text="text",
+                level=-1,
+                parent_id=None,
+                source_page=None,
+                source_paragraph=None,
+                source_span=None,
+            )
 
     def test_empty_text_raises(self) -> None:
         with pytest.raises(ValueError, match="non-empty"):
-            Clause(id="c-0", title=None, text="   ", level=0, parent_id=None, source_page=None, source_paragraph=None, source_span=None)
+            Clause(
+                id="c-0",
+                title=None,
+                text="   ",
+                level=0,
+                parent_id=None,
+                source_page=None,
+                source_paragraph=None,
+                source_span=None,
+            )
 
     def test_mutually_exclusive_source_fields_raises(self) -> None:
         with pytest.raises(ValueError, match="mutually exclusive"):
-            Clause(id="c-0", title=None, text="text", level=0, parent_id=None, source_page=1, source_paragraph=2, source_span=None)
+            Clause(
+                id="c-0",
+                title=None,
+                text="text",
+                level=0,
+                parent_id=None,
+                source_page=1,
+                source_paragraph=2,
+                source_span=None,
+            )
 
     def test_docx_clause_no_page(self) -> None:
         clause = Clause(
@@ -82,24 +118,54 @@ class TestDocument:
 
     def test_invalid_format_raises(self) -> None:
         with pytest.raises(ValueError, match="format"):
-            Document(source_path=Path("/t.txt"), format="txt", page_count=1, clause_count=0, parse_duration_seconds=0.0, warnings=[])
+            Document(
+                source_path=Path("/t.txt"),
+                format="txt",
+                page_count=1,
+                clause_count=0,
+                parse_duration_seconds=0.0,
+                warnings=[],
+            )
 
     def test_page_count_below_one_raises(self) -> None:
         with pytest.raises(ValueError, match="page_count"):
-            Document(source_path=Path("/t.pdf"), format="pdf", page_count=0, clause_count=1, parse_duration_seconds=0.1, warnings=[])
+            Document(
+                source_path=Path("/t.pdf"),
+                format="pdf",
+                page_count=0,
+                clause_count=1,
+                parse_duration_seconds=0.1,
+                warnings=[],
+            )
 
     def test_negative_clause_count_raises(self) -> None:
         with pytest.raises(ValueError, match="clause_count"):
-            Document(source_path=Path("/t.pdf"), format="pdf", page_count=1, clause_count=-1, parse_duration_seconds=0.1, warnings=[])
+            Document(
+                source_path=Path("/t.pdf"),
+                format="pdf",
+                page_count=1,
+                clause_count=-1,
+                parse_duration_seconds=0.1,
+                warnings=[],
+            )
 
     def test_negative_duration_raises(self) -> None:
         with pytest.raises(ValueError, match="parse_duration_seconds"):
-            Document(source_path=Path("/t.pdf"), format="pdf", page_count=1, clause_count=0, parse_duration_seconds=-0.1, warnings=[])
+            Document(
+                source_path=Path("/t.pdf"),
+                format="pdf",
+                page_count=1,
+                clause_count=0,
+                parse_duration_seconds=-0.1,
+                warnings=[],
+            )
 
 
 class TestParseError:
     def test_valid_error(self) -> None:
-        err = ParseError(exit_code=8, category="file_not_found", message="Not found.", action="Check path.")
+        err = ParseError(
+            exit_code=8, category="file_not_found", message="Not found.", action="Check path."
+        )
         assert err.exit_code == 8
         assert err.category == "file_not_found"
 

@@ -1,8 +1,8 @@
 import os
-import signal
 import sys
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 from openreview_cli.parsing.models import Clause
 
@@ -37,13 +37,23 @@ class PdfParser:
 
     def parse(self) -> Iterator[Clause]:
         import pymupdf
-        from openreview_cli.parsing.clause_detector import build_hierarchy, detect_clause_starts, nupunkt_detect_boundaries
+
+        from openreview_cli.parsing.clause_detector import (
+            build_hierarchy,
+            detect_clause_starts,
+            nupunkt_detect_boundaries,
+        )
         from openreview_cli.parsing.models import ParseError
 
         try:
             doc: Any = pymupdf.open(str(self.path))  # type: ignore[no-untyped-call]
         except Exception:
-            raise ParseError(exit_code=8, category="corrupt", message="The file appears to be corrupt or truncated.", action="Provide a valid PDF file.")
+            raise ParseError(
+                exit_code=8,
+                category="corrupt",
+                message="The file appears to be corrupt or truncated.",
+                action="Provide a valid PDF file.",
+            ) from None
 
         if doc.needs_pass:
             password = os.environ.get("OPENREVIEW_PDF_PASSWORD")
@@ -52,18 +62,34 @@ class PdfParser:
                     doc.authenticate(password)
                 except Exception:
                     doc.close()
-                    raise ParseError(exit_code=8, category="password_protected", message="This contract is password-protected.", action="The password in OPENREVIEW_PDF_PASSWORD was incorrect. Set the correct password or provide an unlocked copy.")
+                    raise ParseError(
+                        exit_code=8,
+                        category="password_protected",
+                        message="This contract is password-protected.",
+                        action="The password in OPENREVIEW_PDF_PASSWORD was incorrect. Set the correct password or provide an unlocked copy.",
+                    ) from None
             elif sys.stdin.isatty():
                 import getpass
+
                 try:
                     password = getpass.getpass("PDF password: ")
                     doc.authenticate(password)
                 except Exception:
                     doc.close()
-                    raise ParseError(exit_code=8, category="password_protected", message="This contract is password-protected.", action="Incorrect password. Try again or provide an unlocked copy.")
+                    raise ParseError(
+                        exit_code=8,
+                        category="password_protected",
+                        message="This contract is password-protected.",
+                        action="Incorrect password. Try again or provide an unlocked copy.",
+                    ) from None
             else:
                 doc.close()
-                raise ParseError(exit_code=8, category="password_protected", message="This contract is password-protected.", action="Enter the password or provide an unlocked copy.")
+                raise ParseError(
+                    exit_code=8,
+                    category="password_protected",
+                    message="This contract is password-protected.",
+                    action="Enter the password or provide an unlocked copy.",
+                )
 
         toc = doc.get_toc()
         headings = detect_headings_from_toc(toc) if toc else []
@@ -76,20 +102,32 @@ class PdfParser:
                 try:
                     page_text = extract_page_text(page)
                 except Exception:
-                    raise ParseError(exit_code=8, category="corrupt", message="The file appears to be corrupt or truncated.", action="Provide a valid PDF file.")
+                    raise ParseError(
+                        exit_code=8,
+                        category="corrupt",
+                        message="The file appears to be corrupt or truncated.",
+                        action="Provide a valid PDF file.",
+                    ) from None
 
                 if page_text.strip():
                     has_text = True
                     boundaries = nupunkt_detect_boundaries(page_text)
                     clause_starts = detect_clause_starts(page_text)
-                    clauses = build_hierarchy(boundaries, clause_starts, headings, page_num, clause_counter, page_text)
+                    clauses = build_hierarchy(
+                        boundaries, clause_starts, headings, page_num, clause_counter, page_text
+                    )
                     for clause in clauses:
                         if clause.id:
                             clause_counter += 1
                         yield clause
 
             if not has_text:
-                raise ParseError(exit_code=8, category="no_text", message="This PDF contains no extractable text. If it is a scanned document, install the OCR extension: openreview install ocr", action="Install OCR extension or provide a text-based PDF.")
+                raise ParseError(
+                    exit_code=8,
+                    category="no_text",
+                    message="This PDF contains no extractable text. If it is a scanned document, install the OCR extension: openreview install ocr",
+                    action="Install OCR extension or provide a text-based PDF.",
+                )
 
         except GeneratorExit:
             pass

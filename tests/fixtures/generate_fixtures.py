@@ -1,7 +1,6 @@
 """Generate synthetic test fixtures for document parsing phase."""
 
 import os
-import shutil
 from pathlib import Path
 from typing import Any
 
@@ -143,10 +142,12 @@ No modification of this Agreement shall be effective unless in writing and signe
     plain_doc: Any = pymupdf.open()  # type: ignore[no-untyped-call]
     plain_page = plain_doc.new_page()
     plain_page.insert_text((50, 50), "Hello World", fontname="helv", fontsize=12)
-    plain_doc.save(str(pdf_dir / "password_protected.pdf"),
-                   encryption=pymupdf.PDF_ENCRYPT_AES_128,  # type: ignore[attr-defined]
-                   user_pw="test123",
-                   owner_pw="test123")
+    plain_doc.save(
+        str(pdf_dir / "password_protected.pdf"),
+        encryption=pymupdf.PDF_ENCRYPT_AES_128,  # type: ignore[attr-defined]
+        user_pw="test123",
+        owner_pw="test123",
+    )
     plain_doc.close()
 
     good_pdf: Any = pymupdf.open()  # type: ignore[no-untyped-call]
@@ -165,7 +166,12 @@ No modification of this Agreement shall be effective unless in writing and signe
         doc: Any = pymupdf.open()  # type: ignore[no-untyped-call]
         for i in range(page_count):
             page = doc.new_page()
-            page.insert_text((50, 50), f"Clause {i+1}: This is a sample clause for testing purposes.", fontname="helv", fontsize=10)
+            page.insert_text(
+                (50, 50),
+                f"Clause {i + 1}: This is a sample clause for testing purposes.",
+                fontname="helv",
+                fontsize=10,
+            )
         doc.save(str(pdf_dir / filename))
         doc.close()
 
@@ -178,8 +184,6 @@ No modification of this Agreement shall be effective unless in writing and signe
 def generate_docx_fixtures() -> None:
     """Generate all DOCX fixtures using python-docx."""
     from docx import Document
-    from docx.shared import Pt, Inches
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
     from lxml import etree  # type: ignore[import-untyped]
 
     docx_dir = HERE / "docx"
@@ -206,7 +210,9 @@ def generate_docx_fixtures() -> None:
         doc.add_heading("Section 1.1: Confidential Information", level=2)
         doc.add_paragraph("Confidential Information means all proprietary information disclosed.")
         doc.add_heading("Section 1.2: Exclusions", level=2)
-        doc.add_paragraph("Confidential Information does not include publicly available information.")
+        doc.add_paragraph(
+            "Confidential Information does not include publicly available information."
+        )
         doc.save(str(docx_dir / "with_headings.docx"))
 
     def _make_tracked_changes() -> None:
@@ -231,7 +237,9 @@ def generate_docx_fixtures() -> None:
         doc = Document()
         doc.add_paragraph("The parties agree to the following terms and conditions.")
         doc.add_paragraph("This Agreement shall be governed by the laws of the State of New York.")
-        doc.add_paragraph("Any disputes arising under this Agreement shall be resolved through binding arbitration.")
+        doc.add_paragraph(
+            "Any disputes arising under this Agreement shall be resolved through binding arbitration."
+        )
         doc.add_paragraph("Each party shall indemnify the other party against any losses.")
         doc.add_paragraph("This Agreement represents the entire understanding between the parties.")
         doc.save(str(docx_dir / "flat_document.docx"))
@@ -241,8 +249,8 @@ def generate_docx_fixtures() -> None:
         doc.add_heading("Article I: Definitions", level=1)
         doc.add_paragraph("This paragraph defines key terms used in this agreement.")
         p = doc.add_paragraph()
-        run = p.add_run(" ")
-        drawing = etree.SubElement(p._p, f"{{{WORD_NS}}}drawing")
+        p.add_run(" ")
+        etree.SubElement(p._p, f"{{{WORD_NS}}}drawing")
         doc.add_paragraph("This paragraph follows the embedded image.")
         doc.add_heading("Section 1.1: Key Terms", level=2)
         doc.save(str(docx_dir / "with_images.docx"))
