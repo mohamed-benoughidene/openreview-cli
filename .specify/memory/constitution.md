@@ -1,8 +1,8 @@
 <!--
 Sync Impact Report
 ==================
-Version change: n/a → 1.0.0 (initial ratification)
-Modified principles: none (initial adoption of five principles)
+Version change: 1.1.0 → 1.2.0 (MINOR — GPU acceleration mandate + NLP model memory exemption)
+Modified principles: III (Hardware-Bounded) — added GPU auto-detection rule and NLP model memory exemption rule
 Added sections: Core Principles (I–V), Constraints, Development Workflow
 Removed sections: none
 Templates requiring updates: none — the current spec-kit templates have
@@ -92,6 +92,20 @@ Rules:
   the CLI MUST show live progress.
 - A regression that pushes peak memory above the 100 MB target by more
   than 10% is a release blocker.
+- The PII detection NLP model (spaCy `en_core_web_lg`, ~500 MB loaded) is
+  exempt from the <100 MB peak memory budget. The model is loaded once per
+  CLI session and remains in memory. All other processing — document text,
+  Presidio framework, regex recognizers, output buffers — must stay under
+  the 100 MB peak. This exception is specific to Phase 3 (PII Stripping);
+  any future NLP model of comparable size requires its own constitutional
+  amendment.
+- A GPU, if present on the host machine, MUST be detected and used for
+  NLP model acceleration (spaCy `en_core_web_lg`) via Presidio's built-in
+  CUDA/MPS auto-detection. No configuration is required from the user.
+  The performance targets in this constitution (3-second per-document
+  stripping, 100 MB budget) are CPU-based guarantees. GPU-accelerated
+  machines will achieve faster processing at no additional memory cost.
+  CPU fallback is automatic when no GPU is detected.
 
 Rationale: local models already consume 2–5 GB on the reference machine.
 The tool's slice is what is left. The budget is not negotiable; it is
@@ -180,8 +194,9 @@ hold regardless of feature priority.
   merged. Dependencies with licenses incompatible with AGPL-3.0 are
   forbidden.
 - **Hardware budget**: peak memory `<100 MB` with a hard floor of
-  `<110 MB`; cold startup `<1 s`; warm startup `<0.3 s`; parse time
-  for a 50-page PDF `<3 s`. Exceeding the floor is a release blocker.
+  `<110 MB` (NLP model memory is exempt — see Principle III); cold
+  startup `<1 s`; warm startup `<0.3 s`; parse time for a 50-page
+  PDF `<3 s`. Exceeding the floor is a release blocker.
 - **Privacy tier model**: three tiers — maximum (all-local),
   balanced (PII-stripped cloud where local is not feasible), and
   performance (cloud throughout with PII stripping). Removing a tier
@@ -256,4 +271,4 @@ hold regardless of feature priority.
   successor that fills the same role is a PATCH amendment, provided
   the replacement does not change observable behaviour.
 
-**Version**: 1.0.0 | **Ratified**: 2026-06-23 | **Last Amended**: 2026-06-23
+**Version**: 1.2.0 | **Ratified**: 2026-06-23 | **Last Amended**: 2026-06-25
