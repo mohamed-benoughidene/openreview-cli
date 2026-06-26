@@ -16,6 +16,7 @@ from openreview_cli.gateway.providers import (
     OllamaTimeoutError,
     ollama_discover_models,
 )
+from openreview_cli.gateway.registry import get_models_for_slot
 from openreview_cli.gateway.utils import atomic_write
 
 
@@ -231,15 +232,8 @@ class SetupWizard:
                         else:
                             continue
                 else:
-                    # Registry fallback / static list
-                    static_models = {
-                        "openai": ["gpt-4o", "gpt-4o-mini", "o1-mini"],
-                        "anthropic": ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest"],
-                        "cohere": ["command-r-plus", "embed-english-v3.0", "rerank-english-v3.0"],
-                        "google": ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash"],
-                        "custom": [],
-                    }
-                    choices = static_models.get(provider, [])
+                    # Slot-aware model list from registry
+                    choices = get_models_for_slot(provider, slot)
                     model_choices = list(choices)
                     model_choices.append("manual")
                     model_choices.append("back")

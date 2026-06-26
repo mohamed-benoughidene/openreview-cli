@@ -216,6 +216,18 @@ BUILTIN_MODELS = [
 ]
 
 
+def get_models_for_slot(provider: str, slot: str) -> list[str]:
+    """Return model IDs from BUILTIN_MODELS compatible with the given provider and slot.
+
+    Returns empty list if provider has no registry entries (e.g. custom endpoints).
+    """
+    return [
+        m.model_id
+        for m in BUILTIN_MODELS
+        if m.provider == provider and slot in m.slot_compatibility
+    ]
+
+
 class ModelRegistry:
     """Manages local model cache and fetches updates from remote."""
 

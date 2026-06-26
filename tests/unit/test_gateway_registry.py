@@ -5,7 +5,36 @@ import httpx
 import pytest
 import respx
 
-from openreview_cli.gateway.registry import ModelRegistry
+from openreview_cli.gateway.registry import ModelRegistry, get_models_for_slot
+
+
+def test_get_models_for_slot_filtering() -> None:
+    # Embedding models for openai
+    openai_embed = get_models_for_slot("openai", "embedding")
+    assert openai_embed == ["text-embedding-3-small"]
+
+    # Reasoning models for openai (not gpt-4o-mini, which is extraction/graph only)
+    openai_reason = get_models_for_slot("openai", "reasoning")
+    assert "gpt-4o" in openai_reason
+    assert "gpt-4o-mini" not in openai_reason
+
+    # Cohere: each model has a distinct slot
+    cohere_embed = get_models_for_slot("cohere", "embedding")
+    assert cohere_embed == ["embed-english-v3.0"]
+    cohere_rerank = get_models_for_slot("cohere", "reranking")
+    assert cohere_rerank == ["rerank-english-v3.0"]
+    cohere_reason = get_models_for_slot("cohere", "reasoning")
+    assert cohere_reason == ["command-r-plus"]
+
+    # No Ollama model is tagged embedding except nomic-embed-text
+    ollama_embed = get_models_for_slot("ollama", "embedding")
+    assert ollama_embed == ["nomic-embed-text"]
+
+    # No Anthropic model is compatible with embedding
+    assert get_models_for_slot("anthropic", "embedding") == []
+
+    # Custom provider has no registry entries
+    assert get_models_for_slot("custom", "reasoning") == []
 
 
 @pytest.fixture
