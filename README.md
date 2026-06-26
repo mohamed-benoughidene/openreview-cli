@@ -21,7 +21,7 @@ and will change.
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
 | Unit + integration tests    | 322 (73 s)                |
-| Live integration tests      | 12 (11 passed, 1 expected failure) |
+| Live integration tests      | 12 (11 pass, 1 xfail)    |
 | CLI commands                | ~20                       |
 | SQLite tables               | 7                         |
 | CI jobs                     | 4 (lint, types, test, memory) |
@@ -157,39 +157,60 @@ uv run openreview --version
 |-----------------------------------------------------|--------------------------------------------|
 | `src/openreview_cli/__init__.py`                    | Exposes `__version__`                      |
 | `src/openreview_cli/__main__.py`                    | Entry point: `python -m openreview_cli`    |
-| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse` commands |
+| `src/openreview_cli/app.py`                         | Typer app — config, gateway, client, parse commands |
 | `src/openreview_cli/config/paths.py`                | platformdirs paths (config, data, log)     |
 | `src/openreview_cli/config/loader.py`               | Pydantic model, YAML r/w, env merge        |
 | `src/openreview_cli/config/auth.py`                 | `auth.json` handler, chmod 600             |
 | `src/openreview_cli/storage/database.py`            | SQLite, migrations, cost tracking, clients |
 | `src/openreview_cli/storage/migrations/001_initial.sql` | 5 tables DDL                           |
-| `src/openreview_cli/errors.py`                      | Exit codes (5 = config, 6 = cost limit, 8 = parse error) |
-| `src/openreview_cli/parsing/`                       | Document parser — PDF, DOCX, clause detection |
-| `src/openreview_cli/pii/`                           | PII stripping engine — Presidio, recognizers, encrypted mapping, audit trail |
+| `src/openreview_cli/errors.py`                      | Exit codes (5 = config, 6 = cost, 7 = gateway, 8 = parse, 9 = PII) |
+| `src/openreview_cli/parsing/`                       | PDF/DOCX parser, clause detection, streaming |
+| `src/openreview_cli/pii/`                           | PII stripping — Presidio, recognizers, placeholders, mapping, audit |
 | `src/openreview_cli/gateway/`                       | AI Gateway — routing, costs, wizard, registry, importer, logging |
+| `scripts/benchmark_legalbenchrag.py`                | 860-contract parsing benchmark runner      |
+| `scripts/benchmark_pii_stripping.py`                | PII stripping benchmark (1,730 entities)   |
 | `tests/unit/test_app.py`                            | 5 tests (import, version, help, memory)    |
-| `tests/unit/test_config_loader.py`                  | 6 tests (create, merge, env override)      |
+| `tests/unit/test_config_loader.py`                  | 9 tests (create, merge, env override, gateway config) |
 | `tests/unit/test_auth.py`                           | 7 tests (create, load, perms, providers)   |
 | `tests/unit/test_database.py`                       | 7 tests (init, cost, limits, clients)      |
 | `tests/unit/test_cli_config.py`                     | 8 tests (show, get, set, validation)       |
 | `tests/unit/test_cli_client.py`                     | 5 tests (add, list, delete, --force)       |
+| `tests/unit/test_clause_detector.py`                | 18 tests (boundaries, numbering, hierarchy, non-English) |
+| `tests/unit/test_pdf_parser.py`                     | 11 tests (page text, TOC, font detection, numbering) |
+| `tests/unit/test_docx_parser.py`                    | 7 tests (heading levels, tracked changes, images) |
+| `tests/unit/test_models.py`                         | 25 tests (Clause, Document, ParseError)    |
 | `tests/unit/test_pii_*.py`                          | 40 tests (models, recognizers, placeholders, mapping, audit, engine) |
-| `tests/unit/test_gateway_*.py`                      | 34 tests (models, engine, costs, registry, wizard, importer, logging) |
+| `tests/unit/test_gateway_*.py`                      | 55 tests (models, engine, costs, registry, wizard, importer, logging) |
 | `tests/unit/test_errors.py`                         | 9 tests (exit codes, stderr output)        |
 | `tests/unit/test_paths.py`                          | 10 tests (XDG path resolution)            |
 | `tests/unit/test_providers.py`                      | 8 tests (Ollama discovery, errors)        |
 | `tests/unit/test_utils.py`                          | 6 tests (atomic write, cleanup)           |
+| `tests/integration/test_parse_command.py`           | 7 tests (end-to-end CLI parse flow)        |
+| `tests/integration/test_pdf_parser.py`              | 10 tests (password, encrypted, scan detection) |
+| `tests/integration/test_docx_parser.py`             | 6 tests (tracked changes, images, headings) |
+| `tests/integration/test_stream_clauses.py`          | 10 tests (clause streaming, format equivalence) |
+| `tests/integration/test_accuracy.py`                | 1 test (clause boundary accuracy)          |
+| `tests/integration/test_benchmark.py`               | 1 test (50-page parse speed benchmark)     |
+| `tests/integration/test_error_handling.py`          | 7 tests (missing, corrupt, permissions)    |
+| `tests/integration/test_warnings.py`                | 5 tests (deprecation, non-English, TOFU)   |
+| `tests/integration/test_memory.py`                  | 1 test (tracemalloc peak <110 MB)          |
+| `tests/integration/test_pii_strip_command.py`       | 3 tests (CLI strip end-to-end)             |
+| `tests/integration/test_pii_accuracy.py`            | 2 tests (accuracy skeleton)                |
+| `tests/integration/test_pii_error_handling.py`      | 4 tests (error paths skeleton)            |
+| `tests/integration/test_pii_memory.py`              | 2 tests (memory skeleton)                  |
 | `tests/integration/test_gateway_routing.py`         | 7 tests (mock routing, local mode)        |
 | `tests/integration/test_gateway_fallback.py`        | 3 tests (retry, fallback, on_failure)     |
 | `tests/integration/test_gateway_cli.py`             | 19 tests (CLI subcommands)                |
 | `tests/integration/test_gateway_benchmark.py`       | 1 test (overhead <75 ms)                  |
 | `tests/integration/test_gateway_privacy.py`         | 1 test (network isolation)                |
-| `tests/integration/test_gateway_live.py`            | 6 tests (OpenRouter real-API, 1 xfail)    |
+| `tests/integration/test_gateway_live.py`            | 6 tests (OpenRouter real-API)             |
 | `tests/integration/test_gateway_live_cli.py`        | 6 tests (CLI with OpenRouter)             |
 | `tests/conftest.py`                                 | Memory tracker fixture (< 110 MB)          |
 | `.pre-commit-config.yaml`                           | 10 hooks (ruff, mypy, pytest, hygiene)     |
 | `.github/workflows/ci.yml`                          | 4 parallel CI jobs                         |
 | `specs/001-config-storage-foundation/`              | Spec, plan, and 56-task checklist          |
+| `specs/002-document-parsing/`                       | Spec, plan, and tasks                      |
+| `specs/003-pii-stripping/`                          | Spec, plan, and tasks                      |
 | `specs/004-ai-gateway/`                             | Spec, plan, contracts, and 75-task checklist |
 
 ## Quick start
