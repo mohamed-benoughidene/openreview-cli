@@ -13,21 +13,25 @@ a custom playbook, and produces a structured memo of findings.
 
 ## Status
 
-Pre-alpha. 154 spec tasks implemented across config + storage foundation,
-document parsing engine, and PII stripping (Phase 3). The package is not yet
-on PyPI. APIs and the underlying spec are preliminary and will change.
+Pre-alpha. 229 spec tasks implemented across config + storage foundation,
+document parsing engine, PII stripping (Phase 3), and AI Gateway (Phase 4).
+The package is not yet on PyPI. APIs and the underlying spec are preliminary
+and will change.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
-| Unit + integration tests    | 144 (15.2 s)              |
-| CLI commands                | 9                         |
-| SQLite tables               | 5                         |
+| Unit + integration tests    | 322 (73 s)                |
+| Live integration tests      | 12 (11 passed, 1 expected failure) |
+| CLI commands                | ~20                       |
+| SQLite tables               | 7                         |
 | CI jobs                     | 4 (lint, types, test, memory) |
 | Memory budget (processing)  | < 100 MB (NLP model exempt) |
 | Startup (warm)              | < 0.3 s                   |
-| Spec tasks tracked          | 154 (144 done, 10 deferred)|
-| Dead code cut               | −137 lines, −6 files      |
+| Spec tasks tracked          | 229 (221 done, 8 deferred)|
+| Dead code cut               | −190 lines, −7 files      |
 | PII entity types detected   | 11 body + 4 metadata      |
+| Gateway providers           | 8 (openai, anthropic, google, ollama, openrouter, cohere, huggingface, custom) |
+| Gateway routing overhead    | ~6.5 ms (isolation)       |
 
 ### Parsing performance (real-world benchmark)
 
@@ -109,6 +113,28 @@ The privacy gate is available as a Python API:
 A CLI `--no-pii` flag and config-driven toggle are defined but deferred until
 the review subcommand (Phase 5+) is created — see AGENTS.md deferred-work table.
 
+### AI Gateway (Phase 4)
+
+The gateway routes review requests through task-specific model slots (reasoning,
+extraction, embedding, reranking, graph). It supports 8 providers, interactive
+and non-interactive setup, fallback chains, cost tracking, and YAML import.
+
+| Feature | Status |
+|---------|--------|
+| Routing | ✅ All 5 slots via LiteLLM (chat, embed, rerank) |
+| Providers | ✅ OpenAI, Anthropic, Google, Ollama, OpenRouter, Cohere, HuggingFace, Custom |
+| Interactive wizard | ✅ Rich UI, slot grouping, back/cancel/save, masked key entry |
+| CLI setup | ✅ `--non-interactive` flags for all 5 slots |
+| Fallback | ✅ Exponential backoff, fallback chain, 3 on_failure modes |
+| Cost tracking | ✅ SQLite per-call records, per-review & daily limits |
+| CLI subcommands | ✅ 10 commands (`setup`, `status`, `providers`, `models`, `set`, `test`, `refresh`, `costs`, `install-models`, `import`) |
+| YAML import | ✅ Full validation, all errors reported at once, `api_key_env` support |
+| Model registry | ✅ Remote cache + built-in fallback (14 models across 6 providers) |
+| Logging | ✅ Three-tier (console/file), API key redaction, `--debug-unsafe` |
+| Live testing | ✅ 11 integration tests via OpenRouter (real API calls) |
+
+**Routing overhead**: ~6.5 ms per request in isolation, <75 ms under full CI load.
+
 ## Installation
 
 ```bash
@@ -140,17 +166,31 @@ uv run openreview --version
 | `src/openreview_cli/errors.py`                      | Exit codes (5 = config, 6 = cost limit, 8 = parse error) |
 | `src/openreview_cli/parsing/`                       | Document parser — PDF, DOCX, clause detection |
 | `src/openreview_cli/pii/`                           | PII stripping engine — Presidio, recognizers, encrypted mapping, audit trail |
+| `src/openreview_cli/gateway/`                       | AI Gateway — routing, costs, wizard, registry, importer, logging |
 | `tests/unit/test_app.py`                            | 5 tests (import, version, help, memory)    |
 | `tests/unit/test_config_loader.py`                  | 6 tests (create, merge, env override)      |
-| `tests/unit/test_auth.py`                           | 5 tests (create, load, perms, providers)   |
+| `tests/unit/test_auth.py`                           | 7 tests (create, load, perms, providers)   |
 | `tests/unit/test_database.py`                       | 7 tests (init, cost, limits, clients)      |
 | `tests/unit/test_cli_config.py`                     | 8 tests (show, get, set, validation)       |
 | `tests/unit/test_cli_client.py`                     | 5 tests (add, list, delete, --force)       |
 | `tests/unit/test_pii_*.py`                          | 40 tests (models, recognizers, placeholders, mapping, audit, engine) |
+| `tests/unit/test_gateway_*.py`                      | 34 tests (models, engine, costs, registry, wizard, importer, logging) |
+| `tests/unit/test_errors.py`                         | 9 tests (exit codes, stderr output)        |
+| `tests/unit/test_paths.py`                          | 10 tests (XDG path resolution)            |
+| `tests/unit/test_providers.py`                      | 8 tests (Ollama discovery, errors)        |
+| `tests/unit/test_utils.py`                          | 6 tests (atomic write, cleanup)           |
+| `tests/integration/test_gateway_routing.py`         | 7 tests (mock routing, local mode)        |
+| `tests/integration/test_gateway_fallback.py`        | 3 tests (retry, fallback, on_failure)     |
+| `tests/integration/test_gateway_cli.py`             | 19 tests (CLI subcommands)                |
+| `tests/integration/test_gateway_benchmark.py`       | 1 test (overhead <75 ms)                  |
+| `tests/integration/test_gateway_privacy.py`         | 1 test (network isolation)                |
+| `tests/integration/test_gateway_live.py`            | 6 tests (OpenRouter real-API, 1 xfail)    |
+| `tests/integration/test_gateway_live_cli.py`        | 6 tests (CLI with OpenRouter)             |
 | `tests/conftest.py`                                 | Memory tracker fixture (< 110 MB)          |
 | `.pre-commit-config.yaml`                           | 10 hooks (ruff, mypy, pytest, hygiene)     |
 | `.github/workflows/ci.yml`                          | 4 parallel CI jobs                         |
 | `specs/001-config-storage-foundation/`              | Spec, plan, and 56-task checklist          |
+| `specs/004-ai-gateway/`                             | Spec, plan, contracts, and 75-task checklist |
 
 ## Quick start
 
@@ -166,7 +206,13 @@ openreview client delete acme-corp --force   # Remove client
 openreview parse contract.pdf         # Parse a contract into clauses
 openreview parse contract.pdf --summary    # One-line summary
 openreview parse contract.pdf --format json  # JSON output
-```
+openreview gateway setup --non-interactive --reasoning openai/gpt-4o --embedding ollama/nomic-embed-text  # All 5 slots via flags
+openreview gateway status              # Show configured slots, health, costs
+openreview gateway test reasoning      # Validate API key and provider reachability
+openreview gateway providers           # List providers with auth status
+openreview gateway models openai       # List models for a provider
+openreview gateway costs               # View today's token usage and cost
+openreview gateway import config.yaml  # Import YAML config (5 slots at once)
 
 | Command                                    | What it does                               |
 |--------------------------------------------|--------------------------------------------|
@@ -181,6 +227,16 @@ openreview parse contract.pdf --format json  # JSON output
 | `openreview parse <path>`              | Parse a PDF or DOCX into numbered clauses  |
 | `openreview parse <path> --summary`    | One-line parse summary                     |
 | `openreview parse <path> --format json`| JSON output with all metadata              |
+| `openreview gateway setup [--reasoning ...] [flags]` | Configure all 5 slots (interactive or via flags) |
+| `openreview gateway status`            | Show slot models, provider health, cost limits |
+| `openreview gateway providers`         | List all supported providers with auth status |
+| `openreview gateway models <provider>` | List available models for a provider       |
+| `openreview gateway set <slot> <model>` | Change one slot's model (supports `--fallback`, `--temperature`) |
+| `openreview gateway test <slot>`       | Test API key and provider connectivity     |
+| `openreview gateway refresh`           | Fetch latest model registry from remote    |
+| `openreview gateway costs [--days N] [--session ID]` | View or clear cost records |
+| `openreview gateway install-models <name> [names...]` | Pull Ollama models via `ollama pull` |
+| `openreview gateway import <file> [--force] [--dry-run]` | Import YAML config with validation |
 
 ## Configuration
 
@@ -193,6 +249,8 @@ Secrets (API keys) live in `auth.json` at the same path.
 | `gateway.models`     | LLM provider/model per task   | `reasoning.primary`, `extraction.params.temperature` |
 | `gateway.fallback`   | Retry and timeout behavior    | `retries`, `timeout`, `on_failure` |
 | `gateway.cost_limits`| Spending caps                 | `per_review_cents`, `daily_cents`  |
+| `gateway.registry`   | Model registry source         | `refresh_days`, `remote_url`      |
+| `gateway.logging`    | Gateway-specific log level    | `level`, `debug_file`             |
 | `storage`            | Data retention                | `reviews_keep_forever`, `logs_keep_days` |
 
 ### Environment variable overrides
@@ -230,12 +288,16 @@ uvx pre-commit install
 
 | Check            | Command                         |
 |------------------|---------------------------------|
-| Tests            | `uv run pytest tests/unit/ -q`  |
+| Tests (unit)     | `uv run pytest tests/unit/ -q`  |
+| Tests (all, no live) | `uv run pytest tests/unit/ tests/integration/ -m "not live"` |
 | Memory budget    | `uv run pytest -m memory`       |
-| Benchmark        | `uv run python scripts/benchmark_legalbenchrag.py` |
+| Gateway live     | `OPENROUTER_API_KEY=... uv run pytest tests/integration/test_gateway_live.py -v` |
+| Gateway overhead | `uv run pytest tests/integration/test_gateway_benchmark.py -v` |
+| Parsing benchmark| `uv run python scripts/benchmark_legalbenchrag.py` |
 | Lint             | `uv run ruff check .`           |
 | Format           | `uv run ruff format --check .`  |
 | Types            | `uv run mypy src/ tests/`       |
+| Coverage         | `uv run pytest --cov=openreview_cli --cov-report=term-missing` |
 | All hooks        | `uvx pre-commit run --all-files`|
 
 ## Benchmarks
