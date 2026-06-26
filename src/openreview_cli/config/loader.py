@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 DEFAULT_CONFIG: dict[str, object] = {
     "version": 1,
@@ -25,9 +25,13 @@ DEFAULT_CONFIG: dict[str, object] = {
             },
             "embedding": {
                 "primary": "ollama/nomic-embed-text",
+                "fallback": None,
+                "params": {"dimensions": 512},
             },
             "reranking": {
                 "primary": "ollama/qwen3-reranker-0.6b",
+                "fallback": None,
+                "params": {},
             },
             "graph": {
                 "primary": "ollama/qwen3:8b",
@@ -45,7 +49,14 @@ DEFAULT_CONFIG: dict[str, object] = {
             "per_review_cents": 100,
             "daily_cents": 1000,
         },
-        "model_registry_refresh_days": 7,
+        "registry": {
+            "refresh_days": 7,
+            "remote_url": "https://example.com/models.json",
+        },
+        "logging": {
+            "level": "info",
+            "debug_file": "~/.openreview/gateway.log",
+        },
     },
     "storage": {
         "reviews_keep_forever": True,
@@ -79,68 +90,78 @@ def _get_env_overrides() -> dict[str, Any]:
 
 
 def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[str, Any]:
-    from pydantic import BaseModel, field_validator
+    from pydantic import BaseModel, Field, field_validator
 
     _valid_tiers = frozenset({"maximum", "balanced", "performance"})
-    _valid_on_failure = frozenset({"error", "skip", "warn"})
 
     class ModelParams(BaseModel):
-        temperature: float = 0.1
-        max_tokens: int = 4000
+        temperature: float = Field(default=0.7, ge=0.0, le=2.0)
+        max_tokens: int = Field(default=4000, gt=0)
+        dimensions: int | None = Field(default=None, gt=0)
+        top_p: float | None = Field(default=None, ge=0.0, le=1.0)
+        stop: list[str] | None = None
 
-    class ModelSlot(BaseModel):
+    class SlotConfigModel(BaseModel):
         primary: str
         fallback: str | None = None
         params: ModelParams | None = None
 
-    class EmbeddingSlot(BaseModel):
-        primary: str
-
-    class RerankingSlot(BaseModel):
-        primary: str
-
-    class GatewayModels(BaseModel):
-        reasoning: ModelSlot = ModelSlot(
-            primary="ollama/qwen3:8b", params=ModelParams(temperature=0.1, max_tokens=4000)
-        )
-        extraction: ModelSlot = ModelSlot(
-            primary="ollama/qwen3:4b", params=ModelParams(temperature=0.0, max_tokens=2000)
-        )
-        embedding: EmbeddingSlot = EmbeddingSlot(primary="ollama/nomic-embed-text")
-        reranking: RerankingSlot = RerankingSlot(primary="ollama/qwen3-reranker-0.6b")
-        graph: ModelSlot = ModelSlot(
-            primary="ollama/qwen3:8b", params=ModelParams(temperature=0.0, max_tokens=4000)
-        )
+        @field_validator("primary", "fallback")
+        @classmethod
+        def validate_model_format(cls, v: str | None) -> str | None:
+            if v is None:
+                return v
+            if not v:
+                raise ValueError("model must be non-empty")
+            if "/" in v:
+                provider, *_ = v.split("/", 1)
+                model_id = v.split("/", 1)[1]
+                if not provider or not model_id:
+                    raise ValueError(f"model must be in format 'provider/model-id', got '{v}'")
+            return v
 
     class FallbackConfig(BaseModel):
-        retries: int = 2
-        retry_delay: float = 1.0
-        timeout: int = 60
-        on_failure: str = "error"
+        retries: int = Field(default=2, ge=0)
+        retry_delay: float = Field(default=1.0, gt=0)
+        timeout: int = Field(default=60, gt=0)
+        on_failure: Literal["error", "skip", "warn"] = "error"
 
-        @field_validator("on_failure")
+    class CostLimitsConfig(BaseModel):
+        per_review_cents: int = Field(default=100, ge=0)
+        daily_cents: int = Field(default=1000, ge=0)
+
+    class RegistryConfig(BaseModel):
+        refresh_days: int = Field(default=7, gt=0)
+        remote_url: str
+
+        @field_validator("remote_url")
         @classmethod
-        def _check_on_failure(cls, v: str) -> str:
-            if v not in _valid_on_failure:
-                raise ValueError(f"must be one of: {', '.join(sorted(_valid_on_failure))}")
+        def _validate_url(cls, v: str) -> str:
+            if not (v.startswith("http://") or v.startswith("https://")):
+                raise ValueError(f"invalid remote registry URL: {v}")
             return v
 
-    class CostLimits(BaseModel):
-        per_review_cents: int = 100
-        daily_cents: int = 1000
+    class LoggingConfig(BaseModel):
+        level: Literal["debug", "info", "warning", "error"] = "info"
+        debug_file: str = "~/.openreview/gateway.log"
 
-        @field_validator("per_review_cents", "daily_cents")
+    class GatewayConfigModel(BaseModel):
+        models: dict[str, SlotConfigModel]
+        fallback: FallbackConfig = Field(default_factory=FallbackConfig)
+        cost_limits: CostLimitsConfig = Field(default_factory=CostLimitsConfig)
+        registry: RegistryConfig
+        logging: LoggingConfig = Field(default_factory=LoggingConfig)
+
+        @field_validator("models")
         @classmethod
-        def _check_positive(cls, v: int) -> int:
-            if v < 1:
-                raise ValueError("must be ≥ 1")
+        def _validate_slots(cls, v: dict[str, SlotConfigModel]) -> dict[str, SlotConfigModel]:
+            required_slots = {"reasoning", "extraction", "embedding", "reranking", "graph"}
+            missing = required_slots - set(v.keys())
+            if missing:
+                raise ValueError(
+                    f"missing required slot configurations: {', '.join(sorted(missing))}"
+                )
             return v
-
-    class GatewayConfig(BaseModel):
-        models: GatewayModels = GatewayModels()
-        fallback: FallbackConfig = FallbackConfig()
-        cost_limits: CostLimits = CostLimits()
-        model_registry_refresh_days: int = 7
 
     class PrivacyConfig(BaseModel):
         tier: str = "balanced"
@@ -191,7 +212,7 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
     class OpenReviewConfig(BaseModel):
         version: int = 1
         privacy: PrivacyConfig = PrivacyConfig()
-        gateway: GatewayConfig = GatewayConfig()
+        gateway: GatewayConfigModel
         storage: StorageConfig = StorageConfig()
 
     merged = _deep_merge(defaults, raw)

@@ -23,6 +23,8 @@ Papers/
 .pytest_cache/
 .ruff_cache/
 *.log
+.coverage
+cov_annotate/
 
 # OS files
 .DS_Store

@@ -12,6 +12,7 @@ requires-python = ">=3.12"
 dependencies = [
     "click>=8.0.0",
     "httpx>=0.28.1",
+    "litellm>=1.89.4",
     "nupunkt>=0.6.0",
     "platformdirs>=4.10.0",
     "presidio-analyzer>=2.2.362",
@@ -31,6 +32,8 @@ openreview = "openreview_cli.app:app"
 dev = [
     "mypy>=2.1.0",
     "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "respx>=0.23.1",
     "ruff>=0.15.18",
     "types-pyyaml>=6.0.12.20260518",
 ]
@@ -74,6 +77,13 @@ unfixable = ["B", "SIM"]
 "scripts/**" = ["PLR0912", "PLR0915", "RUF059"]
 "src/openreview_cli/parsing/pdf_parser.py" = ["PLR0912", "PLR0915"]
 "src/openreview_cli/parsing/clause_detector.py" = ["PLW0603"]
+"src/openreview_cli/gateway/engine.py" = ["PLR0912", "PLR0915", "TRY301", "SIM105"]
+"src/openreview_cli/gateway/wizard.py" = ["PLR0912", "PLR0915", "SIM102", "SIM105", "TRY300", "SIM108"]
+"src/openreview_cli/app.py" = ["PLW0603", "PLR0912", "PLR0915", "B008", "SIM108", "SIM102"]
+"src/openreview_cli/gateway/providers.py" = ["TRY300"]
+"src/openreview_cli/gateway/registry.py" = ["TRY004", "TRY301", "TRY300"]
+
+
 
 [tool.ruff.format]
 quote-style = "double"
@@ -104,5 +114,6 @@ markers = [
     "memory: marks memory profiling tests",
     "benchmark: marks benchmark tests",
     "accuracy: marks clause boundary accuracy tests",
+    "live: marks tests that require a live API key (not run in CI)",
 ]
 filterwarnings = ["ignore::DeprecationWarning"]

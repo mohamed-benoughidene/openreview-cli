@@ -59,3 +59,48 @@ def _check_permissions(path: Path) -> None:
             oct(current),
         )
         path.chmod(0o600)
+
+
+def get_api_key(provider: str) -> str | None:
+    """Get the API key for a provider, checking env vars first then auth.json."""
+    # Check environment override first
+    env_name = key_to_env(provider)
+    env_val = os.environ.get(env_name)
+    if env_val:
+        return env_val
+
+    # Fallback to auth.json
+    from openreview_cli.config.paths import get_config_dir
+
+    path = get_config_dir() / AUTH_FILENAME
+    if path.exists():
+        try:
+            auth_data = load_auth(path)
+            return auth_data.get(provider)
+        except Exception:
+            pass
+    return None
+
+
+def get_api_base(provider: str) -> str | None:
+    """Get the API base URL for a provider, checking env vars first then auth.json."""
+    env_name = f"{provider.upper()}_API_BASE"
+    env_val = os.environ.get(env_name)
+    if env_val:
+        return env_val
+
+    # Fallback to auth.json
+    from openreview_cli.config.paths import get_config_dir
+
+    path = get_config_dir() / AUTH_FILENAME
+    if path.exists():
+        try:
+            # We don't want load_auth because it resolves env key mappings,
+            # we just want raw JSON to check provider_api_base or custom_api_base.
+            data = json.loads(path.read_text())
+            val = data.get(f"{provider}_api_base") or data.get(f"{provider}_base_url")
+            return str(val) if val is not None else None
+        except Exception:
+            pass
+
+    return None

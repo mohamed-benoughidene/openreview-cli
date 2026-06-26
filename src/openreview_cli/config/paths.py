@@ -21,3 +21,9 @@ def get_data_dir() -> Path:
 
 def get_review_dir(review_id: str) -> Path:
     return get_data_dir() / "reviews" / review_id
+
+
+def get_cache_dir() -> Path:
+    from platformdirs import user_cache_dir
+
+    return Path(user_cache_dir("openreview", ensure_exists=True))

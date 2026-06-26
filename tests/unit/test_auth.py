@@ -46,3 +46,29 @@ def test_provider_key_env_override(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
     auth_path.write_text('{"openai": "sk-file-value"}')
     result = load_auth(auth_path)
     assert result["openai"] == "sk-test-override"
+
+
+def test_get_api_key_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-env-openai")
+    from openreview_cli.config.auth import get_api_key
+
+    assert get_api_key("openai") == "sk-env-openai"
+
+
+def test_get_api_key_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    # Temporarily override get_config_dir to use tmp_path
+    from openreview_cli.config import paths
+
+    monkeypatch.setattr(paths, "get_config_dir", lambda: tmp_path)
+
+    auth_path = tmp_path / "auth.json"
+    auth_path.write_text('{"openai": "sk-file-openai", "anthropic": "sk-file-anthropic"}')
+
+    from openreview_cli.config.auth import get_api_key
+
+    # Should resolve anthropic from file when no env var is set
+    assert get_api_key("anthropic") == "sk-file-anthropic"
+
+    # Env var should still override file key
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-env-anthropic")
+    assert get_api_key("anthropic") == "sk-env-anthropic"

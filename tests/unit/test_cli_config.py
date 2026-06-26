@@ -86,7 +86,7 @@ def test_config_set_rejects_invalid_int(monkeypatch: pytest.MonkeyPatch, tmp_pat
     config_file = _setup_config(monkeypatch, tmp_path)
     config_file.write_text("version: 1\ngateway:\n  cost_limits:\n    per_review_cents: 100\n")
 
-    result = runner.invoke(app, ["config", "set", "gateway.cost_limits.per_review_cents", "0"])
+    result = runner.invoke(app, ["config", "set", "gateway.cost_limits.per_review_cents", "abc"])
 
     assert result.exit_code == 5
 
