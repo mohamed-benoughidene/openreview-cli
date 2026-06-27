@@ -24,7 +24,7 @@ description: "Tasks for CLI wizard UX redesign — arrow-key navigation, review 
 
 **Purpose**: Project initialization — add questionary dependency
 
-- [ ] T001 Add `questionary` dependency — run `uv add questionary`, verify `uv sync` passes
+- [X] T001 Add `questionary` dependency — run `uv add questionary`, verify `uv sync` passes
 
 ---
 
@@ -34,9 +34,9 @@ description: "Tasks for CLI wizard UX redesign — arrow-key navigation, review 
 
 **⚠️**: No user story work can begin until this phase is complete
 
-- [ ] T002 [P] Create `src/openreview_cli/cli/utils.py` — shared wrappers: `_select()`, `_checkbox()`, `_autocomplete()`, `_confirm()`, `_text()`, `_password()` around questionary primitives with consistent styling
-- [ ] T003 [P] Create `ReviewConfiguration` dataclass, `ReviewMode` enum, `OutputFormat` enum in `src/openreview_cli/cli/review.py`
-- [ ] T004 Add `_is_interactive()` terminal detection (pip, `TERM=dumb`, `sys.stdin.isatty()`) in `src/openreview_cli/cli/utils.py`
+- [X] T002 [P] Create `src/openreview_cli/cli/utils.py` — shared wrappers: `_select()`, `_checkbox()`, `_autocomplete()`, `_confirm()`, `_text()`, `_password()` around questionary primitives with consistent styling
+- [X] T003 [P] Create `ReviewConfiguration` dataclass, `ReviewMode` enum, `OutputFormat` enum in `src/openreview_cli/cli/review.py`
+- [X] T004 Add `_is_interactive()` terminal detection (pip, `TERM=dumb`, `sys.stdin.isatty()`) in `src/openreview_cli/cli/utils.py`
 
 **Checkpoint**: Foundation ready — user story implementation can begin
 
@@ -50,16 +50,16 @@ description: "Tasks for CLI wizard UX redesign — arrow-key navigation, review 
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T005 [P] [US1] Write unit tests for refactored `SetupWizard` arrow-key navigation and model selection in `tests/unit/test_gateway_wizard.py`
-- [ ] T006 [P] [US1] Write integration tests for summary-before-save flow in `tests/integration/test_gateway_cli.py`
+- [X] T005 [P] [US1] Write unit tests for refactored `SetupWizard` arrow-key navigation and model selection in `tests/unit/test_gateway_wizard.py`
+- [X] T006 [P] [US1] Write integration tests for summary-before-save flow in `tests/integration/test_gateway_cli.py`
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Replace `Prompt.ask()` provider/ model selection with `questionary.select()` / `autocomplete()` in `src/openreview_cli/gateway/wizard.py`
-- [ ] T008 [US1] Add summary-before-save Rich Table confirmation in `src/openreview_cli/gateway/wizard.py`
-- [ ] T009 [US1] Add Ctrl+C graceful exit (questionary returns None) + back navigation via choice option in `src/openreview_cli/gateway/wizard.py`
-- [ ] T010 [US1] Refactor API key entry to `questionary.password()` with inline validation in `src/openreview_cli/gateway/wizard.py`
-- [ ] T011 [US1] Verify all gateway tests pass — `uv run pytest tests/ -k gateway -v` (covers FR-15 atomic_write: 6 existing tests in `tests/unit/test_utils.py` verify `gateway/utils.py:atomic_write`)
+- [X] T007 [US1] Replace `Prompt.ask()` provider/ model selection with `questionary.select()` / `autocomplete()` in `src/openreview_cli/gateway/wizard.py`
+- [X] T008 [US1] Add summary-before-save Rich Table confirmation in `src/openreview_cli/gateway/wizard.py`
+- [X] T009 [US1] Add Ctrl+C graceful exit (questionary returns None) + back navigation via choice option in `src/openreview_cli/gateway/wizard.py`
+- [X] T010 [US1] Refactor API key entry to `questionary.password()` with inline validation in `src/openreview_cli/gateway/wizard.py`
+- [X] T011 [US1] Verify all gateway tests pass — `uv run pytest tests/ -k gateway -v` (covers FR-15 atomic_write: 6 existing tests in `tests/unit/test_utils.py` verify `gateway/utils.py:atomic_write`)
 
 **Checkpoint**: US1 complete — gateway setup has arrow-key navigation and summary-before-save
 
@@ -73,18 +73,18 @@ description: "Tasks for CLI wizard UX redesign — arrow-key navigation, review 
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T012 [P] [US2] Write unit tests for `ReviewWizard` in `tests/unit/test_review_wizard.py`
-- [ ] T013 [P] [US2] Write integration tests for review CLI flow in `tests/integration/test_review_cli.py`
+- [X] T012 [P] [US2] Write unit tests for `ReviewWizard` in `tests/unit/test_review_wizard.py`
+- [X] T013 [P] [US2] Write integration tests for review CLI flow in `tests/integration/test_review_cli.py`
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Implement `ReviewWizard.__init__()` with file validation and config in `src/openreview_cli/cli/review.py`
-- [ ] T015 [US2] Implement pre-flight gateway readiness check (≥1 chat + ≥1 embed configured) in `src/openreview_cli/cli/review.py`
-- [ ] T016 [US2] Implement mode/jurisdiction/output-format selection steps with conditional branching in `src/openreview_cli/cli/review.py`
-- [ ] T017 [US2] Implement clause multi-select step (conditional: clause-by-clause mode only) in `src/openreview_cli/cli/review.py`
-- [ ] T018 [US2] Implement Rich Table summary + confirmation before returning `ReviewConfiguration` in `src/openreview_cli/cli/review.py`
-- [ ] T019 [US2] Add `review` Typer command with flags (`--non-interactive`, `--mode`, `--jurisdiction`, `--output`, `--clauses`) in `src/openreview_cli/app.py`
-- [ ] T020 [US2] Verify review tests pass — `uv run pytest tests/ -k "review or gateway" -v`
+- [X] T014 [US2] Implement `ReviewWizard.__init__()` with file validation and config in `src/openreview_cli/cli/review.py`
+- [X] T015 [US2] Implement pre-flight gateway readiness check (≥1 chat + ≥1 embed configured) in `src/openreview_cli/cli/review.py`
+- [X] T016 [US2] Implement mode/jurisdiction/output-format selection steps with conditional branching in `src/openreview_cli/cli/review.py`
+- [X] T017 [US2] Implement clause multi-select step (conditional: clause-by-clause mode only) in `src/openreview_cli/cli/review.py`
+- [X] T018 [US2] Implement Rich Table summary + confirmation before returning `ReviewConfiguration` in `src/openreview_cli/cli/review.py`
+- [X] T019 [US2] Add `review` Typer command with flags (`--non-interactive`, `--mode`, `--jurisdiction`, `--output`, `--clauses`) in `src/openreview_cli/app.py`
+- [X] T020 [US2] Verify review tests pass — `uv run pytest tests/ -k "review or gateway" -v`
 
 **Checkpoint**: US2 complete — review command works in interactive mode
 
@@ -98,13 +98,13 @@ description: "Tasks for CLI wizard UX redesign — arrow-key navigation, review 
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T021 [P] [US3] Write integration tests for non-interactive terminal fallback in `tests/integration/test_review_cli.py`
+- [X] T021 [P] [US3] Write integration tests for non-interactive terminal fallback in `tests/integration/test_review_cli.py`
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Add non-interactive terminal guard + flag-based fallback in `src/openreview_cli/gateway/wizard.py`
-- [ ] T023 [US3] Add instruction hints (FR-08) to all wizard prompts in `src/openreview_cli/cli/utils.py`
-- [ ] T024 [US3] Verify non-interactive scenarios pass — `uv run pytest tests/ -k "non-interactive" -v` (covers both gateway and review wizards; `TERM=dumb`, piped stdin, `--non-interactive` flag)
+- [X] T022 [US3] Add non-interactive terminal guard + flag-based fallback in `src/openreview_cli/gateway/wizard.py`
+- [X] T023 [US3] Add instruction hints (FR-08) to all wizard prompts in `src/openreview_cli/cli/utils.py`
+- [X] T024 [US3] Verify non-interactive scenarios pass — `uv run pytest tests/ -k "non-interactive" -v` (covers both gateway and review wizards; `TERM=dumb`, piped stdin, `--non-interactive` flag)
 
 **Checkpoint**: US3 complete — all scenarios from quickstart.md should pass
 
@@ -114,11 +114,11 @@ description: "Tasks for CLI wizard UX redesign — arrow-key navigation, review 
 
 **Purpose**: Verification, pre-commit, memory budget, constitution compliance
 
-- [ ] T025 [P] Pre-commit sweep — `uv run pre-commit run --all-files`
-- [ ] T026 [P] Memory budget check — `uv run pytest -m memory`
-- [ ] T027 Verify all 8 quickstart validation scenarios from `specs/005-cli-wizard-redesign/quickstart.md`
-- [ ] T028 Cross-check constitution compliance: Privacy (masked input, auth.json), Local-First (no server), Dep-Minimalism (no forbidden deps), YAGNI (no speculative abstractions)
-- [ ] T029 [P] Manual cross-platform smoke test for SC-06 — verify arrow-key navigation on: Linux (local), macOS (local), Windows Terminal/WSL, SSH with PTY (`ssh -t`), and `TERM=dumb` fallback
+- [X] T025 [P] Pre-commit sweep — `uvx pre-commit run --all-files`
+- [X] T026 [P] Memory budget check — `uv run pytest -m memory`
+- [X] T027 Verify all 8 quickstart validation scenarios from `specs/005-cli-wizard-redesign/quickstart.md`
+- [X] T028 Cross-check constitution compliance: Privacy (masked input, auth.json), Local-First (no server), Dep-Minimalism (no forbidden deps), YAGNI (no speculative abstractions)
+- [X] T029 [P] Manual cross-platform smoke test for SC-06 — verify arrow-key navigation on: Linux (local), macOS (local), Windows Terminal/WSL, SSH with PTY (`ssh -t`), and `TERM=dumb` fallback
 
 ---
 

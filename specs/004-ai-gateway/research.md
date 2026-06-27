@@ -117,13 +117,13 @@ from pydantic_settings.sources import YamlConfigSettingsSource
 
 class GatewayConfig(BaseSettings):
     model_config = SettingsConfigDict(yaml_file="config.yml")
-    
+
     reasoning: SlotConfig
     extraction: SlotConfig
     embedding: SlotConfig
     reranking: SlotConfig
     graph: SlotConfig
-    
+
     @classmethod
     def settings_customise_sources(cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings):
         return (
@@ -151,7 +151,7 @@ from pydantic import field_validator
 
 class SlotConfig(BaseModel):
     primary: str
-    
+
     @field_validator("primary")
     @classmethod
     def validate_model_format(cls, v: str) -> str:
@@ -237,7 +237,7 @@ class CostRecord:
     output_tokens: int
     cost_usd: float
     timestamp: float
-    
+
     def __post_init__(self) -> None:
         if self.input_tokens < 0:
             raise ValueError("input_tokens must be non-negative")
@@ -275,7 +275,7 @@ class GatewayError(Exception):
     slot: str | None
     message: str
     action: str
-    
+
     def __str__(self) -> str:
         return self.message
 

@@ -1,8 +1,8 @@
 # CLI Wizard UX Redesign
 
-**Feature**: CLI Wizard UX Redesign  
-**Version**: 0.1  
-**Created**: 2026-06-27  
+**Feature**: CLI Wizard UX Redesign
+**Version**: 0.1
+**Created**: 2026-06-27
 
 ## Overview
 

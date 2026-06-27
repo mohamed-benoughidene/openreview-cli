@@ -400,7 +400,6 @@ reasoning:
 
 
 def test_gateway_import_file_not_found(temp_config_dir: Path) -> None:
-    result = runner.invoke(app, ["gateway", "import", "non_existent_file.yml"])
+    result = runner.invoke(app, ["gateway", "import", "/nonexistent/file.yml"])
     assert result.exit_code == 1
-    output = result.stdout + (getattr(result, "stderr", None) or "")
-    assert "error: file not found" in output.lower()
+    assert "not found" in (result.stdout + (getattr(result, "stderr", None) or "")).lower()

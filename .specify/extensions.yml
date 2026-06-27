@@ -149,6 +149,113 @@ hooks:
         COUNT: NO ANCHOR findings: N
 
         Do not exit until analysis-context.md is written.
+  before_implement:
+    - extension: impl-grounding
+      command: speckit.impl-grounding
+      enabled: true
+      optional: false
+      priority: 1
+      condition: null
+      description: Verify grounding chain and runtime environment before any code is written
+      prompt: |
+        You are preparing the implementation environment. Do not write any code.
+        Do not modify any source files. Only collect, verify, and record.
+
+        Step 1 — Verify grounding chain:
+        Check that all three memory files exist:
+          .specify/memory/verified-sources.md
+          .specify/memory/task-context.md
+          .specify/memory/analysis-context.md
+
+        For each missing file, write:
+          CHAIN BROKEN: <filename> not found
+          Impact: <what detection was skipped>
+          Required action: Run <speckit.research-grounding | speckit.task-grounding | speckit.analysis-grounding> first
+
+        If any CHAIN BROKEN entries exist, halt and report them before proceeding to Step 2.
+
+        Step 2 — Snapshot runtime environment:
+        Run each command that applies to this project and record exact output:
+
+          python3 --version        → RUNTIME: python <version>
+          node --version           → RUNTIME: node <version>
+          npm --version            → RUNTIME: npm <version>
+          rustc --version          → RUNTIME: rustc <version>
+          go version               → RUNTIME: go <version>
+
+        For Python projects — run ONE of:
+          pip freeze               → installed packages with exact versions
+          uv pip freeze            → if uv is the package manager
+          poetry show              → if poetry is the package manager
+
+        Record as:
+          INSTALLED: <package> | VERSION: <x.y.z>
+
+        For Node projects — run ONE of:
+          npm list --depth=0       → installed packages
+          yarn list --depth=0
+
+        Record as:
+          INSTALLED: <package> | VERSION: <x.y.z>
+
+        Step 3 — Cross-check plan vs runtime:
+        Read plan.md and extract every version number or version range specified.
+        Read verified-sources.md and extract all CONFIRMED versions.
+
+        For each planned dependency, compare against INSTALLED list from Step 2:
+          PLAN MATCH: <package> planned <x.y.z> | installed <x.y.z> → OK
+          VERSION DRIFT: <package> planned <x.y.z> | installed <a.b.c> → MISMATCH
+          NOT INSTALLED: <package> planned <x.y.z> | not found in environment
+
+        Step 4 — Fresh filesystem snapshot:
+        Re-scan the project root (2 levels deep).
+        Compare against task-context.md's "Project Structure (actual)" section.
+        Flag any directory or file that is new since task-context.md was written:
+          NEW SINCE TASKS: <path>
+        Flag any path that task-context.md listed as EXISTS but is now gone:
+          REMOVED SINCE TASKS: <path>
+
+        Step 5 — Capture tasks baseline:
+        Read tasks.md and count:
+          TASKS TOTAL: N
+          TASKS COMPLETE [X]: N
+          TASKS PENDING [ ]: N
+        List the first pending task ID and description:
+          FIRST PENDING: <T001> <description>
+
+        Step 6 — Write impl-context.md:
+        Save to .specify/memory/impl-context.md:
+
+        ## Grounding Chain
+        [Step 1 results — OK or CHAIN BROKEN entries]
+
+        ## Runtime Environment
+        [Step 2 results — all RUNTIME entries]
+
+        ## Installed Packages
+        [Step 2 pip/npm output]
+
+        ## Plan vs Runtime
+        [Step 3 — PLAN MATCH, VERSION DRIFT, NOT INSTALLED entries]
+
+        ## Filesystem Delta
+        [Step 4 — NEW SINCE TASKS and REMOVED SINCE TASKS entries]
+
+        ## Tasks Baseline
+        [Step 5 counts and FIRST PENDING]
+
+        ## Implementation Clearance
+        If VERSION DRIFT or NOT INSTALLED entries exist:
+          STATUS: BLOCKED
+          Reason: <list each blocking item>
+          Resolution: Install missing deps or update plan.md to match installed versions
+        Else if CHAIN BROKEN entries exist:
+          STATUS: BLOCKED
+          Reason: Grounding chain incomplete
+        Else:
+          STATUS: CLEAR — implementation may proceed
+
+        Do not exit until impl-context.md is written and Implementation Clearance is set.
 
   after_specify:
     - extension: agent-context
@@ -188,4 +295,14 @@ hooks:
       priority: 10
       prompt: Execute speckit.agent-context.update?
       description: Refresh agent context after analysis
+      condition: null
+
+  after_implement:
+    - extension: agent-context
+      command: speckit.agent-context.update
+      enabled: true
+      optional: true
+      priority: 10
+      prompt: Execute speckit.agent-context.update?
+      description: Refresh agent context after implementation
       condition: null

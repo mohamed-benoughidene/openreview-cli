@@ -12,7 +12,7 @@ The AI Gateway is a model routing layer that connects the review engine to AI pr
 
 **Language/Version**: Python 3.12.3 (pinned in `.python-version` and `pyproject.toml`)
 
-**Primary Dependencies**: 
+**Primary Dependencies**:
 - `litellm` (provider abstraction — chat, embedding, reranking)
 - `pydantic` + `pydantic-settings` (config validation, already permitted in constitution)
 - `httpx` (HTTP client for provider API calls, already in deps)
@@ -20,7 +20,7 @@ The AI Gateway is a model routing layer that connects the review engine to AI pr
 - `typer` (CLI framework, already in deps)
 - `pyyaml` (YAML config loading, already in deps)
 
-**Storage**: 
+**Storage**:
 - SQLite for cost records and session state (existing `storage/` module)
 - YAML config files (`~/.config/openreview/config.yml`)
 - JSON auth file (`~/.config/openreview/auth.json`, chmod 600)
@@ -32,21 +32,21 @@ The AI Gateway is a model routing layer that connects the review engine to AI pr
 
 **Project Type**: CLI tool (local-first, no server)
 
-**Performance Goals**: 
+**Performance Goals**:
 - Gateway routing overhead <50ms per request (SC-007)
 - Fallback activation within 30 seconds including retries (SC-003)
 - Interactive setup completion <5 minutes (SC-001)
 - Non-interactive setup <30 seconds (SC-009)
 - YAML import <10 seconds (SC-011)
 
-**Constraints**: 
+**Constraints**:
 - Peak memory <100 MB (NLP model exempt, constitution Principle III)
 - Cold startup <1s, warm startup <0.3s (constitution)
 - API keys never logged or sent to tool-operated servers (Principle I)
 - Fully local configuration must work end-to-end (Principle I)
 - No provider-specific imports in engine code (FR-017)
 
-**Scale/Scope**: 
+**Scale/Scope**:
 - 5 slots (reasoning, extraction, embedding, reranking, graph)
 - 8+ providers (OpenAI, Anthropic, Google, Ollama, OpenRouter, Cohere, HuggingFace, Custom)
 - 300+ cloud models via registry

@@ -29,7 +29,7 @@ Replace `rich.prompt.Prompt.ask()` with `questionary` interactive prompts (arrow
 
 **Performance Goals**: N/A — wizard responsiveness is bounded by prompt_toolkit rendering latency (sub-second)
 
-**Constraints**: 
+**Constraints**:
 - No web server or long-running daemon
 - Must work over SSH with PTY
 - Must degrade gracefully in non-interactive terminals (`TERM=dumb`, piped stdin)

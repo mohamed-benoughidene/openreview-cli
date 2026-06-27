@@ -920,6 +920,40 @@ app.add_typer(gateway_app)
 
 
 @app.command()
+def review(
+    path: str = typer.Argument(..., help="Path to a PDF or DOCX contract file."),
+    non_interactive: bool = typer.Option(
+        False, "--non-interactive", help="Skip wizard, use CLI flags only"
+    ),
+    mode: str | None = typer.Option(
+        None, "--mode", help="Review mode: full, clause-by-clause, risk-scan"
+    ),
+    jurisdiction: str | None = typer.Option(None, "--jurisdiction", help="Jurisdiction code"),
+    output_format: str | None = typer.Option(
+        None, "--output", help="Output format: json, text, html"
+    ),
+    clauses: str | None = typer.Option(None, "--clauses", help="Clause IDs, comma-separated"),
+) -> None:
+    from openreview_cli.cli.review import ReviewWizard
+
+    clauses_list: list[str] | None = None
+    if clauses is not None:
+        clauses_list = [c.strip() for c in clauses.split(",") if c.strip()]
+
+    wizard = ReviewWizard(
+        file_path=path,
+        non_interactive=non_interactive,
+        mode=mode,
+        jurisdiction=jurisdiction,
+        output_format=output_format,
+        clauses=clauses_list,
+    )
+    config = wizard.run()
+    # Review configuration is ready; caller will use it once review engines exist
+    typer.echo(f"Review ready: {config.mode.value} review of {config.file_path.name}")
+
+
+@app.command()
 def parse(
     path: str = typer.Argument(..., help="Path to a PDF or DOCX contract file."),
     format: str = typer.Option("text", "--format", help="Output format: text, json"),

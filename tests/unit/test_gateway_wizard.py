@@ -61,3 +61,58 @@ def test_slot_grouping_logic() -> None:
     assert wizard.slots_config["reasoning"]["primary"] == "openai/gpt-4o"
     assert wizard.slots_config["extraction"]["primary"] == "openai/gpt-4o"
     assert wizard.slots_config["graph"]["primary"] == "openai/gpt-4o"
+
+
+def test_wizard_arrow_key_navigation_flow(temp_config_dir: Path) -> None:
+    wizard = SetupWizard(config_dir=temp_config_dir)
+    from openreview_cli.gateway.providers import ModelInfo
+
+    fake_models = [ModelInfo(name="llama3", size=4_700_000_000, parameter_size="8B")]
+    select_values = iter(
+        [
+            "ollama",  # provider step 0 (reasoning)
+            "llama3",  # ollama model select step 0
+            "openai",  # provider step 2 (embedding — extraction/graph skipped by grouping)
+            "text-embedding-3-small",  # model select step 2
+            "cohere",  # provider step 3 (reranking)
+            "rerank-v3",  # model select step 3
+        ]
+    )
+
+    def fake_select(message: str, choices: list[str], default: str | None = None) -> str | None:
+        try:
+            return next(select_values)
+        except StopIteration:
+            return None
+
+    with (
+        patch("openreview_cli.gateway.wizard._select", side_effect=fake_select),
+        patch("openreview_cli.gateway.wizard._confirm", return_value=True),
+        patch("openreview_cli.gateway.wizard._password", return_value="sk-test"),
+        patch("openreview_cli.gateway.wizard.validate_api_key", return_value=True),
+        patch("openreview_cli.gateway.wizard._is_interactive", return_value=True),
+        patch("openreview_cli.gateway.wizard.ollama_discover_models", return_value=fake_models),
+        patch(
+            "openreview_cli.gateway.wizard.get_models_for_slot",
+            return_value=["text-embedding-3-small", "text-embedding-3-large"],
+        ),
+        patch.object(wizard, "save") as mock_save,
+    ):
+        wizard.run()
+        assert wizard.slots_config["reasoning"]["primary"] == "ollama/llama3"
+        assert wizard.slots_config["embedding"]["primary"] == "openai/text-embedding-3-small"
+        assert wizard.slots_config["reranking"]["primary"] == "cohere/rerank-v3"
+        mock_save.assert_called_once()
+
+
+def test_wizard_cancel_on_first_step_skips_save(temp_config_dir: Path) -> None:
+    wizard = SetupWizard(config_dir=temp_config_dir)
+
+    with (
+        patch("openreview_cli.gateway.wizard._select", return_value=None),
+        patch("openreview_cli.gateway.wizard._confirm", return_value=False),
+        patch("openreview_cli.gateway.wizard.ollama_discover_models", return_value=[]),
+        patch.object(wizard, "save") as mock_save,
+    ):
+        wizard.run()
+        mock_save.assert_not_called()

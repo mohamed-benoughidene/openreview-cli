@@ -260,11 +260,11 @@ openreview gateway test <slot>
 Testing slot: reasoning
   provider: openai
   model: gpt-4o
-  
+
   ✓ API key valid
   ✓ Models list retrieved (42 models available)
   ✓ Latency: 234ms
-  
+
 Test passed.
 ```
 
@@ -444,10 +444,10 @@ Installing Ollama models...
 
 [1/3] llama3.1
   ✓ Downloaded (4.7 GB)
-  
+
 [2/3] nomic-embed-text
   ✓ Downloaded (274 MB)
-  
+
 [3/3] qwen3-reranker-0.6b
   ✓ Downloaded (350 MB)
 

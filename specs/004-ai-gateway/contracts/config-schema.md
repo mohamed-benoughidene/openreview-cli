@@ -18,49 +18,49 @@ gateway:
       params:  # Optional: model parameters
         temperature: 0.1
         max_tokens: 4000
-    
+
     extraction:
       primary: "ollama/qwen3:4b"
       fallback: null
       params:
         temperature: 0.0
         max_tokens: 2000
-    
+
     embedding:
       primary: "ollama/nomic-embed-text"
       fallback: null
       params:
         dimensions: 512  # Embedding-specific
-    
+
     reranking:
       primary: "ollama/qwen3-reranker-0.6b"
       fallback: null
       params: {}
-    
+
     graph:
       primary: "ollama/qwen3:8b"
       fallback: null
       params:
         temperature: 0.0
         max_tokens: 4000
-  
+
   # Fallback and retry behavior
   fallback:
     retries: 2  # Number of retry attempts (0 = no retries)
     retry_delay: 1.0  # Initial delay in seconds (exponential backoff)
     timeout: 60  # Request timeout in seconds
     on_failure: "error"  # error | skip | warn
-  
+
   # Cost limits (in USD cents)
   cost_limits:
     per_review_cents: 100  # $1.00 per review
     daily_cents: 1000  # $10.00 per day
-  
+
   # Model registry
   registry:
     refresh_days: 7  # Refresh cached registry every N days
     remote_url: "https://example.com/models.json"  # Remote registry URL
-  
+
   # Observability
   logging:
     level: "info"  # debug | info | warning | error
@@ -325,7 +325,7 @@ class SlotConfig(BaseModel):
     primary: str
     fallback: str | None = None
     params: ModelParams | None = None
-    
+
     @field_validator("primary", "fallback")
     @classmethod
     def validate_model_format(cls, v: str | None) -> str | None:
@@ -372,7 +372,7 @@ import os
 def atomic_write_yaml(path: Path, data: dict) -> None:
     """Write YAML config atomically."""
     import yaml
-    
+
     fd, tmp_path = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
     try:
         with os.fdopen(fd, "w") as f:

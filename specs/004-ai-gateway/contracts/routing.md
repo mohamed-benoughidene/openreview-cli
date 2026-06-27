@@ -20,7 +20,7 @@ def route_request(
 ) -> GatewayResponse:
     """
     Route a request through the configured slot.
-    
+
     Args:
         slot: Slot name (reasoning, extraction, embedding, reranking, graph)
         messages: Chat messages for chat completion (reasoning, extraction, graph)
@@ -29,10 +29,10 @@ def route_request(
         documents: Documents to rerank (reranking slot)
         session_id: Review session UUID for cost tracking
         **kwargs: Additional provider-specific parameters
-    
+
     Returns:
         GatewayResponse with response data, token usage, cost, and metadata
-    
+
     Raises:
         GatewayError: If slot not configured, provider fails, or cost limit exceeded
     """
@@ -46,24 +46,24 @@ def route_request(
 @dataclass(slots=True)
 class GatewayResponse:
     """Response from a routed request."""
-    
+
     # Response data (type depends on slot)
     content: str | list[float] | list[RerankResult]
-    
+
     # Token usage
     input_tokens: int
     output_tokens: int
-    
+
     # Cost tracking
     cost_usd: float
-    
+
     # Metadata
     model: str
     provider: str
     slot: str
     fallback_used: bool
     latency_ms: int
-    
+
     # Raw response (for debugging, never logged by default)
     raw_response: Any | None = None
 ```
@@ -143,7 +143,7 @@ class GatewayError(Exception):
     slot: str | None
     message: str
     action: str
-    
+
     def __str__(self) -> str:
         return self.message
 ```
