@@ -14,12 +14,12 @@ The bundle returned by `ReviewWizard.run()` to the caller in `app.py`.
 | `mode` | `Literal["full", "clause-by-clause", "risk-scan"]` | yes | Review mode selected by user |
 | `jurisdiction` | `str \| None` | no | Jurisdiction code (e.g. "us-de", "us-ca", "eu-gdpr"). None when mode is "risk-scan". |
 | `output_format` | `Literal["json", "text", "html"] \| None` | no | Desired output format. None when mode is "risk-scan". |
-| `clauses` | `list[str] \| None` | no | Selected clause IDs. None = all clauses. Only populated when mode is "clause-by-clause". |
+| `clauses` | `list[str] \| None` | no | Selected clause IDs. `None` = all clauses (default). Non-empty list = specific clause IDs selected. Empty list `[]` = error in clause-by-clause mode. Only populated when mode is "clause-by-clause". |
 
 **Validation rules**:
 - `file_path` must exist and be a supported file type (PDF, DOCX)
 - If `mode` is "full" or "clause-by-clause": `jurisdiction` and `output_format` are required
-- If `mode` is "clause-by-clause": `clauses` must have at least one entry (unless empty list = all clauses)
+- If `mode` is "clause-by-clause": `clauses` must be a non-empty list (at least one clause ID selected). `None` means all clauses (used in non-interactive mode or when user selects "all"). An empty list `[]` is an error — the user must select at least one clause.
 - In non-interactive mode, missing required fields raise a validation error
 
 ### WizardStep (internal/shared)
@@ -54,7 +54,41 @@ class OutputFormat(str, enum.Enum):
     HTML = "html"
 ```
 
-## State: ReviewWizard Flow
+## Jurisdiction Codes
+
+The wizard presents a fixed list of jurisdiction codes. The canonical list lives in `src/openreview_cli/cli/review.py` as a module-level constant. The autocomplete/select prompt uses this list.
+
+| Code | Label |
+|------|-------|
+| `us-de` | United States — Delaware |
+| `us-ca` | United States — California |
+| `us-ny` | United States — New York |
+| `us-tx` | United States — Texas |
+| `us-il` | United States — Illinois |
+| `uk` | United Kingdom |
+| `eu-gdpr` | European Union — GDPR |
+| `eu-de` | European Union — Germany |
+| `eu-fr` | European Union — France |
+| `ca` | Canada |
+| `au` | Australia |
+| `sg` | Singapore |
+
+The list is intentionally short for MVP. It can be extended later by adding entries to the constant — no spec change needed.
+
+## Prompt Styling
+
+All questionary prompts across both wizards use a consistent style defined in `cli/utils.py` wrappers:
+
+| Element | Style |
+|---------|-------|
+| Theme | questionary default (prompt_toolkit `ansidark`). No custom colors for MVP — ANSI-aware terminals get styled prompts; `TERM=dumb` falls back to plain text |
+| Instruction hints | Appended to `message` as `"[dim](${hint})[/dim]"` — e.g. `"Select provider (use arrow keys)"`. Turned off in non-interactive mode |
+| "← Back" choice | Last item in every `select()` that supports back navigation. Not shown on entry-point prompts (mode) or password fields |
+| Selected item marker | `◉` for select (single), `◉` for checkbox (selected), `○` for checkbox (unselected) — questionary defaults |
+| Validation errors | Inline red text below the prompt — questionary's built-in `Invalid` exception rendered as `[red]${error}[/red]` beneath the input |
+| Default highlight | First item in the choices list is pre-highlighted. Default for text/password inputs is the previously entered value if any |
+
+These choices are questionary defaults; no custom styling configuration is needed.
 
 ```
 [Start] → [Pre-flight check (gateway ready?)]

@@ -116,7 +116,7 @@ The existing `wizard.py` also lacks: a summary-before-save step, inline input va
 | ID | Criterion | Measurement |
 |----|-----------|------------|
 | SC-01 | First-time user completes gateway setup in under 2 minutes | Timed user test, N=5 |
-| SC-02 | Typed inputs reduced by ≥60% compared to current wizard | Count typed-vs-selected per flow |
+| SC-02 | Typed inputs reduced by ≥60% compared to current wizard | Manual count during user test (N=5): for each wizard run, count the total number of text characters the user types in the old wizard (Prompt.ask typed input) vs. the new wizard (questionary select/autocomplete). Formula: `1 - (new_typed_chars / old_typed_chars)`. Target: ≥0.60. Only counts characters in provider names, model names, and API keys — not confirmation y/n or back/cancel. |
 | SC-03 | 100% of interactive prompts degrade gracefully when stdin is not a TTY | Automated test: pipe input |
 | SC-04 | Review wizard completes in ≤30 seconds for a typical user | Timed user test, N=5 |
 | SC-05 | All existing `gateway setup` integration tests pass after migration | Run `uv run pytest tests/ -k gateway` |

@@ -59,7 +59,7 @@ description: "Tasks for CLI wizard UX redesign — arrow-key navigation, review 
 - [ ] T008 [US1] Add summary-before-save Rich Table confirmation in `src/openreview_cli/gateway/wizard.py`
 - [ ] T009 [US1] Add Ctrl+C graceful exit (questionary returns None) + back navigation via choice option in `src/openreview_cli/gateway/wizard.py`
 - [ ] T010 [US1] Refactor API key entry to `questionary.password()` with inline validation in `src/openreview_cli/gateway/wizard.py`
-- [ ] T011 [US1] Verify all gateway tests pass — `uv run pytest tests/ -k gateway -v`
+- [ ] T011 [US1] Verify all gateway tests pass — `uv run pytest tests/ -k gateway -v` (covers FR-15 atomic_write: 6 existing tests in `tests/unit/test_utils.py` verify `gateway/utils.py:atomic_write`)
 
 **Checkpoint**: US1 complete — gateway setup has arrow-key navigation and summary-before-save
 
@@ -104,7 +104,7 @@ description: "Tasks for CLI wizard UX redesign — arrow-key navigation, review 
 
 - [ ] T022 [US3] Add non-interactive terminal guard + flag-based fallback in `src/openreview_cli/gateway/wizard.py`
 - [ ] T023 [US3] Add instruction hints (FR-08) to all wizard prompts in `src/openreview_cli/cli/utils.py`
-- [ ] T024 [US3] Verify non-interactive scenarios pass — `uv run pytest tests/ -k "non-interactive" -v`
+- [ ] T024 [US3] Verify non-interactive scenarios pass — `uv run pytest tests/ -k "non-interactive" -v` (covers both gateway and review wizards; `TERM=dumb`, piped stdin, `--non-interactive` flag)
 
 **Checkpoint**: US3 complete — all scenarios from quickstart.md should pass
 
@@ -118,6 +118,7 @@ description: "Tasks for CLI wizard UX redesign — arrow-key navigation, review 
 - [ ] T026 [P] Memory budget check — `uv run pytest -m memory`
 - [ ] T027 Verify all 8 quickstart validation scenarios from `specs/005-cli-wizard-redesign/quickstart.md`
 - [ ] T028 Cross-check constitution compliance: Privacy (masked input, auth.json), Local-First (no server), Dep-Minimalism (no forbidden deps), YAGNI (no speculative abstractions)
+- [ ] T029 [P] Manual cross-platform smoke test for SC-06 — verify arrow-key navigation on: Linux (local), macOS (local), Windows Terminal/WSL, SSH with PTY (`ssh -t`), and `TERM=dumb` fallback
 
 ---
 
@@ -233,3 +234,4 @@ With multiple developers:
 - `cli/__init__.py` already created (Phase 1 plan output)
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently
+- **FR-15 (atomic_write)**: Already covered by existing `tests/unit/test_utils.py` (6 tests for `gateway/utils.py:atomic_write`). T011 re-verifies these pass post-refactor. Review wizard does NOT write files — it returns `ReviewConfiguration` to caller, so FR-15 is N/A for review wizard.

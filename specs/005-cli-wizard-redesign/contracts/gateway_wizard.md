@@ -64,7 +64,18 @@ openreview gateway setup --non-interactive \
 | No summary-before-save | Rich Table shown; user must confirm "Save?" before write |
 | No validation feedback inline | `questionary.text(validate=...)` — inline red error |
 | No non-interactive terminal guard | Detect piped stdin / `TERM=dumb` → fallback to flag mode |
-| "back"/"cancel" via string matching on Prompt.ask() | questionary handles Ctrl+C (returns None); "back" via choice in select() |
+| "back"/"cancel" via string matching on Prompt.ask() | questionary handles Ctrl+C (returns None); "← Back" as last choice in select prompts (provider, model, grouping) |
+
+## Back Navigation
+
+The refactored wizard uses a **"← Back" choice** in `questionary.select()` prompts instead of text-based "back" entry. Rules:
+
+| Prompt | Has "← Back"? | Behavior |
+|--------|--------------|----------|
+| Provider selection | Yes (when step_idx > 0) | Decrements step_idx; clears skipped_slots if returning to step 0 |
+| Model selection | Yes | Returns to provider selection for current slot |
+| API key entry | No | questionary.password() — use Ctrl+C to exit instead |
+| Grouping confirm | Yes | Returns to model selection for current slot |
 
 ## Return Value
 

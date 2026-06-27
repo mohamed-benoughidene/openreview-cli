@@ -42,6 +42,9 @@ openreview review <file>
 # Non-interactive mode (all flags required)
 openreview review <file> --non-interactive --mode full --jurisdiction us-de --output json
 
+# Non-interactive with clause-by-clause (comma-separated clause IDs)
+openreview review <file> --non-interactive --mode clause-by-clause --jurisdiction us-de --output json --clauses 1,5,12
+
 # Partial non-interactive (missing flags → error)
 openreview review <file> --non-interactive --mode full
 # → Error: --jurisdiction and --output are required in non-interactive mode
@@ -55,7 +58,9 @@ openreview review <file> --non-interactive --mode full
 | `--mode` | "full" \| "clause-by-clause" \| "risk-scan" | non-interactive: yes | Review mode |
 | `--jurisdiction` | str | non-interactive + full/clause-by-clause: yes | Jurisdiction code |
 | `--output` | "json" \| "text" \| "html" | non-interactive + full/clause-by-clause: yes | Output format |
-| `--clauses` | list[str] | no | Clause IDs (non-interactive + clause-by-clause) |
+
+> **Naming convention**: CLI flags use short names (`--output`). The `ReviewConfiguration` field is `output_format` (Python convention). This is intentional — CLI flags are typed by users, model fields follow Python naming.
+| `--clauses` | list[str] | no | Clause IDs, comma-separated (non-interactive + clause-by-clause). `None` = all clauses; non-empty list = specific IDs; empty list `[]` = error |
 
 ## Return Type
 
@@ -63,10 +68,10 @@ openreview review <file> --non-interactive --mode full
 @dataclass
 class ReviewConfiguration:
     file_path: str
-    mode: str                          # "full" | "clause-by-clause" | "risk-scan"
-    jurisdiction: str | None           # None when mode == "risk-scan"
-    output_format: str | None          # None when mode == "risk-scan"
-    clauses: list[str] | None           # None = all clauses; populated only for clause-by-clause
+    mode: ReviewMode                      # ReviewMode.FULL | ReviewMode.CLAUSE_BY_CLAUSE | ReviewMode.RISK_SCAN (see data-model.md)
+    jurisdiction: str | None              # None when mode == ReviewMode.RISK_SCAN
+    output_format: OutputFormat | None    # None when mode == ReviewMode.RISK_SCAN (see data-model.md)
+    clauses: list[str] | None             # None = all clauses; populated only for CLAUSE_BY_CLAUSE
 ```
 
 ## Errors
@@ -77,3 +82,16 @@ class ReviewConfiguration:
 | Unsupported file type | Print error and exit 1 |
 | Missing required flags in non-interactive mode | Print error and exit 1 |
 | Gateway not reachable (pre-flight) | Warn + offer gateway setup; if declined, continue with defaults |
+| `--clauses` is empty list `[]` in non-interactive + clause-by-clause mode | Print error and exit 1: "Error: --clauses requires at least one clause ID" |
+
+## Back Navigation
+
+The review wizard uses a **"← Back" choice** in `questionary.select()` prompts. Rules:
+
+| Prompt | Has "← Back"? | Behavior |
+|--------|--------------|----------|
+| Mode selection | No | Entry point — Ctrl+C to exit |
+| Jurisdiction selection | Yes | Returns to mode selection |
+| Output format selection | Yes | Returns to jurisdiction selection |
+| Clause multi-select | Yes | Returns to output format selection |
+| Summary confirmation | Yes | Returns to mode selection (restart flow) |
