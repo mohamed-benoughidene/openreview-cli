@@ -14,6 +14,16 @@ The `openreview` CLI wizard (used in `gateway setup` and planned for `review`) r
 
 The existing `wizard.py` also lacks: a summary-before-save step, inline input validation, progressive disclosure (questions conditioned on prior answers), and non-interactive terminal guards.
 
+## Clarifications
+
+### Session 2026-06-27
+
+- Q: Once the review wizard finishes asking questions and the user confirms, where does the answer go? → A: The wizard returns the answers as a bundle (a dataclass or dict); the caller in `app.py` decides what to do next. The wizard itself does not call parse or gateway.
+- Q: What happens if someone runs `review` and the gateway isn't ready (no models, no API keys)? → A: A pre-flight check runs before the wizard starts. If the gateway isn't ready, show a warning and offer to run `openreview gateway setup`. If the user declines, the review continues with default settings anyway.
+- Q: What style should the review wizard's summary table use? → A: Rich table (colored, bordered — same style the gateway setup already uses).
+- Q: What should the pre-flight check look for when checking if the gateway is ready? → A: At least one chat model (reasoning/extraction/graph) configured + one embedding model configured. Reranking is optional for MVP.
+- Q: Should the review wizard be the same class as gateway setup, or a separate class? → A: Separate `ReviewWizard` class. Gateway setup saves to config files and returns nothing; review wizard asks different questions and returns a config bundle.
+
 ## User Scenarios
 
 ### Scenario A: First-time Gateway Setup
@@ -42,12 +52,13 @@ The existing `wizard.py` also lacks: a summary-before-save step, inline input va
 **Flow**:
 1. Runs `openreview review contract.pdf`
 2. If file doesn't exist or is unsupported, exits immediately with a clear error
-3. Selects review mode: Full / Clause-by-clause / Risk scan
-4. If "Risk scan only": jumps directly to summary
-5. If "Full" or "Clause-by-clause": prompted for jurisdiction and output format
-6. If "Clause-by-clause": additionally prompted to multi-select clauses to review
-7. Sees a summary table and confirms or cancels
-8. On confirm, review begins
+3. Pre-flight check: if at least one chat slot (reasoning, extraction, or graph) and one embedding slot aren't configured and reachable, shows a warning and offers to run `openreview gateway setup`. If user declines, continues with default settings anyway
+4. Selects review mode: Full / Clause-by-clause / Risk scan
+5. If "Risk scan only": jumps directly to summary
+6. If "Full" or "Clause-by-clause": prompted for jurisdiction and output format
+7. If "Clause-by-clause": additionally prompted to multi-select clauses to review
+8. Sees a summary table and confirms or cancels
+9. On confirm, returns the confirmed options to the caller (`app.py`)
 
 **Verifiable outcomes**:
 - User reaches summary screen in ≤30 seconds
@@ -88,16 +99,17 @@ The existing `wizard.py` also lacks: a summary-before-save step, inline input va
 | FR-02 | Multi-select prompts support Space-to-toggle with a visible marker and Enter-to-confirm | P0 |
 | FR-03 | Free-text choice prompts support inline fuzzy filtering as the user types | P1 |
 | FR-04 | Input validation errors appear inline on the same prompt screen | P1 |
-| FR-05 | A summary table is displayed before any configuration is saved or review is launched | P0 |
+| FR-05 | A summary table (Rich table, colored) is displayed before any configuration is saved or review is launched | P0 |
 | FR-06 | Later wizard steps are conditionally shown or hidden based on earlier answers | P1 |
 | FR-07 | The wizard supports cancellation at any step via Ctrl+C | P0 |
 | FR-08 | Every interactive prompt displays a brief instruction hint | P2 |
 | FR-09 | The wizard detects non-interactive terminals and falls back to flag-based mode | P0 |
 | FR-10 | All wizard flows have a non-interactive mode accepting all parameters as CLI flags | P1 |
 | FR-11 | A `review` command exists as `openreview review <file>` with the 3-step wizard flow | P0 |
-| FR-12 | The existing `gateway setup` wizard is migrated to the new interaction patterns | P0 |
-| FR-13 | The "back" navigation pattern is preserved or replaced with an equivalent mechanism | P2 |
-| FR-14 | Config file writes remain atomic via `atomic_write` | P0 |
+| FR-12 | A pre-flight check runs before the review wizard: if the gateway isn't ready, warn the user and offer to run setup; if they decline, continue with defaults | P1 |
+| FR-13 | The existing `gateway setup` wizard is migrated to the new interaction patterns | P0 |
+| FR-14 | The "back" navigation pattern is preserved or replaced with an equivalent mechanism | P2 |
+| FR-15 | Config file writes remain atomic via `atomic_write` | P0 |
 
 ## Success Criteria
 
@@ -114,7 +126,8 @@ The existing `wizard.py` also lacks: a summary-before-save step, inline input va
 
 - **Wizard Step**: A single question in the wizard flow with a prompt message, input type, optional choices, validation, and a `when` condition
 - **Wizard Flow**: A sequence of steps with branching via `when` conditions, producing an `answers` dictionary
-- **Review Configuration**: Aggregated result of the review wizard with `file_path`, `mode`, `jurisdiction`, `output_format`, and optional `clauses` list
+- **ReviewWizard**: A new class (separate from `SetupWizard`) that guides the user through review-mode questions step by step. Returns a `ReviewConfiguration` bundle to the caller.
+- **Review Configuration**: The bundle returned by `ReviewWizard.run()`, containing `file_path`, `mode`, `jurisdiction`, `output_format`, and optional `clauses` list. The caller (`app.py`) decides what to do with it.
 - **Gateway Slot Configuration**: The existing 5-slot config with `primary` model string and optional `params`
 
 ## Assumptions
@@ -135,6 +148,7 @@ The existing `wizard.py` also lacks: a summary-before-save step, inline input va
 | API key validation fails | Show inline red error; offer "skip validation" without losing the entered key |
 | User presses Ctrl+C during step 3 of 5 | Show confirmation "Cancel?"; on yes, exit; on no, return to current step |
 | File provided to `review` is encrypted/damaged | Pre-flight check catches this before the wizard starts |
+| Gateway not ready when `review` is run (less than one chat + one embed configured) | Warning shown; user offered to run `openreview gateway setup` first; if declined, continues with defaults |
 | User runs `openreview review` with no file argument | Print usage and exit |
 | User provides conflicting flags without `--non-interactive` | Pre-flight validation catches missing required flags |
 

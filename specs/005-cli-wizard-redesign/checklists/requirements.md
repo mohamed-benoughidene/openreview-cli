@@ -32,5 +32,5 @@
 ## Notes
 
 - All items pass validation
-- No clarifications needed — the research blueprint was specific enough to produce a complete specification
+- 5 clarifications integrated: wizard returns bundle to caller, pre-flight check on gateway readiness, Rich table summary, minimum one chat + one embed, separate ReviewWizard class
 - Ready for `/speckit.plan` or `/speckit.tasks`

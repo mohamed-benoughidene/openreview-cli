@@ -1,23 +1,191 @@
 installed:
-- agent-context
-settings:
-  auto_execute_hooks: true
+  - agent-context
+
 hooks:
+  before_plan:
+    - extension: web-research-grounding
+      command: speckit.research-grounding
+      enabled: true
+      optional: false
+      priority: 1
+      condition: null
+      description: Fetch real docs for all dependencies before Phase 0 runs
+      prompt: |
+        Read the feature spec at the FEATURE_SPEC path (from setup-plan.sh output).
+
+        Extract every item that is:
+        - A named library, package, or tool
+        - A version number (explicit or implied)
+        - A behavioral claim about an external dependency
+        - Marked NEEDS CLARIFICATION
+
+        For each extracted item:
+        1. web_search "{item} official docs 2025"
+        2. web_fetch the official docs, PyPI, npm, or GitHub page returned
+        3. Record the result as:
+           ITEM: <name>
+           SOURCE: <url fetched>
+           VERSION: <exact current stable version>
+           KEY FACTS: <3-5 bullets from the docs>
+           STATUS: CONFIRMED | UNVERIFIED | FETCH FAILED
+
+        Rules:
+        - If fetch fails, still record the item with STATUS: FETCH FAILED
+        - Never drop an item silently
+        - Flag any source older than 12 months as POTENTIALLY STALE
+
+        Save the full output to .specify/memory/verified-sources.md
+
+        Do not exit until every extracted item has a STATUS entry in that file.
+
+  before_tasks:
+    - extension: task-grounding
+      command: speckit.task-grounding
+      enabled: true
+      optional: false
+      priority: 1
+      condition: null
+      description: Snapshot real project structure and verified deps before task generation
+      prompt: |
+        You are grounding the task generator before it writes tasks.md.
+        Do not generate tasks. Only collect and record context.
+
+        Step 1 — Load verified sources:
+        Read .specify/memory/verified-sources.md if it exists.
+        Extract all CONFIRMED items into a flat list:
+          VERIFIED DEP: <name> | VERSION: <x.y.z> | SOURCE: <url>
+        If the file does not exist, write:
+          WARNING: verified-sources.md missing — task descriptions must not reference library APIs or version-specific behavior
+
+        Step 2 — Scan project structure:
+        List the actual directory tree from the project root (2-3 levels deep).
+        Record it as-is. Do not infer or guess missing directories.
+
+        Step 3 — Scan existing source files:
+        For each source file found in Step 2:
+        - Record its path
+        - Record exported functions, classes, or CLI commands if readable in under 50 lines
+        - Mark as EXISTS: <path>
+
+        Step 4 — Read design artifacts:
+        Read plan.md and record:
+        - The exact directory structure it defines
+        - The exact module/file names it specifies
+        For each path in plan.md, check if it EXISTS in Step 3 or is NEW.
+        Flag mismatches:
+          MISMATCH: plan.md says <path> but filesystem has <actual>
+
+        Step 5 — Save output:
+        Write all findings to .specify/memory/task-context.md in this format:
+
+        ## Verified Dependencies
+        [output of Step 1]
+
+        ## Project Structure (actual)
+        [output of Step 2]
+
+        ## Existing Files
+        [output of Step 3]
+
+        ## Plan vs Filesystem
+        [output of Step 4 — confirmed paths and mismatches]
+
+        Do not exit until task-context.md is written.
+
+  before_analyze:
+    - extension: analysis-grounding
+      command: speckit.analysis-grounding
+      enabled: true
+      optional: false
+      priority: 1
+      condition: null
+      description: Assemble reality context before cross-artifact analysis runs
+      prompt: |
+        You are preparing context for the analyzer. Do not analyze anything.
+        Only assemble and record. All operations are read-only.
+
+        Step 1 — Check prior grounding artifacts:
+        - Read .specify/memory/verified-sources.md — if missing, write:
+            GROUNDING WARNING: verified-sources.md not found
+            Impact: analyzer cannot detect version drift or API hallucinations in artifacts
+        - Read .specify/memory/task-context.md — if missing, write:
+            GROUNDING WARNING: task-context.md not found
+            Impact: analyzer cannot detect path mismatches against real filesystem
+
+        Step 2 — Extract reality anchors:
+        From verified-sources.md (if present), extract:
+          ANCHOR DEP: <name> | VERSION: <x.y.z> | CONFIRMED BEHAVIORS: <key facts>
+
+        From task-context.md (if present), extract:
+          ANCHOR PATH: <path> | STATUS: EXISTS | NEW | MISMATCH
+          ANCHOR MISMATCH: plan says <a> but filesystem has <b>
+
+        Step 3 — Scan artifacts for reality claims:
+        Read plan.md and extract every:
+        - Version number or version range written for any dependency
+        - API call, function signature, or config option named explicitly
+        - File path or directory structure defined
+
+        For each extracted claim, cross-reference against Step 2 anchors:
+          CLAIM: <exact text from plan.md>
+          ANCHOR: <matching anchor or NONE>
+          VERDICT: MATCHES | VERSION DRIFT | PATH CONFLICT | NO ANCHOR
+
+        Step 4 — Write analysis-context.md:
+        Save to .specify/memory/analysis-context.md:
+
+        ## Grounding Status
+        [warnings from Step 1, or "All grounding artifacts present"]
+
+        ## Reality Anchors
+        [dep anchors and path anchors from Step 2]
+
+        ## Artifact Reality Claims
+        [all claims and verdicts from Step 3]
+
+        ## Drift Summary
+        COUNT: VERSION DRIFT findings: N
+        COUNT: PATH CONFLICT findings: N
+        COUNT: NO ANCHOR findings: N
+
+        Do not exit until analysis-context.md is written.
+
   after_specify:
-  - extension: agent-context
-    command: speckit.agent-context.update
-    enabled: true
-    optional: true
-    priority: 10
-    prompt: Execute speckit.agent-context.update?
-    description: Refresh agent context after specification
-    condition: null
+    - extension: agent-context
+      command: speckit.agent-context.update
+      enabled: true
+      optional: true
+      priority: 10
+      prompt: Execute speckit.agent-context.update?
+      description: Refresh agent context after specification
+      condition: null
+
   after_plan:
-  - extension: agent-context
-    command: speckit.agent-context.update
-    enabled: true
-    optional: true
-    priority: 10
-    prompt: Execute speckit.agent-context.update?
-    description: Refresh agent context after planning
-    condition: null
+    - extension: agent-context
+      command: speckit.agent-context.update
+      enabled: true
+      optional: true
+      priority: 10
+      prompt: Execute speckit.agent-context.update?
+      description: Refresh agent context after planning
+      condition: null
+
+  after_tasks:
+    - extension: agent-context
+      command: speckit.agent-context.update
+      enabled: true
+      optional: true
+      priority: 10
+      prompt: Execute speckit.agent-context.update?
+      description: Refresh agent context after task generation
+      condition: null
+
+  after_analyze:
+    - extension: agent-context
+      command: speckit.agent-context.update
+      enabled: true
+      optional: true
+      priority: 10
+      prompt: Execute speckit.agent-context.update?
+      description: Refresh agent context after analysis
+      condition: null
