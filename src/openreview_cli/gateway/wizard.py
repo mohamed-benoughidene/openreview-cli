@@ -7,7 +7,14 @@ import yaml
 from rich.console import Console
 from rich.table import Table
 
-from openreview_cli.cli.utils import _confirm, _is_interactive, _password, _select, _text
+from openreview_cli.cli.utils import (
+    _autocomplete,
+    _confirm,
+    _is_interactive,
+    _password,
+    _select,
+    _text,
+)
 from openreview_cli.config.auth import get_api_base, get_api_key
 from openreview_cli.config.loader import load_config
 from openreview_cli.config.paths import get_config_dir
@@ -217,8 +224,7 @@ class SetupWizard:
                 self.console.print(
                     f" - [cyan]{m.name}[/cyan] ({size_mb}, parameter size: {m.parameter_size or 'unknown'})"
                 )
-            choices = [*model_names, "manual"]
-            choice = _select("Select a model", choices=choices, default=model_names[0])
+            choice = _autocomplete("Select a model", choices=model_names, default=model_names[0])
             if choice == "manual":
                 return _text("Enter Ollama model name")
             return choice

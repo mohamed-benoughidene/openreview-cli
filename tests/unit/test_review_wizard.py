@@ -1,5 +1,4 @@
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -14,7 +13,7 @@ from openreview_cli.cli.review import (
 @pytest.fixture
 def sample_contract(tmp_path: Path) -> Path:
     path = tmp_path / "contract.pdf"
-    path.write_text("dummy content")
+    path.write_bytes(b"%PDF-1.4\n")
     return path
 
 

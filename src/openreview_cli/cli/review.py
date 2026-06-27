@@ -4,23 +4,22 @@ import enum
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
 
 from rich.console import Console
 from rich.table import Table
 
-from openreview_cli.cli.utils import _checkbox, _confirm, _is_interactive, _select, _text
+from openreview_cli.cli.utils import _checkbox, _confirm, _is_interactive, _select
 from openreview_cli.config.loader import load_config
 from openreview_cli.config.paths import get_config_dir
 
 
-class ReviewMode(str, enum.Enum):
+class ReviewMode(enum.StrEnum):
     FULL = "full"
     CLAUSE_BY_CLAUSE = "clause-by-clause"
     RISK_SCAN = "risk-scan"
 
 
-class OutputFormat(str, enum.Enum):
+class OutputFormat(enum.StrEnum):
     JSON = "json"
     TEXT = "text"
     HTML = "html"
@@ -60,9 +59,12 @@ class ReviewConfiguration:
                 raise ValueError("jurisdiction is required for full/clause-by-clause mode")
             if self.output_format is None:
                 raise ValueError("output_format is required for full/clause-by-clause mode")
-        if self.mode == ReviewMode.CLAUSE_BY_CLAUSE:
-            if self.clauses is not None and len(self.clauses) == 0:
-                raise ValueError("clauses must be non-empty or None")
+        if (
+            self.mode == ReviewMode.CLAUSE_BY_CLAUSE
+            and self.clauses is not None
+            and len(self.clauses) == 0
+        ):
+            raise ValueError("clauses must be non-empty or None")
 
 
 class ReviewWizard:
@@ -83,14 +85,13 @@ class ReviewWizard:
         self._clauses = clauses
         self.console = Console()
 
-    def run(self) -> ReviewConfiguration:
+    def _validate_file(self) -> None:
         if not self.non_interactive and not _is_interactive():
             self.console.print(
                 "[yellow]Non-interactive terminal detected. "
                 "Use --non-interactive flag or run in a terminal.[/yellow]"
             )
             sys.exit(1)
-
         if not self.file_path.exists():
             self.console.print(f"[red]Error: file not found '{self.file_path}'[/red]")
             sys.exit(1)
@@ -100,6 +101,15 @@ class ReviewWizard:
                 f"Supported: {', '.join(SUPPORTED_EXTENSIONS)}[/red]"
             )
             sys.exit(1)
+        if not self._is_valid_file(self.file_path):
+            self.console.print(
+                f"[red]Error: file '{self.file_path}' appears to be corrupted or not a valid "
+                f"file of type {self.file_path.suffix}.[/red]"
+            )
+            sys.exit(1)
+
+    def run(self) -> ReviewConfiguration:
+        self._validate_file()
 
         if self.non_interactive:
             return self._non_interactive_flow()
@@ -162,11 +172,15 @@ class ReviewWizard:
         fmt: OutputFormat | None = None
         if mode in (ReviewMode.FULL, ReviewMode.CLAUSE_BY_CLAUSE):
             if self._jurisdiction is None:
-                self.console.print("[red]Error: --jurisdiction is required in non-interactive mode for full/clause-by-clause[/red]")
+                self.console.print(
+                    "[red]Error: --jurisdiction is required in non-interactive mode for full/clause-by-clause[/red]"
+                )
                 sys.exit(1)
             jur = self._jurisdiction
             if self._output_format is None:
-                self.console.print("[red]Error: --output is required in non-interactive mode for full/clause-by-clause[/red]")
+                self.console.print(
+                    "[red]Error: --output is required in non-interactive mode for full/clause-by-clause[/red]"
+                )
                 sys.exit(1)
             try:
                 fmt = OutputFormat(self._output_format)
@@ -178,12 +192,11 @@ class ReviewWizard:
                 sys.exit(1)
 
         clauses: list[str] | None = None
-        if mode == ReviewMode.CLAUSE_BY_CLAUSE:
-            if self._clauses is not None:
-                if len(self._clauses) == 0:
-                    self.console.print("[red]Error: --clauses requires at least one clause ID[/red]")
-                    sys.exit(1)
-                clauses = self._clauses
+        if mode == ReviewMode.CLAUSE_BY_CLAUSE and self._clauses is not None:
+            if len(self._clauses) == 0:
+                self.console.print("[red]Error: --clauses requires at least one clause ID[/red]")
+                sys.exit(1)
+            clauses = self._clauses
 
         return ReviewConfiguration(
             file_path=self.file_path,
@@ -202,6 +215,7 @@ class ReviewWizard:
             setup_now = _confirm("Run gateway setup now?")
             if setup_now:
                 from openreview_cli.gateway.wizard import SetupWizard
+
                 SetupWizard().run()
                 return
             self.console.print("[dim]Continuing with defaults...[/dim]")
@@ -221,9 +235,22 @@ class ReviewWizard:
                 setup_now = _confirm("Run gateway setup now?")
                 if setup_now:
                     from openreview_cli.gateway.wizard import SetupWizard
+
                     SetupWizard().run()
         except Exception:
             self.console.print("[yellow]Could not read gateway config.[/yellow]")
+
+    @staticmethod
+    def _is_valid_file(path: Path) -> bool:
+        try:
+            header = path.read_bytes()[:4]
+        except (OSError, PermissionError):
+            return False
+        if path.suffix.lower() == ".pdf":
+            return header.startswith(b"%PDF")
+        if path.suffix.lower() == ".docx":
+            return header.startswith(b"PK\x03\x04")
+        return True
 
     def _prompt_mode(self) -> ReviewMode | None:
         result = _select(
@@ -264,7 +291,7 @@ class ReviewWizard:
         clause_ids = [str(i) for i in range(1, 51)]
         result = _checkbox(
             "Select clauses to review (space to toggle, enter to confirm)",
-            choices=clause_ids + ["← Back"],
+            choices=[*clause_ids, "← Back"],
         )
         if result is None or result == ["← Back"]:
             return None

@@ -87,6 +87,7 @@ def test_wizard_arrow_key_navigation_flow(temp_config_dir: Path) -> None:
 
     with (
         patch("openreview_cli.gateway.wizard._select", side_effect=fake_select),
+        patch("openreview_cli.gateway.wizard._autocomplete", side_effect=fake_select),
         patch("openreview_cli.gateway.wizard._confirm", return_value=True),
         patch("openreview_cli.gateway.wizard._password", return_value="sk-test"),
         patch("openreview_cli.gateway.wizard.validate_api_key", return_value=True),

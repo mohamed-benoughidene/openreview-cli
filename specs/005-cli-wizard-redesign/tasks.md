@@ -122,6 +122,16 @@ description: "Tasks for CLI wizard UX redesign — arrow-key navigation, review 
 
 ---
 
+## Phase 7: Convergence
+
+**Purpose**: Close gaps found during convergence assessment between spec/plan/tasks and the implemented code.
+
+- [X] T030 [US1] Wire `_autocomplete()` into Ollama model selection in `src/openreview_cli/gateway/wizard.py:_select_ollama_model()` — replace `_select()` call with `_autocomplete()` for fuzzy filtering per FR-03 (partial)
+- [X] T031 [US2] Add basic file integrity validation (readable PDF/DOCX) in `src/openreview_cli/cli/review.py:run()` before wizard starts — per spec edge case "File provided to review is encrypted/damaged" (partial)
+- [X] T032 [US1] Remove unused `_autocomplete()` wrapper in `src/openreview_cli/cli/utils.py` if T030 wires it; otherwise review and justify (unrequested) — resolved by T030, wrapper is now used
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
