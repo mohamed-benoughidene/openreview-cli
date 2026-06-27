@@ -142,12 +142,8 @@ class SetupWizard:
 
             if provider != "ollama":
                 existing_key = get_api_key(provider)
-                if existing_key:
-                    reuse = _confirm(f"API key for '{provider}' is already configured. Reuse it?")
-                    if reuse:
-                        self.api_keys[provider] = existing_key
-                    else:
-                        self.api_keys[provider] = self._prompt_and_validate_key(provider)
+                if existing_key and _confirm(f"API key for '{provider}' is already configured. Reuse it?"):
+                    self.api_keys[provider] = existing_key
                 else:
                     self.api_keys[provider] = self._prompt_and_validate_key(provider)
 
@@ -225,8 +221,6 @@ class SetupWizard:
                     f" - [cyan]{m.name}[/cyan] ({size_mb}, parameter size: {m.parameter_size or 'unknown'})"
                 )
             choice = _autocomplete("Select a model", choices=model_names, default=model_names[0])
-            if choice == "manual":
-                return _text("Enter Ollama model name")
             return choice
         except OllamaNotRunningError:
             self.console.print(
