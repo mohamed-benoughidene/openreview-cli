@@ -142,7 +142,9 @@ class SetupWizard:
 
             if provider != "ollama":
                 existing_key = get_api_key(provider)
-                if existing_key and _confirm(f"API key for '{provider}' is already configured. Reuse it?"):
+                if existing_key and _confirm(
+                    f"API key for '{provider}' is already configured. Reuse it?"
+                ):
                     self.api_keys[provider] = existing_key
                 else:
                     self.api_keys[provider] = self._prompt_and_validate_key(provider)
