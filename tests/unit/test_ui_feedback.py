@@ -22,9 +22,7 @@ class TestFormatError:
 
     def test_three_part_format(self, capsys: CaptureFixture[str]) -> None:
         """format_error shows What / Why / How to fix sections."""
-        result = format_error(
-            "Failed to load config", "File not found", "Check the path"
-        )
+        result = format_error("Failed to load config", "File not found", "Check the path")
         captured = capsys.readouterr()
         assert "Failed to load config" in captured.out
         assert "File not found" in captured.out

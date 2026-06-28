@@ -14,9 +14,9 @@ import sys
 from pathlib import Path
 
 from openreview_cli.cli.review import JURISDICTION_CODES, ReviewMode
-from openreview_cli.ui.components.prompt import checkbox, confirm, select
 from openreview_cli.types import OutputFormat
 from openreview_cli.ui.components.progress import Progress
+from openreview_cli.ui.components.prompt import checkbox, confirm, select
 from openreview_cli.ui.components.spinner import Spinner
 from openreview_cli.ui.components.status_line import format_clause_label
 from openreview_cli.ui.components.table import SGTable
@@ -82,7 +82,7 @@ class ReviewFlowWizard(Wizard):
         choices = [f"{j['code']} — {j['label']}" for j in JURISDICTION_CODES]
         jur_result = select(
             "Select jurisdiction",
-            choices=choices + ["← Back"],
+            choices=[*choices, "← Back"],
             default=choices[0],
             hint="use arrow keys",
         )
@@ -94,7 +94,7 @@ class ReviewFlowWizard(Wizard):
         fmt_choices = ["table", "json", "plain"]
         fmt_result = select(
             "Select output format",
-            choices=fmt_choices + ["← Back"],
+            choices=[*fmt_choices, "← Back"],
             default="json",
         )
         if fmt_result is None or fmt_result == "← Back":
@@ -106,7 +106,7 @@ class ReviewFlowWizard(Wizard):
             clause_ids = [str(i) for i in range(1, 51)]
             clauses_result = checkbox(
                 "Select clauses to review (space to toggle, enter to confirm)",
-                choices=clause_ids + ["← Back"],
+                choices=[*clause_ids, "← Back"],
             )
             if clauses_result is None or clauses_result == ["← Back"]:
                 return self._back()
@@ -212,9 +212,7 @@ class ReviewFlowWizard(Wizard):
     def _step_results(self) -> str | None:
         """Display the review findings in an SGTable."""
         mode: ReviewMode | None = self.data.get("mode")
-        output_format: OutputFormat = self.data.get(
-            "output_format", OutputFormat.TABLE
-        )
+        output_format: OutputFormat = self.data.get("output_format", OutputFormat.TABLE)
 
         columns: list[tuple[str, str, int]] = [
             ("Risk", "bold red", 10),
@@ -224,8 +222,7 @@ class ReviewFlowWizard(Wizard):
         ]
 
         rows: list[tuple[str, ...]] = [
-            (f["risk"], f["clause"], f["finding"], f["recommendation"])
-            for f in self._findings
+            (f["risk"], f["clause"], f["finding"], f["recommendation"]) for f in self._findings
         ]
 
         table = SGTable(

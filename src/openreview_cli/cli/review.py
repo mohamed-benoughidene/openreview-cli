@@ -10,7 +10,7 @@ from rich.table import Table
 
 from openreview_cli.config.loader import load_config
 from openreview_cli.config.paths import get_config_dir
-from openreview_cli.types import OutputFormat
+from openreview_cli.types import OutputFormat as OutputFormat  # noqa: PLC0414
 from openreview_cli.ui.components.prompt import checkbox, confirm, select
 from openreview_cli.ui.console import renderer
 

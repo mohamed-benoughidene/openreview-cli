@@ -30,7 +30,7 @@ repos:
     hooks:
       - id: pytest-fast
         name: pytest (fast)
-        entry: uv run pytest -m "not slow and not integration" --quiet
+        entry: uv run pytest -m "not slow and not integration and not memory" --quiet
         language: system
         pass_filenames: false
         always_run: true

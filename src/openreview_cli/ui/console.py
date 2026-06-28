@@ -11,7 +11,6 @@ from __future__ import annotations
 import locale
 import os
 import sys
-
 from typing import Literal
 
 from rich.console import Console
@@ -24,7 +23,7 @@ ICONS: dict[str, str] = {
     "check": "✓",
     "error": "✗",
     "warning": "⚠",
-    "info": "ℹ",
+    "info": "ℹ",  # noqa: RUF001
     "pending": "○",
     "running": "◷",
     "arrow": "▶",
@@ -77,12 +76,13 @@ def get_icon(name: str, ascii_fallback: bool = False) -> str:
         return ICONS_ASCII[name]
 
     # Try Unicode — fall back if the terminal can't encode it
+    icon = ICONS[name]
     try:
-        icon = ICONS[name]
         icon.encode(sys.stdout.encoding or "utf-8")
-        return icon
     except (UnicodeEncodeError, UnicodeError):
         return ICONS_ASCII[name]
+    else:
+        return icon
 
 
 # ---------------------------------------------------------------------------
@@ -154,11 +154,7 @@ class SGRenderer:
     def is_interactive(self) -> bool:
         if self._non_interactive:
             return False
-        return (
-            self._console.is_interactive
-            and sys.stdin.isatty()
-            and sys.stdout.isatty()
-        )
+        return self._console.is_interactive and sys.stdin.isatty() and sys.stdout.isatty()
 
     @property
     def supports_unicode(self) -> bool:

@@ -10,13 +10,15 @@ Each function handles:
 from __future__ import annotations
 
 import sys
-from collections.abc import Callable
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import questionary
 
 from openreview_cli.errors import USAGE_ERROR
 from openreview_cli.ui.console import renderer
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def _ensure_interactive() -> None:

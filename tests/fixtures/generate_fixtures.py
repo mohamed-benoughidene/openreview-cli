@@ -184,7 +184,7 @@ No modification of this Agreement shall be effective unless in writing and signe
 def generate_docx_fixtures() -> None:
     """Generate all DOCX fixtures using python-docx."""
     from docx import Document
-    from lxml import etree  # type: ignore[import-untyped]
+    from lxml import etree
 
     docx_dir = HERE / "docx"
     WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"

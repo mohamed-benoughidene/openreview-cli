@@ -10,8 +10,6 @@ from __future__ import annotations
 import pytest
 
 from openreview_cli.cli.review_wizard import REVIEW_STEPS, ReviewFlowWizard
-from openreview_cli.ui.components.wizard import Wizard
-
 
 # ---------------------------------------------------------------------------
 # Step order
@@ -23,9 +21,7 @@ class TestStepOrder:
 
     @pytest.fixture(autouse=True)
     def _mock_interactive(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(
-            "openreview_cli.ui.components.prompt._ensure_interactive", lambda: None
-        )
+        monkeypatch.setattr("openreview_cli.ui.components.prompt._ensure_interactive", lambda: None)
 
     def test_first_step_is_mode_selection(self) -> None:
         """Entry point is mode_selection, not a generic 'welcome' step."""
@@ -88,9 +84,7 @@ class TestBackNavigation:
 
     @pytest.fixture(autouse=True)
     def _mock_interactive(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(
-            "openreview_cli.ui.components.prompt._ensure_interactive", lambda: None
-        )
+        monkeypatch.setattr("openreview_cli.ui.components.prompt._ensure_interactive", lambda: None)
 
     def test_back_from_config_goes_to_mode(self) -> None:
         """Esc on config step returns to mode_selection."""
@@ -216,12 +210,11 @@ class TestInterruptHandling:
 
     @pytest.fixture(autouse=True)
     def _mock_interactive(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(
-            "openreview_cli.ui.components.prompt._ensure_interactive", lambda: None
-        )
+        monkeypatch.setattr("openreview_cli.ui.components.prompt._ensure_interactive", lambda: None)
 
     def test_ctrl_c_during_mode_selection_exits(self) -> None:
         """KeyboardInterrupt in mode_selection raises SystemExit(1)."""
+
         class InterruptWizard(ReviewFlowWizard):
             def _step_mode_selection(self) -> str | None:
                 raise KeyboardInterrupt()
@@ -233,6 +226,7 @@ class TestInterruptHandling:
 
     def test_ctrl_c_during_processing_exits(self) -> None:
         """KeyboardInterrupt in processing raises SystemExit(1)."""
+
         class InterruptWizard(ReviewFlowWizard):
             def _step_mode_selection(self) -> str | None:
                 return self._next()
@@ -254,10 +248,9 @@ class TestInterruptHandling:
             wiz.run()
         assert exc_info.value.code == 1
 
-    def test_ctrl_c_prints_cancellation_message(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_ctrl_c_prints_cancellation_message(self, capsys: pytest.CaptureFixture[str]) -> None:
         """KeyboardInterrupt prints 'Review cancelled. Partial results were not saved.'"""
+
         class InterruptWizard(ReviewFlowWizard):
             def _step_mode_selection(self) -> str | None:
                 raise KeyboardInterrupt()

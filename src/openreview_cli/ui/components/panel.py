@@ -7,8 +7,6 @@ automatically.
 
 from __future__ import annotations
 
-import sys
-
 from rich.panel import Panel
 from rich.text import Text
 
@@ -25,7 +23,7 @@ def _panel_title(icon: str, title: str = "") -> Text:
 
 
 def info_panel(message: str, title: str = "") -> None:
-    """Print an info panel (cyan border, ℹ prefix)."""
+    """Print an info panel (cyan border, ℹ prefix)."""  # noqa: RUF002
     icon = get_icon("info", ascii_fallback=not renderer.supports_unicode)
     border = "" if not renderer.supports_color else "cyan"
     panel = Panel(

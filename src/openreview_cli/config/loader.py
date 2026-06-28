@@ -293,6 +293,65 @@ def set_config_value(config_path: Path, key: str, value: str) -> dict[str, Any]:
     return validated
 
 
+def _get_known_keys() -> set[str]:
+    """Return the set of all valid dot-delimited config keys."""
+    keys: set[str] = set()
+
+    def _walk(d: dict[str, Any], prefix: str = "") -> None:
+        for k, v in d.items():
+            path = f"{prefix}.{k}" if prefix else k
+            if isinstance(v, dict):
+                _walk(v, path)
+            else:
+                keys.add(path)
+
+    _walk(DEFAULT_CONFIG)
+    return keys
+
+
+def get_unknown_keys(raw: dict[str, Any]) -> list[str]:
+    """Return keys in *raw* that are not valid config keys."""
+    known = _get_known_keys()
+    unknown: list[str] = []
+
+    def _check(d: dict[str, Any], prefix: str = "") -> None:
+        for k, v in d.items():
+            path = f"{prefix}.{k}" if prefix else k
+            if isinstance(v, dict):
+                _check(v, path)
+            elif path not in known:
+                unknown.append(path)
+
+    _check(raw)
+    return unknown
+
+
+def unset_config_value(config_path: Path, key: str) -> dict[str, Any]:
+    """Remove a key from the config file and return the validated config."""
+    import shutil
+
+    import yaml
+
+    with open(config_path) as f:
+        raw = yaml.safe_load(f) or {}
+
+    backup = config_path.with_suffix(".yml.bak")
+    shutil.copy2(config_path, backup)
+
+    keys = key.split(".")
+    obj = raw
+    for k in keys[:-1]:
+        obj = obj.get(k, {})
+    obj.pop(keys[-1], None)
+
+    validated = _validate_and_merge(raw, dict(DEFAULT_CONFIG))
+
+    with open(config_path, "w") as f:
+        yaml.safe_dump(validated, f, default_flow_style=False)
+
+    return validated
+
+
 def load_config(config_path: Path) -> dict[str, Any]:
     import yaml
 
