@@ -13,21 +13,21 @@ a custom playbook, and produces a structured memo of findings.
 
 ## Status
 
-Pre-alpha. 229 spec tasks implemented across config + storage foundation,
-document parsing engine, PII stripping (Phase 3), and AI Gateway (Phase 4).
-The package is not yet on PyPI. APIs and the underlying spec are preliminary
-and will change.
+Pre-alpha. 261 spec tasks implemented across config + storage foundation,
+document parsing engine, PII stripping (Phase 3), AI Gateway (Phase 4),
+and CLI wizard UX redesign (Phase 5). The package is not yet on PyPI.
+APIs and the underlying spec are preliminary and will change.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
-| Unit + integration tests    | 322 (73 s)                |
+| Unit + integration tests    | 330 (73 s)                |
 | Live integration tests      | 12 (11 pass, 1 xfail)    |
-| CLI commands                | ~20                       |
+| CLI commands                | ~22                       |
 | SQLite tables               | 7                         |
 | CI jobs                     | 4 (lint, types, test, memory) |
 | Memory budget (processing)  | < 100 MB (NLP model exempt) |
 | Startup (warm)              | < 0.3 s                   |
-| Spec tasks tracked          | 229 (221 done, 8 deferred)|
+| Spec tasks tracked          | 261 (253 done, 8 deferred)|
 | Dead code cut               | −190 lines, −7 files      |
 | PII entity types detected   | 11 body + 4 metadata      |
 | Gateway providers           | 8 (openai, anthropic, google, ollama, openrouter, cohere, huggingface, custom) |
@@ -111,7 +111,7 @@ The privacy gate is available as a Python API:
 ```
 
 A CLI `--no-pii` flag and config-driven toggle are defined but deferred until
-the review subcommand (Phase 5+) is created — see AGENTS.md deferred-work table.
+the review's clause-level output path is established — see AGENTS.md deferred-work table.
 
 ### AI Gateway (Phase 4)
 
@@ -123,7 +123,7 @@ and non-interactive setup, fallback chains, cost tracking, and YAML import.
 |---------|--------|
 | Routing | ✅ All 5 slots via LiteLLM (chat, embed, rerank) |
 | Providers | ✅ OpenAI, Anthropic, Google, Ollama, OpenRouter, Cohere, HuggingFace, Custom |
-| Interactive wizard | ✅ Rich UI, slot grouping, back/cancel/save, masked key entry |
+| Interactive wizard | ✅ Arrow-key menus, autocomplete filter, masked key entry, summary-before-save |
 | CLI setup | ✅ `--non-interactive` flags for all 5 slots |
 | Fallback | ✅ Exponential backoff, fallback chain, 3 on_failure modes |
 | Cost tracking | ✅ SQLite per-call records, per-review & daily limits |
@@ -157,7 +157,8 @@ uv run openreview --version
 |-----------------------------------------------------|--------------------------------------------|
 | `src/openreview_cli/__init__.py`                    | Exposes `__version__`                      |
 | `src/openreview_cli/__main__.py`                    | Entry point: `python -m openreview_cli`    |
-| `src/openreview_cli/app.py`                         | Typer app — config, gateway, client, parse commands |
+| `src/openreview_cli/app.py`                         | Typer app — config, gateway, client, parse, review commands |
+| `src/openreview_cli/cli/`                           | Interactive wizards (questionary menus, autocomplete, checkbox) |
 | `src/openreview_cli/config/paths.py`                | platformdirs paths (config, data, log)     |
 | `src/openreview_cli/config/loader.py`               | Pydantic model, YAML r/w, env merge        |
 | `src/openreview_cli/config/auth.py`                 | `auth.json` handler, chmod 600             |
@@ -212,6 +213,7 @@ uv run openreview --version
 | `specs/002-document-parsing/`                       | Spec, plan, and tasks                      |
 | `specs/003-pii-stripping/`                          | Spec, plan, and tasks                      |
 | `specs/004-ai-gateway/`                             | Spec, plan, contracts, and 75-task checklist |
+| `specs/005-cli-wizard-redesign/`                    | Spec, plan, research, and 32-task checklist  |
 
 ## Quick start
 
@@ -227,6 +229,7 @@ openreview client delete acme-corp --force   # Remove client
 openreview parse contract.pdf         # Parse a contract into clauses
 openreview parse contract.pdf --summary    # One-line summary
 openreview parse contract.pdf --format json  # JSON output
+openreview gateway setup                # Interactive arrow-key wizard (all 5 slots)
 openreview gateway setup --non-interactive --reasoning openai/gpt-4o --embedding ollama/nomic-embed-text  # All 5 slots via flags
 openreview gateway status              # Show configured slots, health, costs
 openreview gateway test reasoning      # Validate API key and provider reachability
@@ -234,6 +237,8 @@ openreview gateway providers           # List providers with auth status
 openreview gateway models openai       # List models for a provider
 openreview gateway costs               # View today's token usage and cost
 openreview gateway import config.yaml  # Import YAML config (5 slots at once)
+openreview review contract.pdf         # Interactive review wizard (mode, jurisdiction, clauses)
+openreview review contract.pdf --mode quick --jurisdiction us --clauses 1,3,5  # Non-interactive review
 
 | Command                                    | What it does                               |
 |--------------------------------------------|--------------------------------------------|
@@ -248,7 +253,8 @@ openreview gateway import config.yaml  # Import YAML config (5 slots at once)
 | `openreview parse <path>`              | Parse a PDF or DOCX into numbered clauses  |
 | `openreview parse <path> --summary`    | One-line parse summary                     |
 | `openreview parse <path> --format json`| JSON output with all metadata              |
-| `openreview gateway setup [--reasoning ...] [flags]` | Configure all 5 slots (interactive or via flags) |
+| `openreview gateway setup`              | Interactive wizard — arrow-key menus, autocomplete, masked keys, summary-before-save |
+| `openreview gateway setup [--reasoning ...] [flags]` | Configure all 5 slots via flags (non-interactive) |
 | `openreview gateway status`            | Show slot models, provider health, cost limits |
 | `openreview gateway providers`         | List all supported providers with auth status |
 | `openreview gateway models <provider>` | List available models for a provider       |
@@ -258,6 +264,8 @@ openreview gateway import config.yaml  # Import YAML config (5 slots at once)
 | `openreview gateway costs [--days N] [--session ID]` | View or clear cost records |
 | `openreview gateway install-models <name> [names...]` | Pull Ollama models via `ollama pull` |
 | `openreview gateway import <file> [--force] [--dry-run]` | Import YAML config with validation |
+| `openreview review <file>`             | Interactive review wizard — mode, jurisdiction, format, clause selection |
+| `openreview review <file> --mode quick --jurisdiction us --output json --clauses 1,3,5` | Non-interactive review with flags |
 
 ## Configuration
 
