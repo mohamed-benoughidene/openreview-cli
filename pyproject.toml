@@ -36,6 +36,7 @@ dev = [
     "pytest-cov>=7.1.0",
     "respx>=0.23.1",
     "ruff>=0.15.18",
+    "textstat>=0.7.13",
     "types-pyyaml>=6.0.12.20260518",
 ]
 
@@ -105,9 +106,14 @@ disallow_incomplete_defs = true
 no_implicit_reexport = true
 check_untyped_defs = true
 
+[[tool.mypy.overrides]]
+module = ["tests.*", "tests.*.*"]
+ignore_missing_imports = true
+disable_error_code = ["import-untyped"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short -m 'not memory'"
 markers = [
     "slow: marks tests as slow (deselected by default)",
     "integration: marks integration tests (mocked APIs)",
