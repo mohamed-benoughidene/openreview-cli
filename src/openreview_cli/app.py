@@ -16,6 +16,7 @@ from openreview_cli.storage.database import (
     get_connection,
     init_database,
 )
+from openreview_cli.ui.console import renderer
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +24,17 @@ _CONFIG_EXISTS_AT_START = False
 
 app = typer.Typer(
     name="openreview",
-    help="Privacy-first contract review tool.",
+    help="""Privacy-first contract review tool.
+
+Examples:
+  openreview parse contract.pdf                     Parse clauses from a contract
+  openreview review contract.pdf --mode full         Full legal review
+  openreview review contract.pdf --mode risk-scan    Quick risk scan
+  openreview config show                            View current configuration
+  openreview gateway setup                          Configure an AI provider
+""",
     no_args_is_help=True,
-    add_completion=False,
+    add_completion=True,
 )
 
 
@@ -36,7 +45,12 @@ def _version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
-def _init(debug: bool = False, debug_unsafe: bool = False) -> None:
+def _init(
+    debug: bool = False,
+    debug_unsafe: bool = False,
+    verbose: bool = False,
+    config_path: str | None = None,
+) -> None:
     from openreview_cli.gateway.logging import set_debug_unsafe, setup_gateway_logging
 
     set_debug_unsafe(debug_unsafe)
@@ -44,7 +58,7 @@ def _init(debug: bool = False, debug_unsafe: bool = False) -> None:
     log_dir = get_log_dir()
     log_file = log_dir / "openreview.log"
     log_dir.mkdir(parents=True, exist_ok=True)
-    _level = logging.DEBUG if (debug or debug_unsafe) else logging.INFO
+    _level = logging.DEBUG if (debug or debug_unsafe or verbose) else logging.INFO
     _fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
     root = logging.getLogger()
     root.setLevel(_level)
@@ -53,7 +67,7 @@ def _init(debug: bool = False, debug_unsafe: bool = False) -> None:
     _sh.setFormatter(_fmt)
     root.addHandler(_sh)
 
-    config_dir = get_config_dir()
+    config_dir = Path(config_path) if config_path else get_config_dir()
     global _CONFIG_EXISTS_AT_START
     _CONFIG_EXISTS_AT_START = (config_dir / "config.yml").exists()
     config = load_config(config_dir / "config.yml")
@@ -72,8 +86,84 @@ def _init(debug: bool = False, debug_unsafe: bool = False) -> None:
     setup_gateway_logging(level=gw_level, debug_file=gw_debug_file)
 
 
+def _handle_first_run() -> None:
+    """Show welcome panel and offer to run the setup wizard on first run.
+
+    Called from ``_root()`` when no config existed at startup.
+    ``--version`` bypasses this entirely (eager callback raises Exit).
+    """
+    from openreview_cli.ui.components.panel import info_panel
+    from openreview_cli.ui.console import renderer
+
+    info_panel(
+        "Welcome to OpenReview!\n\n"
+        "OpenReview is a privacy-first contract review tool that runs entirely on\n"
+        "your machine. Your contracts stay on your device \u2014 nothing is sent to\n"
+        "the cloud unless you explicitly configure a remote provider.\n\n"
+        "To get started, you\u2019ll need to configure an AI provider. The setup\n"
+        "wizard will guide you through choosing a provider and model.",
+        title="Welcome to OpenReview",
+    )
+
+    if not renderer.is_interactive:
+        return
+
+    import questionary
+
+    try:
+        answer = questionary.confirm(
+            "Would you like to run the setup wizard now?", default=True
+        ).unsafe_ask()
+    except KeyboardInterrupt:
+        typer.echo("\nSetup was interrupted. Run `openreview setup` to try again later.")
+        raise typer.Exit(code=1) from None
+
+    if answer is None:
+        typer.echo("Setup was interrupted. Run `openreview setup` to try again later.")
+        return
+    if answer:
+        gateway_setup()
+        _install_shell_completion()
+
+
+def _install_shell_completion() -> None:
+    """Prompt to install shell completion; non-blocking on failure."""
+    import questionary
+
+    try:
+        answer = questionary.confirm(
+            "Install shell completion? (recommended)", default=True
+        ).unsafe_ask()
+    except (KeyboardInterrupt, Exception):
+        return
+
+    if not answer:
+        return
+
+    import subprocess
+    import sys
+
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "openreview_cli", "--install-completion"],
+            capture_output=True,
+            timeout=30,
+            check=False,
+        )
+    except Exception:
+        from openreview_cli.ui.components.panel import warning_panel
+
+        warning_panel(
+            "Shell completion installation failed.\n"
+            "You can install it later with:\n"
+            "  openreview --install-completion",
+            title="Completion Warning",
+        )
+
+
 @app.callback()
 def _root(
+    ctx: typer.Context,
     version: bool = typer.Option(
         False,
         "--version",
@@ -91,8 +181,67 @@ def _root(
         "--debug-unsafe",
         help="Enable unsafe debug logging (logs API response bodies).",
     ),
+    verbose: bool = typer.Option(False, "--verbose", help="Show detailed processing steps."),
+    quiet: bool = typer.Option(False, "--quiet", help="Suppress all non-error output."),
+    no_color: bool = typer.Option(False, "--no-color", help="Disable ANSI color codes."),
+    no_unicode: bool = typer.Option(False, "--no-unicode", help="Use ASCII fallback icons."),
+    no_spinner: bool = typer.Option(False, "--no-spinner", help="Disable animated spinners."),
+    output: str = typer.Option("table", "--output", help="Output format: table, json, plain"),
+    config: str | None = typer.Option(
+        None, "--config", help="Path to config file (default: XDG config dir)."
+    ),
 ) -> None:
-    _init(debug=debug, debug_unsafe=debug_unsafe)
+    # Wire global flags to the renderer
+    if no_color:
+        renderer.set_no_color()
+    if no_unicode:
+        renderer.set_no_unicode()
+    renderer.no_spinner = no_spinner
+    renderer.verbose = verbose
+    renderer.quiet = quiet
+    renderer.output_format = output
+
+    try:
+        _init(debug=debug, debug_unsafe=debug_unsafe, verbose=verbose, config_path=config)
+    except ValueError as e:
+        from openreview_cli.ui.components.panel import error_panel
+
+        error_panel(
+            "Failed to load configuration",
+            str(e),
+            "Run `openreview setup` to recreate your configuration.",
+            exit_code=3,
+        )
+
+    # Non-blocking warning for unknown config keys — use the override if provided
+    cfg_dir = Path(config) if config else get_config_dir()
+    cfg_file = cfg_dir / "config.yml"
+    if cfg_file.exists():
+        import yaml
+
+        from openreview_cli.config.loader import get_unknown_keys
+
+        try:
+            raw = yaml.safe_load(cfg_file.read_text()) or {}
+            unknown = get_unknown_keys(raw)
+            if unknown:
+                from openreview_cli.ui.components.panel import warning_panel
+
+                keys_str = "\n".join(f"  - {k}" for k in unknown)
+                warning_panel(
+                    f"The following config keys are unrecognized:\n{keys_str}\n\n"
+                    "These keys will be ignored. Check for typos.",
+                    title="Configuration Warning",
+                )
+        except Exception:
+            pass  # Already handled by the ValueError catch above
+
+    if not _CONFIG_EXISTS_AT_START:
+        # Skip first-run detection when --help is requested (Click handles
+        # help natively — still calls the callback, so check via context).
+        invoked = ctx.invoked_subcommand
+        if invoked is not None and invoked != "setup":
+            _handle_first_run()
 
 
 client_app = typer.Typer(
@@ -150,7 +299,7 @@ def client_delete(
     typer.echo(f"deleted client {id}")
 
 
-app.add_typer(client_app)
+app.add_typer(client_app, rich_help_panel="Client Commands")
 
 config_app = typer.Typer(
     name="config",
@@ -160,12 +309,31 @@ config_app = typer.Typer(
 
 
 @config_app.command("show")
-def config_show() -> None:
-    from rich.console import Console
-    from rich.table import Table
+def config_show(
+    output: str = typer.Option("table", "--output", help="Output format: table or json"),
+) -> None:
+    import json
 
     config_path = get_config_dir() / "config.yml"
-    config = load_config(config_path)
+    try:
+        config = load_config(config_path)
+    except ValueError as e:
+        from openreview_cli.ui.components.panel import error_panel
+
+        error_panel(
+            "Failed to load configuration",
+            str(e),
+            "Run `openreview setup` to recreate your configuration.",
+            exit_code=3,
+        )
+        return
+
+    if output == "json":
+        typer.echo(json.dumps(config, indent=2, default=str))
+        return
+
+    from rich.console import Console
+    from rich.table import Table
 
     console = Console()
     table = Table(title="OpenReview Configuration")
@@ -187,7 +355,18 @@ def config_show() -> None:
 @config_app.command("get")
 def config_get(key: str) -> None:
     config_path = get_config_dir() / "config.yml"
-    config = load_config(config_path)
+    try:
+        config = load_config(config_path)
+    except ValueError as e:
+        from openreview_cli.ui.components.panel import error_panel
+
+        error_panel(
+            "Failed to load configuration",
+            str(e),
+            "Run `openreview setup` to recreate your configuration.",
+            exit_code=3,
+        )
+        return
 
     try:
         value = get_config_value(config, key)
@@ -200,16 +379,64 @@ def config_get(key: str) -> None:
 def config_set(key: str, value: str) -> None:
     from pydantic import ValidationError
 
+    from openreview_cli.config.loader import _get_known_keys
+    from openreview_cli.ui.components.panel import error_panel
+    from openreview_cli.ui.components.validation import validate_config_key
+
+    known = _get_known_keys()
+    is_valid, err = validate_config_key(key, known)
+    if not is_valid:
+        error_panel(
+            what="Invalid config key",
+            why=err or "Unknown config key",
+            fix="Run `openreview config show` to see all valid keys.",
+            exit_code=2,
+        )
+
     config_path = get_config_dir() / "config.yml"
 
     try:
+        old_value = get_config_value(load_config(config_path), key)
         set_config_value(config_path, key, value)
-        typer.echo(f"updated {key} = {value}")
+        typer.echo(f"updated {key}: {old_value} -> {value}")
     except (KeyError, ValidationError) as e:
         config_error(str(e))
 
 
-app.add_typer(config_app)
+@config_app.command("unset")
+def config_unset(key: str) -> None:
+    from openreview_cli.config.loader import (
+        _get_known_keys,
+        unset_config_value,
+    )
+    from openreview_cli.ui.components.panel import error_panel
+    from openreview_cli.ui.components.validation import validate_config_key
+
+    known = _get_known_keys()
+    is_valid, err = validate_config_key(key, known)
+    if not is_valid:
+        error_panel(
+            what="Invalid config key",
+            why=err or "Unknown config key",
+            fix="Run `openreview config show` to see all valid keys.",
+            exit_code=2,
+        )
+
+    config_path = get_config_dir() / "config.yml"
+
+    try:
+        unset_config_value(config_path, key)
+        typer.echo(f"reset {key} to default")
+    except (KeyError, ValueError) as e:
+        config_error(str(e))
+
+
+@config_app.command("path")
+def config_path_cmd() -> None:
+    typer.echo(str(get_config_dir()))
+
+
+app.add_typer(config_app, rich_help_panel="Configuration Commands")
 
 
 gateway_app = typer.Typer(
@@ -916,24 +1143,46 @@ def gateway_import(
         raise typer.Exit(code=7) from e
 
 
-app.add_typer(gateway_app)
+app.add_typer(gateway_app, rich_help_panel="Gateway Commands")
 
 
-@app.command()
+@app.command(rich_help_panel="Review Commands")
 def review(
     path: str = typer.Argument(..., help="Path to a PDF or DOCX contract file."),
     non_interactive: bool = typer.Option(
         False, "--non-interactive", help="Skip wizard, use CLI flags only"
     ),
+    yes: bool = typer.Option(
+        False, "--yes", help="Auto-confirm all prompts (implies --non-interactive)"
+    ),
     mode: str | None = typer.Option(
-        None, "--mode", help="Review mode: full, clause-by-clause, risk-scan"
+        None,
+        "--mode",
+        help="Review mode: full, clause-by-clause, risk-scan [required in non-interactive mode]",
     ),
     jurisdiction: str | None = typer.Option(None, "--jurisdiction", help="Jurisdiction code"),
     output_format: str | None = typer.Option(
         None, "--output", help="Output format: json, text, html"
     ),
     clauses: str | None = typer.Option(None, "--clauses", help="Clause IDs, comma-separated"),
+    no_pii: bool = typer.Option(False, "--no-pii", help="Skip PII stripping (debug only)."),
 ) -> None:
+    if yes:
+        renderer.force_non_interactive()
+
+    resolved_non_interactive = non_interactive or yes
+
+    # Interactive TTY path → use Wizard state machine
+    if not resolved_non_interactive:
+        if renderer.is_interactive:
+            from openreview_cli.cli.review_wizard import ReviewFlowWizard
+
+            wiz = ReviewFlowWizard(file_path=path, no_pii=no_pii)
+            wiz.run()
+            return
+        # Fall through to ReviewWizard which handles non-TTY gracefully
+
+    # Non-interactive path → use ReviewWizard with CLI flags
     from openreview_cli.cli.review import ReviewWizard
 
     clauses_list: list[str] | None = None
@@ -942,18 +1191,18 @@ def review(
 
     wizard = ReviewWizard(
         file_path=path,
-        non_interactive=non_interactive,
+        non_interactive=resolved_non_interactive,
         mode=mode,
         jurisdiction=jurisdiction,
         output_format=output_format,
         clauses=clauses_list,
+        no_pii=no_pii,
     )
     config = wizard.run()
-    # Review configuration is ready; caller will use it once review engines exist
     typer.echo(f"Review ready: {config.mode.value} review of {config.file_path.name}")
 
 
-@app.command()
+@app.command(rich_help_panel="Review Commands")
 def parse(
     path: str = typer.Argument(..., help="Path to a PDF or DOCX contract file."),
     format: str = typer.Option("text", "--format", help="Output format: text, json"),
@@ -980,6 +1229,53 @@ def parse(
         typer.echo(format_json(clauses))
     else:
         typer.echo(format_text(clauses, doc))
+
+
+@app.command(rich_help_panel="Configuration Commands")
+def setup(
+    non_interactive: bool = typer.Option(
+        False,
+        "--non-interactive",
+        help="Run setup without interactive prompts.",
+    ),
+) -> None:
+    """Configure OpenReview for first use.
+
+    Shows a welcome panel with privacy notice and guides you through
+    choosing an AI provider and model.  Pass ``--non-interactive`` to
+    accept the default (local-only) configuration without any prompts.
+    """
+    from openreview_cli.ui.components.panel import info_panel, success_panel
+
+    info_panel(
+        "Welcome to OpenReview!\n\n"
+        "This tool reviews contracts entirely on your machine.\n"
+        "Your documents never leave your device unless you choose a\n"
+        "remote AI provider.\n\n"
+        "The default setup uses Ollama (local), which requires no API\n"
+        "keys and keeps everything private.  You can change providers\n"
+        "later with ``openreview gateway setup``.",
+        title="OpenReview Setup",
+    )
+
+    config_dir = get_config_dir()
+    config_file = config_dir / "config.yml"
+    config = load_config(config_file)
+    provider = config.get("provider", {}).get("default", "ollama")
+
+    success_panel(
+        f"Setup complete.\n\n"
+        f"  Config file:    {config_file}\n"
+        f"  AI provider:    {provider}\n\n"
+        f"Try: openreview review contract.pdf --mode full --yes",
+        title="Setup Complete",
+    )
+
+    if non_interactive:
+        return
+
+    gateway_setup()
+    _install_shell_completion()
 
 
 if __name__ == "__main__":

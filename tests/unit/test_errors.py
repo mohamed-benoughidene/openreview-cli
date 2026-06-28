@@ -1,6 +1,17 @@
 import pytest
 
-from openreview_cli.errors import config_error, cost_limit_error, gateway_error, pii_error
+from openreview_cli.errors import (
+    CONFIG_ERROR,
+    GENERAL_ERROR,
+    INPUT_ERROR,
+    NETWORK_ERROR,
+    SUCCESS,
+    USAGE_ERROR,
+    config_error,
+    cost_limit_error,
+    gateway_error,
+    pii_error,
+)
 
 
 def test_config_error_exits_with_code_5() -> None:
@@ -65,3 +76,26 @@ def test_gateway_error_without_slot(capsys: pytest.CaptureFixture[str]) -> None:
         gateway_error("generic failure")
     stderr = capsys.readouterr().err
     assert "Slot:" not in stderr
+
+
+# ── Exit code constants ──────────────────────────────────────────────────────
+
+
+class TestExitCodeConstants:
+    def test_success_is_0(self) -> None:
+        assert SUCCESS == 0
+
+    def test_general_error_is_1(self) -> None:
+        assert GENERAL_ERROR == 1
+
+    def test_usage_error_is_2(self) -> None:
+        assert USAGE_ERROR == 2
+
+    def test_config_error_is_3(self) -> None:
+        assert CONFIG_ERROR == 3
+
+    def test_input_error_is_4(self) -> None:
+        assert INPUT_ERROR == 4
+
+    def test_network_error_is_5(self) -> None:
+        assert NETWORK_ERROR == 5

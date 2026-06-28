@@ -1,10 +1,11 @@
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import httpx
 import pytest
 
 from openreview_cli.gateway.wizard import SetupWizard, validate_api_key
+from openreview_cli.ui.console import SGRenderer
 
 
 @pytest.fixture
@@ -86,12 +87,12 @@ def test_wizard_arrow_key_navigation_flow(temp_config_dir: Path) -> None:
             return None
 
     with (
-        patch("openreview_cli.gateway.wizard._select", side_effect=fake_select),
+        patch("openreview_cli.gateway.wizard.select", side_effect=fake_select),
         patch("openreview_cli.gateway.wizard._autocomplete", side_effect=fake_select),
-        patch("openreview_cli.gateway.wizard._confirm", return_value=True),
-        patch("openreview_cli.gateway.wizard._password", return_value="sk-test"),
+        patch("openreview_cli.gateway.wizard.confirm", return_value=True),
+        patch("openreview_cli.gateway.wizard.password", return_value="sk-test"),
         patch("openreview_cli.gateway.wizard.validate_api_key", return_value=True),
-        patch("openreview_cli.gateway.wizard._is_interactive", return_value=True),
+        patch.object(SGRenderer, "is_interactive", new_callable=PropertyMock, return_value=True),
         patch("openreview_cli.gateway.wizard.ollama_discover_models", return_value=fake_models),
         patch(
             "openreview_cli.gateway.wizard.get_models_for_slot",
@@ -110,8 +111,9 @@ def test_wizard_cancel_on_first_step_skips_save(temp_config_dir: Path) -> None:
     wizard = SetupWizard(config_dir=temp_config_dir)
 
     with (
-        patch("openreview_cli.gateway.wizard._select", return_value=None),
-        patch("openreview_cli.gateway.wizard._confirm", return_value=False),
+        patch("openreview_cli.gateway.wizard.select", return_value=None),
+        patch("openreview_cli.gateway.wizard.confirm", return_value=False),
+        patch.object(SGRenderer, "is_interactive", new_callable=PropertyMock, return_value=True),
         patch("openreview_cli.gateway.wizard.ollama_discover_models", return_value=[]),
         patch.object(wizard, "save") as mock_save,
     ):

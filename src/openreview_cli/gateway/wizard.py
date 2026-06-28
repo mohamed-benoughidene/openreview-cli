@@ -7,14 +7,7 @@ import yaml
 from rich.console import Console
 from rich.table import Table
 
-from openreview_cli.cli.utils import (
-    _autocomplete,
-    _confirm,
-    _is_interactive,
-    _password,
-    _select,
-    _text,
-)
+from openreview_cli.cli.utils import _autocomplete
 from openreview_cli.config.auth import get_api_base, get_api_key
 from openreview_cli.config.loader import load_config
 from openreview_cli.config.paths import get_config_dir
@@ -25,6 +18,8 @@ from openreview_cli.gateway.providers import (
 )
 from openreview_cli.gateway.registry import get_models_for_slot
 from openreview_cli.gateway.utils import atomic_write
+from openreview_cli.ui.components.prompt import confirm, password, select, text
+from openreview_cli.ui.console import renderer
 
 
 def validate_api_key(provider: str, api_key: str, timeout_seconds: float = 10.0) -> bool:
@@ -105,7 +100,7 @@ class SetupWizard:
             self.slots_config["graph"]["primary"] = model_str
 
     def run(self) -> None:
-        if not _is_interactive():
+        if not renderer.is_interactive:
             self.console.print(
                 "[yellow]Non-interactive terminal detected. Use --non-interactive flag or run in a terminal.[/yellow]"
             )
@@ -127,7 +122,7 @@ class SetupWizard:
                 f"\n[bold blue]Step {step_idx + 1} of 5: Configuring '{slot}' slot[/bold blue]"
             )
 
-            provider = self._select_provider(slot, step_idx)
+            provider = self.select_provider(slot, step_idx)
             if provider is None:
                 if step_idx > 0:
                     step_idx -= 1
@@ -136,13 +131,13 @@ class SetupWizard:
                     continue
                 return
 
-            model = self._select_model(slot, provider)
+            model = self.select_model(slot, provider)
             if model is None:
                 continue
 
             if provider != "ollama":
                 existing_key = get_api_key(provider)
-                if existing_key and _confirm(
+                if existing_key and confirm(
                     f"API key for '{provider}' is already configured. Reuse it?"
                 ):
                     self.api_keys[provider] = existing_key
@@ -152,7 +147,7 @@ class SetupWizard:
             self.slots_config[slot]["primary"] = f"{provider}/{model}"
 
             if slot == "reasoning":
-                group = _confirm("Apply this provider and model to extraction and graph slots too?")
+                group = confirm("Apply this provider and model to extraction and graph slots too?")
                 if group:
                     self.apply_grouping(provider, model, slot)
                     skipped_slots.add("extraction")
@@ -161,8 +156,8 @@ class SetupWizard:
             step_idx += 1
 
         self.show_summary()
-        confirm = _confirm("Save this configuration?")
-        if confirm:
+        confirmed = confirm("Save this configuration?")
+        if confirmed:
             self.save()
             self.console.print(
                 "\n[bold green]Gateway configuration completed successfully![/bold green]"
@@ -170,7 +165,7 @@ class SetupWizard:
         else:
             self.console.print("\n[yellow]Setup cancelled. No changes saved.[/yellow]")
 
-    def _select_provider(self, slot: str, step_idx: int) -> str | None:
+    def select_provider(self, slot: str, step_idx: int) -> str | None:
         providers = ["ollama", "openai", "anthropic", "cohere", "google", "custom"]
         choices = list(providers)
         if step_idx > 0:
@@ -181,7 +176,7 @@ class SetupWizard:
         if current_primary and "/" in current_primary:
             default_provider = current_primary.split("/")[0]
 
-        result = _select(
+        result = select(
             f"Select provider for {slot} slot",
             choices=choices,
             default=default_provider,
@@ -190,31 +185,31 @@ class SetupWizard:
             return None
         return result
 
-    def _select_model(self, slot: str, provider: str) -> str | None:
+    def select_model(self, slot: str, provider: str) -> str | None:
         if provider == "ollama":
-            return self._select_ollama_model()
+            return self.select_ollama_model()
         # Slot-aware model list from registry
         choices = list(get_models_for_slot(provider, slot))
         model_choices = [*list(choices), "manual"]
         if choices:
-            choice = _select(
+            choice = select(
                 f"Select model for {provider}",
                 choices=model_choices,
                 default=choices[0],
             )
             if choice == "manual":
-                return _text("Enter model ID")
+                return text("Enter model ID")
             return choice
-        return _text(f"Enter model ID for {provider}")
+        return text(f"Enter model ID for {provider}")
 
-    def _select_ollama_model(self) -> str | None:
+    def select_ollama_model(self) -> str | None:
         try:
             self.console.print("[dim]Checking local Ollama models...[/dim]")
             models = ollama_discover_models()
             if not models:
                 self.console.print("[yellow]Ollama is running, but no models were found.[/yellow]")
                 self.console.print("Hint: Pull a model with 'ollama pull <model>'.")
-                return _text("Enter Ollama model name (e.g. qwen3:8b)")
+                return text("Enter Ollama model name (e.g. qwen3:8b)")
             model_names = [m.name for m in models]
             self.console.print("\nAvailable Ollama models:")
             for m in models:
@@ -228,14 +223,14 @@ class SetupWizard:
             self.console.print(
                 "[red]Ollama is not running.[/red] Hint: Start Ollama with 'ollama serve'."
             )
-            return _text("Enter Ollama model name")
+            return text("Enter Ollama model name")
         except OllamaTimeoutError:
             self.console.print("[red]Ollama connection timed out.[/red]")
-            return _text("Enter Ollama model name")
+            return text("Enter Ollama model name")
 
     def _prompt_and_validate_key(self, provider: str) -> str:
         while True:
-            key = _password(f"Enter API key for {provider}")
+            key = password(f"Enter API key for {provider}")
             if key is None:
                 return ""
             self.console.print("[dim]Validating API key...[/dim]")
@@ -243,10 +238,10 @@ class SetupWizard:
                 self.console.print("[green]API key is valid![/green]")
                 return key
             self.console.print("[red]API key validation failed or timed out.[/red]")
-            retry = _confirm("Retry validation?")
+            retry = confirm("Retry validation?")
             if retry:
                 continue
-            skip = _confirm("Skip validation and save anyway?")
+            skip = confirm("Skip validation and save anyway?")
             if skip:
                 return key
 

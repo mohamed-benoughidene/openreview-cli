@@ -1,6 +1,15 @@
 import sys
 from typing import NoReturn
 
+sys.tracebacklimit = 0
+
+SUCCESS = 0
+GENERAL_ERROR = 1
+USAGE_ERROR = 2
+CONFIG_ERROR = 3
+INPUT_ERROR = 4
+NETWORK_ERROR = 5
+
 
 def config_error(message: str) -> NoReturn:
     print(f"Config error: {message}", file=sys.stderr)

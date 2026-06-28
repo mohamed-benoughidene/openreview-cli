@@ -8,21 +8,17 @@ from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 
-from openreview_cli.cli.utils import _checkbox, _confirm, _is_interactive, _select
 from openreview_cli.config.loader import load_config
 from openreview_cli.config.paths import get_config_dir
+from openreview_cli.types import OutputFormat
+from openreview_cli.ui.components.prompt import checkbox, confirm, select
+from openreview_cli.ui.console import renderer
 
 
 class ReviewMode(enum.StrEnum):
     FULL = "full"
     CLAUSE_BY_CLAUSE = "clause-by-clause"
     RISK_SCAN = "risk-scan"
-
-
-class OutputFormat(enum.StrEnum):
-    JSON = "json"
-    TEXT = "text"
-    HTML = "html"
 
 
 JURISDICTION_CODES: list[dict[str, str]] = [
@@ -76,6 +72,7 @@ class ReviewWizard:
         jurisdiction: str | None = None,
         output_format: str | None = None,
         clauses: list[str] | None = None,
+        no_pii: bool = False,
     ) -> None:
         self.file_path = Path(file_path)
         self.non_interactive = non_interactive
@@ -83,10 +80,11 @@ class ReviewWizard:
         self._jurisdiction = jurisdiction
         self._output_format = output_format
         self._clauses = clauses
+        self._no_pii = no_pii
         self.console = Console()
 
     def _validate_file(self) -> None:
-        if not self.non_interactive and not _is_interactive():
+        if not self.non_interactive and not renderer.is_interactive:
             self.console.print(
                 "[yellow]Non-interactive terminal detected. "
                 "Use --non-interactive flag or run in a terminal.[/yellow]"
@@ -127,7 +125,7 @@ class ReviewWizard:
                     file_path=self.file_path,
                     mode=ReviewMode.RISK_SCAN,
                 )
-                if self._confirm_summary(config):
+                if self.confirm_summary(config):
                     return config
                 continue
 
@@ -152,7 +150,7 @@ class ReviewWizard:
                 output_format=fmt,
                 clauses=clauses,
             )
-            if self._confirm_summary(config):
+            if self.confirm_summary(config):
                 return config
 
     def _non_interactive_flow(self) -> ReviewConfiguration:
@@ -212,7 +210,7 @@ class ReviewWizard:
             self.console.print(
                 "[yellow]Gateway not configured. Run 'openreview gateway setup' first.[/yellow]"
             )
-            setup_now = _confirm("Run gateway setup now?")
+            setup_now = confirm("Run gateway setup now?")
             if setup_now:
                 from openreview_cli.gateway.wizard import SetupWizard
 
@@ -232,7 +230,7 @@ class ReviewWizard:
                     "[yellow]Gateway is missing required models. "
                     "Need at least one chat slot (reasoning/extraction/graph) and one embedding slot configured.[/yellow]"
                 )
-                setup_now = _confirm("Run gateway setup now?")
+                setup_now = confirm("Run gateway setup now?")
                 if setup_now:
                     from openreview_cli.gateway.wizard import SetupWizard
 
@@ -253,7 +251,7 @@ class ReviewWizard:
         return True
 
     def _prompt_mode(self) -> ReviewMode | None:
-        result = _select(
+        result = select(
             "Select review mode",
             choices=["full", "clause-by-clause", "risk-scan"],
             default="full",
@@ -265,7 +263,7 @@ class ReviewWizard:
 
     def _prompt_jurisdiction(self) -> str | None:
         choices = [f"{j['code']} — {j['label']}" for j in JURISDICTION_CODES] + ["← Back"]
-        result = _select(
+        result = select(
             "Select jurisdiction",
             choices=choices,
             default=choices[0],
@@ -277,8 +275,8 @@ class ReviewWizard:
         return code
 
     def _prompt_output_format(self) -> OutputFormat | None:
-        choices = ["json", "text", "html", "← Back"]
-        result = _select(
+        choices = ["table", "json", "plain", "← Back"]
+        result = select(
             "Select output format",
             choices=choices,
             default="json",
@@ -289,7 +287,7 @@ class ReviewWizard:
 
     def _prompt_clauses(self) -> list[str] | None:
         clause_ids = [str(i) for i in range(1, 51)]
-        result = _checkbox(
+        result = checkbox(
             "Select clauses to review (space to toggle, enter to confirm)",
             choices=[*clause_ids, "← Back"],
         )
@@ -297,7 +295,7 @@ class ReviewWizard:
             return None
         return result
 
-    def _confirm_summary(self, config: ReviewConfiguration) -> bool:
+    def confirm_summary(self, config: ReviewConfiguration) -> bool:
         self.console.print("\n[bold]Review Configuration Summary:[/bold]")
         table = Table()
         table.add_column("Setting", style="cyan")
@@ -313,5 +311,5 @@ class ReviewWizard:
             table.add_row("Clauses", ", ".join(config.clauses))
 
         self.console.print(table)
-        result = _confirm("Proceed with this configuration?")
+        result = confirm("Proceed with this configuration?")
         return bool(result)
