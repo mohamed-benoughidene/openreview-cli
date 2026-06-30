@@ -60,5 +60,5 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
       - run: uv sync --frozen
-      - run: uv run python -m spacy download en_core_web_lg --quiet
+      - run: uv pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl
       - run: uv run pytest -m memory -v

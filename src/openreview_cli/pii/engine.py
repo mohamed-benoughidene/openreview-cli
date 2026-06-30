@@ -34,7 +34,7 @@ class PiiEngine:
             model_config = [{"lang_code": "en", "model_name": "en_core_web_lg"}]
             nlp_engine = SpacyNlpEngine(models=model_config)
             self._analyzer = AnalyzerEngine(nlp_engine=nlp_engine)
-        except OSError as err:
+        except (OSError, SystemExit) as err:
             raise PiiError(
                 exit_code=9,
                 category="model_not_found",
