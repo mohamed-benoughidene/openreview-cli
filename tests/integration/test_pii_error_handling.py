@@ -11,11 +11,19 @@ class TestPiiErrorHandling:
     """Error paths in PII mapping and error-model compliance."""
 
     def test_invalid_key_raises_pii_error(self, tmp_path: Path) -> None:
-        """T040: Invalid encryption key raises PiiError with 'Config error' message."""
-        from openreview_cli.pii.mapping import write_pii_mapping
+        """T040: Reading a corrupted mapping file raises InvalidToken."""
+        from openreview_cli.pii.encryption import InvalidToken
+        from openreview_cli.pii.mapping import read_pii_mapping, write_pii_mapping
 
-        with pytest.raises(PiiError, match="Config error"):
-            write_pii_mapping({"a": "b"}, tmp_path, "short")
+        # Write a valid mapping first
+        write_pii_mapping({"a": "b"}, tmp_path, "some-encryption-key-1234")
+
+        # Corrupt the file
+        mapping_file = tmp_path / "pii_map.enc"
+        mapping_file.write_bytes(b"garbage_data_that_is_not_a_valid_fernet_token")
+
+        with pytest.raises(InvalidToken):
+            read_pii_mapping(tmp_path, "some-encryption-key-1234")
 
     def test_pii_error_no_offsets(self) -> None:
         """FR-010: PiiError message does not contain character offsets or text snippets."""
@@ -53,7 +61,7 @@ class TestPiiErrorHandling:
         )
 
         engine = PiiEngine(threshold=0.0)
-        entities, warnings = engine.detect_all_pages([clause], threshold=0.0)
+        entities, warnings = engine.detect_all_pages([clause], threshold=0.0)[:2]
 
         assert any("Non-English" in w for w in warnings), f"No non-English warning: {warnings}"
 

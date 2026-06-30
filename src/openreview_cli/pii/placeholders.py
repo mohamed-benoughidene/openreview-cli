@@ -24,7 +24,7 @@ PRESIDIO_TO_PREFIX = {
 PARTY_PREFIXES = {"PARTY"}
 
 
-def assign_placeholders(
+def assign_placeholders(  # noqa: PLR0912
     entities: list[Any], metadata_entities: list[Any] | None = None
 ) -> tuple[dict[str, str], list[Any]]:
     """Assign deterministic placeholders to entities.
@@ -53,13 +53,21 @@ def assign_placeholders(
         unique = sorted({e.original_value for e in group}, key=str.lower)
 
         if prefix in PARTY_PREFIXES:
-            labels = string.ascii_uppercase[: len(unique)]
-            for val, lbl in zip(unique, labels, strict=True):
-                placeholder = f"[{prefix}_{lbl}]"
-                mapping[placeholder.replace("[", "").replace("]", "")] = val
-                for entity in group:
-                    if entity.original_value == val:
-                        entity.placeholder = placeholder
+            if len(unique) <= 26:
+                labels = string.ascii_uppercase[: len(unique)]
+                for val, lbl in zip(unique, labels, strict=True):
+                    placeholder = f"[{prefix}_{lbl}]"
+                    mapping[placeholder.replace("[", "").replace("]", "")] = val
+                    for entity in group:
+                        if entity.original_value == val:
+                            entity.placeholder = placeholder
+            else:
+                for i, val in enumerate(unique, 1):
+                    placeholder = f"[{prefix}_{i}]"
+                    mapping[placeholder.replace("[", "").replace("]", "")] = val
+                    for entity in group:
+                        if entity.original_value == val:
+                            entity.placeholder = placeholder
         else:
             for i, val in enumerate(unique, 1):
                 placeholder = f"[{prefix}_{i}]"

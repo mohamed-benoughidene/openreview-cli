@@ -142,12 +142,36 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
         cost_limits: CostLimits = CostLimits()
         model_registry_refresh_days: int = 7
 
+    _valid_recognizers = frozenset(
+        {
+            "person",
+            "date",
+            "money",
+            "address",
+            "email",
+            "phone",
+            "organization",
+            "location",
+            "nationality",
+            "date_of_birth",
+            "passport_number",
+            "credit_card",
+            "social_security",
+            "driver_license",
+            "ip_address",
+            "url",
+        }
+    )
+
     class PrivacyConfig(BaseModel):
         tier: str = "balanced"
         strip_pii: bool = True
         log_ttl_days: int = 30
         pii_threshold: float = 0.7
         pii_encryption_key: str = "12345678901234561234567890123456"
+        retention_days: int = 30
+        enabled_recognizers: list[str] = []
+        placeholder_format: str = "[{type}]"
 
         @field_validator("tier")
         @classmethod
@@ -175,6 +199,30 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
         def _check_pii_encryption_key(cls, v: str) -> str:
             if len(v.encode("utf-8")) not in (16, 24, 32):
                 raise ValueError("encryption key must be exactly 16, 24, or 32 bytes")
+            return v
+
+        @field_validator("retention_days")
+        @classmethod
+        def _check_retention_days(cls, v: int) -> int:
+            if not (1 <= v <= 365):
+                raise ValueError("must be between 1 and 365")
+            return v
+
+        @field_validator("enabled_recognizers")
+        @classmethod
+        def _check_enabled_recognizers(cls, v: list[str]) -> list[str]:
+            if not v:
+                return v
+            invalid = set(v) - _valid_recognizers
+            if invalid:
+                raise ValueError(f"invalid recognizers: {', '.join(sorted(invalid))}")
+            return v
+
+        @field_validator("placeholder_format")
+        @classmethod
+        def _check_placeholder_format(cls, v: str) -> str:
+            if "{type}" not in v:
+                raise ValueError("must contain '{type}' placeholder")
             return v
 
     class StorageConfig(BaseModel):

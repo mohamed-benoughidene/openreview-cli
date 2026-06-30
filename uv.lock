@@ -861,6 +861,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
+    { name = "cryptography" },
     { name = "httpx" },
     { name = "nupunkt" },
     { name = "platformdirs" },
@@ -885,6 +886,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.0.0" },
+    { name = "cryptography", specifier = ">=49.0.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "nupunkt", specifier = ">=0.6.0" },
     { name = "platformdirs", specifier = ">=4.10.0" },
