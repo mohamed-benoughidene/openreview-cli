@@ -17,7 +17,7 @@ AGENTS.md
 # Working drafts (not part of the public product)
 products/
 Papers/
-
+data/
 # Python caches and tooling
 .mypy_cache/
 .pytest_cache/

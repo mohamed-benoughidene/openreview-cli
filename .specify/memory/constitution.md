@@ -237,6 +237,46 @@ hold regardless of feature priority.
   configuration schema version are all part of the public surface
   and are protected by Principle IV's amendment rules.
 
+## Research Grounding Rule
+Before resolving any NEEDS CLARIFICATION in research.md, read
+`.specify/memory/verified-sources.md`. All technical claims in research.md
+must reference a CONFIRMED item from that file. Claims not found there
+must be written as UNVERIFIED with reason.
+
+## Task Grounding Rule
+Before generating tasks.md, read `.specify/memory/task-context.md`.
+
+- All file paths in tasks.md must match either EXISTS or NEW paths from task-context.md
+- All library API references must match a CONFIRMED dep from task-context.md
+- If task-context.md is missing, halt and emit: ERROR: run speckit.task-grounding first
+- Flag any task referencing a MISMATCH path as ⚠️ PATH CONFLICT: <plan path> vs <actual path>
+
+## Analysis Grounding Rule
+Before running cross-artifact analysis, read `.specify/memory/analysis-context.md`.
+
+Add a Detection Pass G to the standard analysis passes:
+
+**G. Reality Check** (severity: HIGH if VERSION DRIFT or PATH CONFLICT, MEDIUM if NO ANCHOR)
+- Any version number in plan.md that does not match a CONFIRMED anchor → flag as VERSION DRIFT
+- Any file path in tasks.md that is neither EXISTS nor NEW in task-context.md → flag as PATH CONFLICT  
+- Any API or function name in plan.md with NO ANCHOR in verified-sources.md → flag as UNVERIFIED API
+
+If analysis-context.md is missing, add one CRITICAL finding to the report:
+  C0 | Reality Check | CRITICAL | — | analysis-context.md not found | Run speckit.analysis-grounding before proceeding
+
+## Implementation Grounding Rule
+Before executing any task in tasks.md, read `.specify/memory/impl-context.md`.
+
+- If Implementation Clearance is BLOCKED, halt immediately and surface the reason
+- If VERSION DRIFT exists for a dependency a task references, flag the task as:
+    ⚠️ VERSION DRIFT: task references <planned version> but <installed version> is installed
+- If NOT INSTALLED exists for a dependency a task needs, halt that task with:
+    ❌ MISSING DEP: <package> required but not found in environment
+- If NEW SINCE TASKS or REMOVED SINCE TASKS entries exist, re-read tasks.md
+  for any task referencing the changed path and flag it as:
+    ⚠️ PATH CHANGED: filesystem does not match task-context.md snapshot
+- Never proceed past a BLOCKED clearance without explicit user confirmation
+
 ## Governance
 
 - **Supremacy**: this constitution is the project's source of truth on
