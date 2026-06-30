@@ -57,7 +57,7 @@ def read_pii_mapping(
 
     fernet = derive_key(encryption_key, salt)
     decrypted = decrypt_pii_mapping(token, fernet)
-    payload = json.loads(decrypted.decode("utf-8"))
+    payload: dict[str, Any] = json.loads(decrypted.decode("utf-8"))
     return payload["entries"]
 
 

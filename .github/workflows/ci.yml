@@ -54,6 +54,8 @@ jobs:
 
   memory:
     runs-on: ubuntu-latest
+    env:
+      UV_SYSTEM_PYTHON: "0"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -63,4 +65,5 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
       - run: uv sync --frozen
+      - run: uv run python -m spacy download en_core_web_lg --quiet
       - run: uv run pytest -m memory -v
