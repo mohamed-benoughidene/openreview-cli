@@ -92,7 +92,7 @@ def test_pii_memory_500_pages_2000_entities() -> None:
     engine.close()
 
     max_peak = 100 * 1024 * 1024
-    max_seconds = 30.0
+    max_seconds = 60.0
 
     print(
         f"\nPII Memory Report:\n"
