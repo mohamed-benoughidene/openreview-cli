@@ -62,7 +62,7 @@
 - [X] T013a [US1] Write integration test for provider switching in `tests/integration/test_gateway_routing.py` — configure slot with provider A, route successfully, reconfigure to provider B via config change only, route again, verify correct provider called without code changes (SC-002)
 - [X] T014 [US1] Write integration test for embedding routing in `tests/integration/test_gateway_routing.py` — mock LiteLLM `embedding()`, verify vectors returned
 - [X] T015 [US1] Write integration test for reranking routing in `tests/integration/test_gateway_routing.py` — mock LiteLLM `rerank()`, verify sorted results returned
-- [X] T015a [US1] Write integration test for fully-local zero-network mode in `tests/integration/test_gateway_routing.py` — configure all 5 slots with Ollama, use `respx.mock(assert_all_mocked=True)` to intercept all httpx calls, assert all requests go to `http://localhost:11434` only, verify no calls to external providers (SC-005)
+- [X] T015a [US1] Write integration test for fully-local zero-network mode in `tests/integration/test_gateway_routing.py` — configure 4 required slots (reasoning, extraction, embedding, graph) with Ollama; reranking is optional and disabled by default, use `respx.mock(assert_all_mocked=True)` to intercept all httpx calls, assert all requests go to `http://localhost:11434` only, verify no calls to external providers (SC-005)
 
 ### Implementation for User Story 1
 
@@ -94,7 +94,7 @@
 
 ### Implementation for User Story 2
 
-- [X] T026 [P] [US2] Create `SetupWizard` class in `src/openreview_cli/gateway/wizard.py` — welcome message, slot iteration with "Step X of 5" progress, provider selection via Rich `Prompt`/`Inquirer`
+- [X] T026 [P] [US2] Create `SetupWizard` class in `src/openreview_cli/gateway/wizard.py` — welcome message, slot iteration with "Step X of 4" progress (reranking is optional, step is skipped unless user opts in), provider selection via Rich `Prompt`/`Inquirer`
 - [X] T027 [US2] Implement model selection step in `src/openreview_cli/gateway/wizard.py` — list models from registry for selected provider, user picks, pre-fill if slot grouping applies
 - [X] T027a [US2] Implement `ollama_discover_models()` in `src/openreview_cli/gateway/providers.py` — query `GET http://localhost:11434/api/tags`, parse response `{models: [{name, size, details: {parameter_size, quantization_level}}]}`, handle `httpx.ConnectError` (Ollama not running) and `httpx.TimeoutException`, return list of `ModelInfo` dataclasses. Wire into wizard model selection (FR-012)
 - [X] T028 [US2] Implement API key entry in `src/openreview_cli/gateway/wizard.py` — masked input, copy-to-clipboard action, immediate validation via `GET /v1/models` or 1-token fallback, configurable timeout (default 10s via `httpx.Timeout(total=10.0, connect=5.0)`), retry logic with exponential backoff (from `gateway.fallback` config), retry/skip UX on timeout using `typer.confirm()` (FR-028, FR-015, C5)
@@ -203,7 +203,7 @@
 
 ### Implementation for User Story 6
 
-- [X] T061 [US6] Create import validation in `src/openreview_cli/gateway/importer.py` — parse YAML, validate all 5 slot keys present (reasoning, extraction, embedding, reranking, graph), check provider names, check model format, report ALL errors at once (FR-024). Note: YAML import requires all 5 slots per US6 scenario 1; wizard skip (FR-022) is a separate path
+- [X] T061 [US6] Create import validation in `src/openreview_cli/gateway/importer.py` — parse YAML, validate 4 required slot keys present (reasoning, extraction, embedding, graph); reranking is optional (warn if missing, do not fail), check provider names, check model format, report ALL errors at once (FR-024). Note: YAML import requires 4 required slots; reranking is optional
 - [X] T062 [US6] Implement `openreview gateway import <file>` command in `src/openreview_cli/app.py` — validate, prompt for overwrite confirmation, apply via atomic write, resolve `api_key_env` references (FR-023, FR-025)
 - [X] T063 [US6] Implement env var key resolution in `src/openreview_cli/gateway/importer.py` — read `api_key_env` section, verify env vars exist, write keys to auth.json with chmod 600
 - [X] T064 [US6] Write unit tests for import in `tests/unit/test_gateway_importer.py` — test validation (missing fields, bad providers, inline keys rejected), env var resolution

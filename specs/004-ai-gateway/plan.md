@@ -6,7 +6,7 @@
 
 ## Summary
 
-The AI Gateway is a model routing layer that connects the review engine to AI providers (cloud and local). It provides 5 task-specific slots (reasoning, extraction, embedding, reranking, graph), fallback chains, cost tracking, interactive setup wizard, BYOK key management, and YAML config import. The gateway uses LiteLLM as the provider abstraction layer, Pydantic v2 for configuration validation, and follows the existing codebase patterns (lazy imports, dataclass models, dict-based config, atomic file writes).
+The AI Gateway is a model routing layer that connects the review engine to AI providers (cloud and local). It provides 5 task-specific slots (reasoning, extraction, embedding, reranking—optional, disabled by default—graph), fallback chains, cost tracking, interactive setup wizard, BYOK key management, and YAML config import. The gateway uses LiteLLM as the provider abstraction layer, Pydantic v2 for configuration validation, and follows the existing codebase patterns (lazy imports, dataclass models, dict-based config, atomic file writes).
 
 ## Technical Context
 
@@ -47,7 +47,7 @@ The AI Gateway is a model routing layer that connects the review engine to AI pr
 - No provider-specific imports in engine code (FR-017)
 
 **Scale/Scope**: 
-- 5 slots (reasoning, extraction, embedding, reranking, graph)
+- 5 slots (reasoning, extraction, embedding, graph — required; reranking — optional, disabled by default)
 - 8+ providers (OpenAI, Anthropic, Google, Ollama, OpenRouter, Cohere, HuggingFace, Custom)
 - 300+ cloud models via registry
 - ~10 local models for Ollama

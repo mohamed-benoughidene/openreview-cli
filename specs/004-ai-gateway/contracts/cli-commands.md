@@ -21,7 +21,7 @@ app.add_typer(gateway_app)
 
 ### 1. `openreview gateway setup`
 
-**Purpose**: Interactive first-time setup wizard for configuring all five slots.
+**Purpose**: Interactive first-time setup wizard for configuring gateway slots (4 required + 1 optional).
 
 **Usage**:
 ```bash
@@ -32,7 +32,7 @@ openreview gateway setup [OPTIONS]
 - `--reasoning <provider/model>`: Pre-configure reasoning slot (skip wizard for this slot)
 - `--extraction <provider/model>`: Pre-configure extraction slot
 - `--embedding <provider/model>`: Pre-configure embedding slot
-- `--reranking <provider/model>`: Pre-configure reranking slot
+- `--reranking <provider/model>`: Pre-configure reranking slot (optional, disabled by default)
 - `--graph <provider/model>`: Pre-configure graph slot
 - `--no-interactive`: Force non-interactive mode (error if config incomplete)
 
@@ -42,8 +42,8 @@ openreview gateway setup [OPTIONS]
 3. If no flags and existing config, show current config and ask "Reconfigure? (y/N)"
 4. Wizard flow:
    - Welcome message explaining purpose and privacy
-   - For each slot (reasoning, extraction, embedding, reranking, graph):
-     - Show "Step X of 5" progress indicator
+   - For each slot (reasoning, extraction, embedding, graph — required; reranking — optional):
+     - Show "Step X of 4" progress indicator (reranking step is skipped unless user opts in)
      - List available providers (OpenAI, Anthropic, Google, Ollama, OpenRouter, Cohere, HuggingFace, Custom)
      - User selects provider
      - If cloud provider: prompt for API key (masked input, copy-to-clipboard, immediate validation)

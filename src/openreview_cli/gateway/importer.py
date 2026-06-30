@@ -19,7 +19,7 @@ SUPPORTED_PROVIDERS = {
     "huggingface",
     "custom",
 }
-REQUIRED_SLOTS = {"reasoning", "extraction", "embedding", "reranking", "graph"}
+REQUIRED_SLOTS = {"reasoning", "extraction", "embedding", "graph"}
 ENV_VAR_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
@@ -90,12 +90,16 @@ def validate_import_config(config_dict: dict[str, Any]) -> list[str]:
     if not isinstance(config_dict, dict):
         return ["Imported configuration must be an object/dictionary."]
 
-    # Check for missing and invalid slots
+    # Check required slots
     for slot in REQUIRED_SLOTS:
         if slot not in config_dict:
             errors.append(f"Missing required slot: '{slot}'")
         else:
             errors.extend(_validate_slot_config(slot, config_dict[slot]))
+
+    # Optional reranking slot
+    if "reranking" in config_dict:
+        errors.extend(_validate_slot_config("reranking", config_dict["reranking"]))
 
     # Check api_key_env
     api_key_env = config_dict.get("api_key_env")
@@ -177,6 +181,15 @@ def import_config(config_dict: dict[str, Any], config_dir: Path) -> dict[str, An
         }
         config_data["gateway"]["models"][slot] = slot_conf
 
+    # Optional reranking slot
+    if "reranking" in config_dict:
+        ri = config_dict["reranking"]
+        config_data["gateway"]["models"]["reranking"] = {
+            "primary": f"{ri['provider']}/{ri['model']}",
+            "fallback": ri.get("fallback"),
+            "params": ri.get("params") or {},
+        }
+
     # Write config.yml atomically
     yaml_str = yaml.safe_dump(config_data, default_flow_style=False)
     atomic_write(config_path, yaml_str)
@@ -189,4 +202,6 @@ def import_config(config_dict: dict[str, Any], config_dir: Path) -> dict[str, An
     for slot in sorted(REQUIRED_SLOTS):
         slot_import = config_dict[slot]
         summary[slot] = f"{slot_import['provider']}/{slot_import['model']}"
+    if "reranking" in config_dict:
+        summary["reranking"] = f"{config_dict['reranking']['provider']}/{config_dict['reranking']['model']}"
     return summary

@@ -74,7 +74,7 @@ class SetupWizard:
     def __init__(self, config_dir: Path | None = None) -> None:
         self.config_dir = config_dir or get_config_dir()
         self.console = Console()
-        self.steps = ["reasoning", "extraction", "embedding", "reranking", "graph"]
+        self.steps = ["reasoning", "extraction", "embedding", "graph"]
         self.slots_config: dict[str, dict[str, Any]] = {
             s: {"primary": "", "params": {}} for s in self.steps
         }
@@ -122,7 +122,7 @@ class SetupWizard:
                 continue
 
             self.console.print(
-                f"\n[bold blue]Step {step_idx + 1} of 5: Configuring '{slot}' slot[/bold blue]"
+                f"\n[bold blue]Step {step_idx + 1} of {len(self.steps)}: Configuring '{slot}' slot[/bold blue]"
             )
 
             # 1. Ask for Provider
@@ -288,6 +288,57 @@ class SetupWizard:
                     skipped_slots.add("graph")
 
             step_idx += 1
+
+        # Ask about optional reranking slot
+        if Confirm.ask(
+            "Configure reranking slot? (optional, disabled by default — LightRAG graph retrieval is the precision filter)",
+            default=False,
+        ):
+            self.steps.append("reranking")
+            self.slots_config["reranking"] = {"primary": "", "params": {}}
+            slot = "reranking"
+            self.console.print(
+                f"\n[bold blue]Step {len(self.steps)} of {len(self.steps)}: Configuring 'reranking' slot[/bold blue]"
+            )
+            providers = ["ollama", "openai", "anthropic", "cohere", "google", "custom"]
+            provider = Prompt.ask(f"Select provider for reranking slot", choices=providers, default="ollama").strip().lower()
+            model = ""
+            while not model:
+                if provider == "ollama":
+                    try:
+                        self.console.print("[dim]Checking local Ollama models...[/dim]")
+                        models = ollama_discover_models()
+                        if not models:
+                            self.console.print("[yellow]No models found.[/yellow]")
+                            model = Prompt.ask("Enter Ollama model name (e.g. qwen3-reranker)")
+                        else:
+                            model_names = [m.name for m in models]
+                            self.console.print("\nAvailable Ollama models:")
+                            for m in models:
+                                size_mb = f"{m.size / (1024 * 1024):.0f} MB" if m.size else "unknown"
+                                self.console.print(f" - [cyan]{m.name}[/cyan] ({size_mb})")
+                            choice = Prompt.ask("Select a model", choices=model_names + ["manual"], default=model_names[0])
+                            model = Prompt.ask("Enter Ollama model name") if choice == "manual" else choice
+                    except (OllamaNotRunningError, OllamaTimeoutError):
+                        self.console.print("[red]Ollama not reachable.[/red] Enter model name manually or skip.")
+                        model = Prompt.ask("Enter Ollama model name (or leave empty to skip)")
+                        if not model:
+                            break
+                else:
+                    choices = get_models_for_slot(provider, slot)
+                    if choices:
+                        choice = Prompt.ask(f"Select model for {provider}", choices=choices + ["manual"], default=choices[0])
+                        model = Prompt.ask("Enter model ID") if choice == "manual" else choice
+                    else:
+                        model = Prompt.ask(f"Enter model ID for {provider}")
+                if model:
+                    if provider != "ollama":
+                        existing_key = get_api_key(provider)
+                        if existing_key and Confirm.ask(f"Reuse existing API key for '{provider}'?", default=True):
+                            self.api_keys[provider] = existing_key
+                        else:
+                            self.api_keys[provider] = self._prompt_and_validate_key(provider)
+                    self.slots_config["reranking"]["primary"] = f"{provider}/{model}"
 
         self.save()
         self.show_summary()
