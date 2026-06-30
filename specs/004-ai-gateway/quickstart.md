@@ -135,9 +135,9 @@ embedding:
   params:
     dimensions: 512
 
-reranking:
-  provider: cohere
-  model: rerank-3.5
+# reranking: (optional — LightRAG graph retrieval is the default)
+#   provider: cohere
+#   model: rerank-3.5
 
 graph:
   provider: openai
@@ -329,14 +329,14 @@ except Exception as e:
 # 1. Install Ollama models
 ollama pull llama3.1
 ollama pull nomic-embed-text
-ollama pull qwen3-reranker
+# ollama pull qwen3-reranker (optional — only needed if using cross-encoder reranking)
 
 # 2. Configure all slots to use Ollama
 openreview gateway setup \
   --reasoning ollama/llama3.1 \
   --extraction ollama/llama3.1 \
   --embedding ollama/nomic-embed-text \
-  --reranking ollama/qwen3-reranker \
+  # --reranking ollama/qwen3-reranker \  (optional — LightRAG graph retrieval is the default)
   --graph ollama/llama3.1
 
 # 3. Disconnect from internet (or use firewall to block outbound)

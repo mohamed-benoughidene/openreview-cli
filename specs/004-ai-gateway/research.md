@@ -192,6 +192,8 @@ Rely on LiteLLM for provider API abstraction. Document provider-specific details
 | **Cohere** | `api.cohere.com/v2` | `Authorization: Bearer` | `/chat` | `/embed` | `/rerank` |
 | **OpenRouter** | `openrouter.ai/api/v1` | `Authorization: Bearer` | `/chat/completions` | — | — |
 
+> **Note**: Reranking is optional and disabled by default. LightRAG graph retrieval replaces it as the primary precision filter. The LiteLLM reranking path remains available for users who prefer a cross-encoder.
+
 **Current Models (June 2026)**:
 - OpenAI: `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `text-embedding-3-small`
 - Anthropic: `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5`

@@ -266,6 +266,15 @@ def gateway_setup(
         if missing_slots:
             gateway_error(f"Missing configuration for slots: {', '.join(missing_slots)}")
 
+        # Handle optional reranking flag
+        if flags.get("reranking"):
+            val = flags["reranking"]
+            if "/" in val:
+                parts = val.split("/", 1)
+                if not parts[0] or not parts[1]:
+                    gateway_error(f"Invalid model format for slot 'reranking': '{val}'")
+            wizard.slots_config["reranking"] = {"primary": val, "params": {}}
+
         wizard.save()
         typer.echo("Gateway configured successfully.")
         return
@@ -877,7 +886,8 @@ def gateway_import(
     typer.echo(f"Importing config from: {file}")
     typer.echo("")
     typer.echo("Validating...")
-    typer.echo("  ✓ All 5 slots defined")
+    slots_defined = [s for s in content if s in {"reasoning", "extraction", "embedding", "reranking", "graph"}]
+    typer.echo(f"  ✓ {len(slots_defined)} slot(s) defined")
     typer.echo("  ✓ All providers recognized")
     typer.echo("  ✓ All model IDs valid")
     typer.echo("  ✓ No inline API keys detected")
@@ -886,8 +896,9 @@ def gateway_import(
     # Display summary
     typer.echo("Summary:")
     for slot in ["reasoning", "extraction", "embedding", "reranking", "graph"]:
-        slot_import = content[slot]
-        typer.echo(f"  {slot:<12}: {slot_import['provider']}/{slot_import['model']}")
+        slot_import = content.get(slot)
+        if slot_import:
+            typer.echo(f"  {slot:<12}: {slot_import['provider']}/{slot_import['model']}")
     typer.echo("")
 
     if dry_run:

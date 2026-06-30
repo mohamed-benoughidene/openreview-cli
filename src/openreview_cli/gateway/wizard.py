@@ -79,7 +79,7 @@ class SetupWizard:
     def __init__(self, config_dir: Path | None = None) -> None:
         self.config_dir = config_dir or get_config_dir()
         self.console = Console()
-        self.steps = ["reasoning", "extraction", "embedding", "reranking", "graph"]
+        self.steps = ["reasoning", "extraction", "embedding", "graph"]
         self.slots_config: dict[str, dict[str, Any]] = {
             s: {"primary": "", "params": {}} for s in self.steps
         }
@@ -124,7 +124,7 @@ class SetupWizard:
                 continue
 
             self.console.print(
-                f"\n[bold blue]Step {step_idx + 1} of 5: Configuring '{slot}' slot[/bold blue]"
+                f"\n[bold blue]Step {step_idx + 1} of {len(self.steps)}: Configuring '{slot}' slot[/bold blue]"
             )
 
             provider = self._select_provider(slot, step_idx)
@@ -159,6 +159,31 @@ class SetupWizard:
                     skipped_slots.add("graph")
 
             step_idx += 1
+
+        # Ask about optional reranking slot
+        if _confirm(
+            "Configure reranking slot? (optional, disabled by default)",
+            default=False,
+        ):
+            self.steps.append("reranking")
+            self.slots_config["reranking"] = {"primary": "", "params": {}}
+            slot = "reranking"
+            self.console.print(
+                f"\n[bold blue]Step {len(self.steps)} of {len(self.steps)}: Configuring 'reranking' slot[/bold blue]"
+            )
+            provider = self._select_provider(slot, step_idx=len(self.steps) - 1)
+            if provider:
+                model = self._select_model(slot, provider)
+                if model:
+                    if provider != "ollama":
+                        existing_key = get_api_key(provider)
+                        if existing_key and _confirm(
+                            f"API key for '{provider}' is already configured. Reuse it?"
+                        ):
+                            self.api_keys[provider] = existing_key
+                        else:
+                            self.api_keys[provider] = self._prompt_and_validate_key(provider)
+                    self.slots_config["reranking"]["primary"] = f"{provider}/{model}"
 
         self.show_summary()
         confirm = _confirm("Save this configuration?")

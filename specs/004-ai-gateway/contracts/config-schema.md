@@ -32,11 +32,11 @@ gateway:
       params:
         dimensions: 512  # Embedding-specific
 
-    reranking:
-      primary: "ollama/qwen3-reranker-0.6b"
-      fallback: null
-      params: {}
-
+    # reranking: (optional — disabled by default; LightRAG is the precision filter)
+    #   primary: ""
+    #   fallback: null
+    #   params: {}
+    
     graph:
       primary: "ollama/qwen3:8b"
       fallback: null
@@ -250,7 +250,7 @@ api_key_env:
 ```
 
 **Validation Rules**:
-- All five slots must be present (reasoning, extraction, embedding, reranking, graph)
+- Four required slots must be present (reasoning, extraction, embedding, graph). Reranking is optional (warn if missing, do not fail).
 - Each slot must have `provider` and `model` fields
 - `api_key_env` values are environment variable names, NOT actual keys
 - No inline API keys allowed (security requirement)
@@ -276,11 +276,12 @@ DEFAULT_GATEWAY_CONFIG = {
             "fallback": None,
             "params": {"dimensions": 512}
         },
-        "reranking": {
-            "primary": "ollama/qwen3-reranker-0.6b",
-            "fallback": None,
-            "params": {}
-        },
+        # reranking: optional, disabled by default. Use LightRAG graph retrieval instead.
+        # "reranking": {
+        #     "primary": "",
+        #     "fallback": None,
+        #     "params": {}
+        # },
         "graph": {
             "primary": "ollama/qwen3:8b",
             "fallback": None,

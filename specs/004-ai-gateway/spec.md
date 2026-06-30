@@ -27,7 +27,7 @@
 
 ### User Story 1 - Route Requests Through Task-Specific Slots (Priority: P1)
 
-The review engine needs to call AI models for five distinct tasks — reasoning (compare contract vs playbook), extraction (pull clause values), embedding (vectorize text chunks), reranking (re-score retrieved chunks), and graph extraction (structured JSON output). Each task gets its own slot so the user can assign the best model for each job. The engine calls a single routing function with a slot name and the gateway handles provider selection, authentication, and response formatting. The engine code never imports provider-specific libraries.
+The review engine needs to call AI models for five distinct tasks — reasoning (compare contract vs playbook), extraction (pull clause values), embedding (vectorize text chunks), reranking (re-score retrieved chunks — optional, disabled by default), and graph extraction (structured JSON output). Each task gets its own slot so the user can assign the best model for each job. The engine calls a single routing function with a slot name and the gateway handles provider selection, authentication, and response formatting. The engine code never imports provider-specific libraries.
 
 **Why this priority**: This is the foundation. Without a working routing layer, no review can run. Every downstream phase (chunking, comparison, memo generation) depends on being able to call a model through a slot.
 
@@ -47,7 +47,7 @@ The review engine needs to call AI models for five distinct tasks — reasoning 
 
 A user running the tool for the first time has no models configured. They run the setup command and an interactive wizard walks them through each of the five slots. For each slot, the wizard lists available providers, the user picks one, the wizard lists that provider's models, the user picks one, and the assignment is saved. For cloud providers, the wizard collects and validates the API key with masked input and a copy-to-clipboard action. For local providers (Ollama), no key is needed. When a provider is selected, the wizard offers to apply the same provider to compatible remaining slots (e.g., "Apply OpenAI to the extraction and graph slots too? (Y/n)"). The user may skip any slot.
 
-A visible progress indicator shows "Step X of 5" at all times. The user can navigate back to previous slots without losing entered values, and can cancel at any step with a warning that progress will be saved for configured slots so far. At the end, a summary is shown and the user confirms.
+A visible progress indicator shows "Step X of 4" at all times (reranking is optional — the step is skipped unless the user opts in). The user can navigate back to previous slots without losing entered values, and can cancel at any step with a warning that progress will be saved for configured slots so far. At the end, a summary is shown and the user confirms.
 
 The wizard is not the only path. Users can also configure slots via command-line flags (`--<slot> <provider/model>`) or by importing a YAML config file. These paths are described in User Story 6.
 
@@ -171,9 +171,9 @@ A user who manages multiple machines or a team wants to share model configuratio
 ### Functional Requirements
 
 - **FR-001**: The system MUST provide a routing layer that accepts a slot name and a request, and dispatches the request to the provider/model configured for that slot.
-- **FR-002**: The system MUST support exactly five slots: reasoning, extraction, embedding, reranking, and graph.
+- **FR-002**: The system MUST support four required slots (reasoning, extraction, embedding, graph) and one optional slot (reranking, disabled by default).
 - **FR-003**: The system MUST support at least these providers: OpenAI, Anthropic, Google, Ollama, OpenRouter, Cohere, HuggingFace, and Custom (OpenAI-compatible endpoint).
-- **FR-004**: The system MUST route chat completion requests (for reasoning, extraction, graph slots), embedding requests (for embedding slot), and reranking requests (for reranking slot) through the appropriate provider API.
+- **FR-004**: The system MUST route chat completion requests (for reasoning, extraction, graph slots), embedding requests (for embedding slot), and MAY route reranking requests (for reranking slot) through the appropriate provider API.
 - **FR-005**: The system MUST store API keys in a dedicated auth file with restricted file permissions (mode 600), and MUST support equivalent environment variables that override the file.
 - **FR-006**: The system MUST NEVER send API keys, raw contract text, or PII to any server operated by the tool. All API calls go directly from the user's machine to the user's chosen provider.
 - **FR-007**: The system MUST support a fallback model for each slot. When the primary model fails after all retries, the fallback model is attempted.
@@ -195,14 +195,14 @@ A user who manages multiple machines or a team wants to share model configuratio
 - **FR-023**: The system MUST support importing model configuration from a YAML file via the `gateway import` subcommand.
 - **FR-024**: The system MUST validate the entire imported config file before applying any changes, reporting all errors at once.
 - **FR-025**: The system MUST prompt for confirmation before overwriting existing configuration during import.
-- **FR-026**: The system MUST provide visible step progress ("Step X of 5"), back navigation, and cancel-with-save during the interactive wizard.
+- **FR-026**: The system MUST provide visible step progress ("Step X of 4"; reranking is optional — the step is skipped unless the user opts in), back navigation, and cancel-with-save during the interactive wizard.
 - **FR-027**: The system MUST offer to apply the selected provider to compatible remaining chat slots (reasoning, extraction, graph) when a provider is chosen for one of them during setup.
 - **FR-028**: The system MUST validate API keys immediately on entry in the wizard (not at end), and show a copy-to-clipboard action adjacent to masked input fields.
 - **FR-029**: The system MUST write configuration files atomically: write to a temporary file in the same directory, call `fsync`, then rename to the target path. This prevents partial/corrupt configs on crash.
 
 ### Key Entities
 
-- **Model Slot**: A named task category (reasoning, extraction, embedding, reranking, graph) with a primary model assignment, optional fallback model, and optional parameters (temperature, max_tokens, dimensions, etc.).
+- **Model Slot**: A named task category (reasoning, extraction, embedding, graph — required; reranking — optional, disabled by default) with a primary model assignment, optional fallback model, and optional parameters (temperature, max_tokens, dimensions, etc.).
 - **Provider**: An AI service endpoint (cloud or local) with an authentication method (API key, none for Ollama, API key + base URL for Custom) and a set of available models.
 - **Model Registry**: A cached catalogue of providers and their available models, including slot compatibility, context window, and RAM requirements (for local models). Refreshed periodically from a remote source.
 - **Cost Record**: A per-call record of input tokens, output tokens, estimated cost (USD), slot used, model used, and review session ID. Aggregated for cost reporting and limit enforcement.
