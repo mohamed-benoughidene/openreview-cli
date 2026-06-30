@@ -11,7 +11,7 @@ File format (pii_map.enc):
 import json
 import secrets
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from openreview_cli.pii.encryption import (
     InvalidToken,
@@ -57,8 +57,8 @@ def read_pii_mapping(
 
     fernet = derive_key(encryption_key, salt)
     decrypted = decrypt_pii_mapping(token, fernet)
-    payload = json.loads(decrypted.decode("utf-8"))
-    return payload["entries"]
+    payload: dict[str, Any] = json.loads(decrypted.decode("utf-8"))
+    return cast("dict[str, str]", payload["entries"])
 
 
 def ensure_encryption_key(config: dict[str, Any], config_path: Path) -> str:
