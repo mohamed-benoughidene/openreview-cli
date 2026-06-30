@@ -28,11 +28,12 @@ DEFAULT_CONFIG: dict[str, object] = {
                 "fallback": None,
                 "params": {"dimensions": 512},
             },
-            "reranking": {
-                "primary": "ollama/qwen3-reranker-0.6b",
-                "fallback": None,
-                "params": {},
-            },
+            # reranking: optional, disabled by default
+            # "reranking": {
+            #     "primary": "",
+            #     "fallback": None,
+            #     "params": {},
+            # },
             "graph": {
                 "primary": "ollama/qwen3:8b",
                 "fallback": None,
@@ -155,7 +156,7 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
         @field_validator("models")
         @classmethod
         def _validate_slots(cls, v: dict[str, SlotConfigModel]) -> dict[str, SlotConfigModel]:
-            required_slots = {"reasoning", "extraction", "embedding", "reranking", "graph"}
+            required_slots = {"reasoning", "extraction", "embedding", "graph"}
             missing = required_slots - set(v.keys())
             if missing:
                 raise ValueError(

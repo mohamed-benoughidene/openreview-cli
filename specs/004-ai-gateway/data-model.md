@@ -6,7 +6,7 @@
 
 ### 1. SlotConfig
 
-**Purpose**: Configuration for a single task slot (reasoning, extraction, embedding, reranking, graph).
+**Purpose**: Configuration for a single task slot (reasoning, extraction, embedding, reranking—optional, disabled by default—graph).
 
 **Fields**:
 - `primary: str` — Model identifier in format `provider/model-id` (e.g., `openai/gpt-4o`, `ollama/llama3.1`)
@@ -100,7 +100,7 @@ ReviewSession(
 **Fields**:
 - `record_id: int` — Auto-increment primary key
 - `session_id: str` — Foreign key to ReviewSession
-- `slot: str` — Slot name (reasoning, extraction, embedding, reranking, graph)
+- `slot: str` — Slot name (reasoning, extraction, embedding, graph — required; reranking — optional, disabled by default)
 - `model: str` — Model identifier used
 - `provider: str` — Provider name
 - `input_tokens: int` — Tokens in prompt
@@ -112,7 +112,7 @@ ReviewSession(
 
 **Validation**:
 - `session_id` must reference existing ReviewSession
-- `slot` must be one of: reasoning, extraction, embedding, reranking, graph
+- `slot` must be one of: reasoning, extraction, embedding, reranking, graph. Reranking is optional and disabled by default.
 - `input_tokens`, `output_tokens` must be non-negative
 - `cost_usd` must be non-negative
 - `latency_ms` must be non-negative
