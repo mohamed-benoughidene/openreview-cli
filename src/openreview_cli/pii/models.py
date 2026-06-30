@@ -42,6 +42,7 @@ class PiiResult:
     page_count: int
     duration_seconds: float
     warnings: list[str]
+    failed_pages: list[int] | None = None
 
     def __post_init__(self) -> None:
         if self.page_count < 1:
@@ -132,12 +133,6 @@ class PiiError(Exception):
             raise ValueError("message must be non-empty")
         if not self.action:
             raise ValueError("action must be non-empty")
-
-        # Verify message doesn't contain offsets or text snippets
-        # A simple check for offsets: check if there's text like "offset" or range or direct numbers inside brackets
-        # But per specs, it must not leak details. We check for typical leakage patterns like "char" or "index" or ":"
-        # Let's keep it clean: no specific complex checks that might trigger false positives, but check that
-        # there are no character index ranges in the message.
         if re.search(r"\b(offset|index|position|at character|char)\b", self.message, re.IGNORECASE):
             raise ValueError("message contains forbidden offset details")
 
@@ -146,3 +141,21 @@ class PiiError(Exception):
 
     def __repr__(self) -> str:
         return f"PiiError({self.category}: {self.message})"
+
+
+class PartialProcessingError(Exception):
+    """Raised when PII stripping succeeds on some pages but fails on others."""
+
+    def __init__(
+        self,
+        failed_pages: list[int],
+        successful_pages: list[int],
+        error_messages: dict[int, str],
+    ) -> None:
+        self.failed_pages = failed_pages
+        self.successful_pages = successful_pages
+        self.error_messages = error_messages
+        super().__init__(
+            f"PII processing failed on {len(failed_pages)} page(s): "
+            f"{', '.join(str(p) for p in failed_pages)}"
+        )

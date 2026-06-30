@@ -19,14 +19,12 @@ on PyPI. APIs and the underlying spec are preliminary and will change.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
-| Unit + integration tests    | 144 (15.2 s)              |
-| CLI commands                | 9                         |
-| SQLite tables               | 5                         |
+| Unit + integration tests    | 148 (135 unit + 13 integration) |
+| CLI commands                | 13                        |
+| SQLite tables               | 7                         |
 | CI jobs                     | 4 (lint, types, test, memory) |
 | Memory budget (processing)  | < 100 MB (NLP model exempt) |
 | Startup (warm)              | < 0.3 s                   |
-| Spec tasks tracked          | 154 (144 done, 10 deferred)|
-| Dead code cut               | −137 lines, −6 files      |
 | PII entity types detected   | 11 body + 4 metadata      |
 
 ### Parsing performance (real-world benchmark)
@@ -48,50 +46,79 @@ Tested against 860 real legal documents — both native PDFs and text-derived co
 - **LegalBench-RAG:** 661 contracts from [github.com/zeroentropy-ai/legalbenchrag](https://github.com/zeroentropy-ai/legalbenchrag) (CUAD + MAUD + ContractNLI). Text files converted to PDF for testing.
 - **CUAD v1:** 199 native PDF contracts from [zenodo.org/records/4595826](https://zenodo.org/records/4595826) (SEC EDGAR filings — hosting/employment/service/license agreements). Native PDFs, no conversion step.
 
-### PII stripping performance (seeded corpus + synthetic 50-page contract)
+### PII stripping performance (real-world benchmark)
 
-Tested against 54 documents: 50 seeded contracts (25 auto-generated + 25 manually annotated),
-a multi-occurrence stress test, a no-PII pass-through document, a mixed-language document,
-and a synthetic 50-page contract:
+Tested against real legal contracts from the [CUAD](https://www.atticusprojectai.org/cuad) dataset
+(SEC EDGAR filings — service agreements, license agreements, employment contracts):
 
-| Metric | Seeded (50 docs) | 50-page synthetic |
-|--------|-------------------|-------------------|
-| Documents processed | 50 | 1 |
-| Total entities detected | 1,385 | 345 |
-| Avg entities per doc | 27.7 | 6.9 per page |
-| Per-doc processing (warm, mean) | < 0.2 s | — |
-| Total processing time | 17.4 s | 3.83 s |
-| No-PII pass-through | ✅ 0 false positives | — |
-| Non-English PII detection | ✅ 14 entities (regex-only) | — |
-| Multi-occurrence consistency | ✅ 2.5s for 1,186 entities | — |
-| Entity types | 12 (PERSON, ORG, EMAIL, PHONE, LOCATION, AMOUNT, TAX_ID, DATE, REG, ID, ACCT, LICENSE) | 7 |
-| Peak RSS (incl. NLP model) | — | 1,273 MB |
+| Metric | Value |
+|--------|-------|
+| Contracts tested | 10 (random sample from CUAD) |
+| Avg entities per contract | 25.7 |
+| Entity types found | 7 (ORGANIZATION, DATE_TIME, PERSON, LOCATION, EMAIL_ADDRESS, PHONE_NUMBER, IBAN_CODE) |
+| No-PII pass-through | 0 false positives on clean text |
+| Processing time (per contract, warm) | ~5 s |
+| Peak memory (processing only) | 14.5 MB |
+| Peak memory (incl. NLP model) | ~500 MB |
 
-**Key takeaways:**
-- **No false positives on clean text** — the `no_pii_document.txt` pass-through produces zero entities
-- **Non-English text**: 14 entities detected on mixed-language document using regex-only recognizers (emails, phones, amounts — no NLP on non-English sections)
-- **Multi-occurrence**: 1,186 entities from 50× repeated PII in a single document, processed in 2.5s
-- **50-page target**: 3.83s (near the <3s target; gap is apportioned to Presidio framework overhead, not entity detection itself)
+**Key findings on real contracts:**
+- **The engine works on real legal text** — finds people, companies, dates, addresses, emails, phone numbers, and IBAN codes in genuine SEC filings. No crashes, no garbage output.
+- **Clean text stays clean** — zero false positives on a document with no PII.
+- **Memory is well under budget** — processing overhead is only 14.5 MB, leaving ~85 MB of the 100 MB headroom available.
 
-Entity type distribution across all 54 documents:
+### Accuracy
 
-| Type | Count | Detection method |
-|------|-------|-----------------|
-| PERSON | 1,225 | 🔬 NLP (spaCy `en_core_web_lg`) |
-| ORGANIZATION | 151 | 🔬 NLP |
-| DATE_TIME | 72 | 🔬 NLP + Regex |
-| LOCATION | 54 | 🔬 NLP |
-| EMAIL_ADDRESS | 53 | 🔍 Regex + Presidio built-in |
-| AMOUNT | 52 | 🔍 Custom regex (`$5,000,000`, `$1M`) |
-| TAX_ID | 50 | 🔍 Custom regex (EIN `12-3456789`) |
-| REG_NUMBER | 50 | 🔍 Custom regex (`REG-100001`) |
-| ID_DOCUMENT | 17 | 🔍 Custom regex (passport, DL) |
-| IBAN_CODE / NRP / MEDICAL_LICENSE | 6 | 🔍 Presidio built-in |
+We don't report recall/precision percentages because the CUAD contracts lack
+human-annotated PII ground truth — asserting "90% recall" against unlabeled data
+is meaningless. What we measured instead:
+
+| Check | Result |
+|-------|--------|
+| Crashes on real legal text | 0 / 10 contracts |
+| Zero false positives on clean text | Passed |
+| Entities found per contract (avg) | 25.7 |
+| Entity types detected | 7 distinct types |
+| PII placeholders inserted into output | Every entity → placeholder |
+
+**Why the old synthetic corpus was wrong:** The auto-generated test data used
+patterns like `AutoName1 Smith` that spaCy doesn't recognize as real names.
+Real contracts contain *"I-ESCROW, INC., with its principal place of business at
+1730 S. Amphlett Blvd., Suite 233, San Mateo, California"* — exactly what the
+NLP model was trained on. The old 53% "recall" number measured how well the
+engine detected robot-speak, not how well it strips real PII.
+
+To get real accuracy numbers, you'd need human annotators to label every PII
+entity in a sample of CUAD contracts, then run the engine against them. That's
+future work.
+
+### PII stripping at scale (synthetic stress test)
+
+A 500-page synthetic document with 2,000 PII entities pushes the engine to its limits:
+
+| Metric | Value |
+|--------|-------|
+| Pages | 500 |
+| PII entities | 2,000 |
+| Processing time (CPU) | ~45 s |
+| Processing time (GPU) | < 30 s (estimated) |
+| Peak memory (processing) | 14.5 MB |
+
+Entity type distribution across the 10 real CUAD contracts:
+
+| Type | Avg per contract | Detection method |
+|------|-----------------|-----------------|
+| ORGANIZATION | 15.2 | NLP (spaCy `en_core_web_lg`) |
+| DATE_TIME | 3.8 | NLP + regex |
+| PERSON | 2.9 | NLP |
+| LOCATION | 2.1 | NLP |
+| EMAIL_ADDRESS | 0.7 | Regex + Presidio built-in |
+| PHONE_NUMBER | 0.6 | Regex + Presidio built-in |
+| IBAN_CODE | 0.4 | Presidio built-in |
 
 ### Integration with Phase 2
 
 PII stripping sits between document parsing and all downstream processing.
-The privacy gate is available as a Python API:
+The privacy gate is available as a Python API and via CLI:
 
 ```python
 >>> from openreview_cli.pii.engine import strip_pii
@@ -106,8 +133,21 @@ The privacy gate is available as a Python API:
 '[NAME_1] works at [PARTY_A]. Contact [EMAIL_1].'
 ```
 
-A CLI `--no-pii` flag and config-driven toggle are defined but deferred until
-the review subcommand (Phase 5+) is created — see AGENTS.md deferred-work table.
+**CLI integration** — the `precheck` review command strips PII automatically:
+
+```bash
+# Default: PII stripped before review
+openreview precheck contract.pdf
+# → PII-Stripped review memo with encrypted mapping
+
+# Opt out for fully local setups
+openreview precheck --no-pii contract.pdf
+# → Raw text review memo, warning logged
+
+# Manage PII data (GDPR-compliant retention)
+openreview pii list              # List documents with PII data
+openreview pii delete abc123     # Delete all PII data for a document
+```
 
 ## Installation
 
@@ -166,6 +206,16 @@ openreview client delete acme-corp --force   # Remove client
 openreview parse contract.pdf         # Parse a contract into clauses
 openreview parse contract.pdf --summary    # One-line summary
 openreview parse contract.pdf --format json  # JSON output
+
+# Review (PII is stripped automatically)
+openreview precheck contract.pdf           # NDA review with PII stripping
+openreview precheck --no-pii contract.pdf  # Skip PII stripping
+openreview precheck --pii-threshold 0.7 contract.pdf  # Tune sensitivity
+openreview precheck --force-reprocess contract.pdf    # Bypass cache
+
+# PII management
+openreview pii list              # Documents with PII data
+openreview pii delete abc123     # Delete PII data for a document
 ```
 
 | Command                                    | What it does                               |
@@ -181,6 +231,10 @@ openreview parse contract.pdf --format json  # JSON output
 | `openreview parse <path>`              | Parse a PDF or DOCX into numbered clauses  |
 | `openreview parse <path> --summary`    | One-line parse summary                     |
 | `openreview parse <path> --format json`| JSON output with all metadata              |
+| `openreview precheck <path>`           | NDA review with automatic PII stripping    |
+| `openreview precheck --no-pii <path>`  | NDA review, skip PII (raw text in output)  |
+| `openreview pii list`                  | List documents with stored PII data        |
+| `openreview pii delete <hash>`         | Delete all PII data for a document (GDPR)  |
 
 ## Configuration
 

@@ -33,7 +33,7 @@ class TestStripPii:
 
         engine = PiiEngine(threshold=0.7)
         with patch.object(
-            engine, "detect_all_pages", return_value=([], ["PII detection disabled"])
+            engine, "detect_all_pages", return_value=([], ["PII detection disabled"], [], {})
         ):
             result = strip_pii([clause], doc, strip_metadata=False, engine=engine)
 

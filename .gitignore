@@ -18,6 +18,7 @@ AGENTS.md
 products/
 Papers/
 data/
+draft/
 # Python caches and tooling
 .mypy_cache/
 .pytest_cache/

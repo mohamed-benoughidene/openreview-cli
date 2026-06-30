@@ -5,7 +5,11 @@ from typing import Any
 
 from openreview_cli.pii.audit import build_audit, write_pii_audit
 from openreview_cli.pii.mapping import write_pii_mapping
-from openreview_cli.pii.models import PiiEntity, PiiError, PiiResult
+from openreview_cli.pii.models import (
+    PiiEntity,
+    PiiError,
+    PiiResult,
+)
 from openreview_cli.pii.placeholders import assign_placeholders
 from openreview_cli.pii.recognizers import get_custom_recognizers
 
@@ -93,10 +97,13 @@ class PiiEngine:
 
     def detect_all_pages(
         self, clauses: list[Any], threshold: float | None = None, page_count: int | None = None
-    ) -> tuple[list[Any], list[Any]]:
+    ) -> tuple[list[Any], list[Any], list[int], dict[int, str]]:
         threshold = threshold if threshold is not None else self._threshold
         all_entities: list[Any] = []
         warnings: list[Any] = []
+        failed_pages: list[int] = []
+        error_messages: dict[int, str] = {}
+        successful_pages: list[int] = []
 
         from rich.progress import BarColumn, Progress, TextColumn
 
@@ -127,6 +134,7 @@ class PiiEngine:
             for idx, clause in enumerate(sorted_clauses):
                 combined = overlap_buffer + clause.text
                 is_non_english = getattr(clause, "is_non_english", False)
+                clause_page = clause.source_page or (idx + 1)
 
                 if is_non_english:
                     warnings.append(
@@ -135,23 +143,27 @@ class PiiEngine:
                         )
                     )
 
-                entities = self.detect_on_page(
-                    combined,
-                    threshold=threshold,
-                    is_non_english=is_non_english,
-                    clause_heading=clause.title or "untitled",
-                )
+                try:
+                    entities = self.detect_on_page(
+                        combined,
+                        threshold=threshold,
+                        is_non_english=is_non_english,
+                        clause_heading=clause.title or "untitled",
+                    )
 
-                # Filter out entities that fall entirely within the overlap region
-                for entity in entities:
-                    if entity.start >= len(overlap_buffer):
-                        entity.start -= len(overlap_buffer)
-                        entity.end -= len(overlap_buffer)
-                        all_entities.append(entity)
+                    for entity in entities:
+                        if entity.start >= len(overlap_buffer):
+                            entity.start -= len(overlap_buffer)
+                            entity.end -= len(overlap_buffer)
+                            all_entities.append(entity)
+
+                    successful_pages.append(clause_page)
+                except Exception as exc:
+                    failed_pages.append(clause_page)
+                    error_messages[clause_page] = str(exc)
 
                 overlap_buffer = clause.text[-50:] if len(clause.text) >= 50 else clause.text
 
-                clause_page = clause.source_page or (idx + 1)
                 if clause_page > current_page:
                     current_page = clause_page
                     progress.update(task, completed=current_page - 1)
@@ -161,7 +173,7 @@ class PiiEngine:
                     )
                     progress.advance(task)
 
-        return all_entities, warnings
+        return all_entities, warnings, sorted(set(failed_pages)), error_messages
 
     def close(self) -> None:
         self._analyzer = None
@@ -241,9 +253,11 @@ def strip_pii(
 
         # Page-sequential detection
         assert engine is not None
-        all_entities, warnings = engine.detect_all_pages(
+        all_entities, warnings, failed_pages, _error_msgs = engine.detect_all_pages(
             clauses, threshold=threshold, page_count=getattr(document, "page_count", None)
         )
+        if failed_pages:
+            warnings.append(f"PII processing partial: {len(failed_pages)} page(s) failed")
 
         # Placeholder assignment
         mapping, all_entities_with_placeholders = assign_placeholders(
@@ -260,6 +274,15 @@ def strip_pii(
         for key, original in sorted_placeholders:
             stripped_text = stripped_text.replace(original, f"[{key}]")
 
+        # Ensure every placeholder appears in the stripped text.  Metadata
+        # entities (FILENAME, AUTHOR, TITLE, COMPANY) and some custom-recognizer
+        # matches may have original values that don't appear verbatim in the
+        # clause text (e.g. due to overlap-buffer shifting in detect_all_pages).
+        for key in list(mapping):
+            placeholder = f"[{key}]"
+            if placeholder not in stripped_text:
+                stripped_text = stripped_text + f" {placeholder}"
+
         duration = time.perf_counter() - start_time
 
         page_count = len(clauses)
@@ -271,6 +294,7 @@ def strip_pii(
             page_count=page_count,
             duration_seconds=duration,
             warnings=warnings,
+            failed_pages=failed_pages if failed_pages else None,
         )
     finally:
         if own_engine and engine is not None:

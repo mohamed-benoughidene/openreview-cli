@@ -1,5 +1,7 @@
 import logging
 import sys
+from datetime import UTC
+from pathlib import Path
 
 import typer
 
@@ -56,6 +58,20 @@ def _init(debug: bool = False) -> None:
     data_dir = get_data_dir()
     init_database(data_dir / "openreview.db")
     logger.info("database initialized")
+
+    _cleanup_expired_pii(data_dir)
+
+
+def _cleanup_expired_pii(data_dir: Path) -> None:
+    """Best-effort cleanup of expired PII mappings on CLI startup."""
+    try:
+        from openreview_cli.pii.retention import cleanup_expired
+
+        deleted = cleanup_expired(data_dir / "openreview.db")
+        if deleted:
+            logger.info("cleaned up %d expired PII entries", deleted)
+    except Exception:
+        logger.debug("PII cleanup skipped", exc_info=True)
 
 
 @app.callback()
@@ -191,6 +207,175 @@ def config_set(key: str, value: str) -> None:
 
 
 app.add_typer(config_app)
+
+
+pii_app = typer.Typer(
+    name="pii",
+    help="Manage PII data (encrypted mappings, audit trails, cache).",
+    no_args_is_help=True,
+)
+
+
+@pii_app.command("list")
+def pii_list(
+    format: str = typer.Option("text", "--format", help="Output format: text, json"),
+) -> None:
+    import sqlite3
+
+    from openreview_cli.config.paths import get_data_dir
+
+    db_path = get_data_dir() / "openreview.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    try:
+        rows = conn.execute(
+            "SELECT pc.document_hash, pc.created_at, pc.expiry_at, "
+            "COALESCE(pat.entity_count, 0) as entity_count, "
+            "pc.mapping_path "
+            "FROM pii_cache pc "
+            "LEFT JOIN (SELECT document_hash, entity_count, MAX(timestamp) as max_ts "
+            "FROM pii_audit_trail GROUP BY document_hash) pat "
+            "ON pc.document_hash = pat.document_hash "
+            "ORDER BY pc.created_at DESC"
+        ).fetchall()
+    finally:
+        conn.close()
+
+    if format == "json":
+        import json
+
+        typer.echo(json.dumps([dict(r) for r in rows], indent=2, default=str))
+        return
+
+    from rich.console import Console
+    from rich.table import Table
+
+    console = Console()
+    table = Table(title="Documents with PII data")
+    table.add_column("Document Hash", style="cyan")
+    table.add_column("Entities", style="green")
+    table.add_column("Created", style="white")
+    table.add_column("Expires", style="white")
+    table.add_column("Mapping", style="dim")
+
+    for row in rows:
+        table.add_row(
+            row["document_hash"][:12],
+            str(row["entity_count"]),
+            row["created_at"] or "",
+            row["expiry_at"] or "",
+            row["mapping_path"] or "",
+        )
+    console.print(table)
+
+
+@pii_app.command("delete")
+def pii_delete(
+    document_hash: str = typer.Argument(..., help="Document hash (or prefix, min 8 chars)"),
+) -> None:
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.pii.retention import delete_pii_data
+
+    db_path = get_data_dir() / "openreview.db"
+    result = delete_pii_data(db_path, document_hash)
+    if result["mapping_removed"]:
+        typer.echo(f"Deleted PII data for document hash: {document_hash}")
+        typer.echo("  - Encrypted mapping: removed")
+        typer.echo(f"  - Audit trail: removed ({result['audit_records']} records)")
+        typer.echo("  - Cache entry: removed")
+    else:
+        typer.echo(f"No PII data found for document hash: {document_hash}")
+
+
+@pii_app.command("cleanup")
+def pii_cleanup(
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be deleted"),
+) -> None:
+    import sqlite3
+
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.pii.retention import cleanup_expired
+
+    db_path = get_data_dir() / "openreview.db"
+    if dry_run:
+        from datetime import datetime
+
+        now = datetime.now(UTC).isoformat()
+        conn = sqlite3.connect(str(db_path))
+        try:
+            rows = conn.execute(
+                "SELECT document_hash, mapping_path FROM pii_cache WHERE expiry_at < ?",
+                (now,),
+            ).fetchall()
+        finally:
+            conn.close()
+        typer.echo(f"Dry run: {len(rows)} expired entries would be deleted")
+        return
+
+    deleted = cleanup_expired(db_path)
+    typer.echo(f"Cleanup complete: {deleted} expired entries deleted")
+
+
+app.add_typer(pii_app)
+
+
+@app.command()
+def precheck(
+    document_path: str = typer.Argument(..., help="Path to a PDF or DOCX contract file."),
+    no_pii: bool = typer.Option(
+        False, "--no-pii", help="Disable PII stripping. Processes raw text."
+    ),
+    pii_threshold: float | None = typer.Option(
+        None, "--pii-threshold", help="PII detection confidence threshold (0.0 to 1.0)."
+    ),
+    output: str | None = typer.Option(
+        None, "--output", help="Output directory for review results."
+    ),
+    format: str = typer.Option("text", "--format", help="Output format: text, json."),
+    force_reprocess: bool = typer.Option(
+        False, "--force-reprocess", help="Force re-processing even if cached."
+    ),
+) -> None:
+    """Run a PreCheck review (NDA analysis) on a document.
+
+    Automatically strips PII before processing unless --no-pii is specified.
+    """
+
+    from openreview_cli.pii.models import PartialProcessingError
+    from openreview_cli.review.base import ReviewCommand
+
+    if no_pii and pii_threshold is not None:
+        typer.echo("Error: --no-pii and --pii-threshold are mutually exclusive", err=True)
+        raise typer.Exit(code=3)
+
+    cmd = ReviewCommand(
+        document_path=document_path,
+        pii_enabled=not no_pii,
+        threshold=pii_threshold,
+        output_dir=output,
+        force_reprocess=force_reprocess,
+    )
+
+    try:
+        result = cmd.run()
+    except FileNotFoundError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+    except PartialProcessingError as e:
+        typer.echo(f"Partial PII processing: {e}", err=True)
+        raise typer.Exit(code=2) from None
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+    if no_pii:
+        typer.echo("Warning: PII stripping disabled. Raw text processed.", err=True)
+
+    typer.echo(f"Review memo generated: {result['result_path']}")
+    typer.echo(f"Document hash: {result['document_hash'][:12]}")
+    if result["failed_pages"]:
+        typer.echo(f"Failed pages: {result['failed_pages']}", err=True)
+        raise typer.Exit(code=2)
 
 
 @app.command()
