@@ -5,6 +5,7 @@ import pytest
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "pdf"
 
 
+@pytest.mark.integration
 @pytest.mark.accuracy
 def test_clause_boundary_accuracy() -> None:
     from openreview_cli.parsing.stream import stream_clauses

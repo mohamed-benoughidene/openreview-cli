@@ -2,10 +2,13 @@
 
 from pathlib import Path
 
+import pytest
+
 
 class TestStripPiiEndToEnd:
     """Integration tests that exercise the full PII stripping pipeline."""
 
+    @pytest.mark.integration
     def test_strip_pii_end_to_end(self) -> None:
         """Real PII in clause text is detected, replaced with placeholders, and mapped."""
         from openreview_cli.parsing.models import Clause, Document
@@ -44,6 +47,7 @@ class TestStripPiiEndToEnd:
         assert result.duration_seconds >= 0
         assert isinstance(result.warnings, list)
 
+    @pytest.mark.integration
     def test_strip_pii_no_pii(self) -> None:
         """Clause with no PII returns the original text and an empty mapping."""
         from openreview_cli.parsing.models import Clause, Document

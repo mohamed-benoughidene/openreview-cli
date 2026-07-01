@@ -5,6 +5,7 @@ import pytest
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "pdf"
 
 
+@pytest.mark.integration
 @pytest.mark.memory
 def test_peak_memory_500_page_pdf() -> None:
     import tracemalloc
@@ -25,6 +26,7 @@ def test_peak_memory_500_page_pdf() -> None:
     assert len(clauses) > 0
 
 
+@pytest.mark.integration
 @pytest.mark.memory
 def test_gateway_peak_memory(tmp_path: Path) -> None:
     import tracemalloc

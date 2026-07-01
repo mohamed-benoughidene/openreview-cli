@@ -628,5 +628,41 @@ def gateway_costs(
 
 app.add_typer(gateway_app)
 
+
+@app.command()
+def chunk(
+    path: str = typer.Argument(..., help="Path to a parsed contract JSON file."),
+    format: str = typer.Option("text", "--format", help="Output format: text, json"),
+    summary: bool = typer.Option(False, "--summary", help="Show one-line summary only"),
+) -> None:
+    from openreview_cli.chunking.models import ChunkConfig
+    from openreview_cli.chunking.stream import (
+        format_chunks_json,
+        format_chunks_summary,
+        format_chunks_text,
+        stream_chunks,
+    )
+    from openreview_cli.parsing.stream import parse_document
+
+    try:
+        _, clauses = parse_document(path)
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+    import time
+
+    start = time.time()
+    chunks = list(stream_chunks(clauses, ChunkConfig()))
+    elapsed = time.time() - start
+
+    if summary:
+        typer.echo(format_chunks_summary(len(clauses), len(chunks), elapsed))
+    elif format == "json":
+        typer.echo(format_chunks_json(chunks))
+    else:
+        typer.echo(format_chunks_text(chunks))
+
+
 if __name__ == "__main__":
     app()

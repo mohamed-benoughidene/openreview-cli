@@ -14,6 +14,7 @@ from openreview_cli.parsing.models import Clause, Document
 from openreview_cli.pii.engine import PiiEngine, strip_pii
 
 
+@pytest.mark.integration
 @pytest.mark.memory
 def test_pii_memory_500_pages_2000_entities() -> None:
     """Process a 500-page Clause list with 2000+ PII entities under 100 MB / 30 s.

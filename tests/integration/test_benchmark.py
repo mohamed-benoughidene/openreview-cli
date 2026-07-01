@@ -6,6 +6,7 @@ import pytest
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "pdf"
 
 
+@pytest.mark.integration
 @pytest.mark.benchmark
 def test_parse_speed_50_page_pdf() -> None:
     from openreview_cli.parsing.stream import stream_clauses
