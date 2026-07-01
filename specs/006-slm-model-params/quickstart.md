@@ -31,7 +31,7 @@ uv run pytest tests/unit/test_gateway_router.py -q -k "protected"
 
 **Run**:
 ```bash
-uv run pytest tests/unit/test_gateway_router.py -q -k "health" 
+uv run pytest tests/unit/test_gateway_router.py -q -k "health"
 ```
 
 **Expected**: Health check output includes `extra_params: N` for slots with extra params configured.

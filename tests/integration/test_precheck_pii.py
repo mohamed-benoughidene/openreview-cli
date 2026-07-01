@@ -4,6 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
 PDF = FIXTURES / "pdf"
 
@@ -17,16 +19,19 @@ def run_precheck(*args: str) -> subprocess.CompletedProcess[str]:
 
 
 class TestPrecheckPii:
+    @pytest.mark.integration
     def test_precheck_basic(self) -> None:
         result = run_precheck(str(PDF / "simple_contract.pdf"))
         assert result.returncode == 0
         assert "Review memo generated" in result.stdout
 
+    @pytest.mark.integration
     def test_precheck_no_pii_flag(self) -> None:
         result = run_precheck("--no-pii", str(PDF / "simple_contract.pdf"))
         assert result.returncode == 0
         assert "Review memo generated" in result.stdout
 
+    @pytest.mark.integration
     def test_precheck_file_not_found(self) -> None:
         result = run_precheck(str(FIXTURES / "nonexistent.pdf"))
         assert result.returncode == 1

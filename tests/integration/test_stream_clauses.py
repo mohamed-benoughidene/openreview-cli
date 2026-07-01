@@ -8,18 +8,21 @@ DOCX = FIXTURES / "docx"
 
 
 class TestStreamClauses:
+    @pytest.mark.integration
     def test_routes_to_pdf_parser_for_pdf(self) -> None:
         from openreview_cli.parsing.stream import stream_clauses
 
         clauses = list(stream_clauses(PDF / "simple_contract.pdf"))
         assert all(c.source_page is not None for c in clauses)
 
+    @pytest.mark.integration
     def test_routes_to_docx_parser_for_docx(self) -> None:
         from openreview_cli.parsing.stream import stream_clauses
 
         clauses = list(stream_clauses(DOCX / "simple_contract.docx"))
         assert all(c.source_paragraph is not None for c in clauses)
 
+    @pytest.mark.integration
     def test_unsupported_format_raises(self) -> None:
         from openreview_cli.parsing.models import ParseError
         from openreview_cli.parsing.stream import stream_clauses
@@ -28,6 +31,7 @@ class TestStreamClauses:
             list(stream_clauses(FIXTURES / "test.txt"))
         assert exc.value.category == "unsupported_format"
 
+    @pytest.mark.integration
     def test_non_existent_path_raises(self) -> None:
         from openreview_cli.parsing.models import ParseError
         from openreview_cli.parsing.stream import stream_clauses
@@ -36,6 +40,7 @@ class TestStreamClauses:
             list(stream_clauses(FIXTURES / "nonexistent.pdf"))
         assert exc.value.category == "file_not_found"
 
+    @pytest.mark.integration
     def test_cross_format_equivalence_simple(self) -> None:
         from openreview_cli.parsing.stream import stream_clauses
 
@@ -46,6 +51,7 @@ class TestStreamClauses:
         diff = abs(pdf_count - docx_count) / max(pdf_count, docx_count)
         assert diff <= 0.1
 
+    @pytest.mark.integration
     def test_cross_format_equivalence_flat(self) -> None:
         from openreview_cli.parsing.stream import stream_clauses
 
@@ -56,6 +62,7 @@ class TestStreamClauses:
 
 
 class TestCrossFormatHierarchy:
+    @pytest.mark.integration
     def test_parent_id_chain_integrity(self) -> None:
         from openreview_cli.parsing.stream import stream_clauses
 
@@ -66,5 +73,6 @@ class TestCrossFormatHierarchy:
                 if clause.parent_id is not None:
                     assert clause.parent_id in ids
 
+    @pytest.mark.integration
     def test_warnings_match_across_formats(self) -> None:
         pass  # Placeholder — warnings not fully implemented yet

@@ -8,12 +8,8 @@ occur.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
+import pytest
 from typer.testing import CliRunner
-
-if TYPE_CHECKING:
-    import pytest
 
 from openreview_cli.app import app
 from openreview_cli.gateway.registry import ModelRegistry
@@ -25,6 +21,7 @@ runner = CliRunner()
 class TestGatewayCli:
     """Integration tests for ``openreview gateway <subcommand>``."""
 
+    @pytest.mark.integration
     def test_gateway_help(self) -> None:
         """Verify ``--help`` lists every subcommand."""
         result = runner.invoke(app, ["gateway", "--help"])
@@ -41,6 +38,7 @@ class TestGatewayCli:
         ):
             assert cmd in result.stdout, f"'{cmd}' not listed in gateway help"
 
+    @pytest.mark.integration
     def test_gateway_status_empty_config(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Status reports all slots as not_configured when no models set."""
         # Avoid loading real config / contacting providers
@@ -58,6 +56,7 @@ class TestGatewayCli:
         for slot in sorted(VALID_SLOTS):
             assert slot in result.stdout
 
+    @pytest.mark.integration
     def test_gateway_providers(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Providers table lists every known provider with auth info."""
         monkeypatch.setattr(ModelRegistry, "load", lambda self: None)
@@ -81,6 +80,7 @@ class TestGatewayCli:
         assert "none" in result.stdout  # ollama no auth
         assert "key required" in result.stdout  # openai / anthropic
 
+    @pytest.mark.integration
     def test_gateway_models(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Known provider returns a table of models."""
         monkeypatch.setattr(ModelRegistry, "load", lambda self: None)
@@ -113,6 +113,7 @@ class TestGatewayCli:
         assert "llama3.2:3b" in result.stdout
         assert "nomic-embed-text" in result.stdout
 
+    @pytest.mark.integration
     def test_gateway_models_invalid_provider(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Unknown provider prints a friendly message instead of a table."""
         monkeypatch.setattr(ModelRegistry, "load", lambda self: None)
@@ -122,6 +123,7 @@ class TestGatewayCli:
         assert result.exit_code == 0
         assert "No models found for provider 'nonexistent'." in result.stdout
 
+    @pytest.mark.integration
     def test_gateway_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Assign a model to a slot and confirm the success message."""
         monkeypatch.setattr(
@@ -133,6 +135,7 @@ class TestGatewayCli:
         assert result.exit_code == 0
         assert "Set reasoning → ollama/llama3.2:3b" in result.stdout
 
+    @pytest.mark.integration
     def test_gateway_invalid_slot(self) -> None:
         """Unknown slot causes an early exit with an error message.
 

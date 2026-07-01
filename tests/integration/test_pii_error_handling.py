@@ -10,6 +10,7 @@ from openreview_cli.pii.models import PiiError
 class TestPiiErrorHandling:
     """Error paths in PII mapping and error-model compliance."""
 
+    @pytest.mark.integration
     def test_invalid_key_raises_pii_error(self, tmp_path: Path) -> None:
         """T040: Reading a corrupted mapping file raises InvalidToken."""
         from openreview_cli.pii.encryption import InvalidToken
@@ -25,6 +26,7 @@ class TestPiiErrorHandling:
         with pytest.raises(InvalidToken):
             read_pii_mapping(tmp_path, "some-encryption-key-1234")
 
+    @pytest.mark.integration
     def test_pii_error_no_offsets(self) -> None:
         """FR-010: PiiError message does not contain character offsets or text snippets."""
         err = PiiError(
@@ -42,6 +44,7 @@ class TestPiiErrorHandling:
         # this assertion documents the requirement explicitly.
         assert "offset" not in str(err).lower()
 
+    @pytest.mark.integration
     def test_non_english_regex_only(self) -> None:
         """T041: Non-English text skips NLP but catches regex PII (emails, phones)."""
         from types import SimpleNamespace

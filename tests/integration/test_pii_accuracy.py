@@ -12,6 +12,7 @@ MIN_ENTITIES_PER_DOC = 5
 CUAD_DIR = Path(__file__).resolve().parent.parent.parent / "data/legalbenchrag/corpus/cuad"
 
 
+@pytest.mark.integration
 @pytest.mark.accuracy
 class TestPiiAccuracy:
     """Validate PII detection on real contracts from the CUAD dataset."""

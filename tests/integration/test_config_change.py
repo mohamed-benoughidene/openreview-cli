@@ -9,6 +9,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
 PDF = FIXTURES / "pdf"
 
@@ -44,6 +46,7 @@ def run_precheck(*args: str, **env: str) -> subprocess.CompletedProcess[str]:
 class TestConfigChange:
     """Config change detection — hash comparison drives cache invalidation."""
 
+    @pytest.mark.integration
     def test_config_change_detection(self) -> None:
         """Change PII threshold → config hash changes → cache misses → re-process.
 
@@ -76,6 +79,7 @@ class TestConfigChange:
         assert r4.returncode == 0, f"step 4 failed: {r4.stderr}"
         assert "Review memo generated" in r4.stdout
 
+    @pytest.mark.integration
     def test_precheck_without_config_change(self) -> None:
         """Running precheck twice without any config change succeeds both times."""
         pdf = str(PDF / "simple_contract.pdf")
