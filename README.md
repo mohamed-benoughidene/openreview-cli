@@ -14,15 +14,17 @@ a custom playbook, and produces a structured memo of findings.
 ## Status
 
 Pre-alpha. Foundation shipped: document parsing (PDF/DOCX, clause detection),
-PII stripping (Presidio, 16 entity types, encrypted mapping), AI provider gateway
-(33 models, 8 providers, routing + cost tracking + health check), and SLM
-provider-specific pass-through params (`extra_params` in config.yml). The package
-is not yet on PyPI. APIs and the underlying spec are preliminary and will change.
+PII stripping (Presidio, 16 entity types, encrypted mapping), chunking strategy
+(RCTS, clause-boundary-aware, 512-token default, streaming), PII-to-chunk bridge
+(`strip_pii_clauses()` per-clause replacement), AI provider gateway (33 models,
+8 providers, routing + cost tracking + health check), and SLM provider-specific
+pass-through params (`extra_params` in config.yml). The package is not yet on
+PyPI. APIs and the underlying spec are preliminary and will change.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
-| Unit + integration tests    | 262                       |
-| CLI commands                | 19                        |
+| Unit + integration tests    | 296                       |
+| CLI commands                | 20                        |
 | SQLite tables               | 7                         |
 | CI jobs                     | 4 (lint, types, test, memory) |
 | Memory budget (processing)  | < 100 MB (NLP model exempt) |
@@ -136,6 +138,21 @@ The privacy gate is available as a Python API and via CLI:
 '[NAME_1] works at [PARTY_A]. Contact [EMAIL_1].'
 ```
 
+**Per-clause bridge** — `strip_pii_clauses()` strips PII while preserving clause
+structure, enabling a parse → strip → chunk pipeline:
+
+```python
+>>> from openreview_cli.pii.engine import strip_pii_clauses
+>>> from openreview_cli.parsing.models import Clause, Document
+>>> clauses = [Clause(id="1", text="John Doe works at Acme Inc. Contact john@acme.com.",
+...                   level=1, source_page=1)]
+>>> doc = Document(source_path=Path("test.pdf"), format="pdf", page_count=1, clause_count=1,
+...                parse_duration_seconds=0.0, warnings=[])
+>>> stripped_clauses, pii_result = strip_pii_clauses(clauses, doc)
+>>> stripped_clauses[0].text
+'[NAME_1] works at [PARTY_A]. Contact [EMAIL_1].'
+```
+
 **CLI integration** — the `precheck` review command strips PII automatically:
 
 ```bash
@@ -151,6 +168,24 @@ openreview precheck --no-pii contract.pdf
 openreview pii list              # List documents with PII data
 openreview pii delete abc123     # Delete all PII data for a document
 ```
+
+### Chunking strategy
+
+The chunking engine splits parsed clauses into retrieval-ready chunks using
+RCTS (Recursive Character Text Splitting):
+
+1. **Clause boundaries first** — clauses are never split mid-clause
+2. **Paragraph boundaries** — within a clause, split at paragraph breaks
+3. **Sentence boundaries** — within a paragraph, split at sentence boundaries
+4. **Word boundaries** — oversize sentences are split at word boundaries
+
+Default config: **512 tokens** per chunk, **50-token overlap**, streaming
+(yield-based, <10 MB processing memory). Short adjacent clauses are grouped
+to avoid tiny fragments. Each chunk carries structural metadata (parent
+clause ID, title, level, structural location).
+
+The PII-to-chunk bridge (`strip_pii_clauses()`) enables a clean three-stage
+pipeline: **parse → strip PII → chunk**, with no raw PII in any chunk output.
 
 ## Installation
 
@@ -174,7 +209,7 @@ uv run openreview --version
 |-----------------------------------------------------|--------------------------------------------|
 | `src/openreview_cli/__init__.py`                    | Exposes `__version__`                      |
 | `src/openreview_cli/__main__.py`                    | Entry point: `python -m openreview_cli`    |
-| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse`, `precheck`, `pii`, `gateway` commands |
+| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse`, `precheck`, `chunk`, `pii`, `gateway` commands |
 | `src/openreview_cli/config/paths.py`                | platformdirs paths (config, data, log)     |
 | `src/openreview_cli/config/loader.py`               | Pydantic model, YAML r/w, env merge        |
 | `src/openreview_cli/config/auth.py`                 | `auth.json` handler, chmod 600             |
@@ -182,7 +217,8 @@ uv run openreview --version
 | `src/openreview_cli/storage/migrations/001_initial.sql` | 5 tables DDL                           |
 | `src/openreview_cli/errors.py`                      | Exit codes (5 = config, 6 = cost limit, 8 = parse error) |
 | `src/openreview_cli/parsing/`                       | Document parser — PDF, DOCX, clause detection |
-| `src/openreview_cli/pii/`                           | PII stripping engine — Presidio, recognizers, encrypted mapping, audit trail |
+| `src/openreview_cli/pii/`                           | PII stripping engine — Presidio, recognizers, encrypted mapping, audit trail, `strip_pii_clauses()` bridge |
+| `src/openreview_cli/chunking/`                      | Chunking engine — RCTS splitting, clause-boundary-aware, streaming |
 | `src/openreview_cli/gateway/`                       | AI Gateway — router, registry, cost, models, redaction, wizard |
 | `tests/unit/test_app.py`                            | 5 tests (import, version, help, memory)    |
 | `tests/unit/test_config_loader.py`                  | 6 tests (create, merge, env override)      |
@@ -194,7 +230,11 @@ uv run openreview --version
 | `tests/unit/test_docx_parser.py`                    | 7 tests (DOCX parsing, tracked changes)    |
 | `tests/unit/test_clause_detector.py`                | 18 tests (clause detection, hierarchy)     |
 | `tests/unit/test_models.py`                         | 20 tests (Clause, Document, ParseError)    |
-| `tests/unit/test_pii_*.py`                          | 38 tests (models, recognizers, placeholders, mapping, audit, engine) |
+| `tests/unit/test_pii_*.py`                          | 45 tests (models, recognizers, placeholders, mapping, audit, engine, strip_pii_clauses) |
+| `tests/unit/test_chunking_models.py`                | 4 tests (Chunk, ChunkConfig dataclasses)        |
+| `tests/unit/test_chunking_tokenizer.py`             | 7 tests (token counting edge cases)             |
+| `tests/unit/test_chunking_splitter.py`              | 10 tests (RCTS splitting, overlap, grouping)    |
+| `tests/unit/test_chunking_stream.py`                | 6 tests (stream_chunks pipeline, formatting)    |
 | `tests/unit/test_gateway_models.py`                 | 10 tests (ModelEntry, ProviderInfo)        |
 | `tests/unit/test_gateway_router.py`                 | 25 tests (chat, embed, rerank, extra_params, health check) |
 | `tests/unit/test_gateway_registry.py`               | 8 tests (registry load, Ollama discovery)  |
@@ -220,6 +260,11 @@ openreview client delete acme-corp --force   # Remove client
 openreview parse contract.pdf         # Parse a contract into clauses
 openreview parse contract.pdf --summary    # One-line summary
 openreview parse contract.pdf --format json  # JSON output
+
+# Chunking (clause-aware retrieval-ready splitting)
+openreview chunk contract.json              # Split clauses into chunks (512 tokens, 50 overlap)
+openreview chunk contract.json --format json  # JSON output with metadata
+openreview chunk contract.json --summary      # One-line chunk summary
 
 # Review (PII is stripped automatically)
 openreview precheck contract.pdf           # NDA review with PII stripping
@@ -256,6 +301,9 @@ openreview gateway refresh              # Refresh model registry
 | `openreview parse <path>`              | Parse a PDF or DOCX into numbered clauses  |
 | `openreview parse <path> --summary`    | One-line parse summary                     |
 | `openreview parse <path> --format json`| JSON output with all metadata              |
+| `openreview chunk <path>`              | Split clauses into retrieval-ready chunks (512 tokens, 50 overlap) |
+| `openreview chunk <path> --format json`| JSON chunk output with structural metadata  |
+| `openreview chunk <path> --summary`    | One-line chunk summary (count, token range) |
 | `openreview precheck <path>`           | NDA review with automatic PII stripping    |
 | `openreview precheck --no-pii <path>`  | NDA review, skip PII (raw text in output)  |
 | `openreview pii list`                  | List documents with stored PII data        |
