@@ -13,19 +13,21 @@ a custom playbook, and produces a structured memo of findings.
 
 ## Status
 
-Pre-alpha. 154 spec tasks implemented across config + storage foundation,
-document parsing engine, and PII stripping (Phase 3). The package is not yet
-on PyPI. APIs and the underlying spec are preliminary and will change.
+Pre-alpha. All 38 Phase 9 AI Gateway tasks converged across config + storage
+foundation, document parsing, PII stripping (Phase 3), and AI provider gateway
+(Phase 4). The package is not yet on PyPI. APIs and the underlying spec are
+preliminary and will change.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
-| Unit + integration tests    | 148 (135 unit + 13 integration) |
-| CLI commands                | 13                        |
+| Unit + integration tests    | 242                       |
+| CLI commands                | 19                        |
 | SQLite tables               | 7                         |
 | CI jobs                     | 4 (lint, types, test, memory) |
 | Memory budget (processing)  | < 100 MB (NLP model exempt) |
 | Startup (warm)              | < 0.3 s                   |
 | PII entity types detected   | 11 body + 4 metadata      |
+| AI provider models          | 33 (across 8 providers)   |
 
 ### Parsing performance (real-world benchmark)
 
@@ -171,7 +173,7 @@ uv run openreview --version
 |-----------------------------------------------------|--------------------------------------------|
 | `src/openreview_cli/__init__.py`                    | Exposes `__version__`                      |
 | `src/openreview_cli/__main__.py`                    | Entry point: `python -m openreview_cli`    |
-| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse` commands |
+| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse`, `precheck`, `pii`, `gateway` commands |
 | `src/openreview_cli/config/paths.py`                | platformdirs paths (config, data, log)     |
 | `src/openreview_cli/config/loader.py`               | Pydantic model, YAML r/w, env merge        |
 | `src/openreview_cli/config/auth.py`                 | `auth.json` handler, chmod 600             |
@@ -180,6 +182,7 @@ uv run openreview --version
 | `src/openreview_cli/errors.py`                      | Exit codes (5 = config, 6 = cost limit, 8 = parse error) |
 | `src/openreview_cli/parsing/`                       | Document parser — PDF, DOCX, clause detection |
 | `src/openreview_cli/pii/`                           | PII stripping engine — Presidio, recognizers, encrypted mapping, audit trail |
+| `src/openreview_cli/gateway/`                       | AI Gateway — router, registry, cost, models, redaction, wizard |
 | `tests/unit/test_app.py`                            | 5 tests (import, version, help, memory)    |
 | `tests/unit/test_config_loader.py`                  | 6 tests (create, merge, env override)      |
 | `tests/unit/test_auth.py`                           | 5 tests (create, load, perms, providers)   |
@@ -216,6 +219,16 @@ openreview precheck --force-reprocess contract.pdf    # Bypass cache
 # PII management
 openreview pii list              # Documents with PII data
 openreview pii delete abc123     # Delete PII data for a document
+
+# AI Gateway
+openreview gateway providers            # List supported providers
+openreview gateway models openai        # List models for a provider
+openreview gateway setup                # Interactive setup wizard
+openreview gateway status               # Show configured slots
+openreview gateway set reasoning gpt-4  # Assign model to a slot
+openreview gateway test reasoning       # Send a test request
+openreview gateway costs --today        # Show daily cost summary
+openreview gateway refresh              # Refresh model registry
 ```
 
 | Command                                    | What it does                               |
@@ -235,6 +248,15 @@ openreview pii delete abc123     # Delete PII data for a document
 | `openreview precheck --no-pii <path>`  | NDA review, skip PII (raw text in output)  |
 | `openreview pii list`                  | List documents with stored PII data        |
 | `openreview pii delete <hash>`         | Delete all PII data for a document (GDPR)  |
+| `openreview gateway providers`         | List all supported providers               |
+| `openreview gateway models <provider>` | List available models for a provider       |
+| `openreview gateway setup`             | Interactive provider/model configuration   |
+| `openreview gateway status`            | Show configured slots and reachability     |
+| `openreview gateway set <slot> <model>`| Assign a model to a named slot             |
+| `openreview gateway test <slot>`       | Send a test request to a slot's model      |
+| `openreview gateway costs --today`     | Show daily cost summary                    |
+| `openreview gateway costs --session <id>` | Show per-session cost breakdown        |
+| `openreview gateway refresh`           | Refresh model registry from remote source  |
 
 ## Configuration
 
