@@ -13,6 +13,7 @@ dependencies = [
     "click>=8.0.0",
     "cryptography>=49.0.0",
     "httpx>=0.28.1",
+    "litellm>=1.90.1",
     "nupunkt>=0.6.0",
     "platformdirs>=4.10.0",
     "presidio-analyzer>=2.2.362",

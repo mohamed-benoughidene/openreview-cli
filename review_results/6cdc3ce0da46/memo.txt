@@ -1,0 +1,9 @@
+Article I: Definitions Section 1.1: Confidential Information
+"Confidential Information" means any information disclosed by the Disclosing Party to the Receiving Party that is marked co Section 1.2: Receiving Party
+The Receiving Party shall hold the Confidential Information in confidence and shall not disclose such information to any third Section 1.3: Disclosing Party
+The Disclosing Party retains all right, title, and interest in and to the Confidential Information. Article II: Obligations Section 2.1: Non-disclosure
+The Receiving Party shall not disclose Confidential Information to any third party. This obligation survives termination of this Section 2.2: Standard of Care
+The Receiving Party shall protect Confidential Information using the same degree of care used to protect its own confidentia Article III: Term and Termination Section 3.1: Term
+This Agreement shall commence on the Effective Date and continue for a period of three years. Section 3.2: Termination
+Either party may terminate this Agreement upon thirty days written notice to the other party. Section 3.3: Survival
+The obligations of confidentiality shall survive termination of this Agreement for a period of five years.
