@@ -1,4 +1,4 @@
-# Implementation Context — AI Gateway
+# Implementation Context — SLM Model Params (006)
 
 ## Grounding Chain
 - .specify/memory/verified-sources.md: OK
@@ -7,33 +7,26 @@
 
 ## Runtime Environment
 - RUNTIME: python 3.12.3
-- RUNTIME: node v24.13.0 (not used)
-- RUNTIME: npm 11.6.2 (not used)
-- RUNTIME: rustc not found (not used)
-- RUNTIME: go not found (not used)
 
 ## Installed Packages (relevant)
-- litellm==1.89.4 (NOT in pyproject.toml — T001 needed)
-- httpx==0.28.1 ✅
 - pydantic==2.13.4 ✅
-- typer==0.26.7 ✅
-- rich==15.0.0 ✅
-- PyYAML==6.0.3 ✅
-- platformdirs==4.10.0 (via pyproject.toml)
+- pyyaml==6.0.3 ✅
+- litellm==1.90.1 ✅
 
 ## Plan vs Runtime
-- litellm planned NEW dep | installed 1.89.4 but NOT in pyproject.toml → T001 needed
-- All other planned deps are already in pyproject.toml → MATCH
+- Python 3.12 matches plan ✅
+- Pydantic 2.x matches plan ✅
+- All planned deps present ✅
 
 ## Filesystem Delta (since task-context.md)
-- src/openreview_cli/gateway/ exists with stale __pycache__/ only → clean slate
-- specs/005-ai-gateway/ exists with all artifacts → NEW
+- No structural changes since task-context.md snapshot
+- All gateway files present: models.py, router.py, models.json, config/loader.py
 
 ## Tasks Baseline
-- TASKS TOTAL: 38
-- TASKS COMPLETE [X]: 29
-- TASKS PENDING [ ]: 9
-- FIRST PENDING: T030 — Wire redact_key utility into gateway logging and error output
+- TASKS TOTAL: 17
+- TASKS COMPLETE [X]: 16
+- TASKS PENDING [ ]: 1
+- FIRST PENDING: T017 — Update spec.md Edge Cases entry for non-dict extra_params
 
 ## Implementation Clearance
 STATUS: CLEAR — implementation may proceed

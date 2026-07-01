@@ -75,7 +75,12 @@
           "ram": "5.2 GB",
           "recommended": true,
           "status": "active",
-          "note": "Local — requires ~5.2 GB RAM"
+          "note": "Local — requires ~5.2 GB RAM",
+          "extra_params": {
+            "num_ctx": 32768,
+            "num_gpu": 1,
+            "num_predict": 4096
+          }
         },
         "qwen3:4b": {
           "slots": ["reasoning", "extraction", "graph"],
@@ -83,7 +88,15 @@
           "ram": "2.8 GB",
           "recommended": false,
           "status": "active",
-          "note": "Local — faster, less capable"
+          "note": "Local — faster, less capable",
+          "extra_params": {
+            "num_ctx": 16384,
+            "num_gpu": 0,
+            "num_predict": 2048,
+            "options": {
+              "mirostat": 2
+            }
+          }
         },
         "nomic-embed-text": {
           "slots": ["embedding"],

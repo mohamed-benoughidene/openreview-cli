@@ -184,6 +184,147 @@ class TestRerank:
         ]
 
 
+class TestGetLitellmKwargs:
+    def test_returns_correct_kwargs(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
+        kwargs = gw._get_litellm_kwargs("reasoning")
+        assert kwargs["model"] == "openai/gpt-4"
+        assert kwargs["temperature"] == 0.7
+        assert kwargs["max_tokens"] == 2048
+        assert kwargs["top_p"] == 0.9
+
+
+class TestExtraParamsPassThrough:
+    def test_keys_appear_in_kwargs(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
+        kwargs = gw._get_litellm_kwargs("reasoning")
+        assert kwargs.get("top_p") == 0.9
+
+    def test_no_extra_params_yields_no_extra_keys(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
+        kwargs = gw._get_litellm_kwargs("extraction")
+        assert "top_p" not in kwargs
+
+    def test_empty_dict_adds_no_keys(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        config = COMMON_CONFIG.replace(
+            "      extra_params:\n        top_p: 0.9\n", "      extra_params: {}\n"
+        )
+        gw = _gateway(tmp_path, monkeypatch, config)
+        kwargs = gw._get_litellm_kwargs("reasoning")
+        assert "top_p" not in kwargs
+
+    def test_nested_values_pass_through(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        config = COMMON_CONFIG.replace(
+            "      extra_params:\n        top_p: 0.9\n",
+            "      extra_params:\n        options:\n          mirostat: 2\n",
+        )
+        gw = _gateway(tmp_path, monkeypatch, config)
+        kwargs = gw._get_litellm_kwargs("reasoning")
+        assert kwargs.get("options") == {"mirostat": 2}
+
+    def test_extra_params_overrides_standard_params(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        config = COMMON_CONFIG.replace(
+            "      extra_params:\n        top_p: 0.9\n",
+            "      extra_params:\n        temperature: 0.1\n",
+        )
+        gw = _gateway(tmp_path, monkeypatch, config)
+        kwargs = gw._get_litellm_kwargs("reasoning")
+        assert kwargs["temperature"] == 0.1
+
+
+class TestExtraParamsProtectedKeys:
+    def test_model_key_stripped(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        config = COMMON_CONFIG.replace(
+            "      extra_params:\n        top_p: 0.9\n",
+            "      extra_params:\n        model: gpt-5\n",
+        )
+        gw = _gateway(tmp_path, monkeypatch, config)
+        kwargs = gw._get_litellm_kwargs("reasoning")
+        assert kwargs["model"] == "openai/gpt-4"
+
+    def test_messages_key_stripped(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        config = COMMON_CONFIG.replace(
+            "      extra_params:\n        top_p: 0.9\n",
+            "      extra_params:\n        messages: [bad]\n",
+        )
+        gw = _gateway(tmp_path, monkeypatch, config)
+        kwargs = gw._get_litellm_kwargs("reasoning")
+        assert "messages" not in kwargs
+        assert kwargs["model"] == "openai/gpt-4"
+
+    def test_input_key_stripped(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        config = COMMON_CONFIG.replace(
+            "      extra_params:\n        top_p: 0.9\n",
+            "      extra_params:\n        input: bad\n",
+        )
+        gw = _gateway(tmp_path, monkeypatch, config)
+        kwargs = gw._get_litellm_kwargs("reasoning")
+        assert "input" not in kwargs
+
+    def test_timeout_key_stripped(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        config = COMMON_CONFIG.replace(
+            "      extra_params:\n        top_p: 0.9\n",
+            "      extra_params:\n        timeout: 999\n",
+        )
+        gw = _gateway(tmp_path, monkeypatch, config)
+        kwargs = gw._get_litellm_kwargs("reasoning")
+        assert kwargs.get("timeout", None) != 999
+
+    def test_non_dict_rejected_by_config_validation(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from pydantic_core import ValidationError as PydanticValidationError
+
+        config = COMMON_CONFIG.replace(
+            "      extra_params:\n        top_p: 0.9\n",
+            "      extra_params: not_a_dict\n",
+        )
+        with pytest.raises(PydanticValidationError):
+            _gateway(tmp_path, monkeypatch, config)
+
+
+class TestExtraParamsLogging:
+    def test_debug_logged_when_extra_params_applied(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        caplog.set_level("DEBUG")
+        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
+        gw._get_litellm_kwargs("reasoning")
+        assert any("extra_params" in msg and "top_p" in msg for msg in caplog.messages)
+
+    def test_warning_logged_when_protected_key_stripped(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        caplog.set_level("WARNING")
+        config = COMMON_CONFIG.replace(
+            "      extra_params:\n        top_p: 0.9\n",
+            "      extra_params:\n        model: gpt-5\n",
+        )
+        gw = _gateway(tmp_path, monkeypatch, config)
+        gw._get_litellm_kwargs("reasoning")
+        assert any("Stripped protected key" in msg and "model" in msg for msg in caplog.messages)
+
+
+class TestExtraParamsCrossProvider:
+    def test_ollama_params_on_openai_does_not_crash(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        config = COMMON_CONFIG.replace(
+            "      extra_params:\n        top_p: 0.9\n",
+            "      extra_params:\n        num_gpu: 0\n        num_ctx: 4096\n",
+        )
+        gw = _gateway(tmp_path, monkeypatch, config)
+        kwargs = gw._get_litellm_kwargs("reasoning")
+        assert kwargs.get("num_gpu") == 0
+        assert kwargs.get("num_ctx") == 4096
+
+
 class TestHealthCheck:
     def test_returns_status_per_slot(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         config = """\
@@ -199,12 +340,27 @@ gateway:
             assert "status" in result[slot]
         assert result["reasoning"]["status"] == "missing_api_key"
 
+    def test_includes_extra_params_count_when_configured(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG, "{}")
+        result = gw.health_check()
+        assert result["reasoning"].get("extra_params") == 1
 
-class TestGetLitellmKwargs:
-    def test_returns_correct_kwargs(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
-        kwargs = gw._get_litellm_kwargs("reasoning")
-        assert kwargs["model"] == "openai/gpt-4"
-        assert kwargs["temperature"] == 0.7
-        assert kwargs["max_tokens"] == 2048
-        assert kwargs["top_p"] == 0.9
+    def test_no_extra_params_key_when_not_configured(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG, "{}")
+        result = gw.health_check()
+        assert "extra_params" not in result["extraction"]
+
+    def test_extra_params_count_with_multiple_keys(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        config = COMMON_CONFIG.replace(
+            "      extra_params:\n        top_p: 0.9\n",
+            "      extra_params:\n        num_gpu: 0\n        num_ctx: 4096\n        options:\n          mirostat: 2\n",
+        )
+        gw = _gateway(tmp_path, monkeypatch, config, "{}")
+        result = gw.health_check()
+        assert result["reasoning"].get("extra_params") == 3

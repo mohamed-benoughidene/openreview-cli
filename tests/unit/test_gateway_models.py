@@ -10,6 +10,7 @@ class TestModelEntry:
         assert m.recommended is False
         assert m.status is None
         assert m.note is None
+        assert m.extra_params is None
 
     def test_creates_with_all_fields(self) -> None:
         m = ModelEntry(
@@ -23,6 +24,27 @@ class TestModelEntry:
         )
         assert m.context == 4096
         assert m.recommended is True
+
+    def test_extra_params_default_none(self) -> None:
+        m = ModelEntry(slots=["reasoning"])
+        assert m.extra_params is None
+
+    def test_extra_params_with_dict(self) -> None:
+        m = ModelEntry(slots=["reasoning"], extra_params={"num_ctx": 4096, "num_gpu": 0})
+        assert m.extra_params == {"num_ctx": 4096, "num_gpu": 0}
+
+    def test_extra_params_with_nested_dict(self) -> None:
+        m = ModelEntry(
+            slots=["reasoning"],
+            extra_params={"options": {"mirostat": 2, "num_ctx": 8192}},
+        )
+        assert m.extra_params is not None
+        assert m.extra_params["options"]["mirostat"] == 2
+
+    def test_extra_params_serializes(self) -> None:
+        m = ModelEntry(slots=["reasoning"], extra_params={"top_k": 40, "top_p": 0.9})
+        d = m.model_dump()
+        assert d["extra_params"] == {"top_k": 40, "top_p": 0.9}
 
 
 class TestProviderInfo:
