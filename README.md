@@ -13,20 +13,21 @@ a custom playbook, and produces a structured memo of findings.
 
 ## Status
 
-Pre-alpha. All 38 Phase 9 AI Gateway tasks converged across config + storage
-foundation, document parsing, PII stripping (Phase 3), and AI provider gateway
-(Phase 4). The package is not yet on PyPI. APIs and the underlying spec are
-preliminary and will change.
+Pre-alpha. Foundation shipped: document parsing (PDF/DOCX, clause detection),
+PII stripping (Presidio, 16 entity types, encrypted mapping), AI provider gateway
+(33 models, 8 providers, routing + cost tracking + health check), and SLM
+provider-specific pass-through params (`extra_params` in config.yml). The package
+is not yet on PyPI. APIs and the underlying spec are preliminary and will change.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
-| Unit + integration tests    | 242                       |
+| Unit + integration tests    | 262                       |
 | CLI commands                | 19                        |
 | SQLite tables               | 7                         |
 | CI jobs                     | 4 (lint, types, test, memory) |
 | Memory budget (processing)  | < 100 MB (NLP model exempt) |
 | Startup (warm)              | < 0.3 s                   |
-| PII entity types detected   | 11 body + 4 metadata      |
+| PII entity types detected   | 16                        |
 | AI provider models          | 33 (across 8 providers)   |
 
 ### Parsing performance (real-world benchmark)
@@ -189,7 +190,17 @@ uv run openreview --version
 | `tests/unit/test_database.py`                       | 7 tests (init, cost, limits, clients)      |
 | `tests/unit/test_cli_config.py`                     | 8 tests (show, get, set, validation)       |
 | `tests/unit/test_cli_client.py`                     | 5 tests (add, list, delete, --force)       |
-| `tests/unit/test_pii_*.py`                          | 40 tests (models, recognizers, placeholders, mapping, audit, engine) |
+| `tests/unit/test_pdf_parser.py`                     | 11 tests (PDF parsing, headings, metadata) |
+| `tests/unit/test_docx_parser.py`                    | 7 tests (DOCX parsing, tracked changes)    |
+| `tests/unit/test_clause_detector.py`                | 18 tests (clause detection, hierarchy)     |
+| `tests/unit/test_models.py`                         | 20 tests (Clause, Document, ParseError)    |
+| `tests/unit/test_pii_*.py`                          | 38 tests (models, recognizers, placeholders, mapping, audit, engine) |
+| `tests/unit/test_gateway_models.py`                 | 10 tests (ModelEntry, ProviderInfo)        |
+| `tests/unit/test_gateway_router.py`                 | 25 tests (chat, embed, rerank, extra_params, health check) |
+| `tests/unit/test_gateway_registry.py`               | 8 tests (registry load, Ollama discovery)  |
+| `tests/unit/test_gateway_cost.py`                   | 5 tests (per-token pricing)                |
+| `tests/unit/test_gateway_redaction.py`              | 8 tests (key redaction, RedactingFilter)   |
+| `tests/unit/test_gateway_wizard.py`                 | 2 tests (interactive setup)                |
 | `tests/conftest.py`                                 | Memory tracker fixture (< 110 MB)          |
 | `.pre-commit-config.yaml`                           | 10 hooks (ruff, mypy, pytest, hygiene)     |
 | `.github/workflows/ci.yml`                          | 4 parallel CI jobs                         |
@@ -219,6 +230,7 @@ openreview precheck --force-reprocess contract.pdf    # Bypass cache
 # PII management
 openreview pii list              # Documents with PII data
 openreview pii delete abc123     # Delete PII data for a document
+openreview pii cleanup           # Delete expired PII data
 
 # AI Gateway
 openreview gateway providers            # List supported providers
@@ -248,6 +260,7 @@ openreview gateway refresh              # Refresh model registry
 | `openreview precheck --no-pii <path>`  | NDA review, skip PII (raw text in output)  |
 | `openreview pii list`                  | List documents with stored PII data        |
 | `openreview pii delete <hash>`         | Delete all PII data for a document (GDPR)  |
+| `openreview pii cleanup`              | Delete documents with expired PII retention |
 | `openreview gateway providers`         | List all supported providers               |
 | `openreview gateway models <provider>` | List available models for a provider       |
 | `openreview gateway setup`             | Interactive provider/model configuration   |
@@ -266,7 +279,7 @@ Secrets (API keys) live in `auth.json` at the same path.
 | Section              | What it controls              | Example keys                       |
 |----------------------|-------------------------------|------------------------------------|
 | `privacy`            | PII stripping, log retention  | `tier`, `strip_pii`, `log_ttl_days`|
-| `gateway.models`     | LLM provider/model per task   | `reasoning.primary`, `extraction.params.temperature` |
+| `gateway.models`     | LLM provider/model per task   | `reasoning.primary`, `extraction.params.temperature`, `reasoning.extra_params` |
 | `gateway.fallback`   | Retry and timeout behavior    | `retries`, `timeout`, `on_failure` |
 | `gateway.cost_limits`| Spending caps                 | `per_review_cents`, `daily_cents`  |
 | `storage`            | Data retention                | `reviews_keep_forever`, `logs_keep_days` |

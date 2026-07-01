@@ -24,6 +24,7 @@ from openreview_cli.storage.database import check_daily_limit, check_session_lim
 
 logger = logging.getLogger(__name__)
 
+_PROTECTED_KEYS = frozenset({"model", "messages", "input", "timeout"})
 VALID_SLOTS = frozenset({"reasoning", "extraction", "embedding", "reranking", "graph"})
 _PRIMARY_ONLY_SLOTS = frozenset({"embedding", "reranking"})
 _SLOT_METHOD_MAP: dict[str, str] = {
@@ -97,7 +98,15 @@ class Gateway:
                 kwargs["max_tokens"] = params["max_tokens"]
         extra = cfg.get("extra_params")
         if extra and isinstance(extra, dict):
-            kwargs.update(extra)
+            stripped = {k: v for k, v in extra.items() if k not in _PROTECTED_KEYS}
+            protected_stripped = extra.keys() - stripped.keys()
+            if protected_stripped:
+                logger.warning(
+                    "Stripped protected key(s) from extra_params: %s", protected_stripped
+                )
+            if stripped:
+                logger.debug("Applying extra_params: %s", list(stripped.keys()))
+            kwargs.update(stripped)
         return kwargs
 
     def _check_cost_limits(self, session_id: str | None) -> None:
@@ -282,4 +291,7 @@ class Gateway:
                 result[slot_name] = {"status": "missing_api_key", "provider": provider}
             else:
                 result[slot_name] = {"status": "configured", "provider": provider}
+            extra = cfg.get("extra_params")
+            if isinstance(extra, dict) and extra:
+                result[slot_name]["extra_params"] = len(extra)
         return result

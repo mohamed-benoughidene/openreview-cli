@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -18,6 +20,7 @@ class ModelEntry(BaseModel):
     recommended: bool = False
     status: str | None = None
     note: str | None = None
+    extra_params: dict[str, Any] | None = None
 
 
 class CostRecord(BaseModel):
