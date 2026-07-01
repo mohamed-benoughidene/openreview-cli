@@ -81,7 +81,7 @@ Single project — `src/`, `tests/` at repository root.
 **Independent Test**: Chunk text contains [PARTY_1], [DATE_1] etc., not raw PII. PII mapping is not modified or exposed.
 
 - [X] T013 [US4] Add PII placeholder test in `tests/unit/test_chunking_stream.py` — verify chunks from PII-stripped clauses contain placeholders, not raw PII.
-- [ ] T014 [US4] Add integration test in `tests/integration/test_chunking_cli.py` — strip PII then chunk, verify no raw PII in output. (Deferred — needs PII pipeline integration)
+- [X] T014 [US4] Add integration test in `tests/integration/test_chunking_cli.py` — strip PII then chunk, verify no raw PII in output. (Delivered by spec 008 bridge — `test_pii_safe_chunking` passes)
 
 **Checkpoint**: PII safety verified — chunks contain placeholders only.
 
