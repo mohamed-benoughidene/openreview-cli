@@ -1,0 +1,179 @@
+{
+  "providers": {
+    "openai": {
+      "name": "OpenAI",
+      "env_key": "OPENAI_API_KEY",
+      "auth_required": true,
+      "models": {
+        "gpt-4o": {
+          "slots": ["reasoning", "extraction", "graph"],
+          "context": 128000,
+          "recommended": true,
+          "status": "active"
+        },
+        "gpt-4o-mini": {
+          "slots": ["reasoning", "extraction", "graph"],
+          "context": 128000,
+          "recommended": true,
+          "status": "active"
+        },
+        "text-embedding-3-small": {
+          "slots": ["embedding"],
+          "context": 8192,
+          "dimensions": 1536,
+          "recommended": true,
+          "status": "active"
+        }
+      }
+    },
+    "anthropic": {
+      "name": "Anthropic",
+      "env_key": "ANTHROPIC_API_KEY",
+      "auth_required": true,
+      "models": {
+        "claude-sonnet-latest": {
+          "slots": ["reasoning", "extraction", "graph"],
+          "context": 200000,
+          "recommended": true,
+          "status": "active"
+        },
+        "claude-haiku-latest": {
+          "slots": ["reasoning", "extraction", "graph"],
+          "context": 200000,
+          "recommended": false,
+          "status": "active"
+        }
+      }
+    },
+    "google": {
+      "name": "Google",
+      "env_key": "GOOGLE_API_KEY",
+      "auth_required": true,
+      "models": {
+        "gemini-2.0-flash": {
+          "slots": ["reasoning", "extraction", "graph"],
+          "context": 1048576,
+          "recommended": true,
+          "status": "active"
+        },
+        "text-embedding-004": {
+          "slots": ["embedding"],
+          "dimensions": 768,
+          "recommended": true,
+          "status": "active"
+        }
+      }
+    },
+    "ollama": {
+      "name": "Ollama",
+      "env_key": null,
+      "auth_required": false,
+      "models": {
+        "qwen3:8b": {
+          "slots": ["reasoning", "extraction", "graph"],
+          "context": 32768,
+          "ram": "5.2 GB",
+          "recommended": true,
+          "status": "active",
+          "note": "Local — requires ~5.2 GB RAM"
+        },
+        "qwen3:4b": {
+          "slots": ["reasoning", "extraction", "graph"],
+          "context": 32768,
+          "ram": "2.8 GB",
+          "recommended": false,
+          "status": "active",
+          "note": "Local — faster, less capable"
+        },
+        "nomic-embed-text": {
+          "slots": ["embedding"],
+          "context": 8192,
+          "dimensions": 768,
+          "ram": "274 MB",
+          "recommended": true,
+          "status": "active",
+          "note": "Local embedding, ~274 MB"
+        },
+        "qwen3-reranker-0.6b": {
+          "slots": ["reranking"],
+          "context": 8192,
+          "ram": "600 MB",
+          "recommended": true,
+          "status": "active",
+          "note": "Local reranker"
+        }
+      }
+    },
+    "openrouter": {
+      "name": "OpenRouter",
+      "env_key": "OPENROUTER_API_KEY",
+      "auth_required": true,
+      "models": {
+        "openai/gpt-4o": {
+          "slots": ["reasoning", "extraction", "graph"],
+          "context": 128000,
+          "recommended": true,
+          "status": "active",
+          "note": "Routed through OpenRouter"
+        },
+        "anthropic/claude-sonnet-latest": {
+          "slots": ["reasoning", "extraction", "graph"],
+          "context": 200000,
+          "recommended": false,
+          "status": "active",
+          "note": "Routed through OpenRouter"
+        }
+      }
+    },
+    "cohere": {
+      "name": "Cohere",
+      "env_key": "COHERE_API_KEY",
+      "auth_required": true,
+      "models": {
+        "command-r-plus": {
+          "slots": ["reasoning", "extraction", "graph"],
+          "context": 128000,
+          "recommended": true,
+          "status": "active"
+        },
+        "embed-english-v3.0": {
+          "slots": ["embedding"],
+          "dimensions": 1024,
+          "recommended": true,
+          "status": "active"
+        },
+        "rerank-english-v3.0": {
+          "slots": ["reranking"],
+          "context": 8192,
+          "recommended": true,
+          "status": "active"
+        }
+      }
+    },
+    "huggingface": {
+      "name": "HuggingFace",
+      "env_key": "HUGGINGFACE_API_KEY",
+      "auth_required": true,
+      "models": {
+        "meta-llama/Llama-3.3-70B-Instruct": {
+          "slots": ["reasoning", "extraction", "graph"],
+          "context": 8192,
+          "recommended": true,
+          "status": "active"
+        },
+        "BAAI/bge-large-en-v1.5": {
+          "slots": ["embedding"],
+          "dimensions": 1024,
+          "recommended": true,
+          "status": "active"
+        }
+      }
+    },
+    "custom": {
+      "name": "Custom (OpenAI-compatible)",
+      "env_key": "CUSTOM_API_KEY",
+      "auth_required": true,
+      "models": {}
+    }
+  }
+}

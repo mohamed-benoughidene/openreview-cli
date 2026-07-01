@@ -3,7 +3,7 @@ from pathlib import Path
 
 from openreview_cli.storage.database import (
     check_daily_limit,
-    check_review_limit,
+    check_session_limit,
     get_connection,
     init_database,
     log_cost,
@@ -50,7 +50,7 @@ def test_log_cost_inserts_row(tmp_path: Path) -> None:
     conn = get_connection(db_path)
     row = conn.execute("SELECT * FROM cost_logs").fetchone()
     assert row is not None
-    assert row["review_id"] == "test-review"
+    assert row["session_id"] == "test-review"
     assert row["model"] == "ollama/qwen3:8b"
     assert row["provider"] == "ollama"
     assert row["prompt_tokens"] == 100
@@ -70,14 +70,14 @@ def test_check_daily_limit(tmp_path: Path) -> None:
     assert check_daily_limit(db_path, 400)
 
 
-def test_check_review_limit(tmp_path: Path) -> None:
+def test_check_session_limit(tmp_path: Path) -> None:
     db_path = tmp_path / "openreview.db"
     init_database(db_path)
-    _seed_review(db_path, "review-1")
-    log_cost(db_path, "review-1", "gpt4", "openai", 0, 0, 100)
-    log_cost(db_path, "review-1", "gpt4", "openai", 0, 0, 50)
-    assert not check_review_limit(db_path, "review-1", 100)
-    assert check_review_limit(db_path, "review-1", 200)
+    _seed_review(db_path, "session-1")
+    log_cost(db_path, "session-1", "gpt4", "openai", 0, 0, 100)
+    log_cost(db_path, "session-1", "gpt4", "openai", 0, 0, 50)
+    assert not check_session_limit(db_path, "session-1", 100)
+    assert check_session_limit(db_path, "session-1", 200)
 
 
 def test_log_cost_latency(tmp_path: Path) -> None:

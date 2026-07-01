@@ -13,6 +13,7 @@ dependencies = [
     "click>=8.0.0",
     "cryptography>=49.0.0",
     "httpx>=0.28.1",
+    "litellm>=1.90.1",
     "nupunkt>=0.6.0",
     "platformdirs>=4.10.0",
     "presidio-analyzer>=2.2.362",
@@ -21,6 +22,7 @@ dependencies = [
     "pymupdf>=1.27.2.3",
     "python-docx>=1.2.0",
     "pyyaml>=6.0.3",
+    "questionary>=2.1.1",
     "rich>=15.0.0",
     "typer>=0.26.7",
 ]
@@ -94,6 +96,10 @@ disallow_untyped_decorators = true
 disallow_incomplete_defs = true
 no_implicit_reexport = true
 check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "questionary"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -258,7 +258,7 @@ Add a Detection Pass G to the standard analysis passes:
 
 **G. Reality Check** (severity: HIGH if VERSION DRIFT or PATH CONFLICT, MEDIUM if NO ANCHOR)
 - Any version number in plan.md that does not match a CONFIRMED anchor → flag as VERSION DRIFT
-- Any file path in tasks.md that is neither EXISTS nor NEW in task-context.md → flag as PATH CONFLICT  
+- Any file path in tasks.md that is neither EXISTS nor NEW in task-context.md → flag as PATH CONFLICT
 - Any API or function name in plan.md with NO ANCHOR in verified-sources.md → flag as UNVERIFIED API
 
 If analysis-context.md is missing, add one CRITICAL finding to the report:

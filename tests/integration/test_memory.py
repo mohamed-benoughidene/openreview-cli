@@ -23,3 +23,27 @@ def test_peak_memory_500_page_pdf() -> None:
 
     assert peak < 110 * 1024 * 1024, f"Peak memory {peak / 1024 / 1024:.1f} MB exceeds 110 MB"
     assert len(clauses) > 0
+
+
+@pytest.mark.memory
+def test_gateway_peak_memory(tmp_path: Path) -> None:
+    import tracemalloc
+
+    config_path = tmp_path / "config.yml"
+    config_path.write_text(
+        "version: 1\ngateway:\n  models:\n    reasoning:\n      primary: ollama/qwen3:8b\n"
+    )
+    auth_path = tmp_path / "auth.json"
+    auth_path.write_text("{}")
+
+    from openreview_cli.gateway.router import Gateway
+
+    tracemalloc.start()
+    gw = Gateway(config_path, auth_path, tmp_path / "data.db")
+    _ = gw.health_check()
+    _current, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    assert peak < 110 * 1024 * 1024, (
+        f"Gateway peak memory {peak / 1024 / 1024:.1f} MB exceeds 110 MB"
+    )

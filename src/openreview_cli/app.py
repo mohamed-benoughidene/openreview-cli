@@ -49,7 +49,7 @@ def _init(debug: bool = False) -> None:
     root.addHandler(_sh)
 
     config_dir = get_config_dir()
-    load_config(config_dir / "config.yml")
+    config = load_config(config_dir / "config.yml")
     logger.info("config loaded")
 
     ensure_auth(config_dir)
@@ -60,6 +60,35 @@ def _init(debug: bool = False) -> None:
     logger.info("database initialized")
 
     _cleanup_expired_pii(data_dir)
+    _refresh_model_registry(config)
+
+
+_GATEWAY_REGISTRY_PATH = Path(__file__).parent / "gateway" / "models.json"
+
+
+def _refresh_model_registry(config: dict[str, object] | None) -> None:
+    try:
+        from openreview_cli.gateway.registry import ModelRegistry
+
+        days = 0
+        if config:
+            days = config.get("gateway", {}).get("model_registry_refresh_days", 0)  # type: ignore[attr-defined]
+        if not days:
+            return
+        reg_path = _GATEWAY_REGISTRY_PATH
+        if not reg_path.exists():
+            return
+        registry = ModelRegistry(reg_path)
+        registry.load()
+        import time
+
+        age_seconds = time.time() - reg_path.stat().st_mtime
+        if age_seconds >= days * 86400:
+            url = "https://raw.githubusercontent.com/mohamed-benoughidene/openreview/main/src/openreview_cli/gateway/models.json"
+            count = registry.refresh(url)
+            logger.info("model registry refreshed (%d models)", count)
+    except Exception:
+        logger.debug("model registry refresh skipped", exc_info=True)
 
 
 def _cleanup_expired_pii(data_dir: Path) -> None:
@@ -406,6 +435,198 @@ def parse(
     else:
         typer.echo(format_text(clauses, doc))
 
+
+gateway_app = typer.Typer(
+    name="gateway",
+    help="Configure and manage AI provider gateways.",
+    no_args_is_help=True,
+)
+
+
+@gateway_app.command("setup")
+def gateway_setup() -> None:
+    """Interactive setup wizard for provider and model configuration."""
+    from openreview_cli.gateway.wizard import gateway_setup as _wizard
+
+    _wizard()
+
+
+@gateway_app.command("status")
+def gateway_status() -> None:
+    """Show configured slots and provider reachability."""
+    from rich.console import Console
+    from rich.table import Table
+
+    from openreview_cli.gateway.router import Gateway
+
+    gw = Gateway()
+    status = gw.health_check()
+
+    console = Console()
+    table = Table(title="Gateway Status")
+    table.add_column("Slot", style="cyan")
+    table.add_column("Status", style="green")
+    table.add_column("Provider", style="yellow")
+
+    for slot, info in status.items():
+        table.add_row(slot, info.get("status", "unknown"), info.get("provider", "-"))
+    console.print(table)
+
+
+@gateway_app.command("providers")
+def gateway_providers() -> None:
+    """List all supported providers."""
+    from rich.console import Console
+    from rich.table import Table
+
+    from openreview_cli.gateway.registry import ModelRegistry
+
+    registry = ModelRegistry(_GATEWAY_REGISTRY_PATH)
+    registry.load()
+
+    console = Console()
+    table = Table(title="Supported Providers")
+    table.add_column("Name", style="cyan")
+    table.add_column("Auth", style="green")
+    table.add_column("Models", style="white")
+
+    for p in registry.list_providers():
+        table.add_row(
+            p["name"],
+            "key required" if p["auth_required"] else "none",
+            str(p["model_count"]),
+        )
+    console.print(table)
+
+
+@gateway_app.command("models")
+def gateway_models(provider: str) -> None:
+    """List available models for a provider."""
+    from rich.console import Console
+    from rich.table import Table
+
+    from openreview_cli.gateway.registry import ModelRegistry
+
+    registry = ModelRegistry(_GATEWAY_REGISTRY_PATH)
+    registry.load()
+
+    models = registry.list_models(provider)
+    if provider.lower() == "ollama":
+        dynamic = registry.discover_ollama()
+        seen = {m["model_id"] for m in models}
+        for m in dynamic:
+            if m["model_id"] not in seen:
+                models.append(m)
+                seen.add(m["model_id"])
+
+    if not models:
+        typer.echo(f"No models found for provider '{provider}'.")
+        return
+
+    console = Console()
+    table = Table(title=f"Models for {provider}")
+    table.add_column("Model ID", style="cyan")
+    table.add_column("Slots", style="green")
+    table.add_column("Context", style="white")
+    table.add_column("Recommended", style="yellow")
+
+    for m in models:
+        table.add_row(
+            m["model_id"],
+            ", ".join(m.get("slots", [])),
+            str(m.get("context", "-")),
+            "✓" if m.get("recommended") else "",
+        )
+    console.print(table)
+
+
+@gateway_app.command("set")
+def gateway_set(slot: str, model: str) -> None:
+    """Assign a model to a slot."""
+    from openreview_cli.config.loader import set_config_value
+    from openreview_cli.config.paths import get_config_dir
+    from openreview_cli.gateway.router import VALID_SLOTS
+
+    if slot not in VALID_SLOTS:
+        typer.echo(
+            f"Invalid slot '{slot}'. Valid slots: {', '.join(sorted(VALID_SLOTS))}",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    config_path = get_config_dir() / "config.yml"
+    try:
+        set_config_value(config_path, f"gateway.models.{slot}.primary", model)
+        typer.echo(f"Set {slot} → {model}")
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+
+@gateway_app.command("refresh")
+def gateway_refresh() -> None:
+    """Refresh model registry from remote."""
+    from openreview_cli.gateway.registry import ModelRegistry
+
+    registry = ModelRegistry(_GATEWAY_REGISTRY_PATH)
+    url = "https://raw.githubusercontent.com/mohamed-benoughidene/openreview/main/src/openreview_cli/gateway/models.json"
+    count = registry.refresh(url)
+    typer.echo(f"Registry refreshed: {count} models loaded.")
+
+
+@gateway_app.command("test")
+def gateway_test(slot: str) -> None:
+    """Send a test request to a slot's model."""
+    from openreview_cli.gateway.router import VALID_SLOTS, Gateway
+
+    if slot not in VALID_SLOTS:
+        typer.echo(f"Invalid slot '{slot}'. Valid slots: {', '.join(sorted(VALID_SLOTS))}")
+        raise typer.Exit(code=1)
+
+    gw = Gateway()
+    try:
+        if slot in ("reasoning", "extraction", "graph"):
+            response = gw.chat(slot, [{"role": "user", "content": "Hello — respond with 'OK'."}])
+            typer.echo(f"Response: {response}")
+        elif slot == "embedding":
+            emb = gw.embed(slot, ["Hello world"])
+            typer.echo(f"Embedding: {len(emb[0])} dimensions")
+        elif slot == "reranking":
+            rnk = gw.rerank(slot, "test", ["doc1", "doc2"], top_n=2)
+            typer.echo(f"Reranked: {len(rnk)} results")
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+
+@gateway_app.command("costs")
+def gateway_costs(
+    today: bool = typer.Option(False, "--today", help="Show today's costs"),
+    session: str | None = typer.Option(None, "--session", help="Session ID to query"),
+) -> None:
+    """Show cost summary."""
+    from openreview_cli.gateway.router import Gateway
+
+    gw = Gateway()
+    if session:
+        cost = gw.get_cost(session)
+        typer.echo(
+            f"Session {session}: {cost['prompt_tokens']} prompt tokens, "
+            f"{cost['completion_tokens']} completion tokens, "
+            f"{cost['cost_cents']}¢"
+        )
+    elif today:
+        from openreview_cli.config.paths import get_data_dir
+        from openreview_cli.storage.database import check_daily_limit
+
+        db_path = get_data_dir() / "openreview.db"
+        under = check_daily_limit(db_path, 999999)
+        typer.echo(f"Daily cost limit: {'under' if under else 'exceeded'}")
+    else:
+        typer.echo("Use --today or --session <id> to query costs.")
+
+
+app.add_typer(gateway_app)
 
 if __name__ == "__main__":
     app()

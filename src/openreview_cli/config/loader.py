@@ -92,6 +92,7 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
         primary: str
         fallback: str | None = None
         params: ModelParams | None = None
+        extra_params: dict[str, Any] | None = None
 
     class EmbeddingSlot(BaseModel):
         primary: str
