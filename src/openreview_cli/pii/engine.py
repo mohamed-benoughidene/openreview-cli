@@ -3,6 +3,7 @@
 import time
 from typing import Any
 
+from openreview_cli.parsing.models import Clause
 from openreview_cli.pii.audit import build_audit, write_pii_audit
 from openreview_cli.pii.mapping import write_pii_mapping
 from openreview_cli.pii.models import (
@@ -344,4 +345,114 @@ def strip_and_persist(
     return result
 
 
-__all__ = ["PiiEngine", "strip_and_persist", "strip_pii"]
+def strip_pii_clauses(
+    clauses: list[Any],
+    document: Any,
+    *,
+    threshold: float = 0.7,
+    strip_pii_enabled: bool = True,
+    strip_metadata: bool = True,
+    engine: PiiEngine | None = None,
+) -> tuple[list[Any], PiiResult]:
+    """Strip PII from each clause's text individually while preserving metadata.
+
+    Returns:
+        tuple of (list[Clause] — same clauses with PII-stripped text,
+                  PiiResult — unified stripping result across all clauses)
+    """
+    if not strip_pii_enabled:
+        return list(clauses), PiiResult(
+            stripped_text=" ".join(c.text for c in clauses),
+            mapping={},
+            entities=[],
+            page_count=max(len(clauses), 1),
+            duration_seconds=0.0,
+            warnings=["PII stripping disabled. Contract text may be sent to providers as-is."],
+        )
+
+    start_time = time.perf_counter()
+
+    own_engine = engine is None
+    if own_engine:
+        engine = PiiEngine(threshold=threshold)
+
+    try:
+        metadata_entities: list[PiiEntity] = []
+        if strip_metadata:
+            metadata_entities = _redact_metadata(document)
+
+        assert engine is not None
+        all_entities, warnings, failed_pages, _error_msgs = engine.detect_all_pages(
+            clauses, threshold=threshold, page_count=getattr(document, "page_count", None)
+        )
+        if failed_pages:
+            warnings.append(f"PII processing partial: {len(failed_pages)} page(s) failed")
+
+        mapping, all_entities_with_placeholders = assign_placeholders(
+            all_entities,
+            metadata_entities=metadata_entities,
+        )
+
+        sorted_placeholders = sorted(
+            mapping.items(),
+            key=lambda x: len(x[1]),
+            reverse=True,
+        )
+
+        stripped_clauses: list[Clause] = []
+        for clause in clauses:
+            text = clause.text
+            for key, original in sorted_placeholders:
+                text = text.replace(original, f"[{key}]")
+            stripped_clauses.append(
+                Clause(
+                    id=clause.id,
+                    title=clause.title,
+                    text=text,
+                    level=clause.level,
+                    parent_id=clause.parent_id,
+                    source_page=clause.source_page,
+                    source_paragraph=clause.source_paragraph,
+                    source_span=clause.source_span,
+                )
+            )
+
+        stripped_text = " ".join(c.text for c in stripped_clauses)
+
+        for key in list(mapping):
+            placeholder = f"[{key}]"
+            if placeholder not in stripped_text:
+                stripped_text = stripped_text + f" {placeholder}"
+                if stripped_clauses:
+                    last = stripped_clauses[-1]
+                    stripped_clauses[-1] = Clause(
+                        id=last.id,
+                        title=last.title,
+                        text=last.text + f" {placeholder}",
+                        level=last.level,
+                        parent_id=last.parent_id,
+                        source_page=last.source_page,
+                        source_paragraph=last.source_paragraph,
+                        source_span=last.source_span,
+                    )
+
+        duration = time.perf_counter() - start_time
+        page_count = len(clauses) or 1
+
+        result = PiiResult(
+            stripped_text=stripped_text,
+            mapping=mapping,
+            entities=all_entities_with_placeholders,
+            page_count=page_count,
+            duration_seconds=duration,
+            warnings=warnings,
+            failed_pages=failed_pages if failed_pages else None,
+        )
+
+        return stripped_clauses, result
+    finally:
+        if own_engine and engine is not None:
+            engine.close()
+
+
+__all__ = ["PiiEngine", "strip_and_persist", "strip_pii", "strip_pii_clauses"]
