@@ -29,7 +29,7 @@ will change.
 | Unit + integration tests    | 398                       |
 | CLI commands                | 39                        |
 | SQLite tables               | 9                         |
-| CI jobs                     | 4 (lint, types, test, memory) |
+| CI jobs                     | 5 (lint, types, test, memory, benchmark) |
 | Memory budget (processing)  | < 100 MB (NLP model exempt) |
 | Startup (warm)              | < 0.3 s                   |
 | PII entity types detected   | 16                        |
@@ -321,6 +321,13 @@ openreview prompt export extract-clauses --output /tmp/prompts.yaml
 openreview prompt import /tmp/prompts.yaml
 openreview prompt test --prompt extract-clauses --versions 1,2 --benchmark standard
 openreview prompt optimize --prompt extract-clauses --iterations 3
+
+# Benchmark (automated evaluation)
+openreview benchmark                              # Smoke test (CUAD, default slot)
+openreview benchmark --datasets cuad,maud --slots default,fast  # Multi-dataset
+openreview benchmark --all --ci --compare HEAD~1  # CI regression gate
+openreview benchmark --pii-only                   # PII recall/precision only
+openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 ```
 
 | Command                                    | What it does                               |
@@ -367,6 +374,14 @@ openreview prompt optimize --prompt extract-clauses --iterations 3
 | `openreview prompt import <path>`      | Import prompts from YAML                   |
 | `openreview prompt test --prompt <n> --versions <v1,v2>` | A/B test (requires benchmark) |
 | `openreview prompt optimize --prompt <n> --iterations <i>` | GRPO optimization (requires benchmark) |
+| `openreview benchmark`                    | Run automated evaluation (CUAD/MAUD/ContractNLI) |
+| `openreview benchmark --datasets cuad,maud` | Evaluate specific datasets                   |
+| `openreview benchmark --slots default,fast` | Compare model slots                          |
+| `openreview benchmark --all --ci`          | Full CI regression gate (strict exit codes)   |
+| `openreview benchmark --compare HEAD~1`    | Compare against a baseline ref               |
+| `openreview benchmark --pii-only`          | PII recall/precision benchmark only           |
+| `openreview benchmark --prompt-variant v1 --prompt-variant v2` | Prompt A/B test |
+| `openreview benchmark --format json --output report.json` | JSON report to file |
 
 ## Configuration
 
@@ -418,7 +433,7 @@ uvx pre-commit install
 |------------------|---------------------------------|
 | Tests            | `uv run pytest tests/unit/ -q`  |
 | Memory budget    | `uv run pytest -m memory`       |
-| Benchmark        | `uv run python scripts/benchmark_legalbenchrag.py` |
+| Benchmark        | `uv run openreview benchmark --all --ci`          |
 | Lint             | `uv run ruff check .`           |
 | Format           | `uv run ruff format --check .`  |
 | Types            | `uv run mypy src/ tests/`       |
@@ -441,6 +456,31 @@ uv run python scripts/benchmark_legalbenchrag.py
 The script downloads the corpus, converts each text file to PDF via pymupdf,
 runs the parser against every contract, and writes `metrics-v0.1.0.json` with
 per-file timing, clause counts, and peak memory.
+
+### Benchmark harness (`openreview benchmark`)
+
+Automated evaluation against standard legal contract datasets:
+
+| Metric | What it measures |
+|--------|------------------|
+| Extraction F1 / precision / recall | Clause extraction quality vs CUAD/MAUD/ContractNLI ground truth |
+| PII recall / precision | PII detection accuracy against labeled corpora |
+| Hallucination rate | Factual accuracy of AI-generated findings |
+| Latency | End-to-end processing time per contract |
+| Memory | Peak RSS during evaluation |
+
+```bash
+# Quick smoke test
+openreview benchmark
+
+# Full evaluation across all datasets and model slots
+openreview benchmark --all
+
+# CI regression gate (fails on F1 drop > 2pp vs baseline)
+openreview benchmark --all --ci --compare HEAD~1
+```
+
+See [specs/010-benchmark-harness/](specs/010-benchmark-harness/) for the full specification, or run `openreview benchmark --help` for all options.
 
 ## Contributing
 
