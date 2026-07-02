@@ -1,0 +1,205 @@
+# Bundled NDA Playbook — PreCheck Mode v1
+# This is the default playbook shipped with the PreCheck product mode.
+# Users may override with --playbook <path>.
+
+id: "precheck-nda-v1"
+mode: "precheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Bundled NDA playbook for PreCheck mode. Covers the most common
+    NDA clause categories: confidentiality, permitted disclosures,
+    non-solicitation, term, return of materials, and boilerplate.
+  author: "openreview"
+
+categories:
+  # ── Confidentiality Term ──────────────────────────────────
+  - id: "confidentiality-term"
+    name: "Confidentiality Term"
+    description: >
+      Defines how long confidentiality obligations survive
+      the NDA's termination or the disclosure of information.
+    favorable:
+      description: >
+        Short, fixed confidentiality term (1-3 years). The obligation
+        ends on a definite date, not tied to contract termination.
+      exemplars:
+        - "Confidentiality obligations shall survive for a period of three (3) years"
+        - "The receiving party's obligations under this Agreement shall continue for two (2) years"
+        - "for a period of [NUMBER] years from the date of disclosure"
+    neutral:
+      description: >
+        Standard 3-5 year term, mutual obligations, industry-standard
+        exceptions for independently developed information.
+      exemplars:
+        - "The obligations set forth in this Section shall survive for a period of five (5) years"
+        - "Confidentiality obligations shall remain in effect for the shorter of [NUMBER] years"
+    unfavorable:
+      description: >
+        Indefinite term, perpetual obligations, survival tied to
+        indefinite period or the life of the confidential information.
+      exemplars:
+        - "Confidentiality obligations shall survive the termination of this Agreement indefinitely"
+        - "The obligations of confidentiality shall continue in perpetuity"
+        - "survive for the duration that the Confidential Information remains a trade secret"
+    default_position: "neutral"
+
+  # ── Permitted Disclosures ─────────────────────────────────
+  - id: "permitted-disclosures"
+    name: "Permitted Disclosures"
+    description: >
+      Lists exceptions to confidentiality — disclosures required
+      by law, to professional advisors, or to employees with
+      a need to know.
+    favorable:
+      description: >
+        Broad exceptions: disclosure to employees, advisors,
+        potential acquirers, and financing sources. No prior
+        notice required.
+      exemplars:
+        - "may disclose Confidential Information to its employees, officers, and advisors on a need-to-know basis"
+        - "receiving party may disclose to its Representatives including legal counsel and accountants"
+    neutral:
+      description: >
+        Standard exceptions: required by law, to employees with
+        need-to-know, with reasonable measures to protect.
+      exemplars:
+        - "Disclosure required by law, regulation, or court order"
+        - "to employees and directors with a need to know, provided they are bound by confidentiality"
+    unfavorable:
+      description: >
+        Narrow exceptions: no advisor disclosure, requires prior
+        written notice of any court-ordered disclosure, or
+        restricts disclosure to employees.
+      exemplars:
+        - "no disclosure to any third party including professional advisors"
+        - "receiving party shall provide prompt written notice of any required disclosure"
+        - "disclosure limited to employees who have signed separate confidentiality agreements"
+    default_position: "neutral"
+
+  # ── Non-Solicitation ──────────────────────────────────────
+  - id: "non-solicitation"
+    name: "Non-Solicitation"
+    description: >
+     Restricts the receiving party from hiring or soliciting
+     the disclosing party's employees during and after the NDA term.
+    favorable:
+      description: >
+        No non-solicitation clause, or applies only during the
+        NDA term with a narrow scope (specific individuals only).
+      exemplars:
+        - "The non-solicitation obligation shall expire upon termination of this Agreement"
+        - "applies only to employees directly involved in the discussions under this Agreement"
+    neutral:
+      description: >
+        Standard 6-12 month post-term non-solicitation, mutual,
+        with exceptions for general public solicitations.
+      exemplars:
+        - "Each party agrees not to solicit the other's employees for a period of [NUMBER] months following termination"
+        - "general advertisements not specifically directed at the other party's employees shall not be deemed solicitation"
+    unfavorable:
+      description: >
+        Long or indefinite non-solicitation period (>12 months),
+        one-sided (only restricts receiving party), or covers
+        all employees regardless of involvement.
+      exemplars:
+        - "The receiving party shall not solicit any employee of the disclosing party for a period of [NUMBER] years"
+        - "non-solicitation obligation survives termination indefinitely"
+    default_position: "neutral"
+
+  # ── Term and Termination ──────────────────────────────────
+  - id: "term-and-termination"
+    name: "Term and Termination"
+    description: >
+      Defines the NDA's effective period and how either party
+      can terminate the agreement.
+    favorable:
+      description: >
+        One-year or indefinite term with immediate termination
+        by either party on written notice. No minimum period.
+      exemplars:
+        - "This Agreement may be terminated by either party upon [NUMBER] days' written notice"
+        - "The term of this Agreement shall commence on the Effective Date and continue indefinitely"
+    neutral:
+      description: >
+        Standard 1-3 year term, termination by either party
+        on 30 days' notice. Mutual termination rights.
+      exemplars:
+        - "This Agreement shall have an initial term of [NUMBER] years, renewable by mutual agreement"
+        - "Either party may terminate this Agreement upon [NUMBER] days' prior written notice"
+    unfavorable:
+      description: >
+        Long initial term (5+ years) with automatic renewal,
+        one-sided termination rights, or penalties for early
+        termination.
+      exemplars:
+        - "This Agreement shall automatically renew for successive [NUMBER]-year periods"
+        - "Only the Disclosing Party may terminate this Agreement"
+        - "shall remain in effect for a period of [NUMBER] years from the Effective Date"
+    default_position: "neutral"
+
+  # ── Return of Materials ───────────────────────────────────
+  - id: "return-of-materials"
+    name: "Return of Materials"
+    description: >
+      Obligates the receiving party to return or destroy
+      confidential materials upon the disclosing party's request
+      or upon termination.
+    favorable:
+      description: >
+        Receiving party may keep one copy for legal/regulatory
+        compliance. No certification of destruction required.
+        Electronic copies need not be deleted from backups.
+      exemplars:
+        - "receiving party may retain one copy for legal archival purposes"
+        - "electronic copies residing in standard backup systems need not be deleted"
+    neutral:
+      description: >
+        Mutual obligation to return or destroy on request.
+        Written certification of destruction within 30 days.
+      exemplars:
+        - "Each party shall, upon the other's request, return or destroy all Confidential Information and certify in writing"
+        - "return or destruction shall occur within [NUMBER] days of the request"
+    unfavorable:
+      description: >
+        Immediate destruction required, no archival copy allowed,
+        certification required within 5 days, or covers the
+        receiving party only.
+      exemplars:
+        - "The receiving party shall immediately destroy all Confidential Information and provide written certification within five (5) business days"
+        - "no copy of any Confidential Information may be retained for any purpose"
+    default_position: "neutral"
+
+  # ── Boilerplate / General Provisions ──────────────────────
+  - id: "boilerplate"
+    name: "Boilerplate / General Provisions"
+    description: >
+      Standard legal boilerplate: governing law, jurisdiction,
+      entire agreement, amendment, waiver, severability, and
+      assignment.
+    favorable:
+      description: >
+        Neutral governing law (no clear advantage to either party),
+        no assignment restriction, broad amendment by written
+        agreement.
+      exemplars:
+        - "This Agreement shall be governed by the laws of [STATE] without regard to conflict of laws principles"
+        - "This Agreement may be amended only by a written instrument signed by both parties"
+    neutral:
+      description: >
+        Standard mutual boilerplate with no unusual provisions.
+        Typical governing law, mutual waiver of jury trial,
+        standard severability.
+      exemplars:
+        - "This Agreement constitutes the entire understanding between the parties"
+        - "If any provision is held invalid, the remainder shall continue in full force and effect"
+    unfavorable:
+      description: >
+        Unilateral governing law (disclosing party's home
+        jurisdiction), restriction on receiving party's ability
+        to seek injunctive relief, or assignment clause that
+        allows the disclosing party to assign without consent.
+      exemplars:
+        - "The Disclosing Party may assign this Agreement without the Receiving Party's consent"
+        - "The Receiving Party waives any right to injunctive relief"
+    default_position: "neutral"

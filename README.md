@@ -18,9 +18,11 @@ PII stripping (Presidio, 16 entity types, encrypted mapping), chunking strategy
 (RCTS, clause-boundary-aware, 512-token default, streaming), PII-to-chunk bridge
 (`strip_pii_clauses()` per-clause replacement), AI provider gateway (33 models,
 8 providers, routing + cost tracking + health check), SLM provider-specific
-pass-through params (`extra_params` in config.yml), and prompt management
+pass-through params (`extra_params` in config.yml), prompt management
 (versioned SQLite-backed storage, model-to-prompt binding, variable substitution,
-YAML export/import, A/B testing and GRPO optimization hooks defined).
+YAML export/import, A/B testing and GRPO optimization hooks defined), **and
+single-party contract review (PAKTON 3-agent pipeline: extraction, QA
+verification, report formatting).**
 The package is not yet on PyPI. APIs and the underlying spec are preliminary and
 will change.
 
@@ -291,6 +293,16 @@ openreview precheck --no-pii contract.pdf  # Skip PII stripping
 openreview precheck --pii-threshold 0.7 contract.pdf  # Tune sensitivity
 openreview precheck --force-reprocess contract.pdf    # Bypass cache
 
+# Review (PAKTON 3-agent pipeline)
+openreview precheck review contract.pdf                # Extract + QA pipeline
+openreview precheck review contract.pdf --format json  # JSON report
+openreview precheck review contract.pdf --output report.json  # Save to file
+openreview precheck review --playbook custom.yaml contract.pdf  # Custom playbook
+openreview precheck review --extraction-model fast --qa-model accurate contract.pdf  # Separate model slots
+openreview precheck review --no-pii contract.pdf       # Skip PII stripping
+openreview precheck review --verbose contract.pdf      # Show per-clause progress
+openreview precheck review doc1.pdf doc2.pdf doc3.pdf  # Batch review
+
 # PII management
 openreview pii list              # Documents with PII data
 openreview pii delete abc123     # Delete PII data for a document
@@ -348,6 +360,13 @@ openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 | `openreview chunk <path> --summary`    | One-line chunk summary (count, token range) |
 | `openreview precheck <path>`           | NDA review with automatic PII stripping    |
 | `openreview precheck --no-pii <path>`  | NDA review, skip PII (raw text in output)  |
+| `openreview precheck review <paths...>`| PAKTON 3-agent review (extraction + QA + report) against a playbook |
+| `openreview precheck review --playbook <file> <paths>` | Review with a custom YAML playbook        |
+| `openreview precheck review --format json <paths>`     | JSON-format review report (default: text) |
+| `openreview precheck review --output <file> <paths>`   | Write report to file instead of stdout    |
+| `openreview precheck review --extraction-model <slot> --qa-model <slot> <paths>` | Independent model slots for extraction and QA |
+| `openreview precheck review --no-pii <paths>`| Skip PII stripping in review pipeline     |
+| `openreview precheck review --verbose <paths>` | Show per-clause progress on stderr      |
 | `openreview pii list`                  | List documents with stored PII data        |
 | `openreview pii delete <hash>`         | Delete all PII data for a document (GDPR)  |
 | `openreview pii cleanup`              | Delete documents with expired PII retention |
