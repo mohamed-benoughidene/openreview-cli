@@ -1,0 +1,7 @@
+name: reasoning
+versions:
+  - version: 1
+    content: "Analyze the following {task_type} task. Context length: {context_length} tokens. Provide a thorough reasoning chain before arriving at your conclusion."
+    metadata:
+      tags: ["default"]
+      description: "Default reasoning prompt — chain-of-thought analysis"

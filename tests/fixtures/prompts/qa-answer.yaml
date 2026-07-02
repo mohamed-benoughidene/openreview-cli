@@ -1,0 +1,8 @@
+name: qa-answer
+versions:
+  - version: 1
+    content: "Answer the question based on the provided context. Be concise and cite relevant sections."
+    created_at: "2026-07-02T10:00:00Z"
+    metadata:
+      tags: ["qa", "answer"]
+      description: "Question answering prompt"

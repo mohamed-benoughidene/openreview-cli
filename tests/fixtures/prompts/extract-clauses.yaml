@@ -1,0 +1,14 @@
+name: extract-clauses
+versions:
+  - version: 1
+    content: "Extract all clauses from the contract. Return a JSON array."
+    created_at: "2026-07-02T10:00:00Z"
+    metadata:
+      tags: ["extraction", "default"]
+      description: "Clause extraction prompt v1"
+  - version: 2
+    content: "Extract all clauses from the contract. Return a JSON array with clause_id, text, and section_number."
+    created_at: "2026-07-02T11:00:00Z"
+    metadata:
+      tags: ["extraction", "improved"]
+      description: "Clause extraction prompt v2 with structured output"

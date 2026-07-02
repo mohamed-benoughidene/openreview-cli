@@ -1,0 +1,7 @@
+name: reranking
+versions:
+  - version: 1
+    content: "Re-rank the following search results for relevance to the {query_type} query. Return the most relevant documents first."
+    metadata:
+      tags: ["default"]
+      description: "Default reranking prompt — relevance scoring"

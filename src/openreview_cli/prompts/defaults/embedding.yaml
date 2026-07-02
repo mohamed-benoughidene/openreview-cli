@@ -1,0 +1,7 @@
+name: embedding
+versions:
+  - version: 1
+    content: "Generate an embedding vector for the following {chunk_type} chunk. Focus on semantic meaning and key entities."
+    metadata:
+      tags: ["default"]
+      description: "Default embedding prompt — semantic vector generation"
