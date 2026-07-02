@@ -10,14 +10,14 @@ def stream_chunks(
     config: ChunkConfig | None = None,
 ) -> Iterator[Chunk]:
     """Stream chunks from parsed clauses.
-    
+
     Args:
         clauses: Iterator of Clause objects (from parsing.stream.stream_clauses)
         config: Optional ChunkConfig (defaults to 512 token chunks, 50 overlap)
-    
+
     Yields:
         Chunk objects one at a time — never accumulated in memory.
-    
+
     Raises:
         ValueError: If config.chunk_overlap >= config.chunk_size
     """

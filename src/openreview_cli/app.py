@@ -348,9 +348,17 @@ def pii_cleanup(
 app.add_typer(pii_app)
 
 
-@app.command()
+precheck_app = typer.Typer(
+    name="precheck",
+    help="PreCheck contract review commands.",
+    no_args_is_help=True,
+)
+
+
+@precheck_app.callback(invoke_without_command=True)
 def precheck(
-    document_path: str = typer.Argument(..., help="Path to a PDF or DOCX contract file."),
+    ctx: typer.Context,
+    document_path: str = typer.Argument(None, help="Path to a PDF or DOCX contract file."),
     no_pii: bool = typer.Option(
         False, "--no-pii", help="Disable PII stripping. Processes raw text."
     ),
@@ -368,7 +376,10 @@ def precheck(
     """Run a PreCheck review (NDA analysis) on a document.
 
     Automatically strips PII before processing unless --no-pii is specified.
+    Use 'openreview precheck review' for the full 3-agent review pipeline.
     """
+    if ctx.invoked_subcommand is not None:
+        return
 
     from openreview_cli.pii.models import PartialProcessingError
     from openreview_cli.review.base import ReviewCommand
@@ -376,6 +387,10 @@ def precheck(
     if no_pii and pii_threshold is not None:
         typer.echo("Error: --no-pii and --pii-threshold are mutually exclusive", err=True)
         raise typer.Exit(code=3)
+
+    if not document_path:
+        typer.echo("Error: missing document path argument.", err=True)
+        raise typer.Exit(code=1)
 
     cmd = ReviewCommand(
         document_path=document_path,
@@ -405,6 +420,75 @@ def precheck(
     if result["failed_pages"]:
         typer.echo(f"Failed pages: {result['failed_pages']}", err=True)
         raise typer.Exit(code=2)
+
+
+@precheck_app.command()
+def review(
+    paths: list[str] = typer.Argument(  # noqa: B008
+        ..., help="One or more document paths (PDF, DOCX). Shell glob supported."
+    ),
+    playbook: str | None = typer.Option(
+        None, "--playbook", help="Path to a custom YAML playbook override."
+    ),
+    format: str = typer.Option("text", "--format", help="Output format: text or json."),
+    output: str | None = typer.Option(
+        None, "--output", help="Write output to file instead of stdout."
+    ),
+    extraction_model: str | None = typer.Option(
+        None, "--extraction-model", help="Model slot for the extraction agent."
+    ),
+    qa_model: str | None = typer.Option(
+        None, "--qa-model", help="Model slot for the QA verification agent."
+    ),
+    no_pii: bool = typer.Option(False, "--no-pii", help="Skip PII stripping."),
+    verbose: bool = typer.Option(False, "--verbose", help="Show per-clause progress."),
+) -> None:
+    """Review one or more contract documents against a 3-position playbook.
+
+    Runs the PAKTON 3-agent pipeline: extraction, QA verification, and
+    comparison (no-op). Produces a per-clause structured report with
+    position assessments, confidence scores, and citation grounding.
+    """
+    from openreview_cli.review import format_json, format_terminal, run_review
+
+    try:
+        reports = run_review(
+            paths=paths,
+            playbook_path=playbook,
+            extraction_model=extraction_model or "extraction",
+            qa_model=qa_model,
+            no_pii=no_pii,
+            verbose=verbose,
+        )
+    except FileNotFoundError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=2) from None
+
+    if not reports:
+        typer.echo("No documents processed.", err=True)
+        raise typer.Exit(code=1)
+
+    if format == "json":
+        output_str = format_json(reports)
+        if output:
+            Path(output).write_text(output_str, encoding="utf-8")
+        else:
+            typer.echo(output_str)
+    else:
+        for report in reports:
+            typer.echo(format_terminal(report))
+
+    if any(r.summary.amber_count > 0 for r in reports):
+        typer.echo(
+            "⚠  Some clauses flagged Amber — review recommended.",
+            err=True,
+        )
+
+
+app.add_typer(precheck_app)
 
 
 @app.command()
