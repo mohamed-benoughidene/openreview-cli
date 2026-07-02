@@ -77,6 +77,8 @@ unfixable = ["B", "SIM"]
 "scripts/**" = ["PLR0912", "PLR0915", "RUF059"]
 "src/openreview_cli/parsing/pdf_parser.py" = ["PLR0912", "PLR0915"]
 "src/openreview_cli/parsing/clause_detector.py" = ["PLW0603"]
+"src/openreview_cli/benchmark/cli.py" = ["PLR0912", "PLR0915", "B008"]
+"src/openreview_cli/benchmark/report.py" = ["PLR0911"]
 
 [tool.ruff.format]
 quote-style = "double"

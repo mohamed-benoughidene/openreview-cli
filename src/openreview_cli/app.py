@@ -664,6 +664,10 @@ def chunk(
         typer.echo(format_chunks_text(chunks))
 
 
+from openreview_cli.benchmark.cli import benchmark_app  # noqa: E402
+
+app.add_typer(benchmark_app)
+
 from openreview_cli.prompts.cli import prompt_app  # noqa: E402
 
 app.add_typer(prompt_app)
