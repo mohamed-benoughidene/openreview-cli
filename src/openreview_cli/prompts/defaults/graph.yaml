@@ -1,0 +1,7 @@
+name: graph
+versions:
+  - version: 1
+    content: "Extract entities and relationships from the text. Focus on {entity_type} entities. Return a JSON-LD graph structure."
+    metadata:
+      tags: ["default"]
+      description: "Default graph prompt — entity and relationship extraction"

@@ -664,5 +664,9 @@ def chunk(
         typer.echo(format_chunks_text(chunks))
 
 
+from openreview_cli.prompts.cli import prompt_app  # noqa: E402
+
+app.add_typer(prompt_app)
+
 if __name__ == "__main__":
     app()

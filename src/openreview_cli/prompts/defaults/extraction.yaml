@@ -1,0 +1,7 @@
+name: extraction
+versions:
+  - version: 1
+    content: "Extract all clauses from the provided {document_type}. Return a JSON array with clause_id, text, and section_number for each clause found. There are approximately {clause_count} clauses in this document."
+    metadata:
+      tags: ["default"]
+      description: "Default extraction prompt — extracts clauses with structure"

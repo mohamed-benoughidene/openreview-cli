@@ -209,6 +209,14 @@ class Gateway:
         if slot not in VALID_SLOTS:
             raise SlotNotConfiguredError(f"Invalid slot '{slot}'")
         self._check_cost_limits(session_id)
+        from openreview_cli.prompts.store import PromptStore
+        from openreview_cli.prompts.variables import substitute as sub_vars
+
+        store = PromptStore(self._data_path)
+        resolved = store.resolve(slot)
+        if resolved:
+            resolved = sub_vars(resolved, slot, {})
+            messages = [{"role": "system", "content": resolved}, *messages]
         call_kwargs = self._get_litellm_kwargs(slot)
         call_kwargs["messages"] = messages
         call_kwargs.update(kwargs)
@@ -228,6 +236,14 @@ class Gateway:
         if slot not in VALID_SLOTS:
             raise SlotNotConfiguredError(f"Invalid slot '{slot}'")
         self._check_cost_limits(session_id)
+        from openreview_cli.prompts.store import PromptStore
+        from openreview_cli.prompts.variables import substitute as sub_vars
+
+        store = PromptStore(self._data_path)
+        resolved = store.resolve(slot)
+        if resolved:
+            resolved = sub_vars(resolved, slot, {})
+            texts = [resolved, *texts]
         call_kwargs = self._get_litellm_kwargs(slot)
         call_kwargs["input"] = texts
         response = self._call_with_fallback(slot, embedding, call_kwargs)
@@ -248,6 +264,14 @@ class Gateway:
         if slot not in VALID_SLOTS:
             raise SlotNotConfiguredError(f"Invalid slot '{slot}'")
         self._check_cost_limits(session_id)
+        from openreview_cli.prompts.store import PromptStore
+        from openreview_cli.prompts.variables import substitute as sub_vars
+
+        store = PromptStore(self._data_path)
+        resolved = store.resolve(slot)
+        if resolved:
+            resolved = sub_vars(resolved, slot, {})
+            query = f"{resolved}\n\n{query}"
 
         from litellm import rerank
 
