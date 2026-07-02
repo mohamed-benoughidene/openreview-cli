@@ -62,3 +62,17 @@ jobs:
       - run: uv sync --frozen
       - run: uv pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl
       - run: uv run pytest -m memory -v
+
+  benchmark:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - run: uv sync --frozen --no-dev
+      - run: uv run openreview benchmark --all --ci --compare HEAD~1 || true
