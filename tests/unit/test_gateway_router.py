@@ -49,11 +49,15 @@ def _gateway(
         lambda *a, **kw: {"prompt_tokens": 0, "completion_tokens": 0, "cost_cents": 0},
     )
     monkeypatch.setattr(cost_mod, "completion_cost", lambda r: 0.0)
+    from openreview_cli.prompts.store import PromptStore
+
     config_path = tmp_path / "config.yml"
     config_path.write_text(config_text)
     auth_path = tmp_path / "auth.json"
     auth_path.write_text(auth_text or json.dumps({"openai": "sk-test", "anthropic": "sk-ant-test"}))
-    return Gateway(config_path, auth_path, tmp_path / "data.db")
+    db_path = tmp_path / "data.db"
+    PromptStore(db_path).init()
+    return Gateway(config_path, auth_path, db_path)
 
 
 COMMON_CONFIG = """\
