@@ -17,15 +17,18 @@ Pre-alpha. Foundation shipped: document parsing (PDF/DOCX, clause detection),
 PII stripping (Presidio, 16 entity types, encrypted mapping), chunking strategy
 (RCTS, clause-boundary-aware, 512-token default, streaming), PII-to-chunk bridge
 (`strip_pii_clauses()` per-clause replacement), AI provider gateway (33 models,
-8 providers, routing + cost tracking + health check), and SLM provider-specific
-pass-through params (`extra_params` in config.yml). The package is not yet on
-PyPI. APIs and the underlying spec are preliminary and will change.
+8 providers, routing + cost tracking + health check), SLM provider-specific
+pass-through params (`extra_params` in config.yml), and prompt management
+(versioned SQLite-backed storage, model-to-prompt binding, variable substitution,
+YAML export/import, A/B testing and GRPO optimization hooks defined).
+The package is not yet on PyPI. APIs and the underlying spec are preliminary and
+will change.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
-| Unit + integration tests    | 296                       |
-| CLI commands                | 20                        |
-| SQLite tables               | 7                         |
+| Unit + integration tests    | 398                       |
+| CLI commands                | 39                        |
+| SQLite tables               | 9                         |
 | CI jobs                     | 4 (lint, types, test, memory) |
 | Memory budget (processing)  | < 100 MB (NLP model exempt) |
 | Startup (warm)              | < 0.3 s                   |
@@ -209,7 +212,7 @@ uv run openreview --version
 |-----------------------------------------------------|--------------------------------------------|
 | `src/openreview_cli/__init__.py`                    | Exposes `__version__`                      |
 | `src/openreview_cli/__main__.py`                    | Entry point: `python -m openreview_cli`    |
-| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse`, `precheck`, `chunk`, `pii`, `gateway` commands |
+| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse`, `precheck`, `chunk`, `pii`, `gateway`, `prompt` commands |
 | `src/openreview_cli/config/paths.py`                | platformdirs paths (config, data, log)     |
 | `src/openreview_cli/config/loader.py`               | Pydantic model, YAML r/w, env merge        |
 | `src/openreview_cli/config/auth.py`                 | `auth.json` handler, chmod 600             |
@@ -220,6 +223,14 @@ uv run openreview --version
 | `src/openreview_cli/pii/`                           | PII stripping engine — Presidio, recognizers, encrypted mapping, audit trail, `strip_pii_clauses()` bridge |
 | `src/openreview_cli/chunking/`                      | Chunking engine — RCTS splitting, clause-boundary-aware, streaming |
 | `src/openreview_cli/gateway/`                       | AI Gateway — router, registry, cost, models, redaction, wizard |
+| `src/openreview_cli/prompts/`                       | Prompt management — versioned storage, binding, CLI |
+| `src/openreview_cli/prompts/models.py`              | Pydantic models (Prompt, PromptVersion, PromptBinding) |
+| `src/openreview_cli/prompts/store.py`               | PromptStore — SQLite CRUD, versioning, resolve() |
+| `src/openreview_cli/prompts/cli.py`                 | 14 Typer subcommands (create, update, list, show, delete, diff, bind, unbind, bindings, history, test, export, import, optimize) |
+| `src/openreview_cli/prompts/variables.py`           | `{key}` variable substitution engine |
+| `src/openreview_cli/prompts/defaults.py`            | Default prompt loader (YAML → SQLite on first use) |
+| `src/openreview_cli/prompts/defaults/`              | 5 built-in default prompts (extraction, reasoning, embedding, reranking, graph) |
+| `src/openreview_cli/storage/migrations/004_prompts.sql` | 2 tables DDL (prompt_versions, prompt_bindings) |
 | `tests/unit/test_app.py`                            | 5 tests (import, version, help, memory)    |
 | `tests/unit/test_config_loader.py`                  | 6 tests (create, merge, env override)      |
 | `tests/unit/test_auth.py`                           | 5 tests (create, load, perms, providers)   |
@@ -241,6 +252,14 @@ uv run openreview --version
 | `tests/unit/test_gateway_cost.py`                   | 5 tests (per-token pricing)                |
 | `tests/unit/test_gateway_redaction.py`              | 8 tests (key redaction, RedactingFilter)   |
 | `tests/unit/test_gateway_wizard.py`                 | 2 tests (interactive setup)                |
+| `tests/unit/test_prompt_models.py`                  | 16 tests (model validation, 16 KB limit)   |
+| `tests/unit/test_prompt_store.py`                   | 29 tests (CRUD, binding, export/import)    |
+| `tests/unit/test_prompt_cli.py`                     | 24 tests (all 14 subcommands)              |
+| `tests/unit/test_prompt_variables.py`               | 8 tests (substitution, unknown vars)       |
+| `tests/unit/test_prompt_defaults.py`                | 5 tests (YAML loading, first-use)          |
+| `tests/integration/test_prompt_lifecycle.py`        | 4 tests (create → bind → remove)           |
+| `tests/integration/test_prompt_gateway.py`          | 5 tests (gateway prompt resolution)        |
+| `tests/integration/test_prompt_memory.py`           | 1 test (memory budget < 110 MB)            |
 | `tests/conftest.py`                                 | Memory tracker fixture (< 110 MB)          |
 | `.pre-commit-config.yaml`                           | 10 hooks (ruff, mypy, pytest, hygiene)     |
 | `.github/workflows/ci.yml`                          | 4 parallel CI jobs                         |
@@ -286,6 +305,22 @@ openreview gateway set reasoning gpt-4  # Assign model to a slot
 openreview gateway test reasoning       # Send a test request
 openreview gateway costs --today        # Show daily cost summary
 openreview gateway refresh              # Refresh model registry
+
+# Prompt management
+openreview prompt create --name extract-clauses --content "Extract clauses..." --description "Clause extraction" --tags "extraction,default"
+openreview prompt update extract-clauses --content "Improved prompt..."
+openreview prompt list
+openreview prompt show extract-clauses --version 1
+openreview prompt diff extract-clauses --from 1 --to 2
+openreview prompt delete extract-clauses --force
+openreview prompt bind --slot extraction --prompt extract-clauses --version 2
+openreview prompt unbind --slot extraction
+openreview prompt bindings
+openreview prompt history extract-clauses
+openreview prompt export extract-clauses --output /tmp/prompts.yaml
+openreview prompt import /tmp/prompts.yaml
+openreview prompt test --prompt extract-clauses --versions 1,2 --benchmark standard
+openreview prompt optimize --prompt extract-clauses --iterations 3
 ```
 
 | Command                                    | What it does                               |
@@ -318,6 +353,20 @@ openreview gateway refresh              # Refresh model registry
 | `openreview gateway costs --today`     | Show daily cost summary                    |
 | `openreview gateway costs --session <id>` | Show per-session cost breakdown        |
 | `openreview gateway refresh`           | Refresh model registry from remote source  |
+| `openreview prompt create --name <n> --content <c>` | Create version 1 of a new prompt  |
+| `openreview prompt update <name> --content <c>`     | Create new version (auto-increment) |
+| `openreview prompt list`               | Show all prompts with latest version       |
+| `openreview prompt show <name>`        | View a specific prompt version             |
+| `openreview prompt delete <name>`      | Remove a prompt and all versions           |
+| `openreview prompt diff <name> --from <v1> --to <v2>` | Unified diff between versions |
+| `openreview prompt bind --slot <s> --prompt <n> --version <v>` | Bind prompt version to model slot |
+| `openreview prompt unbind --slot <s>`  | Remove a binding                           |
+| `openreview prompt bindings`           | List all active bindings                   |
+| `openreview prompt history <name>`     | Show version history with metadata         |
+| `openreview prompt export <name>`      | Export prompt(s) to YAML                   |
+| `openreview prompt import <path>`      | Import prompts from YAML                   |
+| `openreview prompt test --prompt <n> --versions <v1,v2>` | A/B test (requires benchmark) |
+| `openreview prompt optimize --prompt <n> --iterations <i>` | GRPO optimization (requires benchmark) |
 
 ## Configuration
 
