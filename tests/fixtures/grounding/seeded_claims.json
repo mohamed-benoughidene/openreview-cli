@@ -1,0 +1,22 @@
+[
+  {"claim": "The receiving party shall not disclose confidential information.", "clause_id": "4.3", "paragraph_index": 0, "expected_verdict": "grounded"},
+  {"claim": "Confidential information includes all written materials marked as confidential.", "clause_id": "4.3", "paragraph_index": 1, "expected_verdict": "grounded"},
+  {"claim": "The receiving party may use confidential information only for the evaluation purpose.", "clause_id": "4.4", "paragraph_index": 0, "expected_verdict": "grounded"},
+  {"claim": "Confidential information does not include information in the public domain.", "clause_id": "4.5", "paragraph_index": 0, "expected_verdict": "grounded"},
+  {"claim": "The obligations of confidentiality shall survive for a period of three years.", "clause_id": "4.6", "paragraph_index": 0, "expected_verdict": "grounded"},
+  {"claim": "The receiving party shall return or destroy confidential information upon request.", "clause_id": "4.7", "paragraph_index": 0, "expected_verdict": "grounded"},
+  {"claim": "Disclosure of confidential information is permitted when required by law.", "clause_id": "4.8", "paragraph_index": 0, "expected_verdict": "grounded"},
+  {"claim": "The receiving party shall limit access to confidential information on a need-to-know basis.", "clause_id": "4.9", "paragraph_index": 0, "expected_verdict": "grounded"},
+  {"claim": "All confidential information shall be stored securely.", "clause_id": "4.10", "paragraph_index": 0, "expected_verdict": "grounded"},
+  {"claim": "The receiving party shall notify the disclosing party of any unauthorized disclosure.", "clause_id": "4.11", "paragraph_index": 0, "expected_verdict": "grounded"},
+  {"claim": "The receiving party shall indemnify the disclosing party for all breaches.", "clause_id": "4.3", "paragraph_index": 0, "expected_verdict": "ungrounded"},
+  {"claim": "This agreement shall be governed by the laws of the State of California.", "clause_id": "7.1", "paragraph_index": 0, "expected_verdict": "ungrounded"},
+  {"claim": "Either party may assign this agreement without the other party's consent.", "clause_id": "10.2", "paragraph_index": 0, "expected_verdict": "ungrounded"},
+  {"claim": "The prevailing party shall recover all legal fees and costs.", "clause_id": "4.3", "paragraph_index": 0, "expected_verdict": "ungrounded"},
+  {"claim": "The term of this agreement shall be five years from the effective date.", "clause_id": "2.1", "paragraph_index": 0, "expected_verdict": "ungrounded"},
+  {"claim": "The receiving party may sublicense confidential information to affiliates.", "clause_id": "4.3", "paragraph_index": 0, "expected_verdict": "uncertain"},
+  {"claim": "All confidential information must be marked with the disclosing party's logo.", "clause_id": "4.3", "paragraph_index": 0, "expected_verdict": "uncertain"},
+  {"claim": "The receiving party shall pay a royalty of 5 percent on net sales.", "clause_id": "4.3", "paragraph_index": 0, "expected_verdict": "uncertain"},
+  {"claim": "Confidential information shall be subject to mandatory audit by the disclosing party.", "clause_id": "4.4", "paragraph_index": 0, "expected_verdict": "uncertain"},
+  {"claim": "The receiving party shall appoint a data protection officer.", "clause_id": "4.3", "paragraph_index": 0, "expected_verdict": "uncertain"}
+]

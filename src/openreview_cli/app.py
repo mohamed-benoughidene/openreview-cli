@@ -442,6 +442,14 @@ def review(
     ),
     no_pii: bool = typer.Option(False, "--no-pii", help="Skip PII stripping."),
     verbose: bool = typer.Option(False, "--verbose", help="Show per-clause progress."),
+    grounding_mode: str | None = typer.Option(
+        "strict",
+        "--grounding-mode",
+        help="Citation grounding mode: strict (ungrounded excluded) or lenient (flagged).",
+    ),
+    no_grounding: bool = typer.Option(
+        False, "--no-grounding", help="Skip citation grounding entirely."
+    ),
 ) -> None:
     """Review one or more contract documents against a 3-position playbook.
 
@@ -449,6 +457,14 @@ def review(
     comparison (no-op). Produces a per-clause structured report with
     position assessments, confidence scores, and citation grounding.
     """
+    # Validate grounding mode
+    if grounding_mode not in ("strict", "lenient"):
+        typer.echo(
+            f"Error: --grounding-mode must be 'strict' or 'lenient', got '{grounding_mode}'",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
     from openreview_cli.review import format_json, format_terminal, run_review
 
     try:
@@ -459,6 +475,7 @@ def review(
             qa_model=qa_model,
             no_pii=no_pii,
             verbose=verbose,
+            grounding_mode=None if no_grounding else grounding_mode,
         )
     except FileNotFoundError as e:
         typer.echo(f"Error: {e}", err=True)

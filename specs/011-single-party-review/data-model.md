@@ -7,9 +7,9 @@
 
 ```
 Playbook (1) ──→ Category (1..*) ──→ PositionDef (1 per position)
-                                                      
-ReviewReport (1) ──→ ClauseAssessment (0..*)         
-                           │                         
+
+ReviewReport (1) ──→ ClauseAssessment (0..*)
+                           │
                     AssessmentSource (1 per agent stage)
 ```
 

@@ -9,6 +9,11 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from datetime import datetime
 
+    from openreview_cli.grounding.models import (
+        CitationProvenance,
+        GroundingVerdict,
+    )
+
 
 class Position(StrEnum):
     """Final position for a clause assessment."""
@@ -99,6 +104,10 @@ class ClauseAssessment:
     qa_revised_rationale: str | None = None
     error: str | None = None
     is_amber: bool = False
+    # Citation grounding discriminator fields (all optional, default None)
+    grounding_verdict: GroundingVerdict | None = None
+    grounding_provenances: list[CitationProvenance] | None = None
+    grounding_confidence: float | None = None
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.confidence <= 1.0:

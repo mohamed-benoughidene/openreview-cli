@@ -22,7 +22,8 @@ pass-through params (`extra_params` in config.yml), prompt management
 (versioned SQLite-backed storage, model-to-prompt binding, variable substitution,
 YAML export/import, A/B testing and GRPO optimization hooks defined), **and
 single-party contract review (PAKTON 3-agent pipeline: extraction, QA
-verification, report formatting).**
+verification, report formatting), and citation grounding discriminator
+(post-hoc claim verification with strict/lenient modes, CG metrics, JSONL audit trail).**
 The package is not yet on PyPI. APIs and the underlying spec are preliminary and
 will change.
 
@@ -225,6 +226,7 @@ uv run openreview --version
 | `src/openreview_cli/pii/`                           | PII stripping engine — Presidio, recognizers, encrypted mapping, audit trail, `strip_pii_clauses()` bridge |
 | `src/openreview_cli/chunking/`                      | Chunking engine — RCTS splitting, clause-boundary-aware, streaming |
 | `src/openreview_cli/gateway/`                       | AI Gateway — router, registry, cost, models, redaction, wizard |
+| `src/openreview_cli/grounding/`                    | Citation grounding discriminator — post-hoc claim verification, strict/lenient modes, CG metrics, JSONL audit trail, corruption generators |
 | `src/openreview_cli/prompts/`                       | Prompt management — versioned storage, binding, CLI |
 | `src/openreview_cli/prompts/models.py`              | Pydantic models (Prompt, PromptVersion, PromptBinding) |
 | `src/openreview_cli/prompts/store.py`               | PromptStore — SQLite CRUD, versioning, resolve() |
@@ -300,6 +302,9 @@ openreview precheck review contract.pdf --output report.json  # Save to file
 openreview precheck review --playbook custom.yaml contract.pdf  # Custom playbook
 openreview precheck review --extraction-model fast --qa-model accurate contract.pdf  # Separate model slots
 openreview precheck review --no-pii contract.pdf       # Skip PII stripping
+openreview precheck review --grounding-mode strict contract.pdf  # Strict grounding (excludes ungrounded claims)
+openreview precheck review --grounding-mode lenient contract.pdf # Lenient grounding (flags ungrounded)
+openreview precheck review --no-grounding contract.pdf  # Skip citation grounding entirely
 openreview precheck review --verbose contract.pdf      # Show per-clause progress
 openreview precheck review doc1.pdf doc2.pdf doc3.pdf  # Batch review
 
@@ -366,6 +371,9 @@ openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 | `openreview precheck review --output <file> <paths>`   | Write report to file instead of stdout    |
 | `openreview precheck review --extraction-model <slot> --qa-model <slot> <paths>` | Independent model slots for extraction and QA |
 | `openreview precheck review --no-pii <paths>`| Skip PII stripping in review pipeline     |
+| `openreview precheck review --grounding-mode strict <paths>` | Strict grounding (exclude ungrounded claims from output) |
+| `openreview precheck review --grounding-mode lenient <paths>` | Lenient grounding (flag ungrounded claims, keep in output) |
+| `openreview precheck review --no-grounding <paths>` | Skip citation grounding entirely |
 | `openreview precheck review --verbose <paths>` | Show per-clause progress on stderr      |
 | `openreview pii list`                  | List documents with stored PII data        |
 | `openreview pii delete <hash>`         | Delete all PII data for a document (GDPR)  |

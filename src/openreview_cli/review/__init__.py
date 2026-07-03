@@ -51,6 +51,7 @@ def run_review(
     qa_model: str | None = None,
     no_pii: bool = False,
     verbose: bool = False,
+    grounding_mode: str | None = None,
 ) -> list[ReviewReport]:
     """Run the PAKTON 3-agent review pipeline on one or more documents.
 
@@ -70,6 +71,8 @@ def run_review(
         Skip PII stripping when ``True``.
     verbose : bool
         Print per-clause progress to stderr when ``True``.
+    grounding_mode : str | None
+        Grounding mode: ``"strict"``, ``"lenient"``, or ``None`` to skip.
 
     Returns
     -------
@@ -140,6 +143,33 @@ def run_review(
         report = _build_report(doc_meta, assessments, playbook)
 
         # Phase 5: Comparison — no-op for single-party review
+
+        # Phase 6: Citation Grounding (optional)
+        if grounding_mode is not None and report.assessments:
+            try:
+                from openreview_cli.grounding import run_grounding
+
+                grounding_result = run_grounding(
+                    report,
+                    doc,
+                    mode=grounding_mode,  # type: ignore[arg-type]  # validated as 'strict'/'lenient' above
+                    source_clauses=clauses,
+                )
+                grounding_result.merge_into(report)
+                logger.info(
+                    "Grounding: %d/%d grounded (%s mode)",
+                    grounding_result.grounded_count,
+                    grounding_result.total_claims,
+                    grounding_mode,
+                )
+            except Exception:
+                logger.warning("Citation grounding failed, skipping", exc_info=True)
+                if verbose:
+                    print(
+                        "  Warning: citation grounding skipped due to error",
+                        file=sys.stderr,
+                    )
+
         reports.append(report)
 
     return reports

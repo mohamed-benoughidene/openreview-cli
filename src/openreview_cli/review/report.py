@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 from openreview_cli.review.models import Position, ReviewReport
 
 
-def format_terminal(report: ReviewReport) -> str:
+def format_terminal(report: ReviewReport) -> str:  # noqa: PLR0915  # ponytail: function extraction would add more complexity
     """Format a ``ReviewReport`` as a human-readable terminal string.
 
     Produces a Rich-styled table with per-clause position badges, confidence
@@ -47,6 +47,9 @@ def format_terminal(report: ReviewReport) -> str:
         console.print("[yellow]No clauses to assess.[/yellow]")
         return buf.getvalue()
 
+    # Check if grounding data is present
+    has_grounding = any(ca.grounding_verdict is not None for ca in report.assessments)
+
     # Per-clause table
     table = Table(show_header=True, header_style="bold")
     table.add_column("#", style="dim", width=4)
@@ -54,6 +57,8 @@ def format_terminal(report: ReviewReport) -> str:
     table.add_column("Category", width=24)
     table.add_column("Position", width=14)
     table.add_column("Confidence", width=12)
+    if has_grounding:
+        table.add_column("Gnd", width=6)
     table.add_column("Status", width=8)
 
     for i, ca in enumerate(report.assessments, 1):
@@ -68,7 +73,11 @@ def format_terminal(report: ReviewReport) -> str:
             ca.playbook_category.replace("-", " ").title() if ca.playbook_category else "—"
         )
 
-        table.add_row(str(i), clause_display, category_display, pos_text, conf_bar, status)
+        row: list[str] = [str(i), clause_display, category_display, pos_text, conf_bar]
+        if has_grounding:
+            row.append(_grounding_style(ca))
+        row.append(status)
+        table.add_row(*row)
 
     console.print(table)
     console.print()
@@ -88,9 +97,50 @@ def format_terminal(report: ReviewReport) -> str:
         if summary.avg_confidence
         else "  Avg confidence: —"
     )
+    if has_grounding:
+        _print_grounding_summary(report, console)
     console.print()
 
     return buf.getvalue()
+
+
+def _grounding_style(ca: Any) -> str:
+    """Return a styled grounding verdict for terminal output."""
+    from openreview_cli.grounding.models import GroundingVerdict
+
+    if ca.grounding_verdict is None:
+        return "[dim]—[/dim]"
+    if ca.grounding_verdict == GroundingVerdict.GROUNDED:
+        return "[green]G[/green]"
+    if ca.grounding_verdict == GroundingVerdict.UNGROUNDED:
+        return "[red]U[/red]"
+    return "[yellow]?[/yellow]"
+
+
+def _print_grounding_summary(report: Any, console: Any) -> None:
+    """Print grounding summary line to console."""
+    from openreview_cli.grounding.models import GroundingVerdict
+
+    grounded = sum(
+        1 for ca in report.assessments if ca.grounding_verdict == GroundingVerdict.GROUNDED
+    )
+    ungrounded = sum(
+        1 for ca in report.assessments if ca.grounding_verdict == GroundingVerdict.UNGROUNDED
+    )
+    uncertain = sum(
+        1 for ca in report.assessments if ca.grounding_verdict == GroundingVerdict.UNCERTAIN
+    )
+    not_processed = sum(1 for ca in report.assessments if ca.grounding_verdict is None)
+
+    parts: list[str] = []
+    parts.append(f"[green]{grounded} grounded[/green]")
+    if ungrounded:
+        parts.append(f"[red]{ungrounded} ungrounded[/red]")
+    if uncertain:
+        parts.append(f"[yellow]{uncertain} uncertain[/yellow]")
+    if not_processed:
+        parts.append(f"[dim]{not_processed} not processed[/dim]")
+    console.print(f"  Grounding: {', '.join(parts)}")
 
 
 def _position_style(ca: Any) -> str:
