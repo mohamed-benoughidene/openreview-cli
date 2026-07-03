@@ -79,6 +79,8 @@ class Playbook:
     mode: str
     categories: list[Category]
     metadata: PlaybookMetadata
+    version_id: str | None = None
+    content_hash: str | None = None
 
     def __post_init__(self) -> None:
         if not self.categories:

@@ -440,6 +440,11 @@ def review(
     playbook: str | None = typer.Option(
         None, "--playbook", help="Path to a custom YAML playbook override."
     ),
+    playbook_version: str | None = typer.Option(
+        None,
+        "--playbook-version",
+        help="Pin a specific stored playbook version (e.g., '1.0.0'). Requires --playbook.",
+    ),
     format: str = typer.Option("text", "--format", help="Output format: text or json."),
     output: str | None = typer.Option(
         None, "--output", help="Write output to file instead of stdout."
@@ -487,6 +492,10 @@ def review(
         )
         raise typer.Exit(code=1)
 
+    if playbook_version is not None and playbook is None:
+        typer.echo("Error: --playbook-version requires --playbook <path>", err=True)
+        raise typer.Exit(code=1)
+
     from openreview_cli.review import format_json, format_terminal, run_review
 
     try:
@@ -499,6 +508,7 @@ def review(
             verbose=verbose,
             grounding_mode=None if no_grounding else grounding_mode,
             confidence_threshold=confidence_threshold,
+            playbook_version=playbook_version,
         )
     except FileNotFoundError as e:
         typer.echo(f"Error: {e}", err=True)

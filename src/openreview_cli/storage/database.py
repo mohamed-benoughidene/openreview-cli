@@ -128,6 +128,66 @@ def check_session_limit(db_path: Path, session_id: str, max_cents: int) -> bool:
         return int(row[0]) < max_cents
 
 
+def ensure_playbook_record(
+    db_path: Path,
+    playbook_id: str,
+    mode: str = "",
+    description: str = "",
+    author: str = "",
+) -> None:
+    """Insert a playbook record if it doesn't exist."""
+    with transaction(db_path) as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO playbook (id, mode, description, author) VALUES (?, ?, ?, ?)",
+            (playbook_id, mode, description, author),
+        )
+
+
+def insert_version(
+    db_path: Path,
+    playbook_id: str,
+    version: str,
+    content_hash_value: str,
+    content: str,
+) -> None:
+    """Insert a new playbook_version row."""
+    with transaction(db_path) as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO playbook_version (id, version, content_hash, content) VALUES (?, ?, ?, ?)",
+            (playbook_id, version, content_hash_value, content),
+        )
+
+
+def find_version(
+    db_path: Path,
+    playbook_id: str,
+    version: str,
+) -> dict[str, Any] | None:
+    """Look up a playbook_version by (id, version). Returns row or None."""
+    with transaction(db_path) as conn:
+        row = conn.execute(
+            "SELECT id, version, content_hash, content, created_at FROM playbook_version WHERE id = ? AND version = ?",
+            (playbook_id, version),
+        ).fetchone()
+        if row is None:
+            return None
+        return dict(row)
+
+
+def get_max_plus_suffix(db_path: Path, playbook_id: str, version: str) -> int:
+    """Get the maximum +N suffix for a given (id, version) pair.
+
+    Returns 0 if no suffixed version exists.
+    """
+    with transaction(db_path) as conn:
+        row = conn.execute(
+            "SELECT MAX(CAST(SUBSTR(version, LENGTH(?) + 2) AS INTEGER)) FROM playbook_version WHERE id = ? AND version LIKE ? || '+%'",
+            (version, playbook_id, version),
+        ).fetchone()
+        result = row[0]
+        return int(result) if result is not None else 0
+
+
 def get_session_cost(db_path: Path, session_id: str) -> dict[str, Any]:
     with transaction(db_path) as conn:
         rows = conn.execute(

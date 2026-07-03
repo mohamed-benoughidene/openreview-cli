@@ -1,0 +1,167 @@
+id: "dealcheck-nda-v1"
+mode: "dealcheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Bundled NDA playbook for DealCheck mode. Covers NDA clauses
+    commonly encountered in M&A and partnership contexts:
+    confidentiality, exclusivity, representations, liability,
+    and termination.
+  author: "openreview"
+
+categories:
+  # ── Confidentiality Scope ──────────────────────────────────
+  - id: "confidentiality-scope"
+    name: "Confidentiality Scope"
+    description: >
+      Defines what qualifies as confidential information under
+      the agreement, including exclusions and limitations.
+    favorable:
+      description: >
+        Broad definition with standard exclusions (public knowledge,
+        independent development). Oral information included if
+        confirmed in writing.
+      exemplars:
+        - "Confidential Information includes all information disclosed in writing, orally, or visually"
+        - "standard exclusions for information already known or independently developed"
+    neutral:
+      description: >
+        Written-only definition with standard exclusions. Oral
+        disclosures excluded unless reduced to writing within 30 days.
+      exemplars:
+        - "Confidential Information means information disclosed in written form and marked confidential"
+        - "oral disclosures must be confirmed in writing within [NUMBER] days"
+    unfavorable:
+      description: >
+        Overly broad definition with no exclusions, covers all
+        information irrespective of marking, or oral information
+        with unreasonably short confirmation window.
+      exemplars:
+        - "all information exchanged between the parties shall be deemed confidential"
+        - "oral disclosures must be confirmed in writing within [NUMBER] business days"
+    default_position: "neutral"
+
+  # ── Exclusivity ────────────────────────────────────────────
+  - id: "exclusivity"
+    name: "Exclusivity"
+    description: >
+      Restricts the receiving party from entering into similar
+      transactions with competitors during the deal evaluation period.
+    favorable:
+      description: >
+        No exclusivity clause, or limited to a specific short period
+        (30-60 days) with mutual application.
+      exemplars:
+        - "Exclusivity shall apply for a period of [NUMBER] days from the Effective Date"
+        - "mutual exclusivity applies only to the specific transaction contemplated"
+    neutral:
+      description: >
+        Standard 60-90 day exclusivity period, mutual obligations,
+        with customary exceptions for existing relationships.
+      exemplars:
+        - "During the exclusivity period, neither party shall solicit alternative proposals"
+        - "customary exceptions for fiduciary duties and pre-existing relationships"
+    unfavorable:
+      description: >
+        Long exclusivity period (120+ days), one-sided, automatic
+        renewal, or covers broad scope beyond the specific transaction.
+      exemplars:
+        - "Exclusivity shall continue for [NUMBER] months and renew automatically"
+        - "Receiving Party may not enter into any similar transaction during exclusivity"
+    default_position: "neutral"
+
+  # ── Representations and Warranties ─────────────────────────
+  - id: "representations"
+    name: "Representations and Warranties"
+    description: >
+      Representations and warranties regarding authority, enforceability,
+      and accuracy of disclosed information.
+    favorable:
+      description: >
+        Mutual representations covering authority and enforceability
+        only. No warranties as to accuracy of disclosed information.
+      exemplars:
+        - "Each party represents that it has full authority to enter into this Agreement"
+        - "no representation or warranty as to the accuracy or completeness of Confidential Information"
+    neutral:
+      description: >
+        Mutual representations with standard disclaimers. Information
+        provided 'as is' with no warranty of accuracy, but parties
+        agree to notify of material errors.
+      exemplars:
+        - "Confidential Information is provided 'AS IS' without warranty of any kind"
+        - "each party shall promptly notify the other of any material errors in disclosed information"
+    unfavorable:
+      description: >
+        One-sided representations (disclosing party only), warranties
+        of accuracy, or indemnification for inaccurate information.
+      exemplars:
+        - "Disclosing Party warrants the accuracy of all Confidential Information disclosed"
+        - "Disclosing Party shall indemnify Receiving Party for losses arising from inaccurate information"
+    default_position: "neutral"
+
+  # ── Liability and Indemnification ──────────────────────────
+  - id: "liability"
+    name: "Liability and Indemnification"
+    description: >
+      Limits on liability for breach of confidentiality, including
+      exclusions for consequential damages and indemnification
+      obligations.
+    favorable:
+      description: >
+        Mutual limitation of liability, exclusion of consequential
+        damages, with standard exceptions for breach of confidentiality
+        and IP infringement.
+      exemplars:
+        - "Neither party shall be liable for consequential damages arising from this Agreement"
+        - "standard exclusions for breach of confidentiality obligations"
+    neutral:
+      description: >
+        Mutual limitation with liability cap (typically 1x to 3x
+        transaction value), standard exclusions, mutual indemnification
+        for third-party claims.
+      exemplars:
+        - "Each party's aggregate liability shall not exceed [NUMBER] times the transaction value"
+        - "mutual indemnification for third-party claims arising from breach of this Agreement"
+    unfavorable:
+      description: >
+        One-sided limitation, uncapped liability for one party,
+        or broad indemnification covering all losses including
+        lost profits and business interruption.
+      exemplars:
+        - "Receiving Party's liability shall be limited but Disclosing Party's liability is uncapped"
+        - "Receiving Party shall indemnify Disclosing Party against all losses including lost profits"
+    default_position: "neutral"
+
+  # ── Term and Termination ──────────────────────────────────
+  - id: "term"
+    name: "Term and Termination"
+    description: >
+      Defines the agreement's duration, termination rights, and
+      survival of key provisions post-termination.
+    favorable:
+      description: >
+        Fixed evaluation period (6-12 months), mutual termination
+        on 30 days notice, confidentiality obligations survive
+        for a reasonable period (1-3 years).
+      exemplars:
+        - "This Agreement shall terminate [NUMBER] months from the Effective Date"
+        - "Confidentiality obligations shall survive for [NUMBER] years following termination"
+    neutral:
+      description: >
+        Standard 1-year term, termination by either party on written
+        notice, survival of confidentiality and exclusivity provisions
+        for 1-3 years.
+      exemplars:
+        - "The term of this Agreement shall be [NUMBER] year, renewable by mutual written agreement"
+        - "Sections relating to confidentiality shall survive termination for [NUMBER] years"
+    unfavorable:
+      description: >
+        Perpetual or automatic-renewal term, one-sided termination
+        rights, indefinite survival of confidentiality obligations,
+        or non-compete obligations surviving termination.
+      exemplars:
+        - "This Agreement shall automatically renew for successive [NUMBER]-year periods"
+        - "Confidentiality obligations shall survive termination indefinitely"
+        - "non-compete obligations shall survive for [NUMBER] years post-termination"
+    default_position: "neutral"

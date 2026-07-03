@@ -22,7 +22,10 @@ pass-through params (`extra_params` in config.yml), prompt management
 (versioned SQLite-backed storage, model-to-prompt binding, variable substitution,
 YAML export/import, A/B testing and GRPO optimization hooks defined), **and
 single-party contract review (PAKTON 3-agent pipeline: extraction, QA
-verification, report formatting), citation grounding discriminator
+verification, report formatting) with 3-position versioned playbooks:
+Preferred/Acceptable/Walkaway positions + Amber for uncertain matches,
+SHA-256 content-hashed immutable SQLite storage, auto-versioning on content
+change, version-stamped audit trail, citation grounding discriminator
 (post-hoc claim verification with strict/lenient modes, CG metrics, JSONL audit trail),
 and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), and experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status.**
 The package is not yet on PyPI. APIs and the underlying spec are preliminary and
@@ -30,9 +33,9 @@ will change.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
-| Unit + integration tests    | 398                       |
+| Unit + integration tests    | 737                       |
 | CLI commands                | 40                        |
-| SQLite tables               | 9                         |
+| SQLite tables               | 11                        |
 | CI jobs                     | 5 (lint, types, test, memory, benchmark) |
 | Memory budget (processing)  | < 100 MB (NLP model exempt) |
 | Startup (warm)              | < 0.3 s                   |
@@ -228,6 +231,9 @@ uv run openreview --version
 | `src/openreview_cli/chunking/`                      | Chunking engine — RCTS splitting, clause-boundary-aware, streaming |
 | `src/openreview_cli/gateway/`                       | AI Gateway — router, registry, cost, models, redaction, wizard |
 | `src/openreview_cli/grounding/`                    | Citation grounding discriminator — post-hoc claim verification, strict/lenient modes, CG metrics, JSONL audit trail, corruption generators |
+| `src/openreview_cli/review/playbook.py`           | Playbook loader — YAML parsing, version resolution, SHA-256 content hashing, position mapping |
+| `src/openreview_cli/review/playbooks/`            | 3 bundled playbooks (PreCheck NDA, DealCheck NDA, HireCheck employment) |
+| `src/openreview_cli/storage/migrations/006_playbook_versioning.sql` | 2 tables (playbook_versions, review_playbooks) |
 | `src/openreview_cli/prompts/`                       | Prompt management — versioned storage, binding, CLI |
 | `src/openreview_cli/prompts/models.py`              | Pydantic models (Prompt, PromptVersion, PromptBinding) |
 | `src/openreview_cli/prompts/store.py`               | PromptStore — SQLite CRUD, versioning, resolve() |
@@ -301,6 +307,8 @@ openreview precheck review contract.pdf                # Extract + QA pipeline
 openreview precheck review contract.pdf --format json  # JSON report
 openreview precheck review contract.pdf --output report.json  # Save to file
 openreview precheck review --playbook custom.yaml contract.pdf  # Custom playbook
+openreview precheck review --playbook-version 2 contract.pdf    # Pin to playbook version 2
+openreview precheck review --playbook-version latest contract.pdf  # Latest version (default)
 openreview precheck review --extraction-model fast --qa-model accurate contract.pdf  # Separate model slots
 openreview precheck review --no-pii contract.pdf       # Skip PII stripping
 openreview precheck review --grounding-mode strict contract.pdf  # Strict grounding (excludes ungrounded claims)
@@ -379,6 +387,7 @@ openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 | `openreview precheck --no-pii <path>`  | NDA review, skip PII (raw text in output)  |
 | `openreview precheck review <paths...>`| PAKTON 3-agent review (extraction + QA + report) against a playbook |
 | `openreview precheck review --playbook <file> <paths>` | Review with a custom YAML playbook        |
+| `openreview precheck review --playbook-version <v> <paths>` | Review with a specific playbook version (e.g., `2`, `latest`) |
 | `openreview precheck review --format json <paths>`     | JSON-format review report (default: text) |
 | `openreview precheck review --output <file> <paths>`   | Write report to file instead of stdout    |
 | `openreview precheck review --extraction-model <slot> --qa-model <slot> <paths>` | Independent model slots for extraction and QA |

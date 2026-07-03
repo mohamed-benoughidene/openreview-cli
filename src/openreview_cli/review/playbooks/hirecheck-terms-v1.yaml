@@ -1,0 +1,179 @@
+id: "hirecheck-terms-v1"
+mode: "hirecheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Bundled employment terms playbook for HireCheck mode. Covers
+    common employment contract clauses: compensation, IP assignment,
+    non-compete, termination, and confidentiality.
+  author: "openreview"
+
+categories:
+  # ── Compensation and Benefits ─────────────────────────────
+  - id: "compensation"
+    name: "Compensation and Benefits"
+    description: >
+      Defines base salary, bonus structure, equity, and benefits
+      entitlements including vesting schedules and performance
+      metrics.
+    favorable:
+      description: >
+        Competitive base salary, transparent bonus structure with
+        measurable targets, equity with standard vesting (4-year/1-year
+        cliff), comprehensive benefits including health and retirement.
+      exemplars:
+        - "Base salary of [NUMBER] per annum, subject to annual review and adjustment"
+        - "Equity grant vesting over four years with a one-year cliff"
+    neutral:
+      description: >
+        Market-rate salary, standard bonus with discretionary component,
+        equity with standard vesting, industry-standard benefits
+        package.
+      exemplars:
+        - "Bonus of up to [PERCENT]% of base salary based on individual and company performance"
+        - "Eligible to participate in all standard employee benefit plans"
+    unfavorable:
+      description: >
+        Below-market salary, bonus entirely discretionary with no
+        criteria, no equity or restricted stock, minimal or no
+        benefits, or clawback provisions beyond legal requirements.
+      exemplars:
+        - "Bonus, if any, shall be solely at the Company's discretion"
+        - "No equity compensation shall be provided"
+        - "all compensation is subject to clawback for any reason at Company's discretion"
+    default_position: "neutral"
+
+  # ── IP Assignment ─────────────────────────────────────────
+  - id: "ip-assignment"
+    name: "Intellectual Property Assignment"
+    description: >
+      Obligation to assign inventions and intellectual property
+      developed during employment, including scope and exceptions.
+    favorable:
+      description: >
+        Assignment limited to inventions created within the scope
+        of employment using company resources, with clear exceptions
+        for personal projects and pre-existing IP.
+      exemplars:
+        - "Employee assigns inventions developed within the scope of employment using company resources"
+        - "Schedule lists all pre-existing inventions excluded from assignment"
+    neutral:
+      description: >
+        Broad assignment covering all inventions during employment,
+        with standard carve-out for projects developed on personal
+        time and unrelated to company business.
+      exemplars:
+        - "Employee assigns all inventions conceived during employment, whether or not during working hours"
+        - "personal projects developed on personal time using personal resources are excluded"
+    unfavorable:
+      description: >
+        Unlimited assignment covering all inventions conceived
+        before or during employment, no carve-outs, or assignment
+        of moral rights, or post-employment assignment obligations.
+      exemplars:
+        - "Employee assigns all inventions conceived at any time, including prior to employment"
+        - "Employee agrees to assist in patent prosecution after termination without additional compensation"
+    default_position: "neutral"
+
+  # ── Non-Compete ───────────────────────────────────────────
+  - id: "non-compete"
+    name: "Non-Compete"
+    description: >
+      Restriction on the employee's ability to work for competitors
+      after termination, including scope, duration, and geographic
+      limits.
+    favorable:
+      description: >
+        No non-compete clause, or limited to narrow scope (specific
+        competitors), short duration (3-6 months), and only for
+        senior executives with compensation during restricted period.
+      exemplars:
+        - "Non-compete applies only to senior executives and includes full salary continuation"
+        - "restricted period of [NUMBER] months, limited to the Company's primary market"
+    neutral:
+      description: >
+        Standard 6-12 month non-compete, reasonable geographic scope,
+        applies to key employees, with compensation during restricted
+        period (garden leave or equivalent).
+      exemplars:
+        - "Non-compete applies for [NUMBER] months within [NUMBER] miles of Company headquarters"
+        - "garden leave provisions apply during the restricted period"
+    unfavorable:
+      description: >
+        Long non-compete (18+ months), broad scope covering all
+        competitors in any field, nationwide or no geographic limit,
+        no compensation during restricted period, or non-solicit
+        of all clients.
+      exemplars:
+        - "Non-compete applies for [NUMBER] years in any business that competes with the Company"
+        - "No compensation shall be paid during the non-compete period"
+        - "Employee may not solicit any client of the Company for [NUMBER] years"
+    default_position: "neutral"
+
+  # ── Termination ──────────────────────────────────────────
+  - id: "termination"
+    name: "Termination"
+    description: >
+      Grounds for termination, notice periods, severance terms,
+      and obligations upon termination.
+    favorable:
+      description: >
+        Termination only for cause or mutual agreement, minimum
+        60-day notice period, generous severance (6-12 months),
+        and outplacement services.
+      exemplars:
+        - "Employment may be terminated by either party upon [NUMBER] days' written notice"
+        - "Severance package includes [NUMBER] months of base salary and continued benefits"
+    neutral:
+      description: >
+        Standard at-will employment or termination for cause, 30-day
+        notice, severance of 1-3 months based on tenure, standard
+        release requirement.
+      exemplars:
+        - "Severance of [NUMBER] weeks of base salary per year of service"
+        - "Severance contingent on execution of a general release of claims"
+    unfavorable:
+      description: >
+        Termination without notice, no severance, forfeiture of
+        earned compensation, broad for-cause definition including
+        performance dissatisfaction, or non-disparagement obligations
+        with penalties.
+      exemplars:
+        - "Employment may be terminated immediately without notice or severance"
+        - "all unvested equity shall be forfeited upon termination for any reason"
+        - "definition of Cause includes failure to meet performance expectations in Company's sole discretion"
+    default_position: "neutral"
+
+  # ── Confidentiality and Trade Secrets ─────────────────────
+  - id: "confidentiality"
+    name: "Confidentiality and Trade Secrets"
+    description: >
+      Obligations regarding company confidential information and
+      trade secrets during and after employment.
+    favorable:
+      description: >
+        Mutual confidentiality obligations (if applicable), standard
+        exceptions for trade secrets, clear definition of confidential
+        information, and sunset on confidentiality obligations (3-5
+        years post-termination).
+      exemplars:
+        - "Confidentiality obligations shall survive termination for [NUMBER] years"
+        - "Trade secret protections shall continue as long as the information remains a trade secret"
+    neutral:
+      description: >
+        Standard employee confidentiality obligations, perpetual
+        for trade secrets, with customary exceptions for court-ordered
+        disclosure and reporting violations to government agencies.
+      exemplars:
+        - "Employee shall hold all Confidential Information in strict confidence"
+        - "nothing in this Agreement prohibits reporting possible violations to government agencies"
+    unfavorable:
+      description: >
+        Lifetime confidentiality obligations for all information
+        (not just trade secrets), no exceptions for protected activity,
+        or requirement to disclose all inventions conceived within
+        [NUMBER] years post-employment.
+      exemplars:
+        - "Confidentiality obligations shall survive indefinitely"
+        - "Employee must disclose all inventions conceived within [NUMBER] years after termination"
+    default_position: "neutral"

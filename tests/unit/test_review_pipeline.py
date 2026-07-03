@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import pytest
@@ -47,7 +47,7 @@ class TestRunReviewPublicAPI:
             PositionDef,
         )
 
-        def mock_bundled() -> Playbook:
+        def mock_bundled(db_path: Any = None, pin_version: str | None = None) -> Playbook:
             fav = PositionDef(description="a", exemplars=["a"])
             neu = PositionDef(description="b", exemplars=["b"])
             unfav = PositionDef(description="c", exemplars=["c"])

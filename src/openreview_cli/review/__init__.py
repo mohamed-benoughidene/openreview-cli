@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+from openreview_cli.config.paths import get_data_dir
 from openreview_cli.review.base import ReviewCommand
 from openreview_cli.review.colors import AmberReason, AssessmentColor, assign_colors
 from openreview_cli.review.extraction import extract_clause, match_category
@@ -48,7 +49,7 @@ __all__ = [
 ]
 
 
-def run_review(
+def run_review(  # noqa: PLR0912
     paths: Sequence[str],
     playbook_path: str | None = None,
     extraction_model: str = "extraction",
@@ -57,6 +58,7 @@ def run_review(
     verbose: bool = False,
     grounding_mode: str | None = None,
     confidence_threshold: float = 0.7,
+    playbook_version: str | None = None,
 ) -> list[ReviewReport]:
     """Run the PAKTON 3-agent review pipeline on one or more documents.
 
@@ -80,6 +82,8 @@ def run_review(
         Grounding mode: ``"strict"``, ``"lenient"``, or ``None`` to skip.
     confidence_threshold : float
         Threshold for Green/Amber/Red assignment (0.0-1.0). Default 0.7.
+    playbook_version : str | None
+        Pin a specific playbook version. Requires ``playbook_path``.
 
     Returns
     -------
@@ -89,8 +93,16 @@ def run_review(
     if qa_model is None:
         qa_model = extraction_model
 
-    # Load playbook
-    playbook = load_playbook(Path(playbook_path)) if playbook_path else load_bundled()
+    db_path = get_data_dir() / "openreview.db"
+
+    if playbook_path:
+        playbook = load_playbook(
+            Path(playbook_path),
+            db_path=db_path,
+            pin_version=playbook_version,
+        )
+    else:
+        playbook = load_bundled(db_path=db_path, pin_version=playbook_version)
 
     reports: list[ReviewReport] = []
 
@@ -231,11 +243,13 @@ def _build_report(
         avg_effective_confidence=avg_effective_confidence,
     )
 
+    playbook_id = playbook.version_id if playbook.version_id else playbook.id
+
     return ReviewReport(
         document=doc_meta,
         assessments=assessments,
         summary=summary,
-        playbook_id=playbook.id,
+        playbook_id=playbook_id,
         generated_at=datetime.now(UTC),
         confidence_threshold=confidence_threshold,
     )
