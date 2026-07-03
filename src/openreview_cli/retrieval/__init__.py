@@ -24,7 +24,6 @@ __all__ = [
     "IndexCorruptError",
     "IndexMeta",
     "IndexNotFoundError",
-
     "Reranker",
     "RetrievalEngine",
     "RetrievalError",

@@ -29,5 +29,3 @@ class EmbeddingError(RetrievalError):
 
     Message: "Embedding computation failed for chunk '{chunk_id}': {reason}"
     """
-
-

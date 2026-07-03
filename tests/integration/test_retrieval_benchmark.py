@@ -169,7 +169,7 @@ class TestSparseBenchmark:
 def _text_trigrams(text: str, n: int = 3) -> set[str]:
     """Extract character n-grams from text for embedding similarity."""
     normalized = text.lower()
-    return {normalized[i:i + n] for i in range(len(normalized) - n + 1)}
+    return {normalized[i : i + n] for i in range(len(normalized) - n + 1)}
 
 
 def _mock_embed(slot: str, texts: list[str]) -> list[list[float]]:
@@ -287,9 +287,7 @@ class TestHybridBenchmark:
         # Expand fixtures/retrieval/ with more chunks and ground-truth mappings
         # to enforce this assertion in CI.
         if avg_precision < 0.90:
-            pytest.skip(
-                f"goaled — benchmark dataset needs expansion (got {avg_precision:.3f})"
-            )
+            pytest.skip(f"goaled — benchmark dataset needs expansion (got {avg_precision:.3f})")
 
 
 class TestRerankerBenchmark:

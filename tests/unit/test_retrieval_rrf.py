@@ -94,7 +94,7 @@ class TestRrfFuse:
         result = rrf_fuse(sparse, dense)
         scores = [s for _, s in result]
         for i in range(len(scores) - 1):
-            assert scores[i] >= scores[i + 1], f"Score at {i} < score at {i+1}"
+            assert scores[i] >= scores[i + 1], f"Score at {i} < score at {i + 1}"
 
     def test_single_method_only(self) -> None:
         sparse = {"A": 1, "B": 2, "C": 3}

@@ -139,7 +139,9 @@ class TestRetrievalEngine:
 
     def test_retrieve_sparse_top_k_respected(self, populated_db: str) -> None:
         engine = RetrievalEngine(populated_db)
-        query = RetrievalQuery(query_text="confidential OR governing OR indemnification", method="sparse", top_k=2)
+        query = RetrievalQuery(
+            query_text="confidential OR governing OR indemnification", method="sparse", top_k=2
+        )
         results = engine.retrieve(query)
         assert len(results) <= 2
 
@@ -200,7 +202,9 @@ class TestRetrievalEngine:
                 db_size_bytes INTEGER DEFAULT 0
             )
         """)
-        conn.execute("INSERT INTO index_meta (document_id, index_status) VALUES ('corrupt-doc', 'corrupt')")
+        conn.execute(
+            "INSERT INTO index_meta (document_id, index_status) VALUES ('corrupt-doc', 'corrupt')"
+        )
         conn.commit()
         conn.close()
 
@@ -211,7 +215,9 @@ class TestRetrievalEngine:
 
     def test_result_ordering_by_score(self, populated_db: str) -> None:
         engine = RetrievalEngine(populated_db)
-        query = RetrievalQuery(query_text="confidential OR indemnification OR limitation", method="sparse", top_k=5)
+        query = RetrievalQuery(
+            query_text="confidential OR indemnification OR limitation", method="sparse", top_k=5
+        )
         results = engine.retrieve(query)
         if len(results) >= 2:
             for i in range(len(results) - 1):

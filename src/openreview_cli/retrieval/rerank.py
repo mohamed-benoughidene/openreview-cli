@@ -116,7 +116,13 @@ class Reranker:
         # Use BM25 results as baseline (no-reranker)
         meta = storage.get_index_meta()
         if meta is None:
-            return {"with_reranker": 0.0, "without_reranker": 0.0, "degradation_pp": 0.0, "consecutive_degradations": 0, "degraded": False}
+            return {
+                "with_reranker": 0.0,
+                "without_reranker": 0.0,
+                "degradation_pp": 0.0,
+                "consecutive_degradations": 0,
+                "degraded": False,
+            }
 
         doc_id = meta.get("document_id", "unknown")
         query = RetrievalQuery(

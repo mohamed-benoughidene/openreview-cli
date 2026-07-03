@@ -55,7 +55,9 @@ def sample_chunks() -> list[dict[str, Any]]:
 class TestIngestDocument:
     """Tests for the ingest_document function."""
 
-    def test_ingest_sparse_creates_db(self, tmp_path: Path, sample_chunks: list[dict[str, Any]]) -> None:
+    def test_ingest_sparse_creates_db(
+        self, tmp_path: Path, sample_chunks: list[dict[str, Any]]
+    ) -> None:
         db_path = tmp_path / "test_sparse.db"
         meta = ingest_document(sample_chunks, str(db_path), method="sparse")
 
@@ -64,7 +66,9 @@ class TestIngestDocument:
         assert meta["method"] == "sparse"
         assert meta["chunk_count"] == 3
 
-    def test_ingest_chunks_written(self, tmp_path: Path, sample_chunks: list[dict[str, Any]]) -> None:
+    def test_ingest_chunks_written(
+        self, tmp_path: Path, sample_chunks: list[dict[str, Any]]
+    ) -> None:
         db_path = tmp_path / "test_chunks.db"
         ingest_document(sample_chunks, str(db_path), method="sparse")
 
@@ -91,7 +95,9 @@ class TestIngestDocument:
         chunk_ids = {r[0] for r in rows}
         assert "c1" in chunk_ids
 
-    def test_ingest_sparse_no_embeddings(self, tmp_path: Path, sample_chunks: list[dict[str, Any]]) -> None:
+    def test_ingest_sparse_no_embeddings(
+        self, tmp_path: Path, sample_chunks: list[dict[str, Any]]
+    ) -> None:
         db_path = tmp_path / "test_no_emb.db"
         ingest_document(sample_chunks, str(db_path), method="sparse")
 
@@ -101,15 +107,15 @@ class TestIngestDocument:
 
         assert rows[0] == 0
 
-    def test_ingest_hybrid_with_gateway(self, tmp_path: Path, sample_chunks: list[dict[str, Any]]) -> None:
+    def test_ingest_hybrid_with_gateway(
+        self, tmp_path: Path, sample_chunks: list[dict[str, Any]]
+    ) -> None:
         db_path = tmp_path / "test_hybrid.db"
         mock_gateway = MagicMock()
         # Return a simple 4-dim embedding for any text
         mock_gateway.embed.return_value = [[0.1, 0.2, 0.3, 0.4]]
 
-        meta = ingest_document(
-            sample_chunks, str(db_path), gateway=mock_gateway, method="hybrid"
-        )
+        meta = ingest_document(sample_chunks, str(db_path), gateway=mock_gateway, method="hybrid")
 
         assert db_path.exists()
         assert meta["method"] == "hybrid"
@@ -120,7 +126,9 @@ class TestIngestDocument:
         conn.close()
         assert rows[0] == 3  # All chunks got embeddings
 
-    def test_ingest_idempotent_overwrites(self, tmp_path: Path, sample_chunks: list[dict[str, Any]]) -> None:
+    def test_ingest_idempotent_overwrites(
+        self, tmp_path: Path, sample_chunks: list[dict[str, Any]]
+    ) -> None:
         db_path = tmp_path / "test_reingest.db"
 
         # First ingest
@@ -138,7 +146,9 @@ class TestIngestDocument:
         conn.close()
         assert rows[0] == 1
 
-    def test_ingest_progress_callback(self, tmp_path: Path, sample_chunks: list[dict[str, Any]]) -> None:
+    def test_ingest_progress_callback(
+        self, tmp_path: Path, sample_chunks: list[dict[str, Any]]
+    ) -> None:
         db_path = tmp_path / "test_progress.db"
         calls: list[tuple[int, int]] = []
 
@@ -150,13 +160,17 @@ class TestIngestDocument:
         assert len(calls) == 3
         assert calls[-1] == (3, 3)
 
-    def test_ingest_incomplete_marker(self, tmp_path: Path, sample_chunks: list[dict[str, Any]]) -> None:
+    def test_ingest_incomplete_marker(
+        self, tmp_path: Path, sample_chunks: list[dict[str, Any]]
+    ) -> None:
         """After successful ingest, status should be 'indexed', not 'ingesting'."""
         db_path = tmp_path / "test_marker.db"
         meta = ingest_document(sample_chunks, str(db_path), method="sparse")
         assert meta["index_status"] == "indexed"
 
-    def test_ingest_index_meta_populated(self, tmp_path: Path, sample_chunks: list[dict[str, Any]]) -> None:
+    def test_ingest_index_meta_populated(
+        self, tmp_path: Path, sample_chunks: list[dict[str, Any]]
+    ) -> None:
         db_path = tmp_path / "test_meta.db"
         meta = ingest_document(sample_chunks, str(db_path), method="sparse")
         assert "document_id" in meta
@@ -164,15 +178,15 @@ class TestIngestDocument:
         assert "index_timestamp" in meta
         assert meta["document_id"] == "test-doc-123"
 
-    def test_ingest_hybrid_embedding_failure(self, tmp_path: Path, sample_chunks: list[dict[str, Any]]) -> None:
+    def test_ingest_hybrid_embedding_failure(
+        self, tmp_path: Path, sample_chunks: list[dict[str, Any]]
+    ) -> None:
         """If embedding fails, ingest should continue (sparse fallback)."""
         db_path = tmp_path / "test_embed_fail.db"
         mock_gateway = MagicMock()
         mock_gateway.embed.side_effect = RuntimeError("Ollama not available")
 
-        meta = ingest_document(
-            sample_chunks, str(db_path), gateway=mock_gateway, method="hybrid"
-        )
+        meta = ingest_document(sample_chunks, str(db_path), gateway=mock_gateway, method="hybrid")
 
         assert meta["index_status"] == "indexed"
         # If embedding failed for all chunks, method falls back to sparse
@@ -185,7 +199,9 @@ class TestIngestDocument:
 class TestLargeDocWarning:
     """T064: Large document warning at 5,000+ chunks."""
 
-    def test_large_doc_warning_logged(self, tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    def test_large_doc_warning_logged(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Ingesting 5001+ chunks should log a warning."""
         import logging
 
@@ -209,13 +225,17 @@ class TestLargeDocWarning:
         db_path = tmp_path / "big_test.db"
         ingest_document(chunks, str(db_path), method="sparse")
 
-        assert any("Large document" in rec.message and "5001" in rec.message for rec in caplog.records)
+        assert any(
+            "Large document" in rec.message and "5001" in rec.message for rec in caplog.records
+        )
 
 
 class TestEmbeddingDimensionMismatch:
     """T064: Embedding dimension mismatch detection."""
 
-    def test_dimension_mismatch_detected(self, tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    def test_dimension_mismatch_detected(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """If embedding dimension changes mid-stream, log warning and clear."""
         import logging
 
@@ -226,7 +246,7 @@ class TestEmbeddingDimensionMismatch:
         mock_gateway = MagicMock()
         # Return 4-dim for first chunk, then 8-dim for second → mismatch
         return_values = [
-            [[0.1, 0.2, 0.3, 0.4]],        # 4-dim
+            [[0.1, 0.2, 0.3, 0.4]],  # 4-dim
             [[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]],  # 8-dim
         ]
         mock_gateway.embed.side_effect = return_values
@@ -274,7 +294,9 @@ class TestLastIndexedDoc:
         result = get_last_indexed_doc(tmp_path)
         assert result is None
 
-    def test_ingest_creates_last_indexed_file(self, tmp_path: Path, sample_chunks: list[dict[str, Any]]) -> None:
+    def test_ingest_creates_last_indexed_file(
+        self, tmp_path: Path, sample_chunks: list[dict[str, Any]]
+    ) -> None:
         from openreview_cli.retrieval.ingest import get_last_indexed_doc, ingest_document
 
         db_path = tmp_path / "test_last_indexed.db"
@@ -292,7 +314,11 @@ class TestLastIndexedDoc:
         from openreview_cli.retrieval.ingest import get_last_indexed_doc
 
         # Manually create last_indexed.json
-        meta = {"document_path": str(tmp_path / "my_doc.ndax"), "document_hash": "abc123", "last_indexed_at": "2026-07-03T12:00:00Z"}
+        meta = {
+            "document_path": str(tmp_path / "my_doc.ndax"),
+            "document_hash": "abc123",
+            "last_indexed_at": "2026-07-03T12:00:00Z",
+        }
         (tmp_path / "last_indexed.json").write_text(json.dumps(meta))
 
         # Create the referenced file so path exists check passes

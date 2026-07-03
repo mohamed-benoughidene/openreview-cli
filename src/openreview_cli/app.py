@@ -1016,9 +1016,7 @@ def ingest(
         if meta.get("embedding_model"):
             embed_info = f" ({meta['embedding_model']}, {meta.get('embedding_dimension', '?')}d)"
 
-        typer.echo(
-            f"Indexed {chunk_count} chunks in {elapsed:.1f}s"
-        )
+        typer.echo(f"Indexed {chunk_count} chunks in {elapsed:.1f}s")
         typer.echo(f"  Method: {final_method}{embed_info}")
         typer.echo(f"  DB: {db_path}")
     except EmbeddingError as e:
@@ -1029,15 +1027,27 @@ def ingest(
 @app.command()
 def retrieve(
     query: str = typer.Argument(..., help="Natural-language query (wrap in quotes)."),
-    file: str | None = typer.Argument(None, help="Document file (.ndax). Omit to use most recently indexed document."),
-    method: str = typer.Option("hybrid", "--method", help="Retrieval method: sparse, dense, hybrid"),
+    file: str | None = typer.Argument(
+        None, help="Document file (.ndax). Omit to use most recently indexed document."
+    ),
+    method: str = typer.Option(
+        "hybrid", "--method", help="Retrieval method: sparse, dense, hybrid"
+    ),
     top_k: int = typer.Option(5, "--top-k", help="Number of results (1-50)"),
-    rerank: bool = typer.Option(False, "--rerank", help="Enable cross-encoder reranker (experimental, opt-in)."),
-    rerank_depth: int = typer.Option(20, "--rerank-depth", help="Number of hybrid results to rerank."),
-    force_rerank: bool = typer.Option(False, "--force-rerank", help="Override reranker validation warning."),
+    rerank: bool = typer.Option(
+        False, "--rerank", help="Enable cross-encoder reranker (experimental, opt-in)."
+    ),
+    rerank_depth: int = typer.Option(
+        20, "--rerank-depth", help="Number of hybrid results to rerank."
+    ),
+    force_rerank: bool = typer.Option(
+        False, "--force-rerank", help="Override reranker validation warning."
+    ),
     format: str = typer.Option("terminal", "--format", help="Output format: terminal, json"),
     db_dir: str | None = typer.Option(None, "--db-dir", help="Index database directory"),
-    no_header: bool = typer.Option(False, "--no-header", help="Omit header row from terminal output."),
+    no_header: bool = typer.Option(
+        False, "--no-header", help="Omit header row from terminal output."
+    ),
 ) -> None:
     """Retrieve relevant clause chunks from an indexed document."""
     import json as json_lib
@@ -1064,7 +1074,7 @@ def retrieve(
         if last_doc is None:
             typer.echo(
                 "Error: No document specified and no previously indexed document found.\n"
-                "Run `openreview retrieve \"<query>\" <file>` with a document, "
+                'Run `openreview retrieve "<query>" <file>` with a document, '
                 "or `openreview ingest <file>` to index one first.",
                 err=True,
             )
@@ -1161,27 +1171,35 @@ def retrieve(
     if format == "json":
         output = []
         for r in results:
-            output.append({
-                "chunk_id": r.chunk_id,
-                "text": r.text,
-                "clause_heading": r.clause_heading,
-                "clause_level": r.clause_level,
-                "hierarchy_chain": r.hierarchy_chain,
-                "score": round(r.score, 4),
-                "method": r.method,
-                "rank_sparse": r.rank_sparse,
-                "rank_dense": r.rank_dense,
-                "rrf_score": round(r.rrf_score, 6) if r.rrf_score is not None else None,
-                "rerank_score": round(r.rerank_score, 6) if r.rerank_score is not None else None,
-            })
-        typer.echo(json_lib.dumps({"query": query, "method": method, "top_k": top_k, "results": output}, indent=2))
+            output.append(
+                {
+                    "chunk_id": r.chunk_id,
+                    "text": r.text,
+                    "clause_heading": r.clause_heading,
+                    "clause_level": r.clause_level,
+                    "hierarchy_chain": r.hierarchy_chain,
+                    "score": round(r.score, 4),
+                    "method": r.method,
+                    "rank_sparse": r.rank_sparse,
+                    "rank_dense": r.rank_dense,
+                    "rrf_score": round(r.rrf_score, 6) if r.rrf_score is not None else None,
+                    "rerank_score": round(r.rerank_score, 6)
+                    if r.rerank_score is not None
+                    else None,
+                }
+            )
+        typer.echo(
+            json_lib.dumps(
+                {"query": query, "method": method, "top_k": top_k, "results": output}, indent=2
+            )
+        )
     else:
         from rich.console import Console
         from rich.table import Table
 
         console = Console()
         show_header = not no_header
-        table = Table(title=f"Retrieval Results — \"{query}\"", show_header=show_header)
+        table = Table(title=f'Retrieval Results — "{query}"', show_header=show_header)
         table.add_column("Rank", style="cyan", justify="right")
         table.add_column("Clause Heading", style="green")
         table.add_column("Score", style="yellow", justify="right")
@@ -1265,7 +1283,9 @@ def index_status(
 @app.command(name="index-clear")
 def index_clear(
     file: str | None = typer.Argument(None, help="Document file (.ndax)."),
-    all_flag: bool = typer.Option(False, "--all", help="Clear ALL indexes (requires confirmation)."),
+    all_flag: bool = typer.Option(
+        False, "--all", help="Clear ALL indexes (requires confirmation)."
+    ),
     db_dir: str | None = typer.Option(None, "--db-dir", help="Index database directory"),
 ) -> None:
     """Remove indexed data for a document."""

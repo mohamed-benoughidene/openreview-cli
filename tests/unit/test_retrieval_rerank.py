@@ -44,16 +44,34 @@ class TestRerankerRerank:
         reranker = Reranker(mock_gateway, model_id="test-cross-encoder")
         candidates = [
             RetrievalResult(
-                chunk_id="c1", text="text one", clause_heading="H1", clause_level=0,
-                hierarchy_chain=["H1"], parent_chunk_id=None, score=0.3, method="hybrid",
+                chunk_id="c1",
+                text="text one",
+                clause_heading="H1",
+                clause_level=0,
+                hierarchy_chain=["H1"],
+                parent_chunk_id=None,
+                score=0.3,
+                method="hybrid",
             ),
             RetrievalResult(
-                chunk_id="c2", text="text two", clause_heading="H2", clause_level=0,
-                hierarchy_chain=["H2"], parent_chunk_id=None, score=0.6, method="hybrid",
+                chunk_id="c2",
+                text="text two",
+                clause_heading="H2",
+                clause_level=0,
+                hierarchy_chain=["H2"],
+                parent_chunk_id=None,
+                score=0.6,
+                method="hybrid",
             ),
             RetrievalResult(
-                chunk_id="c3", text="text three", clause_heading="H3", clause_level=0,
-                hierarchy_chain=["H3"], parent_chunk_id=None, score=0.1, method="hybrid",
+                chunk_id="c3",
+                text="text three",
+                clause_heading="H3",
+                clause_level=0,
+                hierarchy_chain=["H3"],
+                parent_chunk_id=None,
+                score=0.1,
+                method="hybrid",
             ),
         ]
 
@@ -77,8 +95,14 @@ class TestRerankerRerank:
         reranker = Reranker(None)
         candidates = [
             RetrievalResult(
-                chunk_id="c1", text="text", clause_heading="H1", clause_level=0,
-                hierarchy_chain=["H1"], parent_chunk_id=None, score=0.5, method="hybrid",
+                chunk_id="c1",
+                text="text",
+                clause_heading="H1",
+                clause_level=0,
+                hierarchy_chain=["H1"],
+                parent_chunk_id=None,
+                score=0.5,
+                method="hybrid",
             ),
         ]
         results = reranker.rerank("test query", candidates, top_k=5)
@@ -97,9 +121,14 @@ class TestRerankerRerank:
         reranker = Reranker(mock_gateway, model_id="test-cross-encoder")
         candidates = [
             RetrievalResult(
-                chunk_id=f"c{i}", text=f"text {i}", clause_heading=f"H{i}",
-                clause_level=0, hierarchy_chain=[f"H{i}"], parent_chunk_id=None,
-                score=0.1 * i, method="hybrid",
+                chunk_id=f"c{i}",
+                text=f"text {i}",
+                clause_heading=f"H{i}",
+                clause_level=0,
+                hierarchy_chain=[f"H{i}"],
+                parent_chunk_id=None,
+                score=0.1 * i,
+                method="hybrid",
             )
             for i in range(3)
         ]
@@ -120,15 +149,36 @@ class TestRerankerValidate:
     def test_compute_precision_counts_relevant_headings(self) -> None:
         mock_storage = MagicMock()
         mock_storage.load_chunk.side_effect = [
-            {"chunk_id": "c1", "text": "text", "clause_heading": "Confidentiality",
-             "clause_level": 0, "heading_chain": '["Confidentiality"]',
-             "parent_chunk_id": None, "char_start": 0, "char_end": 10},
-            {"chunk_id": "c2", "text": "text", "clause_heading": "Governing Law",
-             "clause_level": 0, "heading_chain": '["Governing Law"]',
-             "parent_chunk_id": None, "char_start": 10, "char_end": 20},
-            {"chunk_id": "c3", "text": "text", "clause_heading": "Indemnification",
-             "clause_level": 0, "heading_chain": '["Indemnification"]',
-             "parent_chunk_id": None, "char_start": 20, "char_end": 30},
+            {
+                "chunk_id": "c1",
+                "text": "text",
+                "clause_heading": "Confidentiality",
+                "clause_level": 0,
+                "heading_chain": '["Confidentiality"]',
+                "parent_chunk_id": None,
+                "char_start": 0,
+                "char_end": 10,
+            },
+            {
+                "chunk_id": "c2",
+                "text": "text",
+                "clause_heading": "Governing Law",
+                "clause_level": 0,
+                "heading_chain": '["Governing Law"]',
+                "parent_chunk_id": None,
+                "char_start": 10,
+                "char_end": 20,
+            },
+            {
+                "chunk_id": "c3",
+                "text": "text",
+                "clause_heading": "Indemnification",
+                "clause_level": 0,
+                "heading_chain": '["Indemnification"]',
+                "parent_chunk_id": None,
+                "char_start": 20,
+                "char_end": 30,
+            },
         ]
 
         reranker = Reranker(MagicMock(), model_id="test-cross-encoder")
@@ -146,18 +196,36 @@ class TestRerankerValidate:
         mock_storage = MagicMock()
 
         chunk_data = {
-            "c1": {"chunk_id": "c1", "text": "confidential text",
-                   "clause_heading": "Article 3 — Confidentiality", "clause_level": 0,
-                   "heading_chain": '["Article 3"]', "parent_chunk_id": None,
-                   "char_start": 0, "char_end": 100},
-            "c2": {"chunk_id": "c2", "text": "indemnification text",
-                   "clause_heading": "Article 8", "clause_level": 0,
-                   "heading_chain": '["Article 8"]', "parent_chunk_id": None,
-                   "char_start": 200, "char_end": 300},
-            "c3": {"chunk_id": "c3", "text": "liability text",
-                   "clause_heading": "Article 9", "clause_level": 0,
-                   "heading_chain": '["Article 9"]', "parent_chunk_id": None,
-                   "char_start": 400, "char_end": 500},
+            "c1": {
+                "chunk_id": "c1",
+                "text": "confidential text",
+                "clause_heading": "Article 3 — Confidentiality",
+                "clause_level": 0,
+                "heading_chain": '["Article 3"]',
+                "parent_chunk_id": None,
+                "char_start": 0,
+                "char_end": 100,
+            },
+            "c2": {
+                "chunk_id": "c2",
+                "text": "indemnification text",
+                "clause_heading": "Article 8",
+                "clause_level": 0,
+                "heading_chain": '["Article 8"]',
+                "parent_chunk_id": None,
+                "char_start": 200,
+                "char_end": 300,
+            },
+            "c3": {
+                "chunk_id": "c3",
+                "text": "liability text",
+                "clause_heading": "Article 9",
+                "clause_level": 0,
+                "heading_chain": '["Article 9"]',
+                "parent_chunk_id": None,
+                "char_start": 400,
+                "char_end": 500,
+            },
         }
 
         def _load_chunk(cid: str) -> dict[str, Any] | None:
@@ -165,7 +233,9 @@ class TestRerankerValidate:
 
         mock_storage.load_chunk.side_effect = _load_chunk
         mock_storage.search_fts.return_value = [
-            ("c1", -2.0), ("c2", -1.5), ("c3", -1.0),
+            ("c1", -2.0),
+            ("c2", -1.5),
+            ("c3", -1.0),
         ]
         mock_storage.insert_rerank_validation.return_value = 0  # T063: consecutive counter
         mock_storage.get_index_meta.return_value = {
@@ -197,9 +267,7 @@ class TestRerankerValidate:
 class TestConsecutiveDegradation:
     """T063: 3-consecutive-run counter for reranker degradation."""
 
-    def test_consecutive_degradation_counter_via_storage(
-        self, tmp_path: Path
-    ) -> None:
+    def test_consecutive_degradation_counter_via_storage(self, tmp_path: Path) -> None:
         """Insert rerank validation records and verify consecutive counter."""
         from openreview_cli.retrieval.storage import RetrievalStorage
 
@@ -212,13 +280,21 @@ class TestConsecutiveDegradation:
 
         # First run: degradation (with < without => degradation_pp < 0)
         c1 = storage.insert_rerank_validation(
-            model_id, doc_type, precision_with=0.2, precision_without=0.8, degradation_pp=-60.0,
+            model_id,
+            doc_type,
+            precision_with=0.2,
+            precision_without=0.8,
+            degradation_pp=-60.0,
         )
         assert c1 == 1, f"Expected 1, got {c1}"
 
         # Second consecutive degradation
         c2 = storage.insert_rerank_validation(
-            model_id, doc_type, precision_with=0.3, precision_without=0.8, degradation_pp=-50.0,
+            model_id,
+            doc_type,
+            precision_with=0.3,
+            precision_without=0.8,
+            degradation_pp=-50.0,
         )
         assert c2 == 2, f"Expected 2, got {c2}"
 
@@ -227,13 +303,15 @@ class TestConsecutiveDegradation:
 
         # Third consecutive degradation → should be >= 3
         c3 = storage.insert_rerank_validation(
-            model_id, doc_type, precision_with=0.1, precision_without=0.8, degradation_pp=-70.0,
+            model_id,
+            doc_type,
+            precision_with=0.1,
+            precision_without=0.8,
+            degradation_pp=-70.0,
         )
         assert c3 == 3, f"Expected 3, got {c3}"
 
-    def test_degradation_resets_after_improvement(
-        self, tmp_path: Path
-    ) -> None:
+    def test_degradation_resets_after_improvement(self, tmp_path: Path) -> None:
         """Consecutive counter resets to 0 after a non-degraded run."""
         from openreview_cli.retrieval.storage import RetrievalStorage
 
@@ -253,9 +331,7 @@ class TestConsecutiveDegradation:
         c3 = storage.insert_rerank_validation(model_id, doc_type, 0.9, 0.8, 10.0)
         assert c3 == 0, f"Expected 0 (reset), got {c3}"
 
-    def test_validate_returns_degraded_flag_after_three(
-        self, tmp_path: Path
-    ) -> None:
+    def test_validate_returns_degraded_flag_after_three(self, tmp_path: Path) -> None:
         """Reranker.validate() should set degraded=True after 3 consecutive degradations."""
         from unittest.mock import MagicMock
 
@@ -294,7 +370,8 @@ class TestConsecutiveDegradation:
         ]
         mock_storage = MagicMock(wraps=storage)
         mock_storage.search_fts.return_value = [
-            ("c1", -2.0), ("c2", -1.5),
+            ("c1", -2.0),
+            ("c2", -1.5),
         ]
         mock_storage.load_chunk.side_effect = storage.load_chunk
 

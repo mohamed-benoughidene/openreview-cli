@@ -276,7 +276,14 @@ class RetrievalStorage:
             """INSERT INTO rerank_validation_log
                (model_id, document_type, precision_with, precision_without, degradation_pp, consecutive)
                VALUES (?, ?, ?, ?, ?, ?)""",
-            (model_id, document_type, precision_with, precision_without, degradation_pp, consecutive),
+            (
+                model_id,
+                document_type,
+                precision_with,
+                precision_without,
+                degradation_pp,
+                consecutive,
+            ),
         )
 
         self.conn.commit()

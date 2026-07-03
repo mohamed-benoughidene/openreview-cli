@@ -163,7 +163,9 @@ class TestIndexMeta:
             chunk_count=12,
             method="hybrid",
         )
-        assert meta.document_id == "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+        assert (
+            meta.document_id == "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+        )
         assert meta.chunk_count == 12
         assert meta.method == "hybrid"
         assert meta.embedding_model is None

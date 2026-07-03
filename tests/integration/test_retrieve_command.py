@@ -75,7 +75,9 @@ def indexed_db(tmp_path: Path) -> Path:
 class TestRetrieveCommand:
     """Integration tests for `openreview retrieve`."""
 
-    def test_retrieve_returns_results(self, runner: CliRunner, indexed_db: Path, tmp_path: Path) -> None:
+    def test_retrieve_returns_results(
+        self, runner: CliRunner, indexed_db: Path, tmp_path: Path
+    ) -> None:
         result = runner.invoke(
             app,
             [
@@ -137,7 +139,9 @@ class TestRetrieveCommand:
         assert "results" in data
         assert len(data["results"]) <= 3
 
-    def test_retrieve_expected_chunk_in_results(self, runner: CliRunner, indexed_db: Path, ground_truth: dict[str, Any]) -> None:
+    def test_retrieve_expected_chunk_in_results(
+        self, runner: CliRunner, indexed_db: Path, ground_truth: dict[str, Any]
+    ) -> None:
         """Verify expected chunk appears in results per ground truth."""
         # Use the sparse query (index 2) to avoid triggering LiteLLM
         query_info = ground_truth["queries"][2]  # "governing law" — sparse
@@ -162,9 +166,7 @@ class TestRetrieveCommand:
         data = _extract_json_from_output(result.output)
         result_ids = {r["chunk_id"] for r in data["results"]}
         expected = set(query_info["expected_chunk_ids"])
-        assert result_ids & expected, (
-            f"Expected one of {expected} in results, got {result_ids}"
-        )
+        assert result_ids & expected, f"Expected one of {expected} in results, got {result_ids}"
 
     def test_retrieve_no_results_message(self, runner: CliRunner, indexed_db: Path) -> None:
         """Query with gibberish should return no-results message."""
@@ -219,10 +221,14 @@ class TestRetrieveCommand:
                 "retrieve",
                 "confidentiality",
                 str(FIXTURE_PATH),
-                "--method", "sparse",
-                "--top-k", "3",
-                "--format", "json",
-                "--db-dir", str(indexed_db.parent),
+                "--method",
+                "sparse",
+                "--top-k",
+                "3",
+                "--format",
+                "json",
+                "--db-dir",
+                str(indexed_db.parent),
             ],
         )
         assert result.exit_code == 0, f"exit {result.exit_code}"
@@ -238,7 +244,9 @@ class TestRetrieveCommand:
             assert "score" in r
             assert "clause_heading" in r
 
-    def test_retrieve_method_dense_fallback_graceful(self, runner: CliRunner, indexed_db: Path) -> None:
+    def test_retrieve_method_dense_fallback_graceful(
+        self, runner: CliRunner, indexed_db: Path
+    ) -> None:
         """--method dense without gateway falls back gracefully (terminal output)."""
         result = runner.invoke(
             app,
@@ -246,9 +254,12 @@ class TestRetrieveCommand:
                 "retrieve",
                 "confidentiality",
                 str(FIXTURE_PATH),
-                "--method", "dense",
-                "--top-k", "3",
-                "--db-dir", str(indexed_db.parent),
+                "--method",
+                "dense",
+                "--top-k",
+                "3",
+                "--db-dir",
+                str(indexed_db.parent),
             ],
         )
         # Dense without gateway falls back to sparse — still exit 0
@@ -264,8 +275,10 @@ class TestRetrieveCommand:
                 "retrieve",
                 "confidentiality",
                 str(FIXTURE_PATH),
-                "--top-k", "3",
-                "--db-dir", str(indexed_db.parent),
+                "--top-k",
+                "3",
+                "--db-dir",
+                str(indexed_db.parent),
             ],
         )
         assert result.exit_code == 0, f"exit {result.exit_code}: {result.stderr[-200:]}"
@@ -278,8 +291,10 @@ class TestRetrieveCommand:
                 "retrieve",
                 "confidentiality",
                 str(FIXTURE_PATH),
-                "--method", "invalid",
-                "--db-dir", str(indexed_db.parent),
+                "--method",
+                "invalid",
+                "--db-dir",
+                str(indexed_db.parent),
             ],
         )
         # The Typer option validates choices, expect non-zero exit
@@ -295,10 +310,14 @@ class TestRetrieveCommand:
                 "retrieve",
                 "confidentiality",
                 str(FIXTURE_PATH),
-                "--method", "sparse",
-                "--top-k", "5",
-                "--format", "json",
-                "--db-dir", str(indexed_db.parent),
+                "--method",
+                "sparse",
+                "--top-k",
+                "5",
+                "--format",
+                "json",
+                "--db-dir",
+                str(indexed_db.parent),
             ],
         )
         assert result.exit_code == 0, f"Exit {result.exit_code}"
@@ -344,6 +363,7 @@ class TestRetrieveCommand:
         # Create fixture file
         fixture_path = tmp_path / "hierarchy_test.ndax"
         import json as json_lib
+
         with open(fixture_path, "w") as f:
             json_lib.dump(chunks, f)
 
@@ -353,6 +373,7 @@ class TestRetrieveCommand:
         db_path = db_dir / f"{DOC_ID[:32]}.db"
 
         from openreview_cli.retrieval.ingest import ingest_from_file
+
         ingest_from_file(fixture_path, db_path, gateway=None, method="sparse")
 
         # Retrieve query that matches sec-1
@@ -362,10 +383,14 @@ class TestRetrieveCommand:
                 "retrieve",
                 "Confidential Information",
                 str(fixture_path),
-                "--method", "sparse",
-                "--top-k", "5",
-                "--format", "json",
-                "--db-dir", str(db_dir),
+                "--method",
+                "sparse",
+                "--top-k",
+                "5",
+                "--format",
+                "json",
+                "--db-dir",
+                str(db_dir),
             ],
         )
         assert result.exit_code == 0, f"Exit {result.exit_code}: {result.output[:200]}"

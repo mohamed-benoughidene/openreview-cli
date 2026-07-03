@@ -134,7 +134,9 @@ class TestIngestCommand:
         assert "Chunks:" in result.output
         assert "Method:" in result.output
 
-    def test_ingest_second_call_shows_already_indexed(self, runner: CliRunner, tmp_path: Path) -> None:
+    def test_ingest_second_call_shows_already_indexed(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
         """Second ingest of same file shows 'already indexed'."""
         runner.invoke(
             app,

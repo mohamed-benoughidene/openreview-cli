@@ -99,11 +99,13 @@ def _save_last_indexed(db_dir: str | Path, doc_path: str, doc_hash: str) -> None
     path = Path(db_dir) / _LAST_INDEXED_FILE
     try:
         path.write_text(
-            json.dumps({
-                "document_path": doc_path,
-                "document_hash": doc_hash,
-                "last_indexed_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            })
+            json.dumps(
+                {
+                    "document_path": doc_path,
+                    "document_hash": doc_hash,
+                    "last_indexed_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                }
+            )
         )
     except OSError:
         logger.debug("Could not write last_indexed.json", exc_info=True)

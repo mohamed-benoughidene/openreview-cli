@@ -10,8 +10,6 @@ if TYPE_CHECKING:
     from openreview_cli.gateway.router import Gateway
 
 
-
-
 def compute_embedding(
     text: str,
     gateway: Gateway,
