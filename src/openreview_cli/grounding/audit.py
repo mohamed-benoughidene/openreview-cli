@@ -37,5 +37,3 @@ class GroundingAuditLog:
         with open(self._path, "a", encoding="utf-8") as f:
             f.write(line + "\n")
             f.flush()
-
-

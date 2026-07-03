@@ -14,6 +14,7 @@ from openreview_cli.grounding.models import (
     GroundingResult,
     GroundingVerdict,
 )
+from openreview_cli.parsing.models import Clause
 
 
 def _make_verdict(
@@ -47,7 +48,7 @@ def source_doc() -> MagicMock:
 
 
 @pytest.fixture
-def source_clauses() -> list:
+def source_clauses() -> list[Clause]:
     """Three real Clause objects with multi-paragraph text for CL tests."""
     from openreview_cli.parsing.models import Clause
 
@@ -110,7 +111,9 @@ class TestCGMetrics:
         metrics = compute_cg_metrics(verdicts, source_doc)
         assert metrics.citation_precision == 0.5
 
-    def test_cp_with_clause_text_aware(self, source_doc: MagicMock, source_clauses: list) -> None:
+    def test_cp_with_clause_text_aware(
+        self, source_doc: MagicMock, source_clauses: list[Clause]
+    ) -> None:
         """CP < 1.0 when cited clause_id does NOT exist in source clauses."""
         verdicts = [
             _make_verdict(0, GroundingVerdict.GROUNDED, clause_id="1.0"),
@@ -119,7 +122,9 @@ class TestCGMetrics:
         metrics = compute_cg_metrics(verdicts, source_doc, source_clauses=source_clauses)
         assert metrics.citation_precision == 0.5
 
-    def test_cp_all_exist_in_source(self, source_doc: MagicMock, source_clauses: list) -> None:
+    def test_cp_all_exist_in_source(
+        self, source_doc: MagicMock, source_clauses: list[Clause]
+    ) -> None:
         """CP = 1.0 when all cited clause_ids exist in source."""
         verdicts = [
             _make_verdict(0, GroundingVerdict.GROUNDED, clause_id="1.0"),
@@ -161,7 +166,9 @@ class TestCGMetrics:
         metrics = compute_cg_metrics([], source_doc)
         assert metrics.citation_relevance == 1.0
 
-    def test_cr_with_clause_text_match(self, source_doc: MagicMock, source_clauses: list) -> None:
+    def test_cr_with_clause_text_match(
+        self, source_doc: MagicMock, source_clauses: list[Clause]
+    ) -> None:
         """CR = 1.0 when claim text appears in cited clause text."""
         claim_texts = {
             0: "Receiving party shall protect Confidential Information",
@@ -171,12 +178,16 @@ class TestCGMetrics:
             GroundingResult(
                 claim_index=0,
                 verdict=GroundingVerdict.GROUNDED,
-                provenances=[CitationProvenance(clause_id="2.0", paragraph_index=0, confidence=0.9)],
+                provenances=[
+                    CitationProvenance(clause_id="2.0", paragraph_index=0, confidence=0.9)
+                ],
             ),
             GroundingResult(
                 claim_index=1,
                 verdict=GroundingVerdict.GROUNDED,
-                provenances=[CitationProvenance(clause_id="3.0", paragraph_index=0, confidence=0.9)],
+                provenances=[
+                    CitationProvenance(clause_id="3.0", paragraph_index=0, confidence=0.9)
+                ],
             ),
         ]
         metrics = compute_cg_metrics(
@@ -184,14 +195,16 @@ class TestCGMetrics:
         )
         assert metrics.citation_relevance == 1.0
 
-    def test_cr_with_no_match(self, source_doc: MagicMock, source_clauses: list) -> None:
+    def test_cr_with_no_match(self, source_doc: MagicMock, source_clauses: list[Clause]) -> None:
         """CR = 0.0 when claim text is absent from cited clause text."""
         claim_texts = {0: "Completely unrelated made-up statement"}
         verdicts = [
             GroundingResult(
                 claim_index=0,
                 verdict=GroundingVerdict.GROUNDED,
-                provenances=[CitationProvenance(clause_id="1.0", paragraph_index=0, confidence=0.9)],
+                provenances=[
+                    CitationProvenance(clause_id="1.0", paragraph_index=0, confidence=0.9)
+                ],
             ),
         ]
         metrics = compute_cg_metrics(
@@ -199,14 +212,16 @@ class TestCGMetrics:
         )
         assert metrics.citation_relevance == 0.0
 
-    def test_cr_empty_claim_text(self, source_doc: MagicMock, source_clauses: list) -> None:
+    def test_cr_empty_claim_text(self, source_doc: MagicMock, source_clauses: list[Clause]) -> None:
         """CR skips empty claim text (not counted relevant)."""
         claim_texts = {0: ""}
         verdicts = [
             GroundingResult(
                 claim_index=0,
                 verdict=GroundingVerdict.GROUNDED,
-                provenances=[CitationProvenance(clause_id="1.0", paragraph_index=0, confidence=0.9)],
+                provenances=[
+                    CitationProvenance(clause_id="1.0", paragraph_index=0, confidence=0.9)
+                ],
             ),
         ]
         metrics = compute_cg_metrics(
@@ -243,7 +258,9 @@ class TestCGMetrics:
         metrics = compute_cg_metrics([], source_doc)
         assert metrics.citation_locality == 1.0
 
-    def test_cl_with_source_out_of_range(self, source_doc: MagicMock, source_clauses: list) -> None:
+    def test_cl_with_source_out_of_range(
+        self, source_doc: MagicMock, source_clauses: list[Clause]
+    ) -> None:
         """CL < 1.0 when paragraph_index exceeds clause paragraph count."""
         # Clause "2.0" has 3 paragraphs (split by \n\n)
         verdicts = [
@@ -259,7 +276,9 @@ class TestCGMetrics:
         metrics = compute_cg_metrics(verdicts, source_doc, source_clauses=source_clauses)
         assert metrics.citation_locality == 0.5
 
-    def test_cl_with_source_in_range(self, source_doc: MagicMock, source_clauses: list) -> None:
+    def test_cl_with_source_in_range(
+        self, source_doc: MagicMock, source_clauses: list[Clause]
+    ) -> None:
         """CL = 1.0 when all paragraph indices are within clause paragraph count."""
         # Clause "2.0" has 3 paragraphs; indices 0, 1, 2 are valid
         verdicts = [
@@ -288,7 +307,9 @@ class TestCGMetrics:
         assert metrics.citation_relevance == 1.0
         assert metrics.citation_locality == 0.75
 
-    def test_all_metrics_with_clause_text(self, source_doc: MagicMock, source_clauses: list) -> None:
+    def test_all_metrics_with_clause_text(
+        self, source_doc: MagicMock, source_clauses: list[Clause]
+    ) -> None:
         """CP/CR/CL with full clause-text awareness."""
         claim_texts = {
             0: "Confidential Information means all",
@@ -300,22 +321,30 @@ class TestCGMetrics:
             GroundingResult(
                 claim_index=0,
                 verdict=GroundingVerdict.GROUNDED,
-                provenances=[CitationProvenance(clause_id="1.0", paragraph_index=0, confidence=0.9)],
+                provenances=[
+                    CitationProvenance(clause_id="1.0", paragraph_index=0, confidence=0.9)
+                ],
             ),
             GroundingResult(
                 claim_index=1,
                 verdict=GroundingVerdict.GROUNDED,
-                provenances=[CitationProvenance(clause_id="2.0", paragraph_index=0, confidence=0.9)],
+                provenances=[
+                    CitationProvenance(clause_id="2.0", paragraph_index=0, confidence=0.9)
+                ],
             ),
             GroundingResult(
                 claim_index=2,
                 verdict=GroundingVerdict.GROUNDED,
-                provenances=[CitationProvenance(clause_id="3.0", paragraph_index=0, confidence=0.9)],
+                provenances=[
+                    CitationProvenance(clause_id="3.0", paragraph_index=0, confidence=0.9)
+                ],
             ),
             GroundingResult(
                 claim_index=3,
                 verdict=GroundingVerdict.GROUNDED,
-                provenances=[CitationProvenance(clause_id="1.0", paragraph_index=0, confidence=0.5)],
+                provenances=[
+                    CitationProvenance(clause_id="1.0", paragraph_index=0, confidence=0.5)
+                ],
             ),
         ]
         metrics = compute_cg_metrics(

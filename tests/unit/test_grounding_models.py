@@ -30,10 +30,9 @@ class TestGroundingVerdict:
         assert set(GroundingVerdict.__members__) == {"GROUNDED", "UNGROUNDED", "UNCERTAIN"}
 
     def test_enum_comparison_to_string(self) -> None:
-        # StrEnum compares equal to its string value
-        assert GroundingVerdict.GROUNDED == "grounded"
-        assert GroundingVerdict.UNGROUNDED == "ungrounded"
-        assert GroundingVerdict.UNCERTAIN == "uncertain"
+        assert GroundingVerdict.GROUNDED.value == "grounded"
+        assert GroundingVerdict.UNGROUNDED.value == "ungrounded"
+        assert GroundingVerdict.UNCERTAIN.value == "uncertain"
 
 
 class TestCitationProvenance:

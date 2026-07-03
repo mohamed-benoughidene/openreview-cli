@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from openreview_cli.grounding.discriminator import CitationGroundingDiscriminator
 from openreview_cli.grounding.models import (
     CGReport,
     GroundingVerdict,
@@ -23,10 +24,8 @@ def mock_gateway() -> MagicMock:
 
 
 @pytest.fixture
-def discriminator(mock_gateway: MagicMock) -> MagicMock:
+def discriminator(mock_gateway: MagicMock) -> CitationGroundingDiscriminator:
     """Create a discriminator with mocked gateway (strict mode by default)."""
-    from openreview_cli.grounding.discriminator import CitationGroundingDiscriminator
-
     return CitationGroundingDiscriminator(
         mode="strict",
         gateway=mock_gateway,
@@ -34,9 +33,7 @@ def discriminator(mock_gateway: MagicMock) -> MagicMock:
 
 
 @pytest.fixture
-def lenient_discriminator(mock_gateway: MagicMock) -> MagicMock:
-    from openreview_cli.grounding.discriminator import CitationGroundingDiscriminator
-
+def lenient_discriminator(mock_gateway: MagicMock) -> CitationGroundingDiscriminator:
     return CitationGroundingDiscriminator(
         mode="lenient",
         gateway=mock_gateway,
@@ -583,7 +580,11 @@ class TestCitationGroundingDiscriminator:
         messages = call_args[0][1] if len(call_args[0]) > 1 else call_args[0][0]
         # messages is a list of dicts; find the user message content
         user_content = next(
-            (m["content"] for m in (messages if isinstance(messages, list) else [messages]) if m.get("role") == "user"),
+            (
+                m["content"]
+                for m in (messages if isinstance(messages, list) else [messages])
+                if m.get("role") == "user"
+            ),
             "",
         )
         assert clause_text in user_content, "Clause text should appear in grounding prompt"

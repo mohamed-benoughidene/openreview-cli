@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -17,7 +18,7 @@ from openreview_cli.grounding.models import (
 
 
 @pytest.fixture
-def temp_dir() -> Path:
+def temp_dir() -> Generator[Path, None, None]:
     with tempfile.TemporaryDirectory() as d:
         yield Path(d)
 

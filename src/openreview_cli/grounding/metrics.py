@@ -26,9 +26,7 @@ def _compute_cp(
 ) -> int:
     """CP: count grounded claims whose clause_id exists in source (or is non-empty as fallback)."""
     if clause_exists:
-        return sum(
-            1 for v in grounded if any(p.clause_id in clause_exists for p in v.provenances)
-        )
+        return sum(1 for v in grounded if any(p.clause_id in clause_exists for p in v.provenances))
     return sum(1 for v in grounded if any(p.clause_id.strip() for p in v.provenances))
 
 
