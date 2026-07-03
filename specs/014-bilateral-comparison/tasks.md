@@ -204,12 +204,12 @@
 ### Tests for CLI
 
 - [X] T049 Write integration test for `compare` subcommand: `precheck --help` shows compare command in `tests/integration/test_bilateral_compare.py`
-- [ ] T050 Write integration test for `--align-only` mode: alignment table produced, no inference calls made, completes <5s in `tests/integration/test_bilateral_align_only.py`  *(deferred: blocked by precheck callback positional arg conflict with Typer CLI tests)*
-- [ ] T051 Write integration test for `--format json --output comparison.json`: valid JSON written to file in `tests/integration/test_bilateral_flags.py` *(deferred: blocked by Typer CLI test limitation)*
-- [ ] T052 Write integration test for `--confidence-threshold 0.8`: different Amber rate produced than default 0.7 in `tests/integration/test_bilateral_flags.py` *(deferred: blocked by Typer CLI test limitation)*
-- [ ] T053 Write integration test for `--conservative` flag: implied high threshold + verbose output in `tests/integration/test_bilateral_flags.py` *(deferred: blocked by Typer CLI test limitation)*
+- [ ] T050 Write integration test for `--align-only` mode: alignment table produced, no inference calls made, completes <5s in `tests/integration/test_bilateral_flags.py`
+- [ ] T051 Write integration test for `--format json --output comparison.json`: valid JSON written to file in `tests/integration/test_bilateral_flags.py`
+- [ ] T052 Write integration test for `--confidence-threshold 0.8`: different Amber rate produced than default 0.7 in `tests/integration/test_bilateral_flags.py`
+- [ ] T053 Write integration test for `--conservative` flag: implied high threshold + verbose output in `tests/integration/test_bilateral_flags.py`
 - [X] T054 Write integration test for mutually exclusive flags: `--conservative` + `--confidence-threshold` → error exit code 3 in `tests/integration/test_bilateral_flags.py`
-- [ ] T055 Write integration test for `--verbose`: RCBSF taxonomy, rationale, alignment_quality displayed in terminal in `tests/integration/test_bilateral_flags.py` *(deferred: blocked by Typer CLI test limitation)*
+- [ ] T055 Write integration test for `--verbose`: RCBSF taxonomy, rationale, alignment_quality displayed in terminal in `tests/integration/test_bilateral_flags.py`
 - [ ] ~~T056 Write integration test for `--share-data` flag: opt-in data collection flow (prompt, anonymization) in `tests/integration/test_bilateral_flags.py`~~ **DEFERRED** — `--share-data` deferred to future spec pending constitutional amendment
 
 ### Implementation for CLI
@@ -230,7 +230,7 @@
 - [ ] T060 Write integration test for both documents failing (first failure printed, exit 1) in `tests/integration/test_bilateral_errors.py`
 - [ ] T061 Write integration test for empty documents (--align-only on empty → alignment table with 0 pairs, 0 alignment_rate) in `tests/integration/test_bilateral_errors.py`
 
-**Checkpoint US3**: ✅ Compare subcommand added to precheck CLI. All flags work with validation. Mutually exclusive enforcement. Experimental disclaimer printed to stderr. (Tasks T049, T054, T057 complete; T050–T053, T055 deferred: blocked by precheck callback's positional `document_path` arg which prevents Typer CLI tests from passing positional args to subcommands — a known Typer architectural limitation.)
+**Checkpoint US3**: ✅ Compare subcommand added to precheck CLI. All flags work with validation. Mutually exclusive enforcement. Experimental disclaimer printed to stderr. (Tasks T049, T054, T057 complete. T050–T053, T055 unblocked by spec 015 subprocess-based tests.)
 
 ---
 

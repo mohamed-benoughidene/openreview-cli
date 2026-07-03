@@ -60,22 +60,22 @@ class TestConfigChange:
         pdf = str(PDF / "simple_contract.pdf")
 
         # ── Step 1: first run, default config hash A ──────────────────────
-        r1 = run_precheck(pdf)
+        r1 = run_precheck("--document", pdf)
         assert r1.returncode == 0, f"step 1 failed: {r1.stderr}"
         assert "Review memo generated" in r1.stdout
 
         # ── Step 2: change threshold via env override → hash B → re-process ─
-        r2 = run_precheck(pdf, OPENREVIEW_PRIVACY__PII_THRESHOLD="0.8")
+        r2 = run_precheck("--document", pdf, OPENREVIEW_PRIVACY__PII_THRESHOLD="0.8")
         assert r2.returncode == 0, f"step 2 failed: {r2.stderr}"
         assert "Review memo generated" in r2.stdout
 
         # ── Step 3: same threshold → hash B → cache hit ───────────────────
-        r3 = run_precheck(pdf, OPENREVIEW_PRIVACY__PII_THRESHOLD="0.8")
+        r3 = run_precheck("--document", pdf, OPENREVIEW_PRIVACY__PII_THRESHOLD="0.8")
         assert r3.returncode == 0, f"step 3 failed: {r3.stderr}"
         assert "Review memo generated" in r3.stdout
 
         # ── Step 4: back to default → hash A → cache hit (from step 1) ───
-        r4 = run_precheck(pdf)
+        r4 = run_precheck("--document", pdf)
         assert r4.returncode == 0, f"step 4 failed: {r4.stderr}"
         assert "Review memo generated" in r4.stdout
 
@@ -84,8 +84,8 @@ class TestConfigChange:
         """Running precheck twice without any config change succeeds both times."""
         pdf = str(PDF / "simple_contract.pdf")
 
-        r1 = run_precheck(pdf)
+        r1 = run_precheck("--document", pdf)
         assert r1.returncode == 0
 
-        r2 = run_precheck(pdf)
+        r2 = run_precheck("--document", pdf)
         assert r2.returncode == 0

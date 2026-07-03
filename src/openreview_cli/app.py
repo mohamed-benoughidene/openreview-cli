@@ -37,8 +37,8 @@ def _version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
-def _validate_threshold(value: float) -> float:
-    if not 0.0 <= value <= 1.0:
+def _validate_threshold(value: float | None) -> float | None:
+    if value is not None and not 0.0 <= value <= 1.0:
         raise typer.BadParameter(f"confidence-threshold must be between 0.0 and 1.0, got {value}")
     return value
 
@@ -366,7 +366,9 @@ precheck_app = typer.Typer(
 @precheck_app.callback(invoke_without_command=True)
 def precheck(
     ctx: typer.Context,
-    document_path: str = typer.Argument(None, help="Path to a PDF or DOCX contract file."),
+    document_path: str | None = typer.Option(
+        None, "--document", "-d", help="Path to a PDF or DOCX contract file."
+    ),
     no_pii: bool = typer.Option(
         False, "--no-pii", help="Disable PII stripping. Processes raw text."
     ),
