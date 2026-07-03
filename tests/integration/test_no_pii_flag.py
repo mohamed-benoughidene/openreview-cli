@@ -26,17 +26,17 @@ def run_precheck(*args: str) -> subprocess.CompletedProcess[str]:
 class TestPrecheckNoPii:
     @pytest.mark.integration
     def test_no_pii_exit_code(self) -> None:
-        result = run_precheck("--no-pii", str(PDF / "simple_contract.pdf"))
+        result = run_precheck("--no-pii", "--document", str(PDF / "simple_contract.pdf"))
         assert result.returncode == 0
 
     @pytest.mark.integration
     def test_no_pii_warning(self) -> None:
-        result = run_precheck("--no-pii", str(PDF / "simple_contract.pdf"))
+        result = run_precheck("--no-pii", "--document", str(PDF / "simple_contract.pdf"))
         assert "PII stripping disabled" in result.stderr
 
     @pytest.mark.integration
     def test_no_pii_no_encrypted_mapping(self) -> None:
-        result = run_precheck("--no-pii", str(PDF / "simple_contract.pdf"))
+        result = run_precheck("--no-pii", "--document", str(PDF / "simple_contract.pdf"))
         m = re.search(r"Review memo generated:\s+(\S+)", result.stdout)
         assert m, "Could not find review directory in output"
         review_dir = Path(m.group(1)).parent

@@ -21,18 +21,18 @@ def run_precheck(*args: str) -> subprocess.CompletedProcess[str]:
 class TestPrecheckPii:
     @pytest.mark.integration
     def test_precheck_basic(self) -> None:
-        result = run_precheck(str(PDF / "simple_contract.pdf"))
+        result = run_precheck("--document", str(PDF / "simple_contract.pdf"))
         assert result.returncode == 0
         assert "Review memo generated" in result.stdout
 
     @pytest.mark.integration
     def test_precheck_no_pii_flag(self) -> None:
-        result = run_precheck("--no-pii", str(PDF / "simple_contract.pdf"))
+        result = run_precheck("--no-pii", "--document", str(PDF / "simple_contract.pdf"))
         assert result.returncode == 0
         assert "Review memo generated" in result.stdout
 
     @pytest.mark.integration
     def test_precheck_file_not_found(self) -> None:
-        result = run_precheck(str(FIXTURES / "nonexistent.pdf"))
+        result = run_precheck("--document", str(FIXTURES / "nonexistent.pdf"))
         assert result.returncode == 1
         assert "Error" in result.stderr or "Error" in result.stdout
