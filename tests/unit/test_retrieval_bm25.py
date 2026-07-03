@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from openreview_cli.retrieval.bm25 import normalize_bm25_scores, preprocess_query
 
 

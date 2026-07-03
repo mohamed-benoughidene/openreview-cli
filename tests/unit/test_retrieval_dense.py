@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import math
 
-import pytest
-
 from openreview_cli.retrieval.dense import (
     compute_l2_norm,
     cosine_similarity,
@@ -22,7 +20,7 @@ class TestEmbeddingSerialization:
         blob = serialize_embedding(original)
         restored = deserialize_embedding(blob, len(original))
         assert len(restored) == len(original)
-        for a, b in zip(original, restored):
+        for a, b in zip(original, restored, strict=True):
             assert abs(a - b) < 1e-6
 
     def test_roundtrip_empty_vector(self) -> None:
@@ -41,7 +39,7 @@ class TestEmbeddingSerialization:
         original = [-0.5, 0.0, 0.5, -1.0, 1.0]
         blob = serialize_embedding(original)
         restored = deserialize_embedding(blob, len(original))
-        for a, b in zip(original, restored):
+        for a, b in zip(original, restored, strict=True):
             assert abs(a - b) < 1e-6
 
     def test_blob_size(self) -> None:

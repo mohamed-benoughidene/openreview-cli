@@ -2,6 +2,7 @@ import json
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -183,7 +184,7 @@ class TestFtsSync:
         assert len(results) > 0
         # All results should contain "indemnification"
         for chunk_id, _score in results:
-            match = next(c["text"] for c in chunks if c["chunk_id"] == chunk_id)
+            match = cast("str", next(c["text"] for c in chunks if c["chunk_id"] == chunk_id))
             assert "indemnification" in match
 
 

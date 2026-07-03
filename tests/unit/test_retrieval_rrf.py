@@ -64,27 +64,27 @@ class TestRrfFuse:
         assert result == []
 
     def test_default_k_parameter(self) -> None:
-        sparse = {"A": 1}
-        dense = {}
+        sparse: dict[str, int] = {"A": 1}
+        dense: dict[str, int] = {}
         result = rrf_fuse(sparse, dense)
         # With k=60 (default): score = 1/(60+1)
         assert abs(dict(result)["A"] - 1 / 61) < 1e-10
 
     def test_custom_k_parameter(self) -> None:
-        sparse = {"A": 1}
-        dense = {}
+        sparse: dict[str, int] = {"A": 1}
+        dense: dict[str, int] = {}
         result = rrf_fuse(sparse, dense, k=10)
         assert abs(dict(result)["A"] - 1 / 11) < 1e-10
 
     def test_k_zero_raises(self) -> None:
-        sparse = {"A": 1}
-        dense = {}
+        sparse: dict[str, int] = {"A": 1}
+        dense: dict[str, int] = {}
         with pytest.raises(ValueError, match="RRF constant k must be positive"):
             rrf_fuse(sparse, dense, k=0)
 
     def test_k_negative_raises(self) -> None:
-        sparse = {"A": 1}
-        dense = {}
+        sparse: dict[str, int] = {"A": 1}
+        dense: dict[str, int] = {}
         with pytest.raises(ValueError, match="RRF constant k must be positive"):
             rrf_fuse(sparse, dense, k=-1)
 

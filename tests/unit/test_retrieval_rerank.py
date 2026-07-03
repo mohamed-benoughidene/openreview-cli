@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
-
-import pytest
 
 from openreview_cli.retrieval.models import RetrievalResult
 from openreview_cli.retrieval.rerank import Reranker
@@ -26,7 +25,7 @@ class TestRerankerInit:
         assert reranker.model_id == "lightrag-cross-encoder"
 
     def test_init_without_gateway(self) -> None:
-        reranker = Reranker(None)  # type: ignore[arg-type]
+        reranker = Reranker(None)
         assert reranker.gateway is None
 
 
@@ -75,7 +74,7 @@ class TestRerankerRerank:
         assert results == []
 
     def test_rerank_without_gateway_returns_original(self) -> None:
-        reranker = Reranker(None)  # type: ignore[arg-type]
+        reranker = Reranker(None)
         candidates = [
             RetrievalResult(
                 chunk_id="c1", text="text", clause_heading="H1", clause_level=0,
@@ -161,7 +160,7 @@ class TestRerankerValidate:
                    "char_start": 400, "char_end": 500},
         }
 
-        def _load_chunk(cid: str) -> dict | None:
+        def _load_chunk(cid: str) -> dict[str, Any] | None:
             return chunk_data.get(cid)
 
         mock_storage.load_chunk.side_effect = _load_chunk
@@ -297,7 +296,7 @@ class TestConsecutiveDegradation:
         mock_storage.search_fts.return_value = [
             ("c1", -2.0), ("c2", -1.5),
         ]
-        mock_storage.load_chunk.side_effect = lambda cid: storage.load_chunk(cid)
+        mock_storage.load_chunk.side_effect = storage.load_chunk
 
         reranker = Reranker(mock_gateway, model_id="test-cross-encoder")
 

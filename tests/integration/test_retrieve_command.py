@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import json as json_lib
-import sqlite3
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from typer.testing import CliRunner
@@ -43,13 +42,13 @@ def _extract_json_from_output(output: str) -> dict[str, Any]:
     if depth != 0:
         msg = f"Unmatched braces in output:\n{output[:500]}"
         raise ValueError(msg)
-    return json_lib.loads(output[start:end])
+    return cast("dict[str, Any]", json_lib.loads(output[start:end]))
 
 
 @pytest.fixture(scope="module")
 def ground_truth() -> dict[str, Any]:
     with open(GROUND_TRUTH_PATH) as f:
-        return json_lib.load(f)
+        return cast("dict[str, Any]", json_lib.load(f))
 
 
 @pytest.fixture
@@ -138,7 +137,7 @@ class TestRetrieveCommand:
         assert "results" in data
         assert len(data["results"]) <= 3
 
-    def test_retrieve_expected_chunk_in_results(self, runner: CliRunner, indexed_db: Path, ground_truth: dict) -> None:
+    def test_retrieve_expected_chunk_in_results(self, runner: CliRunner, indexed_db: Path, ground_truth: dict[str, Any]) -> None:
         """Verify expected chunk appears in results per ground truth."""
         # Use the sparse query (index 2) to avoid triggering LiteLLM
         query_info = ground_truth["queries"][2]  # "governing law" — sparse

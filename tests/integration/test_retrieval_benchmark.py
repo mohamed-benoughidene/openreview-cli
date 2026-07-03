@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json as json_lib
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -89,7 +89,7 @@ def _load_ground_truth() -> list[dict[str, Any]]:
     """Load ground truth queries from fixture."""
     with open(GROUND_TRUTH_PATH) as f:
         gt: dict[str, Any] = json_lib.load(f)
-    return gt.get("queries", [])
+    return cast("list[dict[str, Any]]", gt.get("queries", []))
 
 
 class TestSparseBenchmark:
@@ -214,7 +214,6 @@ class TestHybridBenchmark:
 
         # Populate chunk_embeddings for hybrid mode using the same
         # trigram-based approach as _mock_embed for consistent similarity.
-        import math
         import sqlite3
         import struct
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json as json_lib
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from typer.testing import CliRunner
@@ -36,7 +36,7 @@ def _extract_json_from_output(output: str) -> dict[str, Any]:
     if depth != 0:
         msg = f"Unmatched braces in output:\n{output[:500]}"
         raise ValueError(msg)
-    return json_lib.loads(output[start:end])
+    return cast("dict[str, Any]", json_lib.loads(output[start:end]))
 
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "retrieval"
