@@ -786,6 +786,147 @@ def chunk(
         typer.echo(format_chunks_text(chunks))
 
 
+# ── compare subcommand ──
+
+
+@precheck_app.command("compare")
+def compare(  # noqa: PLR0912
+    doc_a: str = typer.Argument(..., help="Path to Party A's document (PDF or DOCX)."),
+    doc_b: str = typer.Argument(..., help="Path to Party B's document (PDF or DOCX)."),
+    playbook: str | None = typer.Option(
+        None, "--playbook", help="Path to custom YAML playbook override."
+    ),
+    extraction_model: str | None = typer.Option(
+        None, "--extraction-model", help="Model slot for the extraction agent."
+    ),
+    qa_model: str | None = typer.Option(
+        None, "--qa-model", help="Model slot for the QA verification agent."
+    ),
+    confidence_threshold: float | None = typer.Option(
+        None,
+        "--confidence-threshold",
+        "-ct",
+        help="Amber boundary for divergence detection confidence (0.0-1.0). "
+        "Independent of single-party threshold. "
+        "Note: accuracy ceiling ~64% F1 — set generously.",
+        callback=_validate_threshold,
+    ),
+    format: str = typer.Option("text", "--format", help="Output format: text (terminal) or json."),
+    output: str | None = typer.Option(
+        None, "--output", help="Write output to file instead of stdout."
+    ),
+    align_only: bool = typer.Option(
+        False, "--align-only", help="Only run parsing and alignment, skip inference."
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", help="Show full RCBSF classification and rationale."
+    ),
+    no_pii: bool = typer.Option(False, "--no-pii", help="Skip PII stripping on both documents."),
+    conservative: bool = typer.Option(
+        False,
+        "--conservative",
+        help="Shortcut for --confidence-threshold 0.8. Mutually exclusive with --confidence-threshold.",
+    ),
+    grounding_mode: str = typer.Option(
+        "strict",
+        "--grounding-mode",
+        help="Citation grounding mode: strict (ungrounded excluded) or lenient (flagged).",
+    ),
+    no_grounding: bool = typer.Option(
+        False, "--no-grounding", help="Skip citation grounding entirely."
+    ),
+) -> None:
+    """Compare two documents clause-by-clause and detect divergences.
+
+    Runs the NX-1 bilateral comparison pipeline: parses both documents,
+    aligns clauses by heading, runs the comparison agent on each pair,
+    and produces a paired side-by-side assessment with three-color status.
+
+    This is an EXPERIMENTAL feature with known accuracy limitations (≤64% F1).
+    """
+    # Validate mutually exclusive flags
+    if conservative and confidence_threshold is not None:
+        typer.echo(
+            "Error: --conservative and --confidence-threshold are mutually exclusive",
+            err=True,
+        )
+        raise typer.Exit(code=3)
+
+    # Validate output format
+    if format not in ("text", "json"):
+        typer.echo(
+            f"Error: --format must be 'text' or 'json', got '{format}'",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    # Validate grounding mode
+    if grounding_mode not in ("strict", "lenient"):
+        typer.echo(
+            f"Error: --grounding-mode must be 'strict' or 'lenient', got '{grounding_mode}'",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    # Resolve confidence threshold
+    if conservative:
+        resolved_threshold: float = 0.8
+        # Also enable verbose for conservative mode
+        verbose = True
+    else:
+        resolved_threshold = confidence_threshold if confidence_threshold is not None else 0.7
+
+    # Check both files exist
+    for path, _label in [(doc_a, "Party A"), (doc_b, "Party B")]:
+        if not Path(path).exists():
+            typer.echo(f"Error: File not found: {path}", err=True)
+            raise typer.Exit(code=1)
+
+    from openreview_cli.bilateral import run_comparison
+
+    try:
+        report = run_comparison(
+            doc_a_path=doc_a,
+            doc_b_path=doc_b,
+            playbook=None,  # Use bundled playbook
+            extraction_model=extraction_model or "extraction",
+            qa_model=qa_model or extraction_model,
+            no_pii=no_pii,
+            verbose=verbose,
+            confidence_threshold=resolved_threshold,
+            align_only=align_only,
+            grounding_mode=None if no_grounding else grounding_mode,
+        )
+    except FileNotFoundError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=2) from None
+
+    from openreview_cli.bilateral.report import (
+        format_comparison_json,
+        format_comparison_terminal,
+    )
+
+    if format == "json":
+        output_str = format_comparison_json(report)
+        if output:
+            Path(output).write_text(output_str, encoding="utf-8")
+        else:
+            typer.echo(output_str)
+    else:
+        output_str = format_comparison_terminal(report, verbose=verbose)
+        typer.echo(output_str)
+
+    # Print Amber warning to stderr
+    if report.summary.amber_count > 0:
+        typer.echo(
+            f"⚠  {report.summary.amber_count} clause(s) flagged Amber — review recommended.",
+            err=True,
+        )
+
+
 from openreview_cli.benchmark.cli import benchmark_app  # noqa: E402
 
 app.add_typer(benchmark_app)
