@@ -17,7 +17,7 @@ from openreview_cli.review.report import format_json, format_terminal
 
 
 def _make_assessment(cid: str, pos: Position, conf: float, amber: bool = False) -> ClauseAssessment:
-    return ClauseAssessment(
+    ca = ClauseAssessment(
         clause_id=cid,
         clause_text=f"Clause {cid} text that is reasonably long enough to appear in reports.",
         playbook_category="confidentiality-term",
@@ -27,8 +27,10 @@ def _make_assessment(cid: str, pos: Position, conf: float, amber: bool = False) 
         qa_verdict=QAVerdict.agree,
         extraction_model="m1",
         qa_model="m1",
-        is_amber=amber,
     )
+    if amber:
+        ca.is_amber = True
+    return ca
 
 
 def _make_report(assessments: list[ClauseAssessment] | None = None) -> ReviewReport:
@@ -127,7 +129,7 @@ class TestFormatJson:
     def test_schema_version_present(self) -> None:
         report = _make_report()
         data = json.loads(format_json(report))
-        assert data["schema_version"] == "1.0.0"
+        assert data["schema_version"] == "1.1.0"
 
     def test_document_metadata_included(self) -> None:
         report = _make_report()

@@ -20,6 +20,8 @@ from openreview_cli.storage.database import (
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_CONFIDENCE_THRESHOLD: float = 0.7
+
 app = typer.Typer(
     name="openreview",
     help="Privacy-first contract review tool.",
@@ -33,6 +35,12 @@ def _version_callback(value: bool) -> None:
         _init()
         typer.echo(f"openreview {__version__}")
         raise typer.Exit()
+
+
+def _validate_threshold(value: float) -> float:
+    if not 0.0 <= value <= 1.0:
+        raise typer.BadParameter(f"confidence-threshold must be between 0.0 and 1.0, got {value}")
+    return value
 
 
 def _init(debug: bool = False) -> None:
@@ -450,6 +458,18 @@ def review(
     no_grounding: bool = typer.Option(
         False, "--no-grounding", help="Skip citation grounding entirely."
     ),
+    confidence_threshold: float = typer.Option(
+        DEFAULT_CONFIDENCE_THRESHOLD,
+        "--confidence-threshold",
+        "-ct",
+        help="Confidence threshold for Green/Amber/Red assignment (0.0-1.0). "
+        "Clauses with effective confidence below this threshold are marked Amber. "
+        "Note: The comparison accuracy of automated review is bounded by "
+        "approximately 64% F1. Three-color output (Green/Amber/Red) is "
+        "designed to mitigate this — set the threshold generously to push "
+        "uncertain comparisons to Amber rather than risking false Green or Red.",
+        callback=_validate_threshold,
+    ),
 ) -> None:
     """Review one or more contract documents against a 3-position playbook.
 
@@ -476,6 +496,7 @@ def review(
             no_pii=no_pii,
             verbose=verbose,
             grounding_mode=None if no_grounding else grounding_mode,
+            confidence_threshold=confidence_threshold,
         )
     except FileNotFoundError as e:
         typer.echo(f"Error: {e}", err=True)

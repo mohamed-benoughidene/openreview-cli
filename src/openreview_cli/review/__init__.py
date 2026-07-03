@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 from openreview_cli.review.base import ReviewCommand
+from openreview_cli.review.colors import AmberReason, AssessmentColor, assign_colors
 from openreview_cli.review.extraction import extract_clause, match_category
 from openreview_cli.review.models import (
     ClauseAssessment,
@@ -36,8 +37,11 @@ from openreview_cli.review.report import format_json, format_terminal
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "AmberReason",
+    "AssessmentColor",
     "ReviewCommand",
     "ReviewReport",
+    "assign_colors",
     "format_json",
     "format_terminal",
     "run_review",
@@ -52,6 +56,7 @@ def run_review(
     no_pii: bool = False,
     verbose: bool = False,
     grounding_mode: str | None = None,
+    confidence_threshold: float = 0.7,
 ) -> list[ReviewReport]:
     """Run the PAKTON 3-agent review pipeline on one or more documents.
 
@@ -73,6 +78,8 @@ def run_review(
         Print per-clause progress to stderr when ``True``.
     grounding_mode : str | None
         Grounding mode: ``"strict"``, ``"lenient"``, or ``None`` to skip.
+    confidence_threshold : float
+        Threshold for Green/Amber/Red assignment (0.0-1.0). Default 0.7.
 
     Returns
     -------
@@ -140,7 +147,9 @@ def run_review(
             pii_stripped=False,
             parsed_at=datetime.now(UTC),
         )
-        report = _build_report(doc_meta, assessments, playbook)
+        report = _build_report(
+            doc_meta, assessments, playbook, confidence_threshold=confidence_threshold
+        )
 
         # Phase 5: Comparison — no-op for single-party review
 
@@ -189,14 +198,25 @@ def _build_report(
     doc_meta: DocMeta,
     assessments: list[ClauseAssessment],
     playbook: Playbook,
+    confidence_threshold: float = 0.7,
 ) -> ReviewReport:
     """Build a ReviewReport from assessments."""
+    assign_colors(assessments, confidence_threshold)
+
     total_conf = sum(a.confidence for a in assessments if a.playbook_category != "no-match")
     n_conf = sum(1 for a in assessments if a.playbook_category != "no-match") or 1
 
     pos_counts = Counter(a.position for a in assessments)
     no_match_count = sum(1 for a in assessments if a.playbook_category == "no-match")
-    amber_count = sum(1 for a in assessments if a.is_amber)
+    green_count = sum(1 for a in assessments if a.color == AssessmentColor.green)
+    red_count = sum(1 for a in assessments if a.color == AssessmentColor.red)
+    amber_count = sum(1 for a in assessments if a.color == AssessmentColor.amber)
+    valid_conf = [
+        a.effective_confidence
+        for a in assessments
+        if a.effective_confidence is not None and a.playbook_category != "no-match"
+    ]
+    avg_effective_confidence = sum(valid_conf) / len(valid_conf) if valid_conf else 0.0
 
     summary = ReviewSummary(
         favorable_count=pos_counts.get(Position.favorable, 0),
@@ -204,8 +224,11 @@ def _build_report(
         unfavorable_count=pos_counts.get(Position.unfavorable, 0),
         uncertain_count=pos_counts.get(Position.uncertain, 0),
         no_match_count=no_match_count,
+        green_count=green_count,
+        red_count=red_count,
         amber_count=amber_count,
         avg_confidence=total_conf / n_conf,
+        avg_effective_confidence=avg_effective_confidence,
     )
 
     return ReviewReport(
@@ -214,4 +237,5 @@ def _build_report(
         summary=summary,
         playbook_id=playbook.id,
         generated_at=datetime.now(UTC),
+        confidence_threshold=confidence_threshold,
     )
