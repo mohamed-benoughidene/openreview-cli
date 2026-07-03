@@ -1,0 +1,35 @@
+{
+  "document_id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+  "queries": [
+    {
+      "query": "confidentiality obligations",
+      "method": "hybrid",
+      "top_k": 5,
+      "expected_chunk_ids": ["chunk-004", "chunk-003", "chunk-005"]
+    },
+    {
+      "query": "return or destroy confidential information",
+      "method": "hybrid",
+      "top_k": 5,
+      "expected_chunk_ids": ["chunk-008", "chunk-004"]
+    },
+    {
+      "query": "governing law",
+      "method": "sparse",
+      "top_k": 5,
+      "expected_chunk_ids": ["chunk-012"]
+    },
+    {
+      "query": "entire agreement",
+      "method": "sparse",
+      "top_k": 5,
+      "expected_chunk_ids": ["chunk-010", "chunk-011"]
+    },
+    {
+      "query": "warranty disclaimer limitation liability",
+      "method": "hybrid",
+      "top_k": 5,
+      "expected_chunk_ids": ["chunk-009"]
+    }
+  ]
+}
