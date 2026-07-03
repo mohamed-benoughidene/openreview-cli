@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 
+from openreview_cli.review.colors import assign_colors
 from openreview_cli.review.models import (
     Category,
     ClauseAssessment,
@@ -154,6 +155,7 @@ class TestClauseAssessment:
             extraction_model="m1",
             qa_model="m1",
         )
+        assign_colors([ca])
         assert ca.is_amber is True
 
     def test_qa_disagreement_triggers_amber(self) -> None:
@@ -170,6 +172,7 @@ class TestClauseAssessment:
             extraction_model="m1",
             qa_model="m1",
         )
+        assign_colors([ca])
         assert ca.is_amber is True
         assert ca.qa_revised_position == Position.neutral
 
@@ -186,6 +189,7 @@ class TestClauseAssessment:
             qa_model="m1",
             error="Model returned unparseable output",
         )
+        assign_colors([ca])
         assert ca.is_amber is True
 
     def test_confidence_range_validation(self) -> None:
@@ -214,6 +218,7 @@ class TestClauseAssessment:
             extraction_model="m1",
             qa_model="m1",
         )
+        assign_colors([ca])
         assert ca.is_amber is True
         assert ca.playbook_category == "no-match"
 
@@ -277,6 +282,6 @@ class TestReviewReport:
             playbook_id="precheck-nda-v1",
             generated_at=now,
         )
-        assert report.schema_version == "1.0.0"
+        assert report.schema_version == "1.1.0"
         assert len(report.assessments) == 2
         assert report.playbook_id == "precheck-nda-v1"

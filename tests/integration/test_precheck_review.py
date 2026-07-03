@@ -249,7 +249,7 @@ class TestJsonSchema:
         data = _report_to_dict(report)
 
         # Validate structure
-        assert data["schema_version"] == "1.0.0"
+        assert data["schema_version"] == "1.1.0"
         assert data["document"]["filename"] == "test.docx"
         assert len(data["assessments"]) == 1
         assert data["assessments"][0]["position"] == "favorable"
@@ -260,4 +260,4 @@ class TestJsonSchema:
         # Test serialization
         json_str = json.dumps(data, default=str)
         parsed = json.loads(json_str)
-        assert parsed["schema_version"] == "1.0.0"
+        assert parsed["schema_version"] == "1.1.0"

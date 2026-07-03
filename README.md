@@ -22,8 +22,9 @@ pass-through params (`extra_params` in config.yml), prompt management
 (versioned SQLite-backed storage, model-to-prompt binding, variable substitution,
 YAML export/import, A/B testing and GRPO optimization hooks defined), **and
 single-party contract review (PAKTON 3-agent pipeline: extraction, QA
-verification, report formatting), and citation grounding discriminator
-(post-hoc claim verification with strict/lenient modes, CG metrics, JSONL audit trail).**
+verification, report formatting), citation grounding discriminator
+(post-hoc claim verification with strict/lenient modes, CG metrics, JSONL audit trail),
+and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag).**
 The package is not yet on PyPI. APIs and the underlying spec are preliminary and
 will change.
 
@@ -305,6 +306,8 @@ openreview precheck review --no-pii contract.pdf       # Skip PII stripping
 openreview precheck review --grounding-mode strict contract.pdf  # Strict grounding (excludes ungrounded claims)
 openreview precheck review --grounding-mode lenient contract.pdf # Lenient grounding (flags ungrounded)
 openreview precheck review --no-grounding contract.pdf  # Skip citation grounding entirely
+openreview precheck review --confidence-threshold 0.9 contract.pdf  # Raise threshold (more Amber flags)
+openreview precheck review --confidence-threshold 0.3 contract.pdf  # Lower threshold (fewer Amber flags)
 openreview precheck review --verbose contract.pdf      # Show per-clause progress
 openreview precheck review doc1.pdf doc2.pdf doc3.pdf  # Batch review
 
@@ -375,6 +378,7 @@ openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 | `openreview precheck review --grounding-mode lenient <paths>` | Lenient grounding (flag ungrounded claims, keep in output) |
 | `openreview precheck review --no-grounding <paths>` | Skip citation grounding entirely |
 | `openreview precheck review --verbose <paths>` | Show per-clause progress on stderr      |
+| `openreview precheck review --confidence-threshold <0.0-1.0> <paths>` | Threshold for Green/Amber/Red assignment (default 0.7) |
 | `openreview pii list`                  | List documents with stored PII data        |
 | `openreview pii delete <hash>`         | Delete all PII data for a document (GDPR)  |
 | `openreview pii cleanup`              | Delete documents with expired PII retention |
