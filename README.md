@@ -24,14 +24,14 @@ YAML export/import, A/B testing and GRPO optimization hooks defined), **and
 single-party contract review (PAKTON 3-agent pipeline: extraction, QA
 verification, report formatting), citation grounding discriminator
 (post-hoc claim verification with strict/lenient modes, CG metrics, JSONL audit trail),
-and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag).**
+and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), and experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status.**
 The package is not yet on PyPI. APIs and the underlying spec are preliminary and
 will change.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
 | Unit + integration tests    | 398                       |
-| CLI commands                | 39                        |
+| CLI commands                | 40                        |
 | SQLite tables               | 9                         |
 | CI jobs                     | 5 (lint, types, test, memory, benchmark) |
 | Memory budget (processing)  | < 100 MB (NLP model exempt) |
@@ -311,6 +311,15 @@ openreview precheck review --confidence-threshold 0.3 contract.pdf  # Lower thre
 openreview precheck review --verbose contract.pdf      # Show per-clause progress
 openreview precheck review doc1.pdf doc2.pdf doc3.pdf  # Batch review
 
+# Experimental Bilateral Comparison (compare two NDAs side-by-side)
+openreview precheck compare my-nda.pdf their-nda.pdf                    # Divergence report
+openreview precheck compare my-nda.pdf their-nda.pdf --verbose           # Full RCBSF classification
+openreview precheck compare my-nda.pdf their-nda.pdf --conservative      # Max sensitivity (threshold 0.8)
+openreview precheck compare my-nda.pdf their-nda.pdf --confidence-threshold 0.9  # Custom threshold
+openreview precheck compare my-nda.pdf their-nda.pdf --align-only        # Preview alignment, skip inference
+openreview precheck compare my-nda.pdf their-nda.pdf --format json       # JSON output
+openreview precheck compare my-nda.pdf their-nda.pdf --no-pii            # Skip PII stripping
+
 # PII management
 openreview pii list              # Documents with PII data
 openreview pii delete abc123     # Delete PII data for a document
@@ -379,6 +388,13 @@ openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 | `openreview precheck review --no-grounding <paths>` | Skip citation grounding entirely |
 | `openreview precheck review --verbose <paths>` | Show per-clause progress on stderr      |
 | `openreview precheck review --confidence-threshold <0.0-1.0> <paths>` | Threshold for Green/Amber/Red assignment (default 0.7) |
+| `openreview precheck compare <docA> <docB>` | [Experimental] Compare two documents clause-by-clause, detect divergences |
+| `openreview precheck compare --verbose <docA> <docB>` | Show full RCBSF 5-dimension classification and rationale |
+| `openreview precheck compare --conservative <docA> <docB>` | Max sensitivity, shortcut for `--confidence-threshold 0.8` |
+| `openreview precheck compare --confidence-threshold <0.0-1.0> <docA> <docB>` | Custom Amber boundary for divergence confidence (default 0.7) |
+| `openreview precheck compare --align-only <docA> <docB>` | Parsing + alignment only, skip all inference |
+| `openreview precheck compare --format json <docA> <docB>` | Structured JSON comparison report |
+| `openreview precheck compare --output <file> <docA> <docB>` | Write report to file |
 | `openreview pii list`                  | List documents with stored PII data        |
 | `openreview pii delete <hash>`         | Delete all PII data for a document (GDPR)  |
 | `openreview pii cleanup`              | Delete documents with expired PII retention |
