@@ -1,5 +1,7 @@
+import contextlib
 import logging
 import sys
+import time
 from datetime import UTC
 from pathlib import Path
 
@@ -109,6 +111,20 @@ def _cleanup_expired_pii(data_dir: Path) -> None:
             logger.info("cleaned up %d expired PII entries", deleted)
     except Exception:
         logger.debug("PII cleanup skipped", exc_info=True)
+
+
+def _resolve_doc_id(file_path: Path) -> str:
+    """Load a .ndax JSON file and extract the document_id (or SHA-256 fallback)."""
+    import json
+
+    with open(file_path) as f:
+        chunks_data = json.load(f)
+    doc_id = chunks_data[0].get("document_id", "") if chunks_data else ""
+    if not doc_id:
+        import hashlib
+
+        doc_id = hashlib.sha256(file_path.read_bytes()).hexdigest()
+    return doc_id
 
 
 @app.callback()
@@ -792,7 +808,7 @@ def chunk(
 
 
 @precheck_app.command("compare")
-def compare(  # noqa: PLR0912
+def compare(
     doc_a: str = typer.Argument(..., help="Path to Party A's document (PDF or DOCX)."),
     doc_b: str = typer.Argument(..., help="Path to Party B's document (PDF or DOCX)."),
     playbook: str | None = typer.Option(
@@ -927,6 +943,367 @@ def compare(  # noqa: PLR0912
             f"⚠  {report.summary.amber_count} clause(s) flagged Amber — review recommended.",
             err=True,
         )
+
+
+# ── retrieval subcommands ──
+
+
+@app.command()
+def ingest(
+    file: str = typer.Argument(..., help="Path to a .ndax file with pre-chunked data."),
+    method: str = typer.Option("hybrid", "--method", help="Retrieval method: sparse, hybrid"),
+    model: str | None = typer.Option(None, "--model", help="Embedding model override"),
+    db_dir: str | None = typer.Option(None, "--db-dir", help="Index database directory"),
+) -> None:
+    """Parse, chunk, and index a document for retrieval."""
+    from openreview_cli.gateway.router import Gateway
+    from openreview_cli.retrieval.errors import EmbeddingError
+    from openreview_cli.retrieval.ingest import (
+        _ensure_db_dir,
+        get_index_for_document,
+        ingest_from_file,
+    )
+
+    file_path = Path(file)
+    if not file_path.exists():
+        typer.echo(f"Error: File not found: {file}", err=True)
+        raise typer.Exit(code=1)
+
+    import json
+
+    with open(file_path) as f:
+        chunks_data = json.load(f)
+
+    if not chunks_data:
+        typer.echo("Error: No chunks found in file.", err=True)
+        raise typer.Exit(code=1)
+
+    doc_id = _resolve_doc_id(file_path)
+
+    db_dir_resolved = _ensure_db_dir(db_dir)
+    db_path = db_dir_resolved / f"{doc_id[:32]}.db"
+
+    # Check if already indexed
+    existing = get_index_for_document(doc_id[:32], db_dir_resolved)
+    if existing is not None:
+        typer.echo("Document already indexed (up to date). Use --force to re-index.")
+        return
+
+    gateway: Gateway | None = None
+    with contextlib.suppress(Exception):
+        gateway = Gateway()
+
+    try:
+        start = time.time()
+
+        def _progress(current: int, total: int) -> None:
+            if total > 0 and current % max(1, total // 10) == 0:
+                typer.echo(f"  Progress: {current}/{total} chunks", err=True)
+
+        meta = ingest_from_file(
+            file_path,
+            db_path,
+            gateway=gateway,
+            method=method,
+            model_id=model,
+            progress_callback=_progress,
+        )
+        elapsed = time.time() - start
+
+        chunk_count = meta.get("chunk_count", len(chunks_data))
+        final_method = meta.get("method", method)
+        embed_info = ""
+        if meta.get("embedding_model"):
+            embed_info = f" ({meta['embedding_model']}, {meta.get('embedding_dimension', '?')}d)"
+
+        typer.echo(
+            f"Indexed {chunk_count} chunks in {elapsed:.1f}s"
+        )
+        typer.echo(f"  Method: {final_method}{embed_info}")
+        typer.echo(f"  DB: {db_path}")
+    except EmbeddingError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+
+@app.command()
+def retrieve(
+    query: str = typer.Argument(..., help="Natural-language query (wrap in quotes)."),
+    file: str | None = typer.Argument(None, help="Document file (.ndax). Omit to use most recently indexed document."),
+    method: str = typer.Option("hybrid", "--method", help="Retrieval method: sparse, dense, hybrid"),
+    top_k: int = typer.Option(5, "--top-k", help="Number of results (1-50)"),
+    rerank: bool = typer.Option(False, "--rerank", help="Enable cross-encoder reranker (experimental, opt-in)."),
+    rerank_depth: int = typer.Option(20, "--rerank-depth", help="Number of hybrid results to rerank."),
+    force_rerank: bool = typer.Option(False, "--force-rerank", help="Override reranker validation warning."),
+    format: str = typer.Option("terminal", "--format", help="Output format: terminal, json"),
+    db_dir: str | None = typer.Option(None, "--db-dir", help="Index database directory"),
+    no_header: bool = typer.Option(False, "--no-header", help="Omit header row from terminal output."),
+) -> None:
+    """Retrieve relevant clause chunks from an indexed document."""
+    import json as json_lib
+
+    from openreview_cli.gateway.router import Gateway
+    from openreview_cli.retrieval.engine import RetrievalEngine
+    from openreview_cli.retrieval.errors import IndexCorruptError, IndexNotFoundError
+    from openreview_cli.retrieval.ingest import _ensure_db_dir, get_last_indexed_doc
+    from openreview_cli.retrieval.models import RetrievalQuery
+
+    db_dir_resolved = _ensure_db_dir(db_dir)
+
+    # Resolve db_path
+    doc_id = ""
+    if file:
+        file_path = Path(file)
+        if not file_path.exists():
+            typer.echo(f"Error: File not found: {file}", err=True)
+            raise typer.Exit(code=1)
+        doc_id = _resolve_doc_id(file_path)
+    else:
+        # T062: Fallback to most recently indexed document
+        last_doc = get_last_indexed_doc(db_dir_resolved)
+        if last_doc is None:
+            typer.echo(
+                "Error: No document specified and no previously indexed document found.\n"
+                "Run `openreview retrieve \"<query>\" <file>` with a document, "
+                "or `openreview ingest <file>` to index one first.",
+                err=True,
+            )
+            raise typer.Exit(code=2)
+        doc_id = _resolve_doc_id(Path(last_doc))
+
+    if not doc_id:
+        typer.echo("Error: Could not determine document ID.", err=True)
+        raise typer.Exit(code=1)
+
+    db_path = db_dir_resolved / f"{doc_id[:32]}.db"
+
+    if not db_path.exists():
+        typer.echo(
+            "Document not indexed. Run `openreview ingest <file>` first.",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    # Build query
+    try:
+        rq = RetrievalQuery(
+            query_text=query,
+            method=method,
+            top_k=top_k,
+            rerank=rerank,
+            rerank_depth=rerank_depth,
+            force_rerank=force_rerank,
+        )
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+    # Get gateway for dense/hybrid mode
+    gateway: Gateway | None = None
+    if method in ("dense", "hybrid") or rerank:
+        try:
+            gateway = Gateway()
+        except Exception:
+            gateway = None
+
+    engine = RetrievalEngine(db_path, gateway=gateway)
+
+    try:
+        results = engine.retrieve(rq)
+    except IndexNotFoundError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=2) from None
+    except IndexCorruptError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=3) from None
+
+    # ── Offline/dense-fallback notices (T047) ──
+    for notice in engine.notices:
+        typer.echo(f"⚠  {notice}", err=True)
+
+    # ── Reranker integration (T031) ──
+    if rerank and results:
+        from openreview_cli.retrieval.rerank import Reranker
+        from openreview_cli.retrieval.storage import RetrievalStorage
+
+        try:
+            reranker = Reranker(gateway)
+            candidates = results[:rerank_depth] if rerank_depth < len(results) else results
+            results = reranker.rerank(query, candidates, top_k)
+
+            # Check reranker validation warning
+            if not force_rerank:
+                with RetrievalStorage(db_path) as store:
+                    val = store.get_rerank_validation(
+                        model_id=reranker.model_id,
+                        document_type="legal-nda",
+                    )
+                if val and val.get("degradation_pp", 0) is not None:
+                    deg = val["degradation_pp"]
+                    if isinstance(deg, (int, float)) and deg >= 0:
+                        warning = (
+                            "⚠ Reranker validation shows reranker does not improve "
+                            f"retrieval quality (degradation: {deg:.1f}pp). "
+                            "Use --force-rerank to override."
+                        )
+                        typer.echo(warning, err=True)
+
+        except Exception as exc:
+            logger.warning("Reranker integration failed (%s); returning raw results.", exc)
+
+    if not results:
+        typer.echo(
+            "No relevant clauses found for this query. "
+            "Try a different query or use --method sparse for broader matching."
+        )
+        return
+
+    if format == "json":
+        output = []
+        for r in results:
+            output.append({
+                "chunk_id": r.chunk_id,
+                "text": r.text,
+                "clause_heading": r.clause_heading,
+                "clause_level": r.clause_level,
+                "hierarchy_chain": r.hierarchy_chain,
+                "score": round(r.score, 4),
+                "method": r.method,
+                "rank_sparse": r.rank_sparse,
+                "rank_dense": r.rank_dense,
+                "rrf_score": round(r.rrf_score, 6) if r.rrf_score is not None else None,
+                "rerank_score": round(r.rerank_score, 6) if r.rerank_score is not None else None,
+            })
+        typer.echo(json_lib.dumps({"query": query, "method": method, "top_k": top_k, "results": output}, indent=2))
+    else:
+        from rich.console import Console
+        from rich.table import Table
+
+        console = Console()
+        show_header = not no_header
+        table = Table(title=f"Retrieval Results — \"{query}\"", show_header=show_header)
+        table.add_column("Rank", style="cyan", justify="right")
+        table.add_column("Clause Heading", style="green")
+        table.add_column("Score", style="yellow", justify="right")
+        table.add_column("Method", style="blue")
+
+        for rank, r in enumerate(results, start=1):
+            heading = r.clause_heading
+            # Show hierarchy chain as indented tree
+            if r.hierarchy_chain and len(r.hierarchy_chain) > 1:
+                lines = [r.hierarchy_chain[0]]
+                for h in r.hierarchy_chain[1:]:
+                    lines.append(f"  {h}")
+                heading = "\n".join(lines)
+
+            table.add_row(
+                str(rank),
+                heading,
+                f"{r.score:.4f}",
+                r.method,
+            )
+        console.print(table)
+
+
+@app.command(name="index-status")
+def index_status(
+    file: str | None = typer.Argument(None, help="Document file (.ndax)."),
+    db_dir: str | None = typer.Option(None, "--db-dir", help="Index database directory"),
+) -> None:
+    """Show indexing status for a document."""
+
+    from openreview_cli.retrieval.engine import RetrievalEngine
+    from openreview_cli.retrieval.ingest import _ensure_db_dir
+
+    if not file:
+        typer.echo("Error: FILE argument required.", err=True)
+        raise typer.Exit(code=1)
+
+    file_path = Path(file)
+    if not file_path.exists():
+        typer.echo(f"Error: File not found: {file}", err=True)
+        raise typer.Exit(code=1)
+
+    doc_id = _resolve_doc_id(file_path)
+
+    db_dir_resolved = _ensure_db_dir(db_dir)
+    db_path = db_dir_resolved / f"{doc_id[:32]}.db"
+
+    if not db_path.exists():
+        typer.echo(f"Document not indexed. Run `openreview ingest {file}` first.")
+        raise typer.Exit(code=2)
+
+    engine = RetrievalEngine(db_path)
+    meta = engine.get_index_meta()
+    if meta is None:
+        size = db_path.stat().st_size if db_path.exists() else 0
+        typer.echo(f"Index file exists but metadata not found ({size} bytes).")
+        return
+
+    typer.echo(f"Document: {file_path.name}")
+    status = meta.get("index_status", "unknown")
+    ts = meta.get("index_timestamp", "")
+    typer.echo(f"Status:   {status}" + (f" ({ts})" if ts else ""))
+    typer.echo(f"Chunks:   {meta.get('chunk_count', 0)}")
+    typer.echo(f"Method:   {meta.get('method', '?')}")
+    model = meta.get("embedding_model")
+    dim = meta.get("embedding_dim")
+    if model:
+        typer.echo(f"Model:    {model}" + (f" ({dim}d)" if dim else ""))
+    else:
+        typer.echo("Model:    (none — sparse only)")
+    size_bytes = meta.get("db_size_bytes", 0)
+    if size_bytes > 1024 * 1024:
+        size_str = f"{size_bytes / (1024 * 1024):.1f} MB"
+    elif size_bytes > 1024:
+        size_str = f"{size_bytes / 1024:.1f} KB"
+    else:
+        size_str = f"{size_bytes} bytes"
+    typer.echo(f"DB size:  {size_str}")
+
+
+@app.command(name="index-clear")
+def index_clear(
+    file: str | None = typer.Argument(None, help="Document file (.ndax)."),
+    all_flag: bool = typer.Option(False, "--all", help="Clear ALL indexes (requires confirmation)."),
+    db_dir: str | None = typer.Option(None, "--db-dir", help="Index database directory"),
+) -> None:
+    """Remove indexed data for a document."""
+
+    from openreview_cli.retrieval.ingest import _ensure_db_dir
+    from openreview_cli.retrieval.ingest import clear_index as _clear_index
+
+    if all_flag:
+        typer.echo("Clearing ALL indexes...")
+        db_dir_resolved = _ensure_db_dir(db_dir)
+        count = 0
+        for db_file in db_dir_resolved.glob("*.db"):
+            _clear_index(db_file)
+            count += 1
+        typer.echo(f"Cleared {count} index database(s).")
+        return
+
+    if not file:
+        typer.echo("Error: FILE argument required.", err=True)
+        raise typer.Exit(code=1)
+
+    file_path = Path(file)
+    if not file_path.exists():
+        typer.echo(f"Error: File not found: {file}", err=True)
+        raise typer.Exit(code=1)
+
+    doc_id = _resolve_doc_id(file_path)
+
+    db_dir_resolved = _ensure_db_dir(db_dir)
+    db_path = db_dir_resolved / f"{doc_id[:32]}.db"
+
+    if not db_path.exists():
+        typer.echo("Document not indexed.")
+        raise typer.Exit(code=2)
+
+    db_size = db_path.stat().st_size
+    _clear_index(db_path)
+    typer.echo(f"Index for {file_path.name} cleared ({db_size} bytes).")
 
 
 from openreview_cli.benchmark.cli import benchmark_app  # noqa: E402

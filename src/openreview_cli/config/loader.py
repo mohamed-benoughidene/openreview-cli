@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 DEFAULT_CONFIG: dict[str, object] = {
     "version": 1,
@@ -51,6 +51,17 @@ DEFAULT_CONFIG: dict[str, object] = {
         "reviews_keep_forever": True,
         "logs_keep_days": 30,
     },
+    "retrieval": {
+        "default_method": "hybrid",
+        "top_k": 5,
+        "rrf_k": 60,
+        "embedding_model": "nomic-embed-text",
+        "embedding_dimension": 1024,
+        "reranker_model": None,
+        "rerank_enabled": False,
+        "rerank_depth": 20,
+        "db_dir": None,
+    },
 }
 
 
@@ -79,10 +90,7 @@ def _get_env_overrides() -> dict[str, Any]:
 
 
 def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[str, Any]:
-    from pydantic import BaseModel, field_validator
-
-    _valid_tiers = frozenset({"maximum", "balanced", "performance"})
-    _valid_on_failure = frozenset({"error", "skip", "warn"})
+    from pydantic import BaseModel, Field, field_validator
 
     class ModelParams(BaseModel):
         temperature: float = 0.1
@@ -117,25 +125,11 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
         retries: int = 2
         retry_delay: float = 1.0
         timeout: int = 60
-        on_failure: str = "error"
-
-        @field_validator("on_failure")
-        @classmethod
-        def _check_on_failure(cls, v: str) -> str:
-            if v not in _valid_on_failure:
-                raise ValueError(f"must be one of: {', '.join(sorted(_valid_on_failure))}")
-            return v
+        on_failure: Literal["error", "skip", "warn"] = "error"
 
     class CostLimits(BaseModel):
-        per_review_cents: int = 100
-        daily_cents: int = 1000
-
-        @field_validator("per_review_cents", "daily_cents")
-        @classmethod
-        def _check_positive(cls, v: int) -> int:
-            if v < 1:
-                raise ValueError("must be ≥ 1")
-            return v
+        per_review_cents: int = Field(default=100, ge=1)
+        daily_cents: int = Field(default=1000, ge=1)
 
     class GatewayConfig(BaseModel):
         models: GatewayModels = GatewayModels()
@@ -165,48 +159,20 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
     )
 
     class PrivacyConfig(BaseModel):
-        tier: str = "balanced"
+        tier: Literal["maximum", "balanced", "performance"] = "balanced"
         strip_pii: bool = True
-        log_ttl_days: int = 30
-        pii_threshold: float = 0.7
+        log_ttl_days: int = Field(default=30, ge=1)
+        pii_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
         pii_encryption_key: str = "12345678901234561234567890123456"
-        retention_days: int = 30
+        retention_days: int = Field(default=30, ge=1, le=365)
         enabled_recognizers: list[str] = []
         placeholder_format: str = "[{type}]"
-
-        @field_validator("tier")
-        @classmethod
-        def _check_tier(cls, v: str) -> str:
-            if v not in _valid_tiers:
-                raise ValueError(f"must be one of: {', '.join(sorted(_valid_tiers))}")
-            return v
-
-        @field_validator("log_ttl_days")
-        @classmethod
-        def _check_log_ttl(cls, v: int) -> int:
-            if v < 1:
-                raise ValueError("must be ≥ 1")
-            return v
-
-        @field_validator("pii_threshold")
-        @classmethod
-        def _check_pii_threshold(cls, v: float) -> float:
-            if not (0.0 <= v <= 1.0):
-                raise ValueError("must be between 0.0 and 1.0")
-            return v
 
         @field_validator("pii_encryption_key")
         @classmethod
         def _check_pii_encryption_key(cls, v: str) -> str:
             if len(v.encode("utf-8")) not in (16, 24, 32):
                 raise ValueError("encryption key must be exactly 16, 24, or 32 bytes")
-            return v
-
-        @field_validator("retention_days")
-        @classmethod
-        def _check_retention_days(cls, v: int) -> int:
-            if not (1 <= v <= 365):
-                raise ValueError("must be between 1 and 365")
             return v
 
         @field_validator("enabled_recognizers")
@@ -228,20 +194,25 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
 
     class StorageConfig(BaseModel):
         reviews_keep_forever: bool = True
-        logs_keep_days: int = 30
+        logs_keep_days: int = Field(default=30, ge=1)
 
-        @field_validator("logs_keep_days")
-        @classmethod
-        def _check_logs_keep(cls, v: int) -> int:
-            if v < 1:
-                raise ValueError("must be ≥ 1")
-            return v
+    class RetrievalConfig(BaseModel):
+        default_method: Literal["sparse", "dense", "hybrid"] = "hybrid"
+        top_k: int = Field(default=5, ge=1, le=50)
+        rrf_k: int = Field(default=60, ge=1)
+        embedding_model: str = "nomic-embed-text"
+        embedding_dimension: int = 1024
+        reranker_model: str | None = None
+        rerank_enabled: bool = False
+        rerank_depth: int = Field(default=20, ge=1)
+        db_dir: str | None = None
 
     class OpenReviewConfig(BaseModel):
         version: int = 1
         privacy: PrivacyConfig = PrivacyConfig()
         gateway: GatewayConfig = GatewayConfig()
         storage: StorageConfig = StorageConfig()
+        retrieval: RetrievalConfig = RetrievalConfig()
 
     merged = _deep_merge(defaults, raw)
     validated = OpenReviewConfig(**merged)

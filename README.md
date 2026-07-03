@@ -21,7 +21,9 @@ PII stripping (Presidio, 16 entity types, encrypted mapping), chunking strategy
 pass-through params (`extra_params` in config.yml), prompt management
 (versioned SQLite-backed storage, model-to-prompt binding, variable substitution,
 YAML export/import, A/B testing and GRPO optimization hooks defined), **and
-single-party contract review (PAKTON 3-agent pipeline: extraction, QA
+hierarchical retrieval (BM25 + dense embeddings + RRF hybrid fusion, offline
+fallback, reranker validation), and single-party contract review (PAKTON
+3-agent pipeline: extraction, QA
 verification, report formatting), citation grounding discriminator
 (post-hoc claim verification with strict/lenient modes, CG metrics, JSONL audit trail),
 and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), and experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status.**
@@ -31,8 +33,8 @@ will change.
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
 | Unit + integration tests    | 398                       |
-| CLI commands                | 40                        |
-| SQLite tables               | 9                         |
+| CLI commands                | 44                        |
+| SQLite tables               | 10                        |
 | CI jobs                     | 5 (lint, types, test, memory, benchmark) |
 | Memory budget (processing)  | < 100 MB (NLP model exempt) |
 | Startup (warm)              | < 0.3 s                   |
@@ -227,6 +229,7 @@ uv run openreview --version
 | `src/openreview_cli/pii/`                           | PII stripping engine — Presidio, recognizers, encrypted mapping, audit trail, `strip_pii_clauses()` bridge |
 | `src/openreview_cli/chunking/`                      | Chunking engine — RCTS splitting, clause-boundary-aware, streaming |
 | `src/openreview_cli/gateway/`                       | AI Gateway — router, registry, cost, models, redaction, wizard |
+| `src/openreview_cli/retrieval/`                     | Retrieval pipeline — BM25 (FTS5), dense embeddings (Ollama), RRF fusion, reranker, ingest, storage |
 | `src/openreview_cli/grounding/`                    | Citation grounding discriminator — post-hoc claim verification, strict/lenient modes, CG metrics, JSONL audit trail, corruption generators |
 | `src/openreview_cli/prompts/`                       | Prompt management — versioned storage, binding, CLI |
 | `src/openreview_cli/prompts/models.py`              | Pydantic models (Prompt, PromptVersion, PromptBinding) |
@@ -289,6 +292,16 @@ openreview parse contract.pdf --format json  # JSON output
 openreview chunk contract.json              # Split clauses into chunks (512 tokens, 50 overlap)
 openreview chunk contract.json --format json  # JSON output with metadata
 openreview chunk contract.json --summary      # One-line chunk summary
+
+# Retrieval (hybrid BM25 + dense search)
+openreview ingest contract.pdf            # Parse, chunk, embed, and index a document
+openreview retrieve "indemnification clause" contract.pdf  # Hybrid search (BM25 + dense + RRF)
+openreview retrieve "liability cap" contract.pdf --method sparse  # BM25-only
+openreview retrieve "governing law" contract.pdf --method dense   # Dense-only
+openreview retrieve "termination" contract.pdf --rerank           # Enable cross-encoder reranking
+openreview retrieve "confidentiality" contract.pdf --no-header    # Compact output (no table header)
+openreview index-status contract.pdf      # Show index metadata
+openreview index-clear contract.pdf       # Remove document index
 
 # Review (PII is stripped automatically)
 openreview precheck contract.pdf           # NDA review with PII stripping
@@ -375,6 +388,14 @@ openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 | `openreview chunk <path>`              | Split clauses into retrieval-ready chunks (512 tokens, 50 overlap) |
 | `openreview chunk <path> --format json`| JSON chunk output with structural metadata  |
 | `openreview chunk <path> --summary`    | One-line chunk summary (count, token range) |
+| `openreview ingest <path>`             | Parse, chunk, embed, and index a document for retrieval |
+| `openreview retrieve "<query>" <path>` | Hybrid search (BM25 + dense + RRF fusion)  |
+| `openreview retrieve --method sparse <query> <path>`  | BM25-only search                 |
+| `openreview retrieve --method dense <query> <path>`   | Dense embedding search            |
+| `openreview retrieve --rerank <query> <path>`         | Enable cross-encoder reranking   |
+| `openreview retrieve --no-header <query> <path>`      | Omit table header from output    |
+| `openreview index-status <path>`       | Show index metadata               |
+| `openreview index-clear <path>`        | Remove document index             |
 | `openreview precheck <path>`           | NDA review with automatic PII stripping    |
 | `openreview precheck --no-pii <path>`  | NDA review, skip PII (raw text in output)  |
 | `openreview precheck review <paths...>`| PAKTON 3-agent review (extraction + QA + report) against a playbook |

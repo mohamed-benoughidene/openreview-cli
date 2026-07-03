@@ -1,0 +1,134 @@
+[
+  {
+    "chunk_id": "chunk-001",
+    "document_id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "text": "This Non-Disclosure Agreement (the \"Agreement\") is entered into as of [DATE] by and between [PARTY_A] and [PARTY_B].",
+    "clause_heading": "Article 1 — Parties",
+    "clause_level": 0,
+    "parent_chunk_id": null,
+    "heading_chain": ["Article 1 — Parties"],
+    "char_start": 0,
+    "char_end": 145
+  },
+  {
+    "chunk_id": "chunk-002",
+    "document_id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "text": "For purposes of this Agreement, the following terms have the meanings set forth below.",
+    "clause_heading": "Article 2 — Definitions",
+    "clause_level": 0,
+    "parent_chunk_id": null,
+    "heading_chain": ["Article 2 — Definitions"],
+    "char_start": 146,
+    "char_end": 260
+  },
+  {
+    "chunk_id": "chunk-003",
+    "document_id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "text": "\"Confidential Information\" means all information disclosed by one party to the other, whether orally or in writing, that is designated as confidential or that reasonably should be understood to be confidential given the nature of the information and circumstances of disclosure.",
+    "clause_heading": "Section 2.1 — Confidential Information",
+    "clause_level": 1,
+    "parent_chunk_id": "chunk-002",
+    "heading_chain": ["Article 2 — Definitions", "Section 2.1 — Confidential Information"],
+    "char_start": 261,
+    "char_end": 510
+  },
+  {
+    "chunk_id": "chunk-004",
+    "document_id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "text": "The Receiving Party shall maintain all Confidential Information in strict confidence and shall not disclose such information to any third party without the prior written consent of the Disclosing Party.",
+    "clause_heading": "Article 3 — Confidentiality Obligations",
+    "clause_level": 0,
+    "parent_chunk_id": null,
+    "heading_chain": ["Article 3 — Confidentiality Obligations"],
+    "char_start": 511,
+    "char_end": 710
+  },
+  {
+    "chunk_id": "chunk-005",
+    "document_id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "text": "Confidential Information shall not include information that: (a) is or becomes publicly available without breach of this Agreement; (b) was known to the Receiving Party prior to disclosure; (c) is independently developed by the Receiving Party; or (d) is required to be disclosed by law.",
+    "clause_heading": "Section 3.1 — Exclusions",
+    "clause_level": 1,
+    "parent_chunk_id": "chunk-004",
+    "heading_chain": ["Article 3 — Confidentiality Obligations", "Section 3.1 — Exclusions"],
+    "char_start": 711,
+    "char_end": 1010
+  },
+  {
+    "chunk_id": "chunk-006",
+    "document_id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "text": "The Receiving Party shall use Confidential Information solely for the purpose of evaluating a potential business relationship (the \"Purpose\") and shall limit access to those employees who need to know such information for the Purpose.",
+    "clause_heading": "Article 4 — Use and Access",
+    "clause_level": 0,
+    "parent_chunk_id": null,
+    "heading_chain": ["Article 4 — Use and Access"],
+    "char_start": 1011,
+    "char_end": 1270
+  },
+  {
+    "chunk_id": "chunk-007",
+    "document_id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "text": "This Agreement shall commence on the Effective Date and continue for a period of two (2) years (the \"Term\"). The confidentiality obligations shall survive for a period of five (5) years from the date of disclosure.",
+    "clause_heading": "Article 5 — Term and Termination",
+    "clause_level": 0,
+    "parent_chunk_id": null,
+    "heading_chain": ["Article 5 — Term and Termination"],
+    "char_start": 1271,
+    "char_end": 1500
+  },
+  {
+    "chunk_id": "chunk-008",
+    "document_id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "text": "Upon termination of this Agreement, or upon request of the Disclosing Party, the Receiving Party shall promptly return or destroy all Confidential Information and certify such return or destruction in writing.",
+    "clause_heading": "Section 5.1 — Return of Materials",
+    "clause_level": 1,
+    "parent_chunk_id": "chunk-007",
+    "heading_chain": ["Article 5 — Term and Termination", "Section 5.1 — Return of Materials"],
+    "char_start": 1501,
+    "char_end": 1740
+  },
+  {
+    "chunk_id": "chunk-009",
+    "document_id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "text": "THE CONFIDENTIAL INFORMATION IS PROVIDED \"AS IS\" WITHOUT ANY WARRANTY, EXPRESS OR IMPLIED. NEITHER PARTY SHALL BE LIABLE FOR ANY INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES.",
+    "clause_heading": "Article 6 — Disclaimer and Limitation",
+    "clause_level": 0,
+    "parent_chunk_id": null,
+    "heading_chain": ["Article 6 — Disclaimer and Limitation"],
+    "char_start": 1741,
+    "char_end": 1980
+  },
+  {
+    "chunk_id": "chunk-010",
+    "document_id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "text": "This Agreement constitutes the entire agreement between the parties with respect to the subject matter hereof and supersedes all prior negotiations, agreements, and understandings.",
+    "clause_heading": "Article 7 — General Provisions",
+    "clause_level": 0,
+    "parent_chunk_id": null,
+    "heading_chain": ["Article 7 — General Provisions"],
+    "char_start": 1981,
+    "char_end": 2180
+  },
+  {
+    "chunk_id": "chunk-011",
+    "document_id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "text": "This Agreement may be amended only by a written instrument signed by both parties. No waiver of any provision shall be effective unless in writing and signed by the waiving party.",
+    "clause_heading": "Section 7.1 — Amendment and Waiver",
+    "clause_level": 1,
+    "parent_chunk_id": "chunk-010",
+    "heading_chain": ["Article 7 — General Provisions", "Section 7.1 — Amendment and Waiver"],
+    "char_start": 2181,
+    "char_end": 2380
+  },
+  {
+    "chunk_id": "chunk-012",
+    "document_id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "text": "This Agreement shall be governed by and construed in accordance with the laws of the State of Delaware, without regard to its conflict of laws principles.",
+    "clause_heading": "Section 7.2 — Governing Law",
+    "clause_level": 1,
+    "parent_chunk_id": "chunk-010",
+    "heading_chain": ["Article 7 — General Provisions", "Section 7.2 — Governing Law"],
+    "char_start": 2381,
+    "char_end": 2548
+  }
+]
