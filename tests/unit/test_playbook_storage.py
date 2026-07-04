@@ -14,7 +14,9 @@ import pytest
 
 from openreview_cli.storage.database import get_connection
 
-MIGRATIONS_DIR = Path(__file__).resolve().parents[2] / "src" / "openreview_cli" / "storage" / "migrations"
+MIGRATIONS_DIR = (
+    Path(__file__).resolve().parents[2] / "src" / "openreview_cli" / "storage" / "migrations"
+)
 
 
 @pytest.fixture
@@ -49,7 +51,9 @@ class TestMigration006:
 
     def test_schema_columns(self, conn: sqlite3.Connection) -> None:
         _run_migration(conn)
-        cols = {row["name"]: row["type"] for row in conn.execute("PRAGMA table_info(playbook_versions)")}
+        cols = {
+            row["name"]: row["type"] for row in conn.execute("PRAGMA table_info(playbook_versions)")
+        }
         assert cols["playbook_id"] == "TEXT"
         assert cols["version"] == "INTEGER"
         assert cols["content"] == "TEXT"
@@ -67,8 +71,7 @@ class TestMigration006:
     def test_index_created(self, conn: sqlite3.Connection) -> None:
         _run_migration(conn)
         indexes = [
-            row["name"]
-            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")
+            row["name"] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")
         ]
         assert "idx_playbook_versions_lookup" in indexes
 
