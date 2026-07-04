@@ -27,19 +27,19 @@ def _valid_playbook_dict() -> dict[str, Any]:
                 "id": "confidentiality-term",
                 "name": "Confidentiality Term",
                 "description": "Defines confidentiality term",
-                "favorable": {
+                "preferred": {
                     "description": "Short term",
                     "exemplars": ["3 years", "2 years"],
                 },
-                "neutral": {
+                "acceptable": {
                     "description": "Standard term",
                     "exemplars": ["5 years"],
                 },
-                "unfavorable": {
+                "walkaway": {
                     "description": "Indefinite",
                     "exemplars": ["perpetuity", "indefinitely"],
                 },
-                "default_position": "neutral",
+                "default_position": "acceptable",
             }
         ],
     }
@@ -132,7 +132,7 @@ class TestLoadPlaybook:
 
     def test_minimal_exemplars_is_empty(self) -> None:
         d = _valid_playbook_dict()
-        d["categories"][0]["favorable"]["exemplars"] = []
+        d["categories"][0]["preferred"]["exemplars"] = []
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump(d, f)
             fpath = f.name

@@ -1,0 +1,42 @@
+# Legacy-key NDA playbook — uses old favorable/neutral/unfavorable keys
+# This tests backward compatibility (FR-010). Must load with DeprecationWarning.
+id: "legacy-nda-v1"
+mode: "precheck"
+metadata:
+  version: "1.0"
+  description: Legacy NDA playbook with old position keys
+  author: "openreview-test"
+categories:
+  - id: "confidentiality-term"
+    name: "Confidentiality Term"
+    description: Defines how long confidentiality obligations survive
+    favorable:
+      description: Short fixed term (1-3 years)
+      exemplars:
+        - "for a period of three (3) years"
+    neutral:
+      description: Standard 3-5 year term
+      exemplars:
+        - "for a period of five (5) years"
+    unfavorable:
+      description: Indefinite term
+      exemplars:
+        - "shall continue in perpetuity"
+    default_position: "neutral"
+
+  - id: "permitted-disclosures"
+    name: "Permitted Disclosures"
+    description: Exceptions to confidentiality obligations
+    favorable:
+      description: Broad exceptions
+      exemplars:
+        - "may disclose to its advisors"
+    neutral:
+      description: Standard exceptions
+      exemplars:
+        - "disclosure required by law"
+    unfavorable:
+      description: Narrow exceptions
+      exemplars:
+        - "no disclosure to any third party"
+    default_position: "favorable"

@@ -20,10 +20,10 @@ class TestAccuracyMetrics:
 
     def test_position_enum_has_all_values(self) -> None:
         """All expected positions exist for classification."""
-        assert Position.favorable.value == "favorable"
-        assert Position.neutral.value == "neutral"
-        assert Position.unfavorable.value == "unfavorable"
-        assert Position.uncertain.value == "uncertain"
+        assert Position.PREFERRED.value == "preferred"
+        assert Position.ACCEPTABLE.value == "acceptable"
+        assert Position.WALKAWAY.value == "walkaway"
+        assert Position.UNCERTAIN.value == "uncertain"
 
     def test_qa_verdict_enum_has_all_values(self) -> None:
         """All expected QA verdicts exist for error measurement."""

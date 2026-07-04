@@ -12,84 +12,84 @@
       "id": "nda-corp-001",
       "text": "Confidentiality obligations shall survive for a period of three (3) years from the date of disclosure.",
       "expected_category": "confidentiality-term",
-      "expected_position": "favorable",
+      "expected_position": "preferred",
       "page": 1
     },
     {
       "id": "nda-corp-002",
       "text": "The obligations set forth in this Section shall survive for a period of five (5) years.",
       "expected_category": "confidentiality-term",
-      "expected_position": "neutral",
+      "expected_position": "acceptable",
       "page": 2
     },
     {
       "id": "nda-corp-003",
       "text": "Confidentiality obligations shall survive the termination of this Agreement indefinitely and continue in perpetuity.",
       "expected_category": "confidentiality-term",
-      "expected_position": "unfavorable",
+      "expected_position": "walkaway",
       "page": 2
     },
     {
       "id": "nda-corp-004",
       "text": "The receiving party may disclose Confidential Information to its employees, officers, legal counsel, and financial advisors on a need-to-know basis.",
       "expected_category": "permitted-disclosures",
-      "expected_position": "favorable",
+      "expected_position": "preferred",
       "page": 1
     },
     {
       "id": "nda-corp-005",
       "text": "Disclosure required by law, regulation, or court order shall be permitted provided the receiving party gives prompt notice to the disclosing party.",
       "expected_category": "permitted-disclosures",
-      "expected_position": "neutral",
+      "expected_position": "acceptable",
       "page": 1
     },
     {
       "id": "nda-corp-006",
       "text": "The receiving party shall not disclose any Confidential Information to any third party including professional advisors without prior written consent.",
       "expected_category": "permitted-disclosures",
-      "expected_position": "unfavorable",
+      "expected_position": "walkaway",
       "page": 3
     },
     {
       "id": "nda-corp-007",
       "text": "The non-solicitation obligation shall expire upon termination of this Agreement and applies only to employees directly involved in the discussions.",
       "expected_category": "non-solicitation",
-      "expected_position": "favorable",
+      "expected_position": "preferred",
       "page": 2
     },
     {
       "id": "nda-corp-008",
       "text": "This Agreement may be terminated by either party upon thirty (30) days' written notice. The initial term shall be two (2) years, renewable by mutual agreement.",
       "expected_category": "term-and-termination",
-      "expected_position": "neutral",
+      "expected_position": "acceptable",
       "page": 1
     },
     {
       "id": "nda-corp-009",
       "text": "Each party shall, upon the other's request, return or destroy all Confidential Information and certify in writing within thirty (30) days.",
       "expected_category": "return-of-materials",
-      "expected_position": "neutral",
+      "expected_position": "acceptable",
       "page": 1
     },
     {
       "id": "nda-corp-010",
       "text": "The receiving party may retain one copy of the Confidential Information for legal archival purposes. Electronic copies residing in standard backup systems need not be deleted.",
       "expected_category": "return-of-materials",
-      "expected_position": "favorable",
+      "expected_position": "preferred",
       "page": 2
     },
     {
       "id": "nda-corp-011",
       "text": "This Agreement constitutes the entire understanding between the parties and may be amended only by a written instrument signed by both parties.",
       "expected_category": "boilerplate",
-      "expected_position": "neutral",
+      "expected_position": "acceptable",
       "page": 4
     },
     {
       "id": "nda-corp-012",
       "text": "The Disclosing Party may assign this Agreement without the Receiving Party's consent, and the Receiving Party waives any right to injunctive relief.",
       "expected_category": "boilerplate",
-      "expected_position": "unfavorable",
+      "expected_position": "walkaway",
       "page": 4
     }
   ]

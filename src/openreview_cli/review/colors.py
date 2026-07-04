@@ -64,9 +64,9 @@ def assign_colors(assessments: list[ClauseAssessment], threshold: float = 0.7) -
 
         if triggers:
             color = AssessmentColor.amber
-        elif a.position == "unfavorable" and eff_conf >= threshold:
+        elif a.position == "walkaway" and eff_conf >= threshold:
             color = AssessmentColor.red
-        elif a.position in ("favorable", "neutral") and eff_conf >= threshold:
+        elif a.position in ("preferred", "acceptable") and eff_conf >= threshold:
             color = AssessmentColor.green
         else:
             color = AssessmentColor.amber

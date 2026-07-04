@@ -25,12 +25,12 @@ def build_extraction_messages(
     category_id: str,
     category_name: str,
     category_description: str,
-    favorable_desc: str,
-    favorable_exemplars: list[str],
-    neutral_desc: str,
-    neutral_exemplars: list[str],
-    unfavorable_desc: str,
-    unfavorable_exemplars: list[str],
+    preferred_desc: str,
+    preferred_exemplars: list[str],
+    acceptable_desc: str,
+    acceptable_exemplars: list[str],
+    walkaway_desc: str,
+    walkaway_exemplars: list[str],
     default_position: str,
 ) -> list[dict[str, str]]:
     """Build messages for the extraction agent.
@@ -44,29 +44,29 @@ def build_extraction_messages(
         "Respond ONLY with valid JSON — no preamble, no explanation."
     )
 
-    fav_ex = "\n".join(f'  - "{e}"' for e in favorable_exemplars)
-    neu_ex = "\n".join(f'  - "{e}"' for e in neutral_exemplars)
-    unfav_ex = "\n".join(f'  - "{e}"' for e in unfavorable_exemplars)
+    pref_ex = "\n".join(f'  - "{e}"' for e in preferred_exemplars)
+    acc_ex = "\n".join(f'  - "{e}"' for e in acceptable_exemplars)
+    walk_ex = "\n".join(f'  - "{e}"' for e in walkaway_exemplars)
 
     user = (
         f"## Category: {category_name}\n"
         f"{category_description}\n\n"
-        f"### Favorable\n"
-        f"{favorable_desc}\n"
-        f"Exemplars:\n{fav_ex}\n\n"
-        f"### Neutral\n"
-        f"{neutral_desc}\n"
-        f"Exemplars:\n{neu_ex}\n\n"
-        f"### Unfavorable\n"
-        f"{unfavorable_desc}\n"
-        f"Exemplars:\n{unfav_ex}\n\n"
+        f"### Preferred\n"
+        f"{preferred_desc}\n"
+        f"Exemplars:\n{pref_ex}\n\n"
+        f"### Acceptable\n"
+        f"{acceptable_desc}\n"
+        f"Exemplars:\n{acc_ex}\n\n"
+        f"### Walkaway\n"
+        f"{walkaway_desc}\n"
+        f"Exemplars:\n{walk_ex}\n\n"
         f"### Default position (if no specific indicators match)\n"
         f"{default_position}\n\n"
         f"## Clause to classify\n"
         f"```\n{clause_text}\n```\n\n"
         "Return JSON:\n"
         "{\n"
-        '  "position": "favorable" | "neutral" | "unfavorable" | "no-match",\n'
+        '  "position": "preferred" | "acceptable" | "walkaway" | "no-match",\n'
         '  "confidence": 0.0-1.0,\n'
         '  "citation": "exact quoted text from the clause supporting your assessment",\n'
         '  "category_match": true | false\n'
@@ -83,12 +83,12 @@ def build_qa_messages(
     citation: str,
     category_id: str,
     category_name: str,
-    favorable_desc: str,
-    favorable_exemplars: list[str],
-    neutral_desc: str,
-    neutral_exemplars: list[str],
-    unfavorable_desc: str,
-    unfavorable_exemplars: list[str],
+    preferred_desc: str,
+    preferred_exemplars: list[str],
+    acceptable_desc: str,
+    acceptable_exemplars: list[str],
+    walkaway_desc: str,
+    walkaway_exemplars: list[str],
 ) -> list[dict[str, str]]:
     """Build messages for the QA verification agent.
 
@@ -103,15 +103,15 @@ def build_qa_messages(
         "confidence calibration. Respond ONLY with valid JSON."
     )
 
-    fav_ex = "\n".join(f'  - "{e}"' for e in favorable_exemplars)
-    neu_ex = "\n".join(f'  - "{e}"' for e in neutral_exemplars)
-    unfav_ex = "\n".join(f'  - "{e}"' for e in unfavorable_exemplars)
+    pref_ex = "\n".join(f'  - "{e}"' for e in preferred_exemplars)
+    acc_ex = "\n".join(f'  - "{e}"' for e in acceptable_exemplars)
+    walk_ex = "\n".join(f'  - "{e}"' for e in walkaway_exemplars)
 
     user = (
         f"## Category: {category_name}\n"
-        f"### Favorable\n{favorable_desc}\nExemplars:\n{fav_ex}\n\n"
-        f"### Neutral\n{neutral_desc}\nExemplars:\n{neu_ex}\n\n"
-        f"### Unfavorable\n{unfavorable_desc}\nExemplars:\n{unfav_ex}\n\n"
+        f"### Preferred\n{preferred_desc}\nExemplars:\n{pref_ex}\n\n"
+        f"### Acceptable\n{acceptable_desc}\nExemplars:\n{acc_ex}\n\n"
+        f"### Walkaway\n{walkaway_desc}\nExemplars:\n{walk_ex}\n\n"
         f"## Extraction agent's assessment\n"
         f"- Position: {extracted_position}\n"
         f"- Confidence: {confidence}\n"
@@ -126,7 +126,7 @@ def build_qa_messages(
         "Return JSON:\n"
         "{\n"
         '  "verdict": "agree" | "disagree" | "uncertain",\n'
-        '  "revised_position": "favorable" | "neutral" | "unfavorable" | null,\n'
+        '  "revised_position": "preferred" | "acceptable" | "walkaway" | null,\n'
         '  "rationale": "brief explanation of disagreement or uncertainty",\n'
         '  "citation_valid": true | false,\n'
         '  "position_valid": true | false,\n'

@@ -67,33 +67,33 @@ class IndexMeta:
 ```python
 class RetrievalEngine:
     """Orchestrates hybrid retrieval across BM25 + Dense + RRF fusion."""
-    
+
     def __init__(self, db_path: str | Path, gateway: "Gateway"):
         """
         Initialize the retrieval engine.
-        
+
         Args:
             db_path: Path to the SQLite index database.
             gateway: AI Gateway instance for embedding/reranker calls.
         """
         ...
-    
+
     def retrieve(self, query: RetrievalQuery) -> list[RetrievalResult]:
         """
         Execute a retrieval query.
-        
+
         Args:
             query: The retrieval query parameters.
-        
+
         Returns:
             Ranked list of RetrievalResult (length = top_k).
-        
+
         Raises:
             IndexCorruptError: If the index database is corrupted.
             ModelUnavailableError: If embedding model is not available for dense/hybrid.
         """
         ...
-    
+
     def get_index_meta(self) -> IndexMeta:
         """Return metadata about the current index."""
         ...
@@ -115,7 +115,7 @@ async def ingest_document(
 ) -> IndexMeta:
     """
     Ingest parsed chunks into a retrieval index.
-    
+
     Args:
         chunks: Iterator of Chunk objects from the chunking pipeline (spec 007).
         db_path: Path to the SQLite database file.
@@ -123,13 +123,13 @@ async def ingest_document(
         method: "sparse" (BM25 only) or "hybrid" (BM25 + dense embeddings).
         model_id: Embedding model to use (None = gateway default).
         progress_callback: Called with (current, total) after each chunk.
-    
+
     Returns:
         IndexMeta with the completed index metadata.
-    
+
     Raises:
         EmbeddingError: If embedding computation fails for a chunk.
-    
+
     Notes:
         - Idempotent: If db_path exists, it is replaced (not appended).
         - Stream-and-discard: Each chunk is written individually.
@@ -160,7 +160,7 @@ def get_index_for_document(
 ) -> str | Path | None:
     """
     Resolve the SQLite database path for a document hash.
-    
+
     Returns None if no index exists for this document.
     """
     ...
@@ -174,60 +174,60 @@ def get_index_for_document(
 ```python
 class RetrievalStorage:
     """Low-level SQLite operations for the retrieval index."""
-    
+
     def __init__(self, db_path: str | Path):
         self.db_path = db_path
-    
+
     def create_schema(self) -> None:
         """
         Create all tables, FTS5 virtual table, and indexes.
         Sets PRAGMA journal_mode=WAL.
         """
         ...
-    
+
     def insert_chunk(self, chunk: Chunk) -> None:
         """Insert a single chunk row."""
         ...
-    
-    def insert_embedding(self, chunk_id: str, embedding: bytes, 
+
+    def insert_embedding(self, chunk_id: str, embedding: bytes,
                          model_id: str, dimension: int, norm: float) -> None:
         """Insert a single embedding row."""
         ...
-    
+
     def insert_fts(self, chunk_id: str, text: str, clause_heading: str) -> None:
         """Insert a row into the FTS5 virtual table."""
         ...
-    
+
     def search_fts(self, query_text: str, top_k: int) -> list[tuple[str, float]]:
         """
         BM25 search via FTS5.
-        
+
         Returns list of (chunk_id, bm25_score).
         bm25_score is from SQLite's bm25() ranking function (negative = better).
         """
         ...
-    
+
     def load_embeddings(self) -> Iterator[tuple[str, bytes, float]]:
         """
         Stream all (chunk_id, embedding_blob, chunk_norm) tuples.
-        
+
         Used by dense retrieval to compute cosine similarity against query.
         Does not load all embeddings into memory at once — yields one at a time.
         """
         ...
-    
+
     def load_chunk(self, chunk_id: str) -> Chunk | None:
         """Load a single chunk by ID."""
         ...
-    
+
     def load_embedding(self, chunk_id: str) -> tuple[bytes, float] | None:
         """Load a single embedding by chunk ID."""
         ...
-    
+
     def set_index_status(self, status: str) -> None:
         """Set the index status in index_meta table."""
         ...
-    
+
     def get_index_meta(self) -> dict | None:
         """Read index metadata."""
         ...
@@ -243,7 +243,7 @@ def normalize_bm25_scores(
 ) -> list[tuple[str, float]]:
     """
     Normalize FTS5 bm25() scores for RRF fusion input.
-    
+
     FTS5 bm25() returns negative scores where lower (more negative) = better.
     This function converts to rank positions (1 = best) for RRF.
     """
@@ -254,7 +254,7 @@ def normalize_bm25_scores(
 def preprocess_query(query_text: str) -> str:
     """
     Normalize query text for FTS5.
-    
+
     Steps:
     1. Lowercase
     2. Strip punctuation (except hyphens in legal terms like "data-processing")
@@ -276,7 +276,7 @@ def compute_embedding(
 ) -> tuple[list[float], int]:
     """
     Compute embedding vector for text via AI Gateway.
-    
+
     Returns:
         (vector_as_list, dimension)
     """
@@ -298,7 +298,7 @@ def cosine_similarity(
 ) -> float:
     """
     Compute cosine similarity between query and chunk vectors.
-    
+
     If pre-computed norms are provided, skips the sqrt for each vector.
     Returns value in [-1.0, 1.0].
     """
@@ -321,18 +321,18 @@ def rrf_fuse(
 ) -> list[tuple[str, float]]:
     """
     Fuse sparse and dense ranked results via Reciprocal Rank Fusion.
-    
+
     Args:
         sparse_ranks: dict[chunk_id, rank] from BM25 (1 = best).
         dense_ranks: dict[chunk_id, rank] from cosine similarity (1 = best).
         k: RRF constant (default 60).
-    
+
     Returns:
         List of (chunk_id, rrf_score) sorted by descending score.
-    
+
     Formula:
         score(c) = 1/(k + rank_sparse(c)) + 1/(k + rank_dense(c))
-    
+
     A chunk that appears in only one set gets contribution only from that set.
     """
     ...
@@ -345,11 +345,11 @@ def rrf_fuse(
 ```python
 class Reranker:
     """Cross-encoder reranker wrapper via AI Gateway."""
-    
+
     def __init__(self, gateway: "Gateway", model_id: str = "lightrag-cross-encoder"):
         self.gateway = gateway
         self.model_id = model_id
-    
+
     async def rerank(
         self,
         query: str,
@@ -358,12 +358,12 @@ class Reranker:
     ) -> list[tuple[str, float]]:
         """
         Rerank candidate chunks using cross-encoder.
-        
+
         Args:
             query: The original query text.
             candidates: List of (chunk_id, Chunk) pairs to rerank.
             top_k: Number of results to return after reranking.
-        
+
         Returns:
             List of (chunk_id, reranker_score) sorted by descending score.
         """
@@ -375,10 +375,10 @@ class Reranker:
     ) -> dict:
         """
         Run the reranker validation benchmark.
-        
+
         Compares Precision@5 with and without reranker on the document.
         Updates the rerank_validation table.
-        
+
         Returns:
             {"with_reranker": float, "without_reranker": float, "degradation_pp": float}
         """

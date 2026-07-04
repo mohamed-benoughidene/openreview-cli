@@ -40,7 +40,7 @@ def make_clause(clause_id: str = "c1", title: str = "Test", text: str = "Test cl
 
 def make_assessment(
     clause_id: str = "c1",
-    position: Position = Position.neutral,
+    position: Position = Position.ACCEPTABLE,
     confidence: float = 0.85,
 ) -> ClauseAssessment:
     return ClauseAssessment(
@@ -130,8 +130,8 @@ class TestBuildComparisonMessages:
     def test_messages_contain_both_positions(self) -> None:
         from openreview_cli.bilateral.prompts import build_comparison_messages
 
-        ass_a = make_assessment("a1", position=Position.favorable, confidence=0.9)
-        ass_b = make_assessment("b1", position=Position.unfavorable, confidence=0.7)
+        ass_a = make_assessment("a1", position=Position.PREFERRED, confidence=0.9)
+        ass_b = make_assessment("b1", position=Position.WALKAWAY, confidence=0.7)
         messages = build_comparison_messages(
             clause_a_text="Text A",
             clause_b_text="Text B",
@@ -139,8 +139,8 @@ class TestBuildComparisonMessages:
             assessment_b=ass_b,
         )
         combined = " ".join(m["content"] for m in messages)
-        assert "favorable" in combined
-        assert "unfavorable" in combined
+        assert "preferred" in combined
+        assert "walkaway" in combined
         assert "0.9" in combined
         assert "0.7" in combined
 
@@ -176,17 +176,17 @@ class TestBuildComparisonMessages:
         from openreview_cli.bilateral.prompts import build_comparison_messages
         from openreview_cli.review.models import Category, PositionDef
 
-        fav = PositionDef(description="Short term", exemplars=["3 years"])
-        neu = PositionDef(description="Standard", exemplars=["5 years"])
-        unfav = PositionDef(description="Indefinite", exemplars=["perpetuity"])
+        pref = PositionDef(description="Short term", exemplars=["3 years"])
+        acc = PositionDef(description="Standard", exemplars=["5 years"])
+        walk = PositionDef(description="Indefinite", exemplars=["perpetuity"])
         cat = Category(
             id="confidentiality-term",
             name="Confidentiality Term",
             description="Duration of confidentiality obligations",
-            favorable=fav,
-            neutral=neu,
-            unfavorable=unfav,
-            default_position=Position.neutral,
+            preferred=pref,
+            acceptable=acc,
+            walkaway=walk,
+            default_position=Position.ACCEPTABLE,
         )
 
         messages = build_comparison_messages(
@@ -224,8 +224,8 @@ class TestComparisonAgent:
         monkeypatch.setattr("openreview_cli.bilateral.comparison.call_gateway_chat", mock_gateway)
 
         pair = make_alignment_pair()
-        ass_a = make_assessment("a1", Position.favorable, 0.9)
-        ass_b = make_assessment("b1", Position.unfavorable, 0.8)
+        ass_a = make_assessment("a1", Position.PREFERRED, 0.9)
+        ass_b = make_assessment("b1", Position.WALKAWAY, 0.8)
 
         result = compare_pair(
             alignment=pair,

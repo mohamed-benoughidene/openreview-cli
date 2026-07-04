@@ -21,10 +21,10 @@ from openreview_cli.review.models import (
 
 class TestPosition:
     def test_enum_values(self) -> None:
-        assert Position.favorable.value == "favorable"
-        assert Position.neutral.value == "neutral"
-        assert Position.unfavorable.value == "unfavorable"
-        assert Position.uncertain.value == "uncertain"
+        assert Position.PREFERRED.value == "preferred"
+        assert Position.ACCEPTABLE.value == "acceptable"
+        assert Position.WALKAWAY.value == "walkaway"
+        assert Position.UNCERTAIN.value == "uncertain"
 
 
 class TestQAVerdict:
@@ -51,35 +51,35 @@ class TestPositionDef:
 
 class TestCategory:
     def test_minimal(self) -> None:
-        fav = PositionDef(description="Short term", exemplars=["3 years"])
-        neu = PositionDef(description="5 years", exemplars=["5 years"])
-        unfav = PositionDef(description="Indefinite", exemplars=["perpetuity"])
+        pref = PositionDef(description="Short term", exemplars=["3 years"])
+        acc = PositionDef(description="5 years", exemplars=["5 years"])
+        walk = PositionDef(description="Indefinite", exemplars=["perpetuity"])
         cat = Category(
             id="confidentiality-term",
             name="Confidentiality Term",
             description="Defines how long confidentiality obligations survive",
-            favorable=fav,
-            neutral=neu,
-            unfavorable=unfav,
-            default_position=Position.neutral,
+            preferred=pref,
+            acceptable=acc,
+            walkaway=walk,
+            default_position=Position.ACCEPTABLE,
         )
         assert cat.id == "confidentiality-term"
-        assert cat.default_position == Position.neutral
+        assert cat.default_position == Position.ACCEPTABLE
 
     def test_default_position_not_uncertain(self) -> None:
-        """default_position must be favorable/neutral/unfavorable, never uncertain."""
-        fav = PositionDef(description="a", exemplars=["a"])
-        neu = PositionDef(description="b", exemplars=["b"])
-        unfav = PositionDef(description="c", exemplars=["c"])
+        """default_position must be preferred/acceptable/walkaway, never uncertain."""
+        pref = PositionDef(description="a", exemplars=["a"])
+        acc = PositionDef(description="b", exemplars=["b"])
+        walk = PositionDef(description="c", exemplars=["c"])
         with pytest.raises(ValueError, match="default_position"):
             Category(
                 id="test",
                 name="Test",
                 description="test",
-                favorable=fav,
-                neutral=neu,
-                unfavorable=unfav,
-                default_position=Position.uncertain,
+                preferred=pref,
+                acceptable=acc,
+                walkaway=walk,
+                default_position=Position.UNCERTAIN,
             )
 
 
@@ -91,17 +91,17 @@ class TestPlaybookMetadata:
 
 class TestPlaybook:
     def make_category(self, cat_id: str) -> Category:
-        fav = PositionDef(description="a", exemplars=["a"])
-        neu = PositionDef(description="b", exemplars=["b"])
-        unfav = PositionDef(description="c", exemplars=["c"])
+        pref = PositionDef(description="a", exemplars=["a"])
+        acc = PositionDef(description="b", exemplars=["b"])
+        walk = PositionDef(description="c", exemplars=["c"])
         return Category(
             id=cat_id,
             name=cat_id,
             description="test",
-            favorable=fav,
-            neutral=neu,
-            unfavorable=unfav,
-            default_position=Position.neutral,
+            preferred=pref,
+            acceptable=acc,
+            walkaway=walk,
+            default_position=Position.ACCEPTABLE,
         )
 
     def test_minimal(self) -> None:
@@ -133,7 +133,7 @@ class TestClauseAssessment:
             clause_id="clause-001",
             clause_text="Confidential Information shall be kept secret for 3 years.",
             playbook_category="confidentiality-term",
-            position=Position.favorable,
+            position=Position.PREFERRED,
             confidence=0.92,
             citation="for 3 years",
             qa_verdict=QAVerdict.agree,
@@ -148,7 +148,7 @@ class TestClauseAssessment:
             clause_id="c1",
             clause_text="text",
             playbook_category="test",
-            position=Position.neutral,
+            position=Position.ACCEPTABLE,
             confidence=0.3,
             citation="text",
             qa_verdict=QAVerdict.agree,
@@ -163,25 +163,25 @@ class TestClauseAssessment:
             clause_id="c1",
             clause_text="text",
             playbook_category="test",
-            position=Position.favorable,
+            position=Position.PREFERRED,
             confidence=0.9,
             citation="text",
             qa_verdict=QAVerdict.disagree,
-            qa_revised_position=Position.neutral,
+            qa_revised_position=Position.ACCEPTABLE,
             qa_revised_rationale="The clause is standard market language",
             extraction_model="m1",
             qa_model="m1",
         )
         assign_colors([ca])
         assert ca.is_amber is True
-        assert ca.qa_revised_position == Position.neutral
+        assert ca.qa_revised_position == Position.ACCEPTABLE
 
     def test_error_triggers_amber(self) -> None:
         ca = ClauseAssessment(
             clause_id="c1",
             clause_text="text",
             playbook_category="test",
-            position=Position.uncertain,
+            position=Position.UNCERTAIN,
             confidence=0.0,
             citation="",
             qa_verdict=QAVerdict.uncertain,
@@ -198,7 +198,7 @@ class TestClauseAssessment:
                 clause_id="c1",
                 clause_text="text",
                 playbook_category="test",
-                position=Position.neutral,
+                position=Position.ACCEPTABLE,
                 confidence=1.5,  # out of range
                 citation="text",
                 qa_verdict=QAVerdict.agree,
@@ -211,7 +211,7 @@ class TestClauseAssessment:
             clause_id="c1",
             clause_text="Recitals page",
             playbook_category="no-match",
-            position=Position.uncertain,
+            position=Position.UNCERTAIN,
             confidence=0.0,
             citation="",
             qa_verdict=QAVerdict.uncertain,
@@ -233,16 +233,16 @@ class TestDocMeta:
 class TestReviewSummary:
     def test_counts(self) -> None:
         rs = ReviewSummary(
-            favorable_count=10,
-            neutral_count=8,
-            unfavorable_count=4,
+            preferred_count=10,
+            acceptable_count=8,
+            walkaway_count=4,
             uncertain_count=2,
             no_match_count=0,
             amber_count=3,
             avg_confidence=0.85,
         )
         assert rs.total == 24
-        assert rs.favorable_count == 10
+        assert rs.preferred_count == 10
 
 
 class TestReviewReport:
@@ -262,13 +262,13 @@ class TestReviewReport:
     def test_minimal(self) -> None:
         dm = DocMeta(filename="nda.docx", page_count=5, clause_count=3, pii_stripped=False)
         assessments = [
-            self.make_assessment("c1", Position.favorable, 0.9),
-            self.make_assessment("c2", Position.neutral, 0.8),
+            self.make_assessment("c1", Position.PREFERRED, 0.9),
+            self.make_assessment("c2", Position.ACCEPTABLE, 0.8),
         ]
         summary = ReviewSummary(
-            favorable_count=1,
-            neutral_count=1,
-            unfavorable_count=0,
+            preferred_count=1,
+            acceptable_count=1,
+            walkaway_count=0,
             uncertain_count=0,
             no_match_count=0,
             amber_count=0,

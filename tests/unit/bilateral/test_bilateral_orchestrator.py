@@ -31,10 +31,10 @@ def sample_playbook() -> Playbook:
         id="confidentiality-term",
         name="Confidentiality Term",
         description="Defines how long confidentiality obligations survive",
-        favorable=fav,
-        neutral=neu,
-        unfavorable=unfav,
-        default_position=Position.neutral,
+        preferred=fav,
+        acceptable=neu,
+        walkaway=unfav,
+        default_position=Position.ACCEPTABLE,
     )
     meta = PlaybookMetadata(version="1.0.0", description="Test", author="test")
     return Playbook(id="test-nda", mode="precheck", categories=[cat], metadata=meta)
@@ -87,7 +87,7 @@ class TestRunComparison:
         def mock_extraction_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
             extraction_call_count[0] += 1
             return (
-                '{"position": "favorable", "confidence": 0.85, '
+                '{"position": "preferred", "confidence": 0.85, '
                 '"citation": "3 years", "category_match": true}'
             )
 
@@ -165,7 +165,7 @@ class TestRunComparison:
         def mock_extraction_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
             call_order.append("extract")
             return (
-                '{"position": "favorable", "confidence": 0.85, '
+                '{"position": "preferred", "confidence": 0.85, '
                 '"citation": "text", "category_match": true}'
             )
 
@@ -267,7 +267,7 @@ class TestRunComparison:
 
         def mock_extraction_chat_fn(_slot: str, _messages: list[dict[str, str]]) -> str:
             return (
-                '{"position": "neutral", "confidence": 0.9, '
+                '{"position": "acceptable", "confidence": 0.9, '
                 '"citation": "text", "category_match": true}'
             )
 

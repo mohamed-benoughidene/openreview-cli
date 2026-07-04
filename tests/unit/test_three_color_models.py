@@ -109,7 +109,7 @@ class TestEffectiveConfidence:
 
 def _make_assessment(
     confidence: float = 0.8,
-    position: Position = Position.favorable,
+    position: Position = Position.PREFERRED,
     qa_verdict: QAVerdict = QAVerdict.agree,
     error: str | None = None,
     grounding_verdict: GroundingVerdict | None = None,
@@ -132,27 +132,27 @@ def _make_assessment(
 
 
 class TestAssignColors:
-    def test_favorable_high_confidence_green(self) -> None:
-        a = _make_assessment(confidence=0.85, position=Position.favorable)
+    def test_preferred_high_confidence_green(self) -> None:
+        a = _make_assessment(confidence=0.85, position=Position.PREFERRED)
         assign_colors([a])
         assert a.color == AssessmentColor.green
         assert a.effective_confidence == 0.85
         assert a.amber_reasons == []
 
-    def test_neutral_high_confidence_green(self) -> None:
-        a = _make_assessment(confidence=0.85, position=Position.neutral)
+    def test_acceptable_high_confidence_green(self) -> None:
+        a = _make_assessment(confidence=0.85, position=Position.ACCEPTABLE)
         assign_colors([a])
         assert a.color == AssessmentColor.green
 
-    def test_unfavorable_high_confidence_red(self) -> None:
-        a = _make_assessment(confidence=0.85, position=Position.unfavorable)
+    def test_walkaway_high_confidence_red(self) -> None:
+        a = _make_assessment(confidence=0.85, position=Position.WALKAWAY)
         assign_colors([a])
         assert a.color == AssessmentColor.red
         assert a.effective_confidence == 0.85
         assert a.amber_reasons == []
 
     def test_low_confidence_amber(self) -> None:
-        a = _make_assessment(confidence=0.4, position=Position.favorable)
+        a = _make_assessment(confidence=0.4, position=Position.PREFERRED)
         assign_colors([a])
         assert a.color == AssessmentColor.amber
         assert AmberReason.low_confidence in (a.amber_reasons or [])
@@ -188,34 +188,34 @@ class TestAssignColors:
         assert AmberReason.grounding_uncertain in (a.amber_reasons or [])
 
     def test_uncertain_position_amber(self) -> None:
-        a = _make_assessment(position=Position.uncertain)
+        a = _make_assessment(position=Position.UNCERTAIN)
         assign_colors([a])
         assert a.color == AssessmentColor.amber
 
     def test_threshold_boundary_not_amber(self) -> None:
         """Confidence exactly at threshold is NOT amber from threshold alone."""
-        a = _make_assessment(confidence=0.5, position=Position.favorable)
+        a = _make_assessment(confidence=0.5, position=Position.PREFERRED)
         assign_colors([a], threshold=0.5)
         assert a.color == AssessmentColor.green
         assert AmberReason.low_confidence not in (a.amber_reasons or [])
 
     def test_custom_threshold(self) -> None:
-        a = _make_assessment(confidence=0.75, position=Position.favorable)
+        a = _make_assessment(confidence=0.75, position=Position.PREFERRED)
         assign_colors([a], threshold=0.9)
         assert a.color == AssessmentColor.amber
         assert AmberReason.low_confidence in (a.amber_reasons or [])
 
     def test_threshold_zero(self) -> None:
         """threshold=0.0 → no clause goes amber from threshold alone (only from other triggers)."""
-        # High-confidence favorable — stays green
-        a1 = _make_assessment(confidence=0.92, position=Position.favorable)
+        # High-confidence preferred — stays green
+        a1 = _make_assessment(confidence=0.92, position=Position.PREFERRED)
         # Low-confidence (0.1) but threshold=0.0 means no low_confidence trigger
-        a2 = _make_assessment(confidence=0.1, position=Position.favorable)
+        a2 = _make_assessment(confidence=0.1, position=Position.PREFERRED)
         # Error — should still be amber regardless of threshold
-        a3 = _make_assessment(confidence=0.8, error="Failed", position=Position.favorable)
+        a3 = _make_assessment(confidence=0.8, error="Failed", position=Position.PREFERRED)
         # QA disagree — should still be amber regardless of threshold
         a4 = _make_assessment(
-            confidence=0.8, qa_verdict=QAVerdict.disagree, position=Position.favorable
+            confidence=0.8, qa_verdict=QAVerdict.disagree, position=Position.PREFERRED
         )
 
         assign_colors([a1, a2, a3, a4], threshold=0.0)
@@ -231,10 +231,10 @@ class TestAssignColors:
 
     def test_threshold_one(self) -> None:
         """threshold=1.0 → every clause with confidence < 1.0 goes amber (unless other triggers beat it)."""
-        a1 = _make_assessment(confidence=0.99, position=Position.favorable)
-        a2 = _make_assessment(confidence=0.5, position=Position.favorable)
-        # unfavorable with conf < 1.0 — still amber because low_confidence, not red
-        a3 = _make_assessment(confidence=0.85, position=Position.unfavorable)
+        a1 = _make_assessment(confidence=0.99, position=Position.PREFERRED)
+        a2 = _make_assessment(confidence=0.5, position=Position.PREFERRED)
+        # walkaway with conf < 1.0 — still amber because low_confidence, not red
+        a3 = _make_assessment(confidence=0.85, position=Position.WALKAWAY)
 
         assign_colors([a1, a2, a3], threshold=1.0)
         assert a1.color == AssessmentColor.amber
@@ -250,7 +250,7 @@ class TestAssignColors:
     def test_multiple_triggers(self) -> None:
         a = _make_assessment(
             confidence=0.3,
-            position=Position.unfavorable,
+            position=Position.WALKAWAY,
             qa_verdict=QAVerdict.disagree,
             error="Failed",
             grounding_verdict=GroundingVerdict.UNGROUNDED,
@@ -265,7 +265,7 @@ class TestAssignColors:
     def test_no_grounding_data_no_grounding_trigger(self) -> None:
         a = _make_assessment(
             confidence=0.85,
-            position=Position.favorable,
+            position=Position.PREFERRED,
             grounding_verdict=None,
             grounding_confidence=None,
         )
@@ -281,8 +281,8 @@ class TestAssignColors:
         assert elapsed < 0.1  # 100 ms
 
     def test_deterministic(self) -> None:
-        a1 = _make_assessment(confidence=0.45, position=Position.neutral)
-        a2 = _make_assessment(confidence=0.45, position=Position.neutral)
+        a1 = _make_assessment(confidence=0.45, position=Position.ACCEPTABLE)
+        a2 = _make_assessment(confidence=0.45, position=Position.ACCEPTABLE)
         assign_colors([a1])
         assign_colors([a2])
         assert a1.color == a2.color
@@ -298,7 +298,7 @@ class TestIsAmberBackwardCompat:
         assert a.is_amber is True
 
     def test_color_green_is_amber_false(self) -> None:
-        a = _make_assessment(confidence=0.85, position=Position.favorable)
+        a = _make_assessment(confidence=0.85, position=Position.PREFERRED)
         assign_colors([a])
         assert a.color == AssessmentColor.green
         assert a.is_amber is False
@@ -314,7 +314,7 @@ class TestIsAmberBackwardCompat:
         assert a.is_amber is False  # not set by __post_init__
 
     def test_color_red_is_amber_false(self) -> None:
-        a = _make_assessment(confidence=0.85, position=Position.unfavorable)
+        a = _make_assessment(confidence=0.85, position=Position.WALKAWAY)
         assign_colors([a])
         assert a.color == AssessmentColor.red
         assert a.is_amber is False
@@ -333,7 +333,7 @@ class TestReviewSummaryExtensions:
 
     def test_with_values(self) -> None:
         s = ReviewSummary(
-            favorable_count=10,
+            preferred_count=10,
             amber_count=3,
             green_count=8,
             red_count=2,

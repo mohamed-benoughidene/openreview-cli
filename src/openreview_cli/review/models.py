@@ -19,10 +19,10 @@ if TYPE_CHECKING:
 class Position(StrEnum):
     """Final position for a clause assessment."""
 
-    favorable = "favorable"
-    neutral = "neutral"
-    unfavorable = "unfavorable"
-    uncertain = "uncertain"
+    PREFERRED = "preferred"
+    ACCEPTABLE = "acceptable"
+    WALKAWAY = "walkaway"
+    UNCERTAIN = "uncertain"
 
 
 class QAVerdict(StrEnum):
@@ -52,14 +52,14 @@ class Category:
     id: str
     name: str
     description: str
-    favorable: PositionDef
-    neutral: PositionDef
-    unfavorable: PositionDef
+    preferred: PositionDef
+    acceptable: PositionDef
+    walkaway: PositionDef
     default_position: Position
 
     def __post_init__(self) -> None:
-        if self.default_position == Position.uncertain:
-            raise ValueError("default_position must be favorable, neutral, or unfavorable")
+        if self.default_position == Position.UNCERTAIN:
+            raise ValueError("default_position must be preferred, acceptable, or walkaway")
 
 
 @dataclass
@@ -146,9 +146,9 @@ class DocMeta:
 class ReviewSummary:
     """Aggregate statistics across all assessments."""
 
-    favorable_count: int = 0
-    neutral_count: int = 0
-    unfavorable_count: int = 0
+    preferred_count: int = 0
+    acceptable_count: int = 0
+    walkaway_count: int = 0
     uncertain_count: int = 0
     no_match_count: int = 0
     amber_count: int = 0
@@ -160,9 +160,9 @@ class ReviewSummary:
     @property
     def total(self) -> int:
         return (
-            self.favorable_count
-            + self.neutral_count
-            + self.unfavorable_count
+            self.preferred_count
+            + self.acceptable_count
+            + self.walkaway_count
             + self.uncertain_count
             + self.no_match_count
         )
@@ -179,3 +179,4 @@ class ReviewReport:
     generated_at: datetime
     confidence_threshold: float = 0.7
     schema_version: str = "1.1.0"
+    playbook_version: int | None = None

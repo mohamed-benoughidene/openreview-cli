@@ -117,7 +117,7 @@ def sample_report() -> ReviewReport:
                 clause_id=f"clause_{i}",
                 clause_text=f"Test claim {i}: The receiving party shall not disclose",
                 playbook_category="confidentiality",
-                position=Position.favorable,
+                position=Position.PREFERRED,
                 confidence=0.9,
                 citation="4.3",
                 qa_verdict=(QAVerdict.disagree if i >= 8 else QAVerdict.agree),
@@ -133,9 +133,9 @@ def sample_report() -> ReviewReport:
         pii_stripped=False,
     )
     summary = ReviewSummary(
-        favorable_count=10,
-        neutral_count=0,
-        unfavorable_count=0,
+        preferred_count=10,
+        acceptable_count=0,
+        walkaway_count=0,
         uncertain_count=0,
         no_match_count=0,
         amber_count=0,

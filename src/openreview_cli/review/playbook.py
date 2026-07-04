@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -79,36 +80,100 @@ def _parse_playbook(raw: dict[str, Any]) -> Playbook:
     )
 
 
+LEGACY_POSITION_KEYS: dict[str, str] = {
+    "favorable": "preferred",
+    "neutral": "acceptable",
+    "unfavorable": "walkaway",
+}
+
+
 def _parse_category(raw: dict[str, Any]) -> Category:
-    """Parse a single category dict into a Category model."""
+    """Parse a single category dict into a Category model.
+
+    Supports legacy position keys (favorable/neutral/unfavorable) with a
+    DeprecationWarning. New keys (preferred/acceptable/walkaway) take
+    precedence when both are present.
+    """
+    resolved = dict(raw)
+    used_legacy = False
+
+    for old_key, new_key in LEGACY_POSITION_KEYS.items():
+        if old_key in raw and new_key not in raw:
+            resolved[new_key] = raw[old_key]
+            used_legacy = True
+
     for req in (
         "id",
         "name",
         "description",
-        "favorable",
-        "neutral",
-        "unfavorable",
+        "preferred",
+        "acceptable",
+        "walkaway",
         "default_position",
     ):
-        if req not in raw:
+        if req not in resolved:
             raise PlaybookLoadError(f"Category missing required field: {req}")
 
+    if used_legacy:
+        warnings.warn(
+            "Legacy position keys 'favorable'/'neutral'/'unfavorable' used. "
+            "Rename to 'preferred'/'acceptable'/'walkaway'. This will be removed in a future version.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+    # Also map legacy default_position values
+    default_val = str(resolved["default_position"])
+    if default_val in LEGACY_POSITION_KEYS:
+        if not used_legacy:
+            warnings.warn(
+                f"Legacy default_position value '{default_val}' used. "
+                f"Use '{LEGACY_POSITION_KEYS[default_val]}' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        default_val = LEGACY_POSITION_KEYS[default_val]
+
     try:
-        default = Position(raw["default_position"])
+        default = Position(default_val)
     except ValueError as exc:
         raise PlaybookLoadError(
-            f"Invalid default_position '{raw['default_position']}' in category '{raw.get('id', '?')}'"
+            f"Invalid default_position '{default_val}' in category '{resolved.get('id', '?')}'"
         ) from exc
 
     return Category(
-        id=str(raw["id"]),
-        name=str(raw["name"]),
-        description=str(raw["description"]),
-        favorable=_parse_position_def(raw["favorable"]),
-        neutral=_parse_position_def(raw["neutral"]),
-        unfavorable=_parse_position_def(raw["unfavorable"]),
+        id=str(resolved["id"]),
+        name=str(resolved["name"]),
+        description=str(resolved["description"]),
+        preferred=_parse_position_def(resolved["preferred"]),
+        acceptable=_parse_position_def(resolved["acceptable"]),
+        walkaway=_parse_position_def(resolved["walkaway"]),
         default_position=default,
     )
+
+
+def load_playbook_from_db(playbook_id: str) -> tuple[Playbook, int]:
+    """Load the latest version of a playbook from the database.
+
+    Returns (Playbook, version_number).
+
+    Raises PlaybookLoadError if the playbook_id is not found.
+    """
+    import json
+
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.storage.database import get_latest_playbook_version
+
+    db_path = get_data_dir() / "openreview.db"
+    result = get_latest_playbook_version(db_path, playbook_id)
+    if result is None:
+        raise PlaybookLoadError(f"Playbook '{playbook_id}' not found in database.")
+    content, version = result
+    try:
+        raw = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise PlaybookLoadError(f"Corrupt playbook data: {exc}") from exc
+    return _parse_playbook(raw), version
 
 
 def _parse_position_def(raw: dict[str, Any]) -> PositionDef:

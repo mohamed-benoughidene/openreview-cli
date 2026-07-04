@@ -39,7 +39,7 @@ def make_clause(clause_id: str = "c1", title: str = "Test", text: str = "Test cl
 
 def make_assessment(
     clause_id: str = "c1",
-    position: Position = Position.neutral,
+    position: Position = Position.ACCEPTABLE,
     confidence: float = 0.85,
 ) -> ClauseAssessment:
     return ClauseAssessment(
