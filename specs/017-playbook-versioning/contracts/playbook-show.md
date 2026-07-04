@@ -35,15 +35,15 @@ None.
    Description: Standard NDA v2
    Author: Legal Team
    Created: 2026-07-03 14:30:00
-   
+
    Categories:
-   
+
    1. confidentiality — Confidentiality
       Default: preferred
       Preferred: Broad mutual protection
       Acceptable: Standard one-way protection
       Walkaway: No confidentiality clause
-   
+
    2. ...
    ```
 7. Exit code 0.

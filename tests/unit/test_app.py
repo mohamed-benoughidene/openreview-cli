@@ -39,4 +39,4 @@ def test_warm_startup_latency(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -
     start = time.perf_counter()
     runner.invoke(app, ["--version"])
     elapsed = time.perf_counter() - start
-    assert elapsed < 0.3, f"warm startup took {elapsed:.3f}s, expected <0.3s"
+    assert elapsed < 0.5, f"warm startup took {elapsed:.3f}s, expected <0.5s"

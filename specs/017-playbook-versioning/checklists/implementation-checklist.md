@@ -46,7 +46,7 @@ Use this checklist to track completion of each implementation task.
 - [ ] Add `playbook` Typer group to `app.py`
 - [ ] Implement `playbook import <yaml-path>`:
   - [ ] Validate file exists
-  - [ ] Parse YAML via existing `load_playbook()` 
+  - [ ] Parse YAML via existing `load_playbook()`
   - [ ] Compute next version number
   - [ ] Serialise to JSON and insert into DB
   - [ ] Print confirmation with version info

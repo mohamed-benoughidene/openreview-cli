@@ -22,8 +22,10 @@ pass-through params (`extra_params` in config.yml), prompt management
 (versioned SQLite-backed storage, model-to-prompt binding, variable substitution,
 YAML export/import, A/B testing and GRPO optimization hooks defined), **and
 hierarchical retrieval (BM25 + dense embeddings + RRF hybrid fusion, offline
-fallback, reranker validation), and single-party contract review (PAKTON
-3-agent pipeline: extraction, QA
+fallback, reranker validation), 5-stage async pipeline framework (Stage ABC,
+runner with cancellation and progress tracking, memory budget enforcement,
+adapters for parse/strip/chunk/retrieve/generate), and single-party contract
+review (PAKTON 3-agent pipeline: extraction, QA
 verification, report formatting), citation grounding discriminator
 (post-hoc claim verification with strict/lenient modes, CG metrics, JSONL audit trail),
 and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), playbook versioning (database storage with version tracking, position rename to preferred/acceptable/walkaway with backward compatibility, version-stamped reviews), and experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status.**
@@ -32,7 +34,7 @@ will change.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
-| Unit + integration tests    | 1,143                    |
+| Unit + integration tests    | 1,237                    |
 | CLI commands                | 50                        |
 | SQLite tables               | 13                        |
 | Migrations                  | 6                         |
@@ -237,7 +239,9 @@ uv run openreview --version
 | `src/openreview_cli/gateway/`                       | AI Gateway — router, registry, cost, models, redaction, wizard |
 | `src/openreview_cli/retrieval/`                     | Retrieval pipeline — BM25 (FTS5), dense embeddings (Ollama), RRF fusion, reranker, ingest, storage |
 | `src/openreview_cli/grounding/`                    | Citation grounding discriminator — post-hoc claim verification, strict/lenient modes, CG metrics, JSONL audit trail, corruption generators |
-| `src/openreview_cli/review/`                       | Single-party review package (PAKTON 3-agent pipeline) |
+| `src/openreview_cli/pipeline/`                      | 5-stage async pipeline — Stage ABC, runner with cancellation/progress/memory enforcement, adapters (parse/strip/chunk/retrieve/generate), error hierarchy, progress events |
+| `src/openreview_cli/review/`                       | Single-party review package (PAKTON 3-agent pipeline, delegates through async pipeline) |
+| `src/openreview_cli/review/pipeline.py`            | ReviewStage — wraps extraction/QA agents as a pipeline stage |
 | `src/openreview_cli/review/playbook.py`            | Playbook loader — YAML parsing, validation, DB-backed load via `load_playbook_from_db()` |
 | `src/openreview_cli/review/playbooks/`             | Bundled YAML playbooks (e.g., `precheck-nda-v1.yaml`) |
 | `src/openreview_cli/prompts/`                       | Prompt management — versioned storage, binding, CLI |
@@ -280,6 +284,14 @@ uv run openreview --version
 | `tests/unit/test_playbook_versioning.py`            | 5 tests (position rename backward compat, old YAML keys) |
 | `tests/unit/test_playbook_storage.py`               | 8 tests (playbook database CRUD, version tracking) |
 | `tests/integration/test_playbook_commands.py`       | 6 tests (playbook import/list/show CLI, `--playbook` flag) |
+| `tests/unit/test_pipeline_base.py`                  | 7 tests (Stage ABC, StageResult)           |
+| `tests/unit/test_pipeline_errors.py`                | 11 tests (error hierarchy)                 |
+| `tests/unit/test_pipeline_progress.py`              | 3 tests (progress events)                  |
+| `tests/unit/test_pipeline_runner.py`                | 15 tests (runner, cancellation, memory)    |
+| `tests/unit/test_pipeline_adapters.py`              | 28 tests (all 5 stage adapters)           |
+| `tests/unit/test_pipeline_memory.py`                | 7 tests (memory budget enforcement)        |
+| `tests/integration/test_pipeline_e2e.py`            | 12 tests (end-to-end pipeline)            |
+| `tests/integration/test_pipeline_memory.py`         | 5 tests (pipeline memory budget)           |
 | `tests/conftest.py`                                 | Memory tracker fixture (< 110 MB)          |
 | `.pre-commit-config.yaml`                           | 10 hooks (ruff, mypy, pytest, hygiene)     |
 | `.github/workflows/ci.yml`                          | 4 parallel CI jobs                         |

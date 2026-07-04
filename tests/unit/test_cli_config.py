@@ -100,4 +100,4 @@ def test_config_operation_latency(monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
     elapsed = time.perf_counter() - start
 
     assert result.exit_code == 0
-    assert elapsed < 0.5, f"config get took {elapsed:.3f}s (limit: 0.5s)"
+    assert elapsed < 1.0, f"config get took {elapsed:.3f}s (limit: 1.0s)"

@@ -1,108 +1,94 @@
-# Analysis Context
+# Analysis Context — 5-Stage Async Pipeline Framework (018)
 
-**Generated**: 2026-07-01 | **Phase**: speckit.analysis-grounding | **Feature**: 007-chunking-strategy
+**Generated**: 2026-07-04 | **Feature**: `018-5-stage-async-pipeline` | **Branch**: `feat/018-5-stage-async-pipeline`
 
-## Grounding Status
+---
 
-- All grounding artifacts present
-- verified-sources.md: OK
-- task-context.md: OK
+## 1. Grounding Chain Status
 
-## Reality Anchors
+| Source | Status | Lines | Notes |
+|--------|--------|-------|-------|
+| `verified-sources.md` | ✅ Loaded | 87 lines | Deps confirmed (15 runtime, 4 dev), zero new needed, all 5 capability modules on disk, no forbidden deps |
+| `task-context.md` | ✅ Loaded | 134 lines | All 11 pipeline source paths = NEW, all 4 test paths = NEW, `review/__init__.py` = EXISTS, all existing modules confirmed |
+| `analysis-context.md` | ✅ Creating now | — | Grounding chain complete |
 
-### Dependency Anchors
+**Grounding chain**: `verified-sources.md` → `task-context.md` (references verified-sources.md) → `analysis-context.md` (this file). Chain is intact and consistent.
 
-- ANCHOR DEP: Python | VERSION: 3.12.3 | CONFIRMED BEHAVIORS: dataclass(slots=True), re, itertools, collections.abc.Iterator, pathlib — all stdlib
-- ANCHOR DEP: pytest | VERSION: 9.1.1 | CONFIRMED BEHAVIORS: `pytest -k "chunking"`, existing config in pyproject.toml
-- ANCHOR DEP: Rich | VERSION: 15.0.0 | CONFIRMED BEHAVIORS: rich.progress.Progress, rich.console.Console
-- ANCHOR DEP: Click | VERSION: 8.4.2 | CONFIRMED BEHAVIORS: Typer CLI framework
-- ANCHOR DEP: PyYAML | VERSION: 6.0.3 | CONFIRMED BEHAVIORS: yaml.safe_load(), existing config infra
-- ANCHOR DEP: Pydantic | VERSION: 2.13.4 | CONFIRMED BEHAVIORS: BaseModel, field_validator — used in config/loader.py
-- ANCHOR DEP: openreview-cli | VERSION: editable | CONFIRMED BEHAVIORS: parsing.models.Clause, parsing.stream.stream_clauses, config.loader.load_config
+---
 
-### Path Anchors
+## 2. Plan Claims vs Reality
 
-- ANCHOR PATH: src/openreview_cli/chunking/ | STATUS: NEW
-- ANCHOR PATH: src/openreview_cli/app.py | STATUS: EXISTS
-- ANCHOR PATH: src/openreview_cli/parsing/models.py | STATUS: EXISTS
-- ANCHOR PATH: src/openreview_cli/parsing/stream.py | STATUS: EXISTS
-- ANCHOR PATH: src/openreview_cli/config/loader.py | STATUS: EXISTS
-- ANCHOR PATH: tests/unit/ | STATUS: EXISTS
-- ANCHOR PATH: tests/integration/ | STATUS: EXISTS
-- ANCHOR PATH: tests/fixtures/ | STATUS: EXISTS
-- ANCHOR PATH: tests/unit/test_chunking_models.py | STATUS: NEW
-- ANCHOR PATH: tests/unit/test_chunking_tokenizer.py | STATUS: NEW
-- ANCHOR PATH: tests/unit/test_chunking_splitter.py | STATUS: NEW
-- ANCHOR PATH: tests/unit/test_chunking_stream.py | STATUS: NEW
-- ANCHOR PATH: tests/integration/test_chunking_cli.py | STATUS: NEW
-- ANCHOR PATH: tests/integration/test_chunking_performance.py | STATUS: NEW
-- ANCHOR PATH: tests/integration/test_chunking_memory.py | STATUS: NEW
+### Dependencies
 
-## Artifact Reality Claims
+| Claim | Source | Reality | Verdict |
+|-------|--------|---------|---------|
+| Zero new runtime deps | plan.md §Primary Dependencies | ✅ Stdlib only: `asyncio`, `dataclasses`, `abc`, `time`, `tracemalloc`, `logging` — all confirmed in Python 3.12 | ✅ MATCH |
+| No forbidden deps | plan.md §Constraints | ✅ None present (langchain, llama-index, FAISS, spaCy-direct, sentence-transformers, Click, loguru, FastAPI/Flask all absent) | ✅ MATCH |
+| `psutil` not a dep | spec.md FR-010 (mentions psutil as option) | ✅ `psutil` is not in pyproject.toml. Plan correctly chose `tracemalloc` instead. | ✅ MATCH (spec allows either) |
 
-### plan.md Claims
+### File Paths
 
-| Claim | Anchor | Verdict |
+| Claim | Source | Reality | Verdict |
+|-------|--------|---------|---------|
+| `src/openreview_cli/pipeline/` | plan.md §Project Structure | ❌ Does not exist — marked NEW in task-context.md | ✅ MATCH (will be created) |
+| 11 source files, 4 test files | plan.md, tasks.md | All 15 paths confirmed NEW in task-context.md | ✅ MATCH |
+| `review/__init__.py` exists | plan.md (refactor target) | ✅ EXISTS on disk | ✅ MATCH |
+| `parsing/`, `pii/`, `chunking/`, `retrieval/`, `gateway/` | plan.md §Stage Adapter Pattern | ✅ All 5 confirmed on disk in task-context.md | ✅ MATCH |
+
+### Module Interfaces (UNVERIFIED — flagged for analysis)
+
+The plan and tasks reference specific function names from existing modules. These have NOT been verified against actual module `__init__.py` exports:
+
+| Claim | Source | Reality |
 |-------|--------|---------|
-| Python 3.12 | Python 3.12.3 | MATCHES |
-| pytest (existing infra) | pytest 9.1.1 | MATCHES |
-| @dataclass(slots=True) | Python 3.12.3 — dataclass(slots=True) stdlib | MATCHES |
-| No new dependencies | verified-sources: no new deps needed | MATCHES |
-| SQLite (future, sqlite-vss) | NONE — not in scope for this phase | NO ANCHOR (expected — future) |
-| src/openreview_cli/chunking/ | NEW path | MATCHES |
-| src/openreview_cli/app.py | EXISTS | MATCHES |
-| tests/unit/test_chunking_models.py | NEW path | MATCHES |
+| `openreview_cli.parsing.stream.parse_document()` | plan.md §Stage Adapter Pattern | ⚠️ UNVERIFIED — function signature not confirmed against `parsing/__init__.py` |
+| `openreview_cli.parsing.stream_clauses()` | plan.md §Research Resolution 2 | ⚠️ UNVERIFIED — name mismatch with above (two different names used for same module) |
+| `openreview_cli.pii.strip_pii_clauses()` | plan.md, tasks.md | ⚠️ UNVERIFIED — function name not confirmed |
+| `openreview_cli.chunking.chunk_clauses()` | plan.md, tasks.md | ⚠️ UNVERIFIED — function name not confirmed |
+| `openreview_cli.retrieval.search()` | plan.md, tasks.md | ⚠️ UNVERIFIED — function name not confirmed |
+| `openreview_cli.gateway.Gateway.chat()` | plan.md, tasks.md | ⚠️ UNVERIFIED — method signature not confirmed |
 
-### spec.md Claims
+**Risk**: If actual function signatures differ, stage adapter implementations (P2-I-002 through P2-I-006) will need adjustment. Tasks.md P2-I-005 acknowledges this for retrieval ("if signature differs, stub with NotImplementedError") but other adapters assume exact match.
 
-| Claim | Anchor | Verdict |
-|-------|--------|---------|
-| Whitespace + punctuation tokenizer | stdlib `re` module | MATCHES |
-| RCTS from scratch (no LangChain) | verified-sources: LangChain forbidden | MATCHES |
-| 512 token chunks, 50 token overlap | config.yml infra available | MATCHES |
-| @dataclass(slots=True) for Chunk | Python 3.12.3 | MATCHES |
-| Rich progress indicator | Rich 15.0.0 | MATCHES |
-| PyYAML config loading | PyYAML 6.0.3 | MATCHES |
-| Typer CLI command | Click 8.4.2 (Typer) | MATCHES |
-| Clause dataclass from parsing module | Clause(id, title, text, level, parent_id, ...) | MATCHES |
-| stream_clauses() generator | stream_clauses(path) -> Iterator[Clause] | MATCHES |
-| load_config() function | load_config(config_path) -> dict | MATCHES |
-| Exit codes 0, 1, 2 | errors.py convention | MATCHES |
+### Contracts Directory
 
-### research.md Claims
+`contracts/pipeline-api.md` is referenced in tasks.md §Interface Contract Map but was NOT read during this analysis (cap limit). The analysis assumes the contracts align with the plan and data-model.md.
 
-| Claim | Anchor | Verdict |
-|-------|--------|---------|
-| LangChain RCTS algorithm reference | verified-sources: behavioral claim only | NO ANCHOR (behavioral claim, not dep) |
-| PAKTON hierarchical chunking (P-13) | NONE — research paper | NO ANCHOR (research paper, not dep) |
-| LegalBench-RAG (P-9) | NONE — research paper | NO ANCHOR (research paper, not dep) |
+---
 
-### data-model.md Claims
+## 3. Mismatches
 
-| Claim | Anchor | Verdict |
-|-------|--------|---------|
-| Chunk @dataclass(slots=True) | Python 3.12.3 | MATCHES |
-| ChunkConfig @dataclass | Python 3.12.3 | MATCHES |
-| Field types (str, int, str \| None) | stdlib typing | MATCHES |
+| ID | Location | Issue | Severity |
+|----|----------|-------|----------|
+| M1 | plan.md vs tasks.md | Stage ABC in P1-I-001 lacks `should_skip()` method, but P2-T-008 tests it | HIGH |
+| M2 | plan.md §Research Resolution 2 vs plan.md §Stage Adapter Pattern | Function name inconsistency: `stream_clauses()` vs `parse_document()` for same parsing module | MEDIUM |
+| M3 | tasks.md P2-I-005 | Retrieval stub with `NotImplementedError` conflicts with SC-005 (zero-regression adoption) if run_review() is refactored before retrieval adapter is complete | HIGH |
+| M4 | spec.md FR-010 | Mentions `psutil` as optional measurement tool, but `psutil` is not in deps and not in stdlib. Plan correctly uses `tracemalloc` only. | LOW |
+| M5 | plan.md §Performance Goals | "Cleanup callback reduces stage-local memory to zero" — zero is unrealistic (GC non-determinism, reference cycles) | MEDIUM |
 
-### contracts/chunking-api.md Claims
+---
 
-| Claim | Anchor | Verdict |
-|-------|--------|---------|
-| stream_chunks(clauses, config) signature | Iterator pattern matches stream_clauses | MATCHES |
-| ValueError on invalid config | errors.py convention | MATCHES |
-| Typer CLI pattern for chunk command | app.py parse command pattern | MATCHES |
-| Exit codes 0, 1, 2 | errors.py conventions | MATCHES |
+## 4. Assumptions for Analysis
 
-## Drift Summary
+The following assumptions are carried into the cross-artifact analysis. If any is invalid, findings may change.
 
-- COUNT: VERSION DRIFT findings: 0
-- COUNT: PATH CONFLICT findings: 0
-- COUNT: NO ANCHOR findings: 4 (all expected — 2 research papers, 1 future feature, 1 behavioral claim reference)
+1. **Function signatures match**: The 6 UNVERIFIED module function names listed above are assumed to match actual exports. If wrong, stage adapter tasks (P2-I-002 through P2-I-006) may require signature adjustments or wrappers.
+2. **Contracts align with plan**: The `contracts/pipeline-api.md` is assumed to match the interfaces described in plan.md and data-model.md. Not verified in this analysis.
+3. **`conftest.py` has `memory_tracker` fixture**: Memory tests (P3-T-005) rely on `memory_tracker` fixture declared in `tests/conftest.py`. Not verified.
+4. **`@pytest.mark.integration` and `@pytest.mark.memory` are registered**: Tasks.md assumes these markers exist in pytest config. Not verified.
+5. **Stage adapter base needed**: P2-I-001 creates shared adapter utilities. Whether this is needed or each adapter can be independent is assumed per plan.
+6. **`asyncio.Event` cancellation**: The plan assumes `asyncio.Event` for cancellation. The spec allows "asyncio.Event or callback". Assumption is reasonable.
+7. **No existing `pipeline/` module**: Confirmed NEW by task-context.md. No naming collision risk.
 
-## Implementation Readiness
+---
 
-- All dependency versions match runtime
-- All file paths align between plan.md and filesystem
-- No forbidden dependencies are referenced
-- All API claims (tokenizer, RCTS, dataclass, Rich, PyYAML, Typer) are grounded in confirmed installed packages
+## 5. Reality Check (Constitution §Analysis Grounding Rule)
+
+| Check | Result |
+|-------|--------|
+| VERSION DRIFT — Any version number in plan.md that doesn't match CONFIRMED anchor | ✅ None. Python 3.12 confirmed. No other version numbers in plan.md that differ from reality. |
+| PATH CONFLICT — Any file path in tasks.md that is neither EXISTS nor NEW | ✅ None. All 15 paths confirmed. |
+| UNVERIFIED API — Any API/function name in plan.md with NO ANCHOR in verified-sources.md | ⚠️ 6 function names unverified (see §2 Module Interfaces above) |
+| `analysis-context.md` exists | ✅ Created by this analysis |
+
+**Verdict**: Grounding is intact but 6 API function names require verification before implementation. These are flagged as findings in the analysis report.
