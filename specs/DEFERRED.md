@@ -906,3 +906,239 @@ creates a new version rather than restoring the old one). There are no
 - `playbook diff <id> <v1> <v2>` (version diff is a prerequisite for meaningful rollback)
 - `playbook history <id>` — show full version timeline
 - Interactive rollback: pick a version and set it as current
+
+---
+
+## D-22: Background / Out-of-band Task Support
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 018 — 5-stage async pipeline framework |
+| **Deferred at** | 2026-07-04 |
+| **Trigger** | Explicitly out of scope in the spec — linear CLI workflow only |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+The pipeline framework runs stages sequentially in-process with async IO
+concurrency only. Background tasks, event loops that outlive a single
+command, and cross-command state are all out of scope per the spec
+assumptions. Every pipeline starts, executes all stages, and terminates.
+
+Out-of-band task support would enable:
+
+1. A persistent pipeline worker (e.g., watching a directory for new
+   documents and automatically running a review)
+2. Cross-command state sharing (e.g., a model connection pool that
+   survives between `openreview precheck` invocations)
+3. Background pre-loading of the PII NLP model or gateway model cache
+   so subsequent commands start faster
+4. Scheduled re-processing (e.g., re-run review on document change)
+
+### What would need to change to unblock
+
+1. Design a persistent pipeline worker or daemon mode for the CLI
+   (constitutional check: Principle II requires CLI-only, so a daemon
+   process may conflict)
+2. Add cross-command state storage (SQLite-backed or file-backed)
+3. Optionally add a `--watch` or `--daemon` flag to pipeline consumers
+4. Add integration tests that verify state persistence across commands
+
+### Blueprint references
+
+Spec 018 §6 (Assumptions), C-25 scope boundary. The current design
+intentionally avoids all of these to keep the framework simple.
+
+---
+
+## D-23: Bilateral and Benchmark Pipeline Adoption
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 018 — 5-stage async pipeline framework |
+| **Deferred at** | 2026-07-04 |
+| **Trigger** | Explicitly out of scope — only the review pipeline was adopted |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+The pipeline framework is adopted by exactly one consumer:
+`run_review()` in `review/__init__.py`. The bilateral comparison pipeline
+and the benchmark harness are explicitly deferred to follow-up PRs.
+
+Adopting the pipeline framework for bilateral comparison and benchmark
+would:
+
+1. Replace the manual stage orchestration in
+   `src/openreview_cli/bilateral/` (if it exists) with ParseStage,
+   StripStage, and a new ComparisonStage
+2. Replace the benchmark runner's hardcoded sequence with a configurable
+   Pipeline
+3. Allow both consumers to benefit from error isolation, progress
+   reporting, memory tracking, and cancellation
+
+### What would need to change to unblock
+
+1. For bilateral comparison: wrap the comparison agent as a
+   `ComparisonStage` (or reuse `ReviewStage` with comparison-aware config)
+2. For benchmark: refactor the benchmark runner to accept a `Pipeline`
+   object instead of calling modules directly
+3. Verify no regressions in bilateral or benchmark test suites
+4. Update `pyproject.toml` entry points if any new stage adapters are
+   needed
+
+### Blueprint references
+
+Spec 018 §5 (Adoption Strategy), plan.md checklist item 4,
+research.md §4. The review pipeline adoption is the v1 proof point;
+bilateral and benchmark follow when they need the pipeline guarantees.
+
+---
+
+## D-24: True Async PII Stripping Stage
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 018 — 5-stage async pipeline framework |
+| **Deferred at** | 2026-07-04 |
+| **Trigger** | Ponytail comment in `pipeline/adapters/strip.py:45` |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+`StripStage` wraps the existing synchronous `strip_pii_clauses()` call
+in `asyncio.to_thread()` — it offloads to a thread pool worker rather
+than being truly async-native. This works correctly but adds the overhead
+of a thread context switch, and if the GIL serializes the underlying
+spaCy-heavy operations, the thread pool offers no parallelism benefit.
+
+A true async PII stripping stage would need the underlying PII engine to
+expose an async API or incremental processing that yields intermediate
+results without blocking.
+
+### What would need to change to unblock
+
+1. Refactor the PII engine (`src/openreview_cli/pii/engine.py`) to expose
+   an async `strip_pii_clauses_async()` or incremental generator that
+   yields stripped clauses without blocking the event loop
+2. Update `StripStage.run()` to call the async entry point directly
+   instead of `asyncio.to_thread()`
+3. Verify thread safety if the PII engine's internal state (spaCy model,
+   Presidio analyzer) is shared across concurrent invocations
+
+### Blueprint references
+
+Ponytail marker at `src/openreview_cli/pipeline/adapters/strip.py` line 45.
+The existing PII engine pre-loads the spaCy model (`en_core_web_lg`) once,
+so the async refactor would mainly affect how callers interact with it.
+
+---
+
+## D-25: Streaming Lazy Iterator Preservation in ChunkStage
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 018 — 5-stage async pipeline framework |
+| **Deferred at** | 2026-07-04 |
+| **Trigger** | Ponytail comment in `pipeline/adapters/chunk.py:39` |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+`ChunkStage` calls `stream_chunks(clauses, config)` which returns a lazy
+iterator, then immediately converts it to a list inside the thread worker:
+
+```python
+def _chunk() -> list[Any]:
+    return list(stream_chunks(clauses, self.config))
+```
+
+This materialises every chunk into memory at once, losing the streaming
+memory benefit that `stream_chunks()` was designed to provide. For large
+documents (200+ pages, thousands of chunks), this can push peak memory
+above the streaming baseline.
+
+Preserving the lazy iterator would require the pipeline framework to
+support streaming outputs — where a stage yields items incrementally
+rather than producing a single batch dict at the end.
+
+### What would need to change to unblock
+
+1. Extend the `Stage` interface or the `PipelineContext` to support
+   streaming stage outputs (e.g., an `AsyncIterable` channel per stage)
+2. Update `ChunkStage.run()` to yield chunks incrementally instead of
+   collecting them into a list
+3. Update downstream stages (`RetrieveStage`, `GenerateStage`) to consume
+   chunks as a stream rather than a list
+4. Add a memory-benchmark test that measures the difference between
+   batched and streaming chunk processing
+
+### Blueprint references
+
+Ponytail marker at `src/openreview_cli/pipeline/adapters/chunk.py` line 39.
+The underlying `stream_chunks()` function (in `openreview_cli.chunking`)
+already produces a lazy generator — the pipeline wrapper discards that
+property.
+
+---
+
+## D-26: Sophisticated Retrieval Query Building
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 018 — 5-stage async pipeline framework |
+| **Deferred at** | 2026-07-04 |
+| **Trigger** | Ponytail comment in `pipeline/adapters/retrieve.py:65` |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+`RetrieveStage` builds the retrieval query from context by naively
+concatenating the text of the first 5 chunks:
+
+```python
+# ponytail: simple concatenation rather than sophisticated query building
+query_text = " ".join(c.text for c in chunks[:5])
+```
+
+This works for v1 but has known limitations:
+- Ignores chunks beyond the first 5 entirely
+- No query expansion or reformulation
+- No weighting of chunks by relevance
+- No boolean operators or field filters
+- No prompt-based query refinement (e.g., "find confidentiality clauses
+  about trade secrets")
+
+Sophisticated query building would use the playbook and review context
+to construct a targeted query rather than concatenating raw chunk text.
+
+### What would need to change to unblock
+
+1. Design a query-building strategy that considers the playbook's
+   categories, the user's review intent, and per-chunk metadata
+2. Optionally use an LLM to reformulate the raw context into a concise
+   search query (via the AI Gateway extraction slot)
+3. Support query operators (AND/OR exclusion) and field filters
+4. Add a test corpus that demonstrates improved recall/precision over
+   the naive concatenation approach
+
+### Blueprint references
+
+Ponytail marker at `src/openreview_cli/pipeline/adapters/retrieve.py` line 65.
+Spec 018 retrieval feature (the retrieve stage wraps `RetrievalEngine`
+which already supports a `RetrievalQuery` dataclass with room for future
+query structure).
+
+### Future features (not deferred — natural next steps)
+
+- **Query expansion via LLM**: Use the AI Gateway to rewrite a raw context
+  snippet into a focused query, improving recall.
+- **Playbook-aware retrieval**: Use playbook category descriptors as part
+  of the query to bias results toward clauses relevant to the current
+  playbook mode.
+- **Per-chunk relevance scoring**: Expose individual chunk relevance scores
+  in the retrieval output so downstream stages (generate, review) can
+  weight or filter results.
+- **Hybrid search**: Combine vector similarity with keyword/BM25 scoring,
+  especially useful for clause-number lookups ("§3.2") that embeddings
+  handle poorly.

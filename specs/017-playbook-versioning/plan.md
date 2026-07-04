@@ -30,7 +30,7 @@ NX-3 extends the playbook system (spec 011) with **persistent, versioned playboo
 
 **Performance Goals**: Negligible — playbook storage is a few KB per version, single-user, no in-memory footprint beyond the one playbook loaded at review time. Well within the <100 MB budget.
 
-**Constraints**: 
+**Constraints**:
 - Local-only (no server, no cloud sync) — Principle II
 - No new dependencies — Principle IV
 - TDD required — tests before implementation
