@@ -15,17 +15,17 @@ from openreview_cli.review.models import (
 
 @pytest.fixture
 def sample_category() -> Category:
-    fav = PositionDef(description="Short term", exemplars=["3 years", "2 years"])
-    neu = PositionDef(description="Standard term", exemplars=["5 years"])
-    unfav = PositionDef(description="Indefinite", exemplars=["perpetuity"])
+    pref = PositionDef(description="Short term", exemplars=["3 years", "2 years"])
+    acc = PositionDef(description="Standard term", exemplars=["5 years"])
+    walk = PositionDef(description="Indefinite", exemplars=["perpetuity"])
     return Category(
         id="confidentiality-term",
         name="Confidentiality Term",
         description="Defines confidentiality term",
-        favorable=fav,
-        neutral=neu,
-        unfavorable=unfav,
-        default_position=Position.neutral,
+        preferred=pref,
+        acceptable=acc,
+        walkaway=walk,
+        default_position=Position.ACCEPTABLE,
     )
 
 
@@ -42,7 +42,7 @@ class TestQAAgent:
             clause_id="c1",
             clause_text="Confidential Info shall be kept secret for 3 years.",
             playbook_category="confidentiality-term",
-            position=Position.favorable,
+            position=Position.PREFERRED,
             confidence=0.92,
             citation="for 3 years",
             qa_verdict=QAVerdict.agree,
@@ -77,7 +77,7 @@ class TestQAAgent:
             clause_id="c1",
             clause_text="Confidential Info shall be kept secret for 5 years.",
             playbook_category="confidentiality-term",
-            position=Position.favorable,  # extraction says favorable
+            position=Position.PREFERRED,  # extraction says preferred
             confidence=0.88,
             citation="5 years",
             qa_verdict=QAVerdict.agree,
@@ -87,7 +87,7 @@ class TestQAAgent:
 
         def mock_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
             return (
-                '{"verdict": "disagree", "revised_position": "neutral", '
+                '{"verdict": "disagree", "revised_position": "acceptable", '
                 '"rationale": "5 years is standard market term, not short", '
                 '"citation_valid": true, '
                 '"position_valid": false, "category_valid": true, '
@@ -99,7 +99,7 @@ class TestQAAgent:
         result = verify_assessment(assessment, sample_category, qa_model="test-slot")
 
         assert result.qa_verdict == QAVerdict.disagree
-        assert result.qa_revised_position == Position.neutral
+        assert result.qa_revised_position == Position.ACCEPTABLE
         assert result.qa_revised_rationale is not None
         assert result.is_amber
 
@@ -113,7 +113,7 @@ class TestQAAgent:
             clause_id="c1",
             clause_text="Confidential Info shall be kept secret for 99 years.",
             playbook_category="confidentiality-term",
-            position=Position.unfavorable,
+            position=Position.WALKAWAY,
             confidence=0.6,
             citation="99 years",
             qa_verdict=QAVerdict.agree,
@@ -147,7 +147,7 @@ class TestQAAgent:
             clause_id="c1",
             clause_text="Some text",
             playbook_category="confidentiality-term",
-            position=Position.neutral,
+            position=Position.ACCEPTABLE,
             confidence=0.8,
             citation="text",
             qa_verdict=QAVerdict.agree,

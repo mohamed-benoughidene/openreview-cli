@@ -50,10 +50,10 @@ def _make_report(
         pii_stripped=False,
     )
     summary = ReviewSummary(
-        favorable_count=sum(1 for a in assessments if a.position == Position.favorable),
-        neutral_count=sum(1 for a in assessments if a.position == Position.neutral),
-        unfavorable_count=sum(1 for a in assessments if a.position == Position.unfavorable),
-        uncertain_count=sum(1 for a in assessments if a.position == Position.uncertain),
+        preferred_count=sum(1 for a in assessments if a.position == Position.PREFERRED),
+        acceptable_count=sum(1 for a in assessments if a.position == Position.ACCEPTABLE),
+        walkaway_count=sum(1 for a in assessments if a.position == Position.WALKAWAY),
+        uncertain_count=sum(1 for a in assessments if a.position == Position.UNCERTAIN),
         no_match_count=0,
         amber_count=sum(1 for a in assessments if a.is_amber),
         avg_confidence=sum(a.confidence for a in assessments) / max(len(assessments), 1),
@@ -71,8 +71,8 @@ def _make_report(
 class TestThresholdPropagation:
     def test_default_threshold_colors(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
-            _make_assessment("c2", Position.neutral, 0.45),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
+            _make_assessment("c2", Position.ACCEPTABLE, 0.45),
         ]
         assign_colors(assessments, threshold=0.7)
         assert assessments[0].color == AssessmentColor.green
@@ -80,8 +80,8 @@ class TestThresholdPropagation:
 
     def test_custom_threshold_more_amber(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.85),
-            _make_assessment("c2", Position.neutral, 0.72),
+            _make_assessment("c1", Position.PREFERRED, 0.85),
+            _make_assessment("c2", Position.ACCEPTABLE, 0.72),
         ]
         # 0.7 threshold: both >= 0.7 → both green
         assign_colors(assessments, threshold=0.7)
@@ -99,8 +99,8 @@ class TestThresholdPropagation:
 
     def test_custom_threshold_fewer_amber(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.3),
-            _make_assessment("c2", Position.neutral, 0.45),
+            _make_assessment("c1", Position.PREFERRED, 0.3),
+            _make_assessment("c2", Position.ACCEPTABLE, 0.45),
         ]
         # 0.7 threshold: both < 0.7 → both amber
         assign_colors(assessments, threshold=0.7)
@@ -114,16 +114,16 @@ class TestThresholdPropagation:
             a.effective_confidence = None
         assign_colors(assessments, threshold=0.3)
         # 0.3 is NOT < 0.3, so c1 is not amber from threshold alone
-        # But c1 position is favorable and conf >= threshold, so green
+        # But c1 position is preferred and conf >= threshold, so green
         assert assessments[0].color == AssessmentColor.green  # type: ignore[comparison-overlap]
         # 0.45 < 0.3 is False, so c2 is also not amber from threshold
-        # position neutral, conf >= threshold, so green
+        # position acceptable, conf >= threshold, so green
         assert assessments[1].color == AssessmentColor.green
 
     def test_ninety_threshold_on_eighty_five(self) -> None:
         """Clause with confidence 0.85 and threshold 0.9 → Amber."""
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.85),
+            _make_assessment("c1", Position.PREFERRED, 0.85),
         ]
         assign_colors(assessments, threshold=0.9)
         assert assessments[0].color == AssessmentColor.amber
@@ -132,11 +132,11 @@ class TestThresholdPropagation:
     def test_threshold_at_boundary(self) -> None:
         """Clause with confidence 0.5 and threshold 0.5 → NOT Amber from threshold."""
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.5),
+            _make_assessment("c1", Position.PREFERRED, 0.5),
         ]
         assign_colors(assessments, threshold=0.5)
         # 0.5 < 0.5 is False, so no low_confidence trigger
-        # Position favorable, conf >= threshold → Green
+        # Position preferred, conf >= threshold → Green
         assert assessments[0].color == AssessmentColor.green
 
     def test_empty_assessment_list(self) -> None:
@@ -145,14 +145,14 @@ class TestThresholdPropagation:
 
     def test_report_records_confidence_threshold(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
         ]
         report = _make_report(assessments, threshold=0.7)
         assert report.confidence_threshold == 0.7
 
     def test_report_records_custom_threshold(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
         ]
         report = _make_report(assessments, threshold=0.3)
         assert report.confidence_threshold == 0.3
@@ -163,16 +163,16 @@ class TestThresholdPropagation:
 
     def test_schema_version_is_1_1_0(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
         ]
         report = _make_report(assessments)
         assert report.schema_version == "1.1.0"
 
     def test_summary_green_red_counts_after_colors(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
-            _make_assessment("c2", Position.unfavorable, 0.85),
-            _make_assessment("c3", Position.favorable, 0.45),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
+            _make_assessment("c2", Position.WALKAWAY, 0.85),
+            _make_assessment("c3", Position.PREFERRED, 0.45),
         ]
         assign_colors(assessments, threshold=0.7)
         report = _make_report(assessments)
@@ -184,8 +184,8 @@ class TestThresholdPropagation:
 
     def test_avg_effective_confidence_calculated(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
-            _make_assessment("c2", Position.neutral, 0.85),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
+            _make_assessment("c2", Position.ACCEPTABLE, 0.85),
         ]
         assign_colors(assessments, threshold=0.7)
         vals = [a.effective_confidence for a in assessments if a.effective_confidence is not None]
@@ -195,8 +195,8 @@ class TestThresholdPropagation:
     def test_backward_compat_is_amber_accessible(self) -> None:
         """is_amber should be accessible after assign_colors."""
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
-            _make_assessment("c2", Position.favorable, 0.45),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
+            _make_assessment("c2", Position.PREFERRED, 0.45),
         ]
         # Before assign_colors, is_amber returns _is_amber (default False)
         assert assessments[0].is_amber is False
@@ -217,11 +217,11 @@ class TestPerformanceAndDeterminism:
         assessments = [
             _make_assessment(
                 str(i),
-                Position.favorable
+                Position.PREFERRED
                 if i % 3 == 0
-                else Position.unfavorable
+                else Position.WALKAWAY
                 if i % 3 == 1
-                else Position.neutral,
+                else Position.ACCEPTABLE,
                 0.3 + (i % 7) * 0.1,
                 grounding_verdict=GroundingVerdict.UNGROUNDED if i % 5 == 0 else None,
             )
@@ -234,12 +234,12 @@ class TestPerformanceAndDeterminism:
 
     def test_deterministic_output(self) -> None:
         assessments1 = [
-            _make_assessment("c1", Position.favorable, 0.6),
-            _make_assessment("c2", Position.unfavorable, 0.9),
+            _make_assessment("c1", Position.PREFERRED, 0.6),
+            _make_assessment("c2", Position.WALKAWAY, 0.9),
         ]
         assessments2 = [
-            _make_assessment("c1", Position.favorable, 0.6),
-            _make_assessment("c2", Position.unfavorable, 0.9),
+            _make_assessment("c1", Position.PREFERRED, 0.6),
+            _make_assessment("c2", Position.WALKAWAY, 0.9),
         ]
         assign_colors(assessments1, threshold=0.7)
         assign_colors(assessments2, threshold=0.7)

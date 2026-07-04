@@ -36,10 +36,10 @@ def _make_assessment(cid: str, pos: Position, conf: float, amber: bool = False) 
 def _make_report(assessments: list[ClauseAssessment] | None = None) -> ReviewReport:
     if assessments is None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
-            _make_assessment("c2", Position.neutral, 0.85),
-            _make_assessment("c3", Position.unfavorable, 0.72, amber=True),
-            _make_assessment("c4", Position.uncertain, 0.45, amber=True),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
+            _make_assessment("c2", Position.ACCEPTABLE, 0.85),
+            _make_assessment("c3", Position.WALKAWAY, 0.72, amber=True),
+            _make_assessment("c4", Position.UNCERTAIN, 0.45, amber=True),
         ]
     dm = DocMeta(
         filename="nda.docx",
@@ -48,10 +48,10 @@ def _make_report(assessments: list[ClauseAssessment] | None = None) -> ReviewRep
         pii_stripped=True,
     )
     summary = ReviewSummary(
-        favorable_count=sum(1 for a in assessments if a.position == Position.favorable),
-        neutral_count=sum(1 for a in assessments if a.position == Position.neutral),
-        unfavorable_count=sum(1 for a in assessments if a.position == Position.unfavorable),
-        uncertain_count=sum(1 for a in assessments if a.position == Position.uncertain),
+        preferred_count=sum(1 for a in assessments if a.position == Position.PREFERRED),
+        acceptable_count=sum(1 for a in assessments if a.position == Position.ACCEPTABLE),
+        walkaway_count=sum(1 for a in assessments if a.position == Position.WALKAWAY),
+        uncertain_count=sum(1 for a in assessments if a.position == Position.UNCERTAIN),
         no_match_count=0,
         amber_count=sum(1 for a in assessments if a.is_amber),
         avg_confidence=sum(a.confidence for a in assessments) / max(len(assessments), 1),
@@ -82,18 +82,18 @@ class TestFormatTerminal:
     def test_contains_summary(self) -> None:
         report = _make_report()
         output = format_terminal(report)
-        assert "Favorable" in output
-        assert "Neutral" in output
-        assert "Unfavorable" in output
+        assert "Preferred" in output
+        assert "Acceptable" in output
+        assert "Walkaway" in output
         assert "Uncertain" in output
         assert "Amber" in output
 
     def test_contains_assessment_positions(self) -> None:
         report = _make_report()
         output = format_terminal(report)
-        assert "FAVORABLE" in output.upper()
-        assert "NEUTRAL" in output.upper()
-        assert "UNFAVORABLE" in output.upper()
+        assert "PREFERRED" in output.upper()
+        assert "ACCEPTABLE" in output.upper()
+        assert "WALKAWAY" in output.upper()
         assert "UNCERTAIN" in output.upper()
 
     def test_amber_highlighted(self) -> None:
@@ -109,14 +109,14 @@ class TestFormatTerminal:
 
     def test_summary_counts_match(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.9),
-            _make_assessment("c2", Position.neutral, 0.8),
-            _make_assessment("c3", Position.unfavorable, 0.7),
-            _make_assessment("c4", Position.uncertain, 0.3),
+            _make_assessment("c1", Position.PREFERRED, 0.9),
+            _make_assessment("c2", Position.ACCEPTABLE, 0.8),
+            _make_assessment("c3", Position.WALKAWAY, 0.7),
+            _make_assessment("c4", Position.UNCERTAIN, 0.3),
         ]
         report = _make_report(assessments)
         output = format_terminal(report)
-        assert "1" in output  # favorable count
+        assert "1" in output  # preferred count
 
 
 class TestFormatJson:
@@ -154,9 +154,9 @@ class TestFormatJson:
         data = json.loads(format_json(report))
         n_assessments = len(data["assessments"])
         total_from_summary = (
-            data["summary"]["favorable_count"]
-            + data["summary"]["neutral_count"]
-            + data["summary"]["unfavorable_count"]
+            data["summary"]["preferred_count"]
+            + data["summary"]["acceptable_count"]
+            + data["summary"]["walkaway_count"]
             + data["summary"]["uncertain_count"]
             + data["summary"]["no_match_count"]
         )
@@ -166,7 +166,7 @@ class TestFormatJson:
         report = _make_report([])
         data = json.loads(format_json(report))
         assert data["assessments"] == []
-        assert data["summary"]["favorable_count"] == 0
+        assert data["summary"]["preferred_count"] == 0
 
     def test_batch_format(self) -> None:
         """Batch reports as a list of ReviewReports should produce a JSON array."""

@@ -36,7 +36,12 @@ def format_terminal(report: ReviewReport) -> str:  # noqa: PLR0912, PLR0915  # p
     # Header
     console.print()
     console.print("[bold]NDA Review Report[/bold]")
-    console.print(f"[dim]Playbook: {report.playbook_id}[/dim]")
+    if report.playbook_version is not None:
+        console.print(
+            f"[dim]Playbook: {report.playbook_id} (version {report.playbook_version})[/dim]"
+        )
+    else:
+        console.print(f"[dim]Playbook: {report.playbook_id}[/dim]")
     console.print()
 
     # Document metadata
@@ -119,9 +124,9 @@ def format_terminal(report: ReviewReport) -> str:  # noqa: PLR0912, PLR0915  # p
     console.print(f"  Green:       {summary.green_count}")
     console.print(f"  Amber:       {summary.amber_count}")
     console.print(f"  Red:         {summary.red_count}")
-    console.print(f"  Favorable:   {summary.favorable_count}")
-    console.print(f"  Neutral:     {summary.neutral_count}")
-    console.print(f"  Unfavorable: {summary.unfavorable_count}")
+    console.print(f"  Preferred:   {summary.preferred_count}")
+    console.print(f"  Acceptable:  {summary.acceptable_count}")
+    console.print(f"  Walkaway:    {summary.walkaway_count}")
     console.print(f"  Uncertain:   {summary.uncertain_count}")
     console.print(f"  No-match:    {summary.no_match_count}")
     console.print()
@@ -182,10 +187,10 @@ def _print_grounding_summary(report: Any, console: Any) -> None:
 def _position_style(ca: Any) -> str:
     """Return a styled position string for terminal output."""
     mapping: dict[Position, str] = {
-        Position.favorable: "[green]Favorable[/green]",
-        Position.neutral: "[yellow]Neutral[/yellow]",
-        Position.unfavorable: "[red]Unfavorable[/red]",
-        Position.uncertain: "[bold red]Uncertain[/bold red]",
+        Position.PREFERRED: "[green]Preferred[/green]",
+        Position.ACCEPTABLE: "[yellow]Acceptable[/yellow]",
+        Position.WALKAWAY: "[red]Walkaway[/red]",
+        Position.UNCERTAIN: "[bold red]Uncertain[/bold red]",
     }
     return mapping.get(ca.position, str(ca.position.value))
 

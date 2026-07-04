@@ -2,7 +2,7 @@
 
 Single-party review brings contract analysis to the CLI: a user uploads a
 contract and receives a structured, per-clause assessment scored against a
-3-position playbook (favorable, neutral, unfavorable). Three pipeline
+3-position playbook (preferred, acceptable, walkaway). Three pipeline
 stages — extraction, QA verification, and a no-op comparison placeholder —
 produce citation-grounded, uncertainty-aware output.
 """
@@ -30,7 +30,7 @@ from openreview_cli.review.models import (
     ReviewReport,
     ReviewSummary,
 )
-from openreview_cli.review.playbook import load_bundled, load_playbook
+from openreview_cli.review.playbook import load_bundled, load_playbook, load_playbook_from_db
 from openreview_cli.review.qa import verify_assessment
 from openreview_cli.review.report import format_json, format_terminal
 
@@ -44,13 +44,15 @@ __all__ = [
     "assign_colors",
     "format_json",
     "format_terminal",
+    "load_playbook_from_db",
     "run_review",
 ]
 
 
-def run_review(
+def run_review(  # noqa: PLR0912
     paths: Sequence[str],
     playbook_path: str | None = None,
+    playbook_id: str | None = None,
     extraction_model: str = "extraction",
     qa_model: str | None = None,
     no_pii: bool = False,
@@ -67,6 +69,8 @@ def run_review(
         is handled by the CLI shell.
     playbook_path : str | None
         Path to a custom YAML playbook. ``None`` uses the bundled NDA playbook.
+    playbook_id : str | None
+        Playbook ID to load from database. Takes precedence over playbook_path.
     extraction_model : str
         Model slot name for the extraction agent.
     qa_model : str | None
@@ -89,8 +93,23 @@ def run_review(
     if qa_model is None:
         qa_model = extraction_model
 
-    # Load playbook
-    playbook = load_playbook(Path(playbook_path)) if playbook_path else load_bundled()
+    # Load playbook with precedence: DB id > file path > bundled
+    playbook_version: int | None = None
+    if playbook_id and playbook_path:
+        import warnings
+
+        warnings.warn(
+            "Both --playbook and --playbook-path provided. "
+            "--playbook (database) takes precedence; --playbook-path is ignored.",
+            UserWarning,
+            stacklevel=2,
+        )
+    if playbook_id:
+        playbook, playbook_version = load_playbook_from_db(playbook_id)
+    elif playbook_path:
+        playbook = load_playbook(Path(playbook_path))
+    else:
+        playbook = load_bundled()
 
     reports: list[ReviewReport] = []
 
@@ -148,7 +167,11 @@ def run_review(
             parsed_at=datetime.now(UTC),
         )
         report = _build_report(
-            doc_meta, assessments, playbook, confidence_threshold=confidence_threshold
+            doc_meta,
+            assessments,
+            playbook,
+            confidence_threshold=confidence_threshold,
+            playbook_version=playbook_version,
         )
 
         # Phase 5: Comparison — no-op for single-party review
@@ -199,6 +222,7 @@ def _build_report(
     assessments: list[ClauseAssessment],
     playbook: Playbook,
     confidence_threshold: float = 0.7,
+    playbook_version: int | None = None,
 ) -> ReviewReport:
     """Build a ReviewReport from assessments."""
     assign_colors(assessments, confidence_threshold)
@@ -219,10 +243,10 @@ def _build_report(
     avg_effective_confidence = sum(valid_conf) / len(valid_conf) if valid_conf else 0.0
 
     summary = ReviewSummary(
-        favorable_count=pos_counts.get(Position.favorable, 0),
-        neutral_count=pos_counts.get(Position.neutral, 0),
-        unfavorable_count=pos_counts.get(Position.unfavorable, 0),
-        uncertain_count=pos_counts.get(Position.uncertain, 0),
+        preferred_count=pos_counts.get(Position.PREFERRED, 0),
+        acceptable_count=pos_counts.get(Position.ACCEPTABLE, 0),
+        walkaway_count=pos_counts.get(Position.WALKAWAY, 0),
+        uncertain_count=pos_counts.get(Position.UNCERTAIN, 0),
         no_match_count=no_match_count,
         green_count=green_count,
         red_count=red_count,
@@ -238,4 +262,5 @@ def _build_report(
         playbook_id=playbook.id,
         generated_at=datetime.now(UTC),
         confidence_threshold=confidence_threshold,
+        playbook_version=playbook_version,
     )

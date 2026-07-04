@@ -371,6 +371,194 @@ def pii_cleanup(
 
 app.add_typer(pii_app)
 
+playbook_app = typer.Typer(
+    name="playbook",
+    help="Manage versioned playbooks in the local database.",
+    no_args_is_help=True,
+)
+
+
+@playbook_app.command("import")
+def playbook_import(
+    yaml_path: str = typer.Argument(..., help="Path to YAML playbook file"),
+) -> None:
+    """Import a YAML playbook into the local database.
+
+    Parses the YAML playbook, validates it, and saves it as a new append-only version.
+    Returns the playbook ID and version number.
+    """
+    import json
+    from dataclasses import asdict
+
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.review.playbook import load_playbook
+    from openreview_cli.storage.database import import_playbook_yaml
+
+    path = Path(yaml_path)
+    if not path.exists():
+        typer.echo(f"Error: File not found: {yaml_path}", err=True)
+        raise typer.Exit(code=2)
+
+    try:
+        playbook = load_playbook(path)
+    except Exception as e:
+        typer.echo(f"Error: Invalid playbook: {e}", err=True)
+        raise typer.Exit(code=2) from None
+
+    db_path = get_data_dir() / "openreview.db"
+    content = json.dumps(asdict(playbook))
+    try:
+        next_ver, prev_version = import_playbook_yaml(db_path, playbook.id, content)
+    except Exception as e:
+        typer.echo(f"Error: Failed to save playbook: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+    msg = f"Imported playbook '{playbook.id}' as version {next_ver}."
+    if prev_version is not None:
+        msg += f" (previous version: {prev_version})."
+    typer.echo(msg)
+
+
+@playbook_app.command("list")
+def playbook_list() -> None:
+    """List all playbooks in the local database.
+
+    Displays a table with playbook ID, description, latest version, and import date.
+    """
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.storage.database import list_playbooks
+
+    db_path = get_data_dir() / "openreview.db"
+    try:
+        playbooks = list_playbooks(db_path)
+    except Exception as e:
+        typer.echo(f"Error: Database error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+    if not playbooks:
+        typer.echo("No playbooks saved yet.")
+        return
+
+    import json as _json
+
+    from rich.console import Console
+    from rich.table import Table
+
+    console = Console()
+    table = Table(title="Playbooks")
+    table.add_column("ID", style="cyan")
+    table.add_column("Description", style="green")
+    table.add_column("Latest Version", style="yellow", justify="right")
+    table.add_column("Imported", style="white")
+
+    for pb_id, version, created_at in playbooks:
+        # Try to extract description from the latest version's content
+        desc = ""
+        try:
+            from openreview_cli.storage.database import get_playbook_version
+
+            content = get_playbook_version(db_path, pb_id, version)
+            if content:
+                parsed = _json.loads(content)
+                desc = parsed.get("metadata", {}).get("description", "")
+        except Exception:
+            pass
+
+        # Format date as YYYY-MM-DD
+        date_str = created_at[:10] if created_at else ""
+        table.add_row(pb_id, desc, str(version), date_str)
+
+    console.print(table)
+
+
+@playbook_app.command("show")
+def playbook_show(
+    playbook_id: str = typer.Argument(..., help="Playbook ID"),
+    version: int = typer.Argument(..., help="Version number"),
+) -> None:
+    """Show a specific playbook version from the database.
+
+    Displays full playbook contents including all categories and their
+    position definitions.
+    """
+    import json as _json
+
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.storage.database import get_playbook_version
+
+    if version < 1:
+        typer.echo("Error: Version must be a positive integer.", err=True)
+        raise typer.Exit(code=2)
+
+    db_path = get_data_dir() / "openreview.db"
+    try:
+        content = get_playbook_version(db_path, playbook_id, version)
+    except Exception as e:
+        typer.echo(f"Error: Database error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+    if content is None:
+        # Check if playbook_id exists at all
+        from openreview_cli.storage.database import list_playbooks
+
+        all_pbs = list_playbooks(db_path)
+        ids = {pb[0] for pb in all_pbs}
+        if playbook_id not in ids:
+            typer.echo(f"Error: Playbook '{playbook_id}' not found.", err=True)
+        else:
+            typer.echo(
+                f"Error: Version {version} not found for playbook '{playbook_id}'.",
+                err=True,
+            )
+        raise typer.Exit(code=2)
+
+    # Parse and display
+    try:
+        parsed = _json.loads(content)
+    except _json.JSONDecodeError as e:
+        typer.echo(f"Error: Corrupt playbook data: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+    from rich.console import Console
+    from rich.panel import Panel
+
+    console = Console()
+
+    meta = parsed.get("metadata", {})
+    header = f"Playbook: {playbook_id} (version {version})"
+    lines = [f"Mode: {parsed.get('mode', '?')}"]
+    lines.append(f"Description: {meta.get('description', '')}")
+    lines.append(f"Author: {meta.get('author', '')}")
+    lines.append(f"Created: {meta.get('version', '')}")
+
+    console.print()
+    console.print(Panel.fit("\n".join(lines), title=header))
+    console.print()
+
+    categories = parsed.get("categories", [])
+    if categories:
+        console.print("[bold]Categories:[/bold]")
+        console.print()
+        for i, cat in enumerate(categories, 1):
+            cat_id = cat.get("id", "?")
+            cat_name = cat.get("name", "")
+            default_pos = cat.get("default_position", "preferred")
+            console.print(f"  [cyan]{i}.[/cyan] [bold]{cat_id}[/bold] — {cat_name}")
+            console.print(f"     Default: {default_pos}")
+
+            for pos_name in ("preferred", "acceptable", "walkaway"):
+                pos = cat.get(pos_name, {})
+                desc = pos.get("description", "")
+                exemplars = pos.get("exemplars", [])
+                console.print(f"     [green]{pos_name.title()}[/green]: {desc}")
+                if exemplars:
+                    for ex in exemplars:
+                        console.print(f"       • {ex}")
+            console.print()
+
+
+app.add_typer(playbook_app)
+
 
 precheck_app = typer.Typer(
     name="precheck",
@@ -453,8 +641,11 @@ def review(
     paths: list[str] = typer.Argument(  # noqa: B008
         ..., help="One or more document paths (PDF, DOCX). Shell glob supported."
     ),
+    playbook_path: str | None = typer.Option(
+        None, "--playbook-path", help="Path to a custom YAML playbook override."
+    ),
     playbook: str | None = typer.Option(
-        None, "--playbook", help="Path to a custom YAML playbook override."
+        None, "--playbook", help="Playbook ID to load from database."
     ),
     format: str = typer.Option("text", "--format", help="Output format: text or json."),
     output: str | None = typer.Option(
@@ -508,7 +699,8 @@ def review(
     try:
         reports = run_review(
             paths=paths,
-            playbook_path=playbook,
+            playbook_path=playbook_path,
+            playbook_id=playbook,
             extraction_model=extraction_model or "extraction",
             qa_model=qa_model,
             no_pii=no_pii,

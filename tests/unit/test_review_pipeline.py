@@ -55,10 +55,10 @@ class TestRunReviewPublicAPI:
                 id="test-cat",
                 name="Test",
                 description="test",
-                favorable=fav,
-                neutral=neu,
-                unfavorable=unfav,
-                default_position=Position.neutral,
+                preferred=fav,
+                acceptable=neu,
+                walkaway=unfav,
+                default_position=Position.ACCEPTABLE,
             )
             return Playbook(
                 id="test",

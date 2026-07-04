@@ -26,7 +26,7 @@ from openreview_cli.review.report import format_json, format_terminal
 def base_assessment_args() -> dict[str, Any]:
     return {
         "playbook_category": "confidentiality",
-        "position": Position.favorable,
+        "position": Position.PREFERRED,
         "confidence": 0.9,
         "citation": "4.3",
         "qa_verdict": QAVerdict.agree,
@@ -42,7 +42,7 @@ def doc_meta() -> DocMeta:
 
 @pytest.fixture
 def summary() -> ReviewSummary:
-    return ReviewSummary(favorable_count=1, amber_count=0, avg_confidence=0.9)
+    return ReviewSummary(preferred_count=1, amber_count=0, avg_confidence=0.9)
 
 
 def _make_report(

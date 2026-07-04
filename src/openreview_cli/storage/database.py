@@ -128,6 +128,60 @@ def check_session_limit(db_path: Path, session_id: str, max_cents: int) -> bool:
         return int(row[0]) < max_cents
 
 
+def import_playbook_yaml(db_path: Path, playbook_id: str, content: str) -> tuple[int, int | None]:
+    """Import a playbook YAML content, returning (new_version, prev_version).
+
+    If this is the first import, prev_version is None.
+    """
+    with transaction(db_path) as conn:
+        cur = conn.execute(
+            "SELECT COALESCE(MAX(version), 0) FROM playbook_versions WHERE playbook_id = ?",
+            (playbook_id,),
+        )
+        prev_version = int(cur.fetchone()[0])
+        next_ver = prev_version + 1
+        conn.execute(
+            "INSERT INTO playbook_versions (playbook_id, version, content) VALUES (?, ?, ?)",
+            (playbook_id, next_ver, content),
+        )
+    prev: int | None = prev_version if prev_version > 0 else None
+    return next_ver, prev
+
+
+def get_playbook_version(db_path: Path, playbook_id: str, version: int) -> str | None:
+    """Get the content of a specific playbook version, or None."""
+    with transaction(db_path) as conn:
+        row = conn.execute(
+            "SELECT content FROM playbook_versions WHERE playbook_id = ? AND version = ?",
+            (playbook_id, version),
+        ).fetchone()
+    return str(row["content"]) if row else None
+
+
+def get_latest_playbook_version(db_path: Path, playbook_id: str) -> tuple[str, int] | None:
+    """Get the content and version of the latest playbook version, or None."""
+    with transaction(db_path) as conn:
+        row = conn.execute(
+            "SELECT content, version FROM playbook_versions WHERE playbook_id = ? ORDER BY version DESC LIMIT 1",
+            (playbook_id,),
+        ).fetchone()
+    return (str(row["content"]), int(row["version"])) if row else None
+
+
+def list_playbooks(db_path: Path) -> list[tuple[str, int, str]]:
+    """List all playbooks with their latest version and created_at.
+
+    Returns (playbook_id, max_version, created_at) for each playbook,
+    ordered by playbook_id.
+    """
+    with transaction(db_path) as conn:
+        rows = conn.execute(
+            "SELECT playbook_id, MAX(version) AS version, created_at "
+            "FROM playbook_versions GROUP BY playbook_id ORDER BY playbook_id"
+        ).fetchall()
+    return [(str(r["playbook_id"]), int(r["version"]), str(r["created_at"])) for r in rows]
+
+
 def get_session_cost(db_path: Path, session_id: str) -> dict[str, Any]:
     with transaction(db_path) as conn:
         rows = conn.execute(

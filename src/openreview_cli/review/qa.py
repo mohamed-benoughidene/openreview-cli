@@ -49,12 +49,12 @@ def verify_assessment(
         citation=assessment.citation,
         category_id=category.id,
         category_name=category.name,
-        favorable_desc=category.favorable.description,
-        favorable_exemplars=category.favorable.exemplars,
-        neutral_desc=category.neutral.description,
-        neutral_exemplars=category.neutral.exemplars,
-        unfavorable_desc=category.unfavorable.description,
-        unfavorable_exemplars=category.unfavorable.exemplars,
+        preferred_desc=category.preferred.description,
+        preferred_exemplars=category.preferred.exemplars,
+        acceptable_desc=category.acceptable.description,
+        acceptable_exemplars=category.acceptable.exemplars,
+        walkaway_desc=category.walkaway.description,
+        walkaway_exemplars=category.walkaway.exemplars,
     )
 
     try:

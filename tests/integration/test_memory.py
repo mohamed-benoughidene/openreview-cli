@@ -91,7 +91,7 @@ def test_review_peak_memory() -> None:
                 clause_id=clause.id,
                 clause_text=clause.text,
                 playbook_category="confidentiality-term",
-                position=Position.neutral,
+                position=Position.ACCEPTABLE,
                 confidence=0.85,
                 citation=clause.text[:80],
                 qa_verdict=QAVerdict.agree,
@@ -108,9 +108,9 @@ def test_review_peak_memory() -> None:
         parsed_at=datetime.now(UTC),
     )
     summary = ReviewSummary(
-        favorable_count=0,
-        neutral_count=len(assessments),
-        unfavorable_count=0,
+        preferred_count=0,
+        acceptable_count=len(assessments),
+        walkaway_count=0,
         uncertain_count=0,
         no_match_count=0,
         amber_count=0,

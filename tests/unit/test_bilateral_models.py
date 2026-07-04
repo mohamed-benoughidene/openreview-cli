@@ -43,7 +43,7 @@ def make_clause(clause_id: str = "c1", text: str = "Confidentiality clause text"
 
 def make_assessment(
     clause_id: str = "c1",
-    position: Position = Position.neutral,
+    position: Position = Position.ACCEPTABLE,
     confidence: float = 0.9,
 ) -> ClauseAssessment:
     """Create a minimal ClauseAssessment for testing."""

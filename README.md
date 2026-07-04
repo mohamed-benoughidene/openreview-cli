@@ -26,15 +26,16 @@ fallback, reranker validation), and single-party contract review (PAKTON
 3-agent pipeline: extraction, QA
 verification, report formatting), citation grounding discriminator
 (post-hoc claim verification with strict/lenient modes, CG metrics, JSONL audit trail),
-and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), and experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status.**
+and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), playbook versioning (database storage with version tracking, position rename to preferred/acceptable/walkaway with backward compatibility, version-stamped reviews), and experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status.**
 The package is not yet on PyPI. APIs and the underlying spec are preliminary and
 will change.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
-| Unit + integration tests    | 398                       |
-| CLI commands                | 44                        |
-| SQLite tables               | 10                        |
+| Unit + integration tests    | 1,143                    |
+| CLI commands                | 50                        |
+| SQLite tables               | 13                        |
+| Migrations                  | 6                         |
 | CI jobs                     | 5 (lint, types, test, memory, benchmark) |
 | Memory budget (processing)  | < 100 MB (NLP model exempt) |
 | Startup (warm)              | < 0.3 s                   |
@@ -218,12 +219,17 @@ uv run openreview --version
 |-----------------------------------------------------|--------------------------------------------|
 | `src/openreview_cli/__init__.py`                    | Exposes `__version__`                      |
 | `src/openreview_cli/__main__.py`                    | Entry point: `python -m openreview_cli`    |
-| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse`, `precheck`, `chunk`, `pii`, `gateway`, `prompt` commands |
+| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse`, `precheck`, `chunk`, `pii`, `gateway`, `prompt`, `playbook` commands |
 | `src/openreview_cli/config/paths.py`                | platformdirs paths (config, data, log)     |
 | `src/openreview_cli/config/loader.py`               | Pydantic model, YAML r/w, env merge        |
 | `src/openreview_cli/config/auth.py`                 | `auth.json` handler, chmod 600             |
-| `src/openreview_cli/storage/database.py`            | SQLite, migrations, cost tracking, clients |
+| `src/openreview_cli/storage/database.py`            | SQLite, migrations, cost tracking, clients, playbook storage |
 | `src/openreview_cli/storage/migrations/001_initial.sql` | 5 tables DDL                           |
+| `src/openreview_cli/storage/migrations/002_pii_tables.sql` | 2 tables DDL                     |
+| `src/openreview_cli/storage/migrations/003_gateway.sql` | Gateway schema updates                  |
+| `src/openreview_cli/storage/migrations/004_prompts.sql` | 2 tables DDL (prompt_versions, prompt_bindings) |
+| `src/openreview_cli/storage/migrations/005_benchmark.sql` | 3 tables DDL                       |
+| `src/openreview_cli/storage/migrations/006_playbooks.sql` | 1 table DDL (playbook_versions, append-only) |
 | `src/openreview_cli/errors.py`                      | Exit codes (5 = config, 6 = cost limit, 8 = parse error) |
 | `src/openreview_cli/parsing/`                       | Document parser — PDF, DOCX, clause detection |
 | `src/openreview_cli/pii/`                           | PII stripping engine — Presidio, recognizers, encrypted mapping, audit trail, `strip_pii_clauses()` bridge |
@@ -231,6 +237,9 @@ uv run openreview --version
 | `src/openreview_cli/gateway/`                       | AI Gateway — router, registry, cost, models, redaction, wizard |
 | `src/openreview_cli/retrieval/`                     | Retrieval pipeline — BM25 (FTS5), dense embeddings (Ollama), RRF fusion, reranker, ingest, storage |
 | `src/openreview_cli/grounding/`                    | Citation grounding discriminator — post-hoc claim verification, strict/lenient modes, CG metrics, JSONL audit trail, corruption generators |
+| `src/openreview_cli/review/`                       | Single-party review package (PAKTON 3-agent pipeline) |
+| `src/openreview_cli/review/playbook.py`            | Playbook loader — YAML parsing, validation, DB-backed load via `load_playbook_from_db()` |
+| `src/openreview_cli/review/playbooks/`             | Bundled YAML playbooks (e.g., `precheck-nda-v1.yaml`) |
 | `src/openreview_cli/prompts/`                       | Prompt management — versioned storage, binding, CLI |
 | `src/openreview_cli/prompts/models.py`              | Pydantic models (Prompt, PromptVersion, PromptBinding) |
 | `src/openreview_cli/prompts/store.py`               | PromptStore — SQLite CRUD, versioning, resolve() |
@@ -238,7 +247,6 @@ uv run openreview --version
 | `src/openreview_cli/prompts/variables.py`           | `{key}` variable substitution engine |
 | `src/openreview_cli/prompts/defaults.py`            | Default prompt loader (YAML → SQLite on first use) |
 | `src/openreview_cli/prompts/defaults/`              | 5 built-in default prompts (extraction, reasoning, embedding, reranking, graph) |
-| `src/openreview_cli/storage/migrations/004_prompts.sql` | 2 tables DDL (prompt_versions, prompt_bindings) |
 | `tests/unit/test_app.py`                            | 5 tests (import, version, help, memory)    |
 | `tests/unit/test_config_loader.py`                  | 6 tests (create, merge, env override)      |
 | `tests/unit/test_auth.py`                           | 5 tests (create, load, perms, providers)   |
@@ -268,6 +276,10 @@ uv run openreview --version
 | `tests/integration/test_prompt_lifecycle.py`        | 4 tests (create → bind → remove)           |
 | `tests/integration/test_prompt_gateway.py`          | 5 tests (gateway prompt resolution)        |
 | `tests/integration/test_prompt_memory.py`           | 1 test (memory budget < 110 MB)            |
+| `tests/unit/test_playbook.py`                       | 12 tests (playbook YAML loading, validation) |
+| `tests/unit/test_playbook_versioning.py`            | 5 tests (position rename backward compat, old YAML keys) |
+| `tests/unit/test_playbook_storage.py`               | 8 tests (playbook database CRUD, version tracking) |
+| `tests/integration/test_playbook_commands.py`       | 6 tests (playbook import/list/show CLI, `--playbook` flag) |
 | `tests/conftest.py`                                 | Memory tracker fixture (< 110 MB)          |
 | `.pre-commit-config.yaml`                           | 10 hooks (ruff, mypy, pytest, hygiene)     |
 | `.github/workflows/ci.yml`                          | 4 parallel CI jobs                         |
@@ -313,7 +325,8 @@ openreview precheck --force-reprocess contract.pdf    # Bypass cache
 openreview precheck review contract.pdf                # Extract + QA pipeline
 openreview precheck review contract.pdf --format json  # JSON report
 openreview precheck review contract.pdf --output report.json  # Save to file
-openreview precheck review --playbook custom.yaml contract.pdf  # Custom playbook
+openreview precheck review --playbook-path custom.yaml contract.pdf  # Custom YAML playbook
+openreview precheck review --playbook my-terms contract.pdf          # DB-stored playbook (latest version)
 openreview precheck review --extraction-model fast --qa-model accurate contract.pdf  # Separate model slots
 openreview precheck review --no-pii contract.pdf       # Skip PII stripping
 openreview precheck review --grounding-mode strict contract.pdf  # Strict grounding (excludes ungrounded claims)
@@ -364,6 +377,15 @@ openreview prompt import /tmp/prompts.yaml
 openreview prompt test --prompt extract-clauses --versions 1,2 --benchmark standard
 openreview prompt optimize --prompt extract-clauses --iterations 3
 
+# Playbook management (versioned database storage)
+openreview playbook import my-terms.yaml              # Import a YAML playbook into the database
+openreview playbook list                              # List all playbooks with their latest version
+openreview playbook show my-terms 1                   # Show a specific playbook version
+
+# Review with a database-sourced playbook (version-stamped)
+openreview precheck review --playbook my-terms contract.pdf  # Load latest version from DB
+openreview precheck review --playbook-path custom.yaml contract.pdf  # File-based (takes precedence)
+
 # Benchmark (automated evaluation)
 openreview benchmark                              # Smoke test (CUAD, default slot)
 openreview benchmark --datasets cuad,maud --slots default,fast  # Multi-dataset
@@ -399,7 +421,8 @@ openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 | `openreview precheck <path>`           | NDA review with automatic PII stripping    |
 | `openreview precheck --no-pii <path>`  | NDA review, skip PII (raw text in output)  |
 | `openreview precheck review <paths...>`| PAKTON 3-agent review (extraction + QA + report) against a playbook |
-| `openreview precheck review --playbook <file> <paths>` | Review with a custom YAML playbook        |
+| `openreview precheck review --playbook <id> <paths>` | Review with the latest version of a database-stored playbook (version-stamped report) |
+| `openreview precheck review --playbook-path <file> <paths>` | Review with a custom YAML playbook file (takes precedence over `--playbook`) |
 | `openreview precheck review --format json <paths>`     | JSON-format review report (default: text) |
 | `openreview precheck review --output <file> <paths>`   | Write report to file instead of stdout    |
 | `openreview precheck review --extraction-model <slot> --qa-model <slot> <paths>` | Independent model slots for extraction and QA |
@@ -442,6 +465,9 @@ openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 | `openreview prompt import <path>`      | Import prompts from YAML                   |
 | `openreview prompt test --prompt <n> --versions <v1,v2>` | A/B test (requires benchmark) |
 | `openreview prompt optimize --prompt <n> --iterations <i>` | GRPO optimization (requires benchmark) |
+| `openreview playbook import <path>`  | Import a YAML playbook into the local database (append-only versioning) |
+| `openreview playbook list`           | List all playbooks with latest version and description |
+| `openreview playbook show <id> <version>` | Show the full content of a specific playbook version |
 | `openreview benchmark`                    | Run automated evaluation (CUAD/MAUD/ContractNLI) |
 | `openreview benchmark --datasets cuad,maud` | Evaluate specific datasets                   |
 | `openreview benchmark --slots default,fast` | Compare model slots                          |

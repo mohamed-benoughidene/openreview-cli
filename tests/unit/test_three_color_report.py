@@ -45,10 +45,10 @@ def _make_assessment(
 def _make_report(assessments: list[ClauseAssessment] | None = None) -> ReviewReport:
     if assessments is None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
-            _make_assessment("c2", Position.neutral, 0.85),
-            _make_assessment("c3", Position.unfavorable, 0.72, amber=True),
-            _make_assessment("c4", Position.uncertain, 0.45, amber=True),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
+            _make_assessment("c2", Position.ACCEPTABLE, 0.85),
+            _make_assessment("c3", Position.WALKAWAY, 0.72, amber=True),
+            _make_assessment("c4", Position.UNCERTAIN, 0.45, amber=True),
         ]
     dm = DocMeta(
         filename="nda.docx",
@@ -65,10 +65,10 @@ def _make_report(assessments: list[ClauseAssessment] | None = None) -> ReviewRep
     ]
     avg_effective_confidence = sum(valid_conf) / len(valid_conf) if valid_conf else 0.0
     summary = ReviewSummary(
-        favorable_count=sum(1 for a in assessments if a.position == Position.favorable),
-        neutral_count=sum(1 for a in assessments if a.position == Position.neutral),
-        unfavorable_count=sum(1 for a in assessments if a.position == Position.unfavorable),
-        uncertain_count=sum(1 for a in assessments if a.position == Position.uncertain),
+        preferred_count=sum(1 for a in assessments if a.position == Position.PREFERRED),
+        acceptable_count=sum(1 for a in assessments if a.position == Position.ACCEPTABLE),
+        walkaway_count=sum(1 for a in assessments if a.position == Position.WALKAWAY),
+        uncertain_count=sum(1 for a in assessments if a.position == Position.UNCERTAIN),
         no_match_count=0,
         green_count=green_count,
         red_count=red_count,
@@ -88,7 +88,7 @@ def _make_report(assessments: list[ClauseAssessment] | None = None) -> ReviewRep
 class TestFormatTerminalThreeColor:
     def test_green_assessment_shows_green_badge(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
         ]
         assign_colors(assessments, threshold=0.7)
         report = _make_report(assessments)
@@ -97,7 +97,7 @@ class TestFormatTerminalThreeColor:
 
     def test_amber_assessment_shows_amber_badge(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.45),
+            _make_assessment("c1", Position.PREFERRED, 0.45),
         ]
         assign_colors(assessments, threshold=0.7)
         report = _make_report(assessments)
@@ -107,7 +107,7 @@ class TestFormatTerminalThreeColor:
 
     def test_red_assessment_shows_red_badge(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.unfavorable, 0.92),
+            _make_assessment("c1", Position.WALKAWAY, 0.92),
         ]
         assign_colors(assessments, threshold=0.7)
         report = _make_report(assessments)
@@ -118,7 +118,7 @@ class TestFormatTerminalThreeColor:
         assessments = [
             _make_assessment(
                 "c1",
-                Position.favorable,
+                Position.PREFERRED,
                 0.45,
                 qa_verdict=QAVerdict.disagree,
             ),
@@ -137,7 +137,7 @@ class TestFormatTerminalThreeColor:
         assessments = [
             _make_assessment(
                 "c1",
-                Position.favorable,
+                Position.PREFERRED,
                 0.3,
                 error="LLM error",
                 qa_verdict=QAVerdict.disagree,
@@ -151,7 +151,7 @@ class TestFormatTerminalThreeColor:
 
     def test_green_assessment_no_amber_reasons_in_output(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
         ]
         assign_colors(assessments, threshold=0.7)
         report = _make_report(assessments)
@@ -160,10 +160,10 @@ class TestFormatTerminalThreeColor:
 
     def test_summary_shows_green_amber_red_counts(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
-            _make_assessment("c2", Position.neutral, 0.85),
-            _make_assessment("c3", Position.unfavorable, 0.95),
-            _make_assessment("c4", Position.favorable, 0.45),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
+            _make_assessment("c2", Position.ACCEPTABLE, 0.85),
+            _make_assessment("c3", Position.WALKAWAY, 0.95),
+            _make_assessment("c4", Position.PREFERRED, 0.45),
         ]
         assign_colors(assessments, threshold=0.7)
         report = _make_report(assessments)
@@ -174,8 +174,8 @@ class TestFormatTerminalThreeColor:
 
     def test_summary_shows_avg_effective_confidence(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
-            _make_assessment("c2", Position.neutral, 0.85),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
+            _make_assessment("c2", Position.ACCEPTABLE, 0.85),
         ]
         assign_colors(assessments, threshold=0.7)
         report = _make_report(assessments)
@@ -184,7 +184,7 @@ class TestFormatTerminalThreeColor:
 
     def test_summary_shows_confidence_threshold(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
         ]
         assign_colors(assessments, threshold=0.7)
         report = _make_report(assessments)
@@ -193,7 +193,7 @@ class TestFormatTerminalThreeColor:
 
     def test_backward_compat_amber_flags_still_present(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.45),
+            _make_assessment("c1", Position.PREFERRED, 0.45),
         ]
         assign_colors(assessments, threshold=0.7)
         report = _make_report(assessments)
@@ -207,8 +207,8 @@ class TestFormatTerminalThreeColor:
 
     def test_no_grounding_no_grounding_triggers(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
-            _make_assessment("c2", Position.favorable, 0.3),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
+            _make_assessment("c2", Position.PREFERRED, 0.3),
         ]
         assign_colors(assessments, threshold=0.7)
         report = _make_report(assessments)
@@ -219,8 +219,8 @@ class TestFormatTerminalThreeColor:
 class TestFormatJsonThreeColor:
     def test_assessment_has_color_field(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
-            _make_assessment("c2", Position.favorable, 0.3),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
+            _make_assessment("c2", Position.PREFERRED, 0.3),
         ]
         assign_colors(assessments, threshold=0.7)
         report = _make_report(assessments)
@@ -230,8 +230,8 @@ class TestFormatJsonThreeColor:
 
     def test_assessment_has_amber_reasons_field(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
-            _make_assessment("c2", Position.favorable, 0.3),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
+            _make_assessment("c2", Position.PREFERRED, 0.3),
         ]
         assign_colors(assessments, threshold=0.7)
         report = _make_report(assessments)
@@ -241,7 +241,7 @@ class TestFormatJsonThreeColor:
 
     def test_assessment_has_effective_confidence_field(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
         ]
         assign_colors(assessments, threshold=0.7)
         report = _make_report(assessments)
@@ -250,7 +250,7 @@ class TestFormatJsonThreeColor:
 
     def test_report_has_confidence_threshold(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
         ]
         assign_colors(assessments, threshold=0.7)
         report = _make_report(assessments)
@@ -260,10 +260,10 @@ class TestFormatJsonThreeColor:
 
     def test_summary_has_green_red_avg_effective_counts(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
-            _make_assessment("c2", Position.neutral, 0.85),
-            _make_assessment("c3", Position.unfavorable, 0.95),
-            _make_assessment("c4", Position.favorable, 0.45),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
+            _make_assessment("c2", Position.ACCEPTABLE, 0.85),
+            _make_assessment("c3", Position.WALKAWAY, 0.95),
+            _make_assessment("c4", Position.PREFERRED, 0.45),
         ]
         assign_colors(assessments, threshold=0.7)
         report = _make_report(assessments)
@@ -274,7 +274,7 @@ class TestFormatJsonThreeColor:
 
     def test_backward_compat_amber_count_present(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.3),
+            _make_assessment("c1", Position.PREFERRED, 0.3),
         ]
         assign_colors(assessments, threshold=0.7)
         report = _make_report(assessments)
@@ -288,8 +288,8 @@ class TestFormatJsonThreeColor:
 
     def test_is_amber_consistent_with_color(self) -> None:
         assessments = [
-            _make_assessment("c1", Position.favorable, 0.92),
-            _make_assessment("c2", Position.favorable, 0.3),
+            _make_assessment("c1", Position.PREFERRED, 0.92),
+            _make_assessment("c2", Position.PREFERRED, 0.3),
         ]
         assign_colors(assessments, threshold=0.7)
         report = _make_report(assessments)

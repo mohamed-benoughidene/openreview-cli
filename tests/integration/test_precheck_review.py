@@ -70,16 +70,16 @@ def custom_playbook() -> Generator[Path, None, None]:
                 "id": "confidentiality-term",
                 "name": "Confidentiality Term",
                 "description": "Defines confidentiality term",
-                "favorable": {
+                "preferred": {
                     "description": "Short term",
                     "exemplars": ["3 years"],
                 },
-                "neutral": {"description": "Standard", "exemplars": ["5 years"]},
-                "unfavorable": {
+                "acceptable": {"description": "Standard", "exemplars": ["5 years"]},
+                "walkaway": {
                     "description": "Indefinite",
                     "exemplars": ["perpetuity"],
                 },
-                "default_position": "neutral",
+                "default_position": "acceptable",
             }
         ],
     }
@@ -221,7 +221,7 @@ class TestJsonSchema:
                 clause_id="c1",
                 clause_text="Confidential info shall be kept secret for 3 years.",
                 playbook_category="confidentiality-term",
-                position=Position.favorable,
+                position=Position.PREFERRED,
                 confidence=0.92,
                 citation="for 3 years",
                 qa_verdict=QAVerdict.agree,
@@ -230,9 +230,9 @@ class TestJsonSchema:
             )
         ]
         summary = ReviewSummary(
-            favorable_count=1,
-            neutral_count=0,
-            unfavorable_count=0,
+            preferred_count=1,
+            acceptable_count=0,
+            walkaway_count=0,
             uncertain_count=0,
             no_match_count=0,
             amber_count=0,
@@ -252,9 +252,9 @@ class TestJsonSchema:
         assert data["schema_version"] == "1.1.0"
         assert data["document"]["filename"] == "test.docx"
         assert len(data["assessments"]) == 1
-        assert data["assessments"][0]["position"] == "favorable"
+        assert data["assessments"][0]["position"] == "preferred"
         assert data["assessments"][0]["is_amber"] is False
-        assert data["summary"]["favorable_count"] == 1
+        assert data["summary"]["preferred_count"] == 1
         assert data["summary"]["avg_confidence"] == 0.92
 
         # Test serialization

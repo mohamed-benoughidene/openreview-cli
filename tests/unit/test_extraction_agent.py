@@ -16,10 +16,10 @@ def sample_playbook() -> Playbook:
         id="confidentiality-term",
         name="Confidentiality Term",
         description="Defines how long confidentiality obligations survive",
-        favorable=fav,
-        neutral=neu,
-        unfavorable=unfav,
-        default_position=Position.neutral,
+        preferred=fav,
+        acceptable=neu,
+        walkaway=unfav,
+        default_position=Position.ACCEPTABLE,
     )
     meta = PlaybookMetadata(version="1.0.0", description="Test", author="test")
     return Playbook(id="test", mode="precheck", categories=[cat], metadata=meta)
@@ -60,13 +60,13 @@ class TestExtractionAgent:
             category_id="confidentiality-term",
             category_name="Confidentiality Term",
             category_description="",
-            favorable_desc="Short term",
-            favorable_exemplars=["3 years", "2 years"],
-            neutral_desc="Standard",
-            neutral_exemplars=["5 years"],
-            unfavorable_desc="Indefinite",
-            unfavorable_exemplars=["perpetuity"],
-            default_position="neutral",
+            preferred_desc="Short term",
+            preferred_exemplars=["3 years", "2 years"],
+            acceptable_desc="Standard",
+            acceptable_exemplars=["5 years"],
+            walkaway_desc="Indefinite",
+            walkaway_exemplars=["perpetuity"],
+            default_position="acceptable",
         )
         combined = " ".join(m["content"] for m in messages)
         assert "3 years" in combined
@@ -80,7 +80,7 @@ class TestExtractionAgent:
 
         def mock_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
             return (
-                '{"position": "favorable", "confidence": 0.85, '
+                '{"position": "preferred", "confidence": 0.85, '
                 '"citation": "for 3 years", "category_match": true}'
             )
 
@@ -92,7 +92,7 @@ class TestExtractionAgent:
             category=sample_playbook.categories[0],
             extraction_model="test-slot",
         )
-        assert result.position == Position.favorable
+        assert result.position == Position.PREFERRED
         assert result.confidence == 0.85
         assert not result.is_amber  # high confidence, no QA yet
 
@@ -116,6 +116,6 @@ class TestExtractionAgent:
             category=sample_playbook.categories[0],
             extraction_model="test-slot",
         )
-        # Falls back to category default_position (neutral)
-        assert result.position == Position.neutral
+        # Falls back to category default_position (acceptable)
+        assert result.position == Position.ACCEPTABLE
         assert result.confidence == 0.0

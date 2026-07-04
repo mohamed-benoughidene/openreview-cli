@@ -226,10 +226,10 @@ def _position_badge(assessment: Any) -> str:
 
     pos = assessment.position if hasattr(assessment, "position") else None
     mapping: dict[Position, str] = {
-        Position.favorable: "[green]Favorable[/green]",
-        Position.neutral: "[yellow]Neutral[/yellow]",
-        Position.unfavorable: "[red]Unfavorable[/red]",
-        Position.uncertain: "[bold red]Uncertain[/bold red]",
+        Position.PREFERRED: "[green]Preferred[/green]",
+        Position.ACCEPTABLE: "[yellow]Acceptable[/yellow]",
+        Position.WALKAWAY: "[red]Walkaway[/red]",
+        Position.UNCERTAIN: "[bold red]Uncertain[/bold red]",
     }
     if pos and isinstance(pos, Position):
         return mapping.get(pos, str(pos.value))
