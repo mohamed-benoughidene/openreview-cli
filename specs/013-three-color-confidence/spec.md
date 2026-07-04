@@ -6,9 +6,7 @@
 
 **Status**: Draft
 
-**Input**: Blueprint §11 seed — "Three-color output with confidence scores. User-configurable `--confidence-threshold` flag."
-
-**Blueprints**: N-6 (§7, line 425), §6.4 (lines 334–344), R-6 (§8, line 464), Q-8 (§10, lines 613–627), CON-1, R-1, R-11, P-4
+**Input**: Speckit feed seed — "Three-color output with confidence scores. User-configurable `--confidence-threshold` flag."
 
 ---
 
@@ -18,7 +16,7 @@
 
 A legal professional runs a single-party review on an NDA. Instead of scanning every clause detail, they see the output color-coded: Green (safe — proceed), Amber (uncertain — check manually), Red (problematic — needs attention). They immediately know which clauses are safe and which need human review, without reading through every assessment.
 
-**Why this priority**: The three-color signal is the primary mitigation for the comparison accuracy ceiling (§6.4, CON-1). Without it, the user cannot distinguish high-confidence from uncertain assessments at a glance. This is the core value of the feature.
+**Why this priority**: The three-color signal is the primary mitigation for the comparison accuracy ceiling (best published F1 ≤64% on binary discrepancy detection — a hard open research problem). Without it, the user cannot distinguish high-confidence from uncertain assessments at a glance. This is the core value of the feature.
 
 **Independent Test**: Can be fully tested by running a review with known clause assessments and verifying the terminal output shows the correct color for each clause (Green/Amber/Red) in the Status column.
 
@@ -34,7 +32,7 @@ A legal professional runs a single-party review on an NDA. Instead of scanning e
 
 A legal professional wants fewer Amber flags because they trust the model, so they run with `--confidence-threshold 0.3`. Conversely, a risk-averse professional wants more Amber flags and runs with `--confidence-threshold 0.8`. In both cases, the output is recalculated without re-running extraction, QA, or grounding. The user sees the effect immediately.
 
-**Why this priority**: User-configurable threshold is listed as a hard requirement in the blueprint seed (§11). It directly addresses the "set Amber threshold generously" mandate from §6.4 and R-6, and it is the mechanism through which users adapt the tool to their risk tolerance.
+**Why this priority**: User-configurable threshold is a hard requirement. It directly addresses the "set Amber threshold generously" mandate (mitigating the published F1 ≤64% accuracy ceiling), and it is the mechanism through which users adapt the tool to their risk tolerance.
 
 **Independent Test**: Can be fully tested by running the same review twice with different `--confidence-threshold` values and verifying the color distributions differ.
 
@@ -95,41 +93,41 @@ A developer tests the three-color system by passing extreme `--confidence-thresh
 
 ### Functional Requirements
 
-- **FR-001**: System MUST assign each `ClauseAssessment` a three-color status (Green/Amber/Red) computed from the combined position, confidence, QA verdict, grounding verdict, and user-configured threshold. The color is a derived property — it is not stored but computed at output time. The computation is O(n) and introduces no external calls. [N-6][§6.4]
+- **FR-001**: System MUST assign each `ClauseAssessment` a three-color status (Green/Amber/Red) computed from the combined position, confidence, QA verdict, grounding verdict, and user-configured threshold. The color is a derived property — it is not stored but computed at output time. The computation is O(n) and introduces no external calls.
 
 - **FR-002**: Color assignment rules:
   - **Green**: Position is favorable or neutral AND confidence >= threshold AND no Amber trigger is active.
   - **Red**: Position is unfavorable AND confidence >= threshold AND no Amber trigger is active.
   - **Amber** (everything else): Position is uncertain, OR confidence < threshold, OR QA verdict is disagree or uncertain, OR error is present, OR grounding verdict is ungrounded or uncertain.
-  - These rules supersede the current hardcoded `is_amber` logic in `ClauseAssessment.__post_init__` (which unconditionally uses 0.5 as threshold). The threshold becomes configurable, and the color enum replaces the boolean flag. [§6.4][CON-1][R-11]
+  - These rules supersede the current hardcoded `is_amber` logic in `ClauseAssessment.__post_init__` (which unconditionally uses 0.5 as threshold). The threshold becomes configurable, and the color enum replaces the boolean flag.
 
-- **FR-003**: System MUST expose a `--confidence-threshold` CLI flag on every review-producing subcommand (`precheck`, `hirecheck`, etc.). The flag accepts a float in [0.0, 1.0], defaulting to 0.7. Values outside the range MUST be rejected with a clear error message. [N-6][R-6]
+- **FR-003**: System MUST expose a `--confidence-threshold` CLI flag on every review-producing subcommand (`precheck`, `hirecheck`, etc.). The flag accepts a float in [0.0, 1.0], defaulting to 0.7. Values outside the range MUST be rejected with a clear error message.
 
-- **FR-004**: Amber triggers are defined as: extraction confidence < threshold; QA verdict is `disagree` or `uncertain`; assessment has a non-None error; grounding verdict is `ungrounded` or `uncertain`. Each trigger is evaluated independently — any single trigger makes the assessment Amber. Grounding is only a trigger when grounding data exists (grounding_verdict is not None). [§6.4][R-11]
+- **FR-004**: Amber triggers are defined as: extraction confidence < threshold; QA verdict is `disagree` or `uncertain`; assessment has a non-None error; grounding verdict is `ungrounded` or `uncertain`. Each trigger is evaluated independently — any single trigger makes the assessment Amber. Grounding is only a trigger when grounding data exists (grounding_verdict is not None).
 
-- **FR-005**: The three-color status MUST be rendered in terminal output via a dedicated color indicator (distinct from the position color) in the Status column. The existing `⚠ AMBER` / `OK` representation MUST be replaced with a three-state indicator: Green badge, Amber badge with warning symbol, Red badge. [Q-8]
+- **FR-005**: The three-color status MUST be rendered in terminal output via a dedicated color indicator (distinct from the position color) in the Status column. The existing `⚠ AMBER` / `OK` representation MUST be replaced with a three-state indicator: Green badge, Amber badge with warning symbol, Red badge. (Per the lawyer-facing output format requirement: tracked-changes .docx + redline PDF + summary memo.)
 
-- **FR-006**: JSON output MUST include a `"color"` field on each `ClauseAssessment` with one of `"green"`, `"amber"`, `"red"`. The existing `is_amber` boolean field in JSON output MUST be deprecated in favor of the three-state field. [Q-8]
+- **FR-006**: JSON output MUST include a `"color"` field on each `ClauseAssessment` with one of `"green"`, `"amber"`, `"red"`. The existing `is_amber` boolean field in JSON output MUST be deprecated in favor of the three-state field. (Per the lawyer-facing output format requirement.)
 
-- **FR-007**: The color computation MUST be a pure stateless mapping from existing assessment fields — it MUST NOT require re-running extraction, QA, or grounding. Changing `--confidence-threshold` must produce output instantaneously (sub-second for any reasonable number of clauses). [§6.4]
+- **FR-007**: The color computation MUST be a pure stateless mapping from existing assessment fields — it MUST NOT require re-running extraction, QA, or grounding. Changing `--confidence-threshold` must produce output instantaneously (sub-second for any reasonable number of clauses). (Per the derived-at-output-time design: color is computed when rendering, not stored.)
 
-- **FR-008**: User-facing help text for `--confidence-threshold` MUST include a disclosure of the comparison accuracy ceiling: "Note: The comparison accuracy of automated review is bounded by approximately 64% F1. Three-color output (Green/Amber/Red) is designed to mitigate this — set the threshold generously to push uncertain comparisons to Amber rather than risking false Green or Red." [CON-1][R-1]
+- **FR-008**: User-facing help text for `--confidence-threshold` MUST include a disclosure of the comparison accuracy ceiling: "Note: The comparison accuracy of automated review is bounded by approximately 64% F1. Three-color output (Green/Amber/Red) is designed to mitigate this — set the threshold generously to push uncertain comparisons to Amber rather than risking false Green or Red." (Per the deliberate ≥70% initial accuracy bar and the Amber-as-warning-category decision.)
 
-- **FR-009**: The `AssessmentColor` enum (Green/Amber/Red) MUST be a first-class entity in the review data model, replacing the boolean `is_amber` flag as the primary color signal. The `is_amber` flag MAY be retained as a derived convenience property (`is_amber == (color == AssessmentColor.AMBER)`) for backwards compatibility with existing consumers of `ReviewSummary.amber_count`. [N-6][§6.4]
+- **FR-009**: The `AssessmentColor` enum (Green/Amber/Red) MUST be a first-class entity in the review data model, replacing the boolean `is_amber` flag as the primary color signal. The `is_amber` flag MAY be retained as a derived convenience property (`is_amber == (color == AssessmentColor.AMBER)`) for backwards compatibility with existing consumers of `ReviewSummary.amber_count`.
 
-- **FR-010**: The ReviewSummary MUST include a three-color breakdown count (green_count, amber_count, red_count) in addition to the existing position breakdown. The existing `amber_count` is preserved as a derived property from `amber_count`. [Q-8]
+- **FR-010**: The ReviewSummary MUST include a three-color breakdown count (green_count, amber_count, red_count) in addition to the existing position breakdown. The existing `amber_count` is preserved as a derived property from `amber_count`. (Per the lawyer-facing output format requirement.)
 
-- **FR-011**: Neutral position with confidence ≥ threshold maps to Green. Neutral position with confidence < threshold maps to Amber. This is a three-color system (not four-color): neutral with high confidence is treated as "safe to proceed" (Green). [§6.4]
+- **FR-011**: Neutral position with confidence ≥ threshold maps to Green. Neutral position with confidence < threshold maps to Amber. This is a three-color system (not four-color): neutral with high confidence is treated as "safe to proceed" (Green).
 
-- **FR-012**: Default confidence threshold is 0.7. Users may override via `--confidence-threshold` flag. The 0.7 default implements the "set Amber threshold generously" mandate from §6.4 and the accuracy ceiling mitigation from R-6. [§6.4][R-6]
+- **FR-012**: Default confidence threshold is 0.7. Users may override via `--confidence-threshold` flag. The 0.7 default implements the "set Amber threshold generously" mandate (mitigating the published F1 ≤64% accuracy ceiling).
 
-- **FR-013**: The `--confidence-threshold` flag is per-command (e.g., `openreview precheck --confidence-threshold 0.8`). Each review subcommand accepts the flag independently with a shared default of 0.7. Mode-specific defaults are a future option. [§6.4]
+- **FR-013**: The `--confidence-threshold` flag is per-command (e.g., `openreview precheck --confidence-threshold 0.8`). Each review subcommand accepts the flag independently with a shared default of 0.7. Mode-specific defaults are a future option.
 
 ### Key Entities
 
 - **AssessmentColor**: An enumeration with three values — `GREEN`, `AMBER`, `RED`. Represents the final color-assigned verdict for a single clause assessment. Derived deterministically from position, confidence, QA verdict, error, grounding verdict, and the user-configured threshold. Replaces the boolean `is_amber` as the primary color signal. A convenience property `is_amber` MAY be retained on `ClauseAssessment` for backwards compatibility, defined as `is_amber == (color == AMBER)`.
 
-- **ConfidenceThreshold**: A single float value in [0.0, 1.0] that controls the boundary between high-confidence (Green/Red) and low-confidence (Amber) assessments. Default is 0.7. Provided per-command via `--confidence-threshold` CLI flag. The threshold affects color assignment only — it does not change extraction, QA, or grounding behavior. [§6.4][R-6]
+- **ConfidenceThreshold**: A single float value in [0.0, 1.0] that controls the boundary between high-confidence (Green/Red) and low-confidence (Amber) assessments. Default is 0.7. Provided per-command via `--confidence-threshold` CLI flag. The threshold affects color assignment only — it does not change extraction, QA, or grounding behavior.
 
 ### Integration Points
 
@@ -153,29 +151,29 @@ A developer tests the three-color system by passing extreme `--confidence-thresh
 
 ### Measurable Outcomes
 
-- **SC-001**: A user can pass `--confidence-threshold 0.7` and `--confidence-threshold 0.3` on the same review and observe different color distributions in the output, with 0.7 producing more Amber flags than 0.3. The output for both invocations is produced in under 1 second for a 100-clause review (no pipeline re-run). [N-6][§6.4]
+- **SC-001**: A user can pass `--confidence-threshold 0.7` and `--confidence-threshold 0.3` on the same review and observe different color distributions in the output, with 0.7 producing more Amber flags than 0.3. The output for both invocations is produced in under 1 second for a 100-clause review (no pipeline re-run).
 
-- **SC-002**: Every clause assessment in terminal output shows one of three distinct color badges (Green/Amber/Red) in the Status column. JSON output includes a `"color"` field on every assessment. Zero assessments fail to render a color. [Q-8]
+- **SC-002**: Every clause assessment in terminal output shows one of three distinct color badges (Green/Amber/Red) in the Status column. JSON output includes a `"color"` field on every assessment. Zero assessments fail to render a color. (Per the lawyer-facing output format requirement.)
 
-- **SC-003**: User-facing help text for `--confidence-threshold` includes the accuracy ceiling disclosure (§6.4, CON-1) and a recommendation to set the threshold generously. Verified by grepping the help text. [CON-1][R-1]
+- **SC-003**: User-facing help text for `--confidence-threshold` includes the accuracy ceiling disclosure (best published F1 ≤64% on bilateral comparison — a hard open research problem) and a recommendation to set the threshold generously. Verified by grepping the help text.
 
-- **SC-004**: Given a list of 1,000 clause assessments with known positions and confidences, the color assignment function returns correct colors for all 1,000 in under 100 ms. Verified with a unit test. [§6.4]
+- **SC-004**: Given a list of 1,000 clause assessments with known positions and confidences, the color assignment function returns correct colors for all 1,000 in under 100 ms. Verified with a unit test.
 
-- **SC-005**: The color computation is stateless and produces identical output for identical input, regardless of invocation order, system state, or number of calls. Verified by running the same computation twice and comparing results. [§6.4]
+- **SC-005**: The color computation is stateless and produces identical output for identical input, regardless of invocation order, system state, or number of calls. Verified by running the same computation twice and comparing results.
 
-- **SC-006**: A review with all assessments marked Amber (due to low confidence, QA disagreement, and errors) renders without visual conflicts — each Amber badge is distinct and readable, no color clashes. [Q-8]
+- **SC-006**: A review with all assessments marked Amber (due to low confidence, QA disagreement, and errors) renders without visual conflicts — each Amber badge is distinct and readable, no color clashes. (Per the lawyer-facing output format requirement.)
 
-- **SC-007**: When `--confidence-threshold` is not specified, the system uses the default threshold and produces consistent output. When an invalid value (e.g., `1.5` or `-0.1`) is passed, the CLI exits with a clear error message and non-zero exit code. [N-6]
+- **SC-007**: When `--confidence-threshold` is not specified, the system uses the default threshold and produces consistent output. When an invalid value (e.g., `1.5` or `-0.1`) is passed, the CLI exits with a clear error message and non-zero exit code.
 
 ---
 
 ## Assumptions
 
-- **Neutral positions map to Green**: When a neutral position has confidence ≥ threshold and no Amber triggers are active, the assessment is Green (low-risk). This matches the three-color model from §6.4 and CON-1, where Green means "safe to proceed" and neutral with high confidence is safe. [FR-011][§6.4]
+- **Neutral positions map to Green**: When a neutral position has confidence ≥ threshold and no Amber triggers are active, the assessment is Green (low-risk). This matches the three-color model (Amber as the escape hatch for the published F1 ≤64% accuracy ceiling), where Green means "safe to proceed" and neutral with high confidence is safe. [FR-011]
 
 - **Color is derived at output time, not stored**: The three-color status is computed when rendering terminal/JSON output, not stored on the `ClauseAssessment` dataclass. This allows threshold changes without re-processing assessments and keeps the data model clean. The `AssessmentColor` enum may appear transiently during rendering but is not persisted.
 
-- **Default confidence threshold is 0.7**: Per §6.4 guidance to "set Amber threshold generously" and R-6 accuracy ceiling mitigation. Users may override via `--confidence-threshold` on any review subcommand. [FR-012][§6.4][R-6]
+- **Default confidence threshold is 0.7**: Per the "set Amber threshold generously" guidance (mitigating the published F1 ≤64% accuracy ceiling) and the Amber-as-warning-category decision. Users may override via `--confidence-threshold` on any review subcommand. [FR-012]
 
 - **Single-party review only (v1)**: The three-color output integrates with the single-party review pipeline (spec 011). Multi-party review (future) and other product modes will add `--confidence-threshold` when they are specified.
 
@@ -185,7 +183,7 @@ A developer tests the three-color system by passing extreme `--confidence-thresh
 
 - **Hardware budget not impacted**: The color computation is a deterministic O(n) mapping with no external calls, no new dependencies, and no memory allocation proportional to document size beyond the existing assessment list. It stays well within the 100 MB peak memory budget.
 
-- **CLI scope**: `--confidence-threshold` is per-command (e.g., `openreview precheck --confidence-threshold 0.7`), not global. Each review-producing mode accepts the flag independently with a shared default of 0.7. Mode-specific defaults are a future option. [FR-013][§6.4]
+- **CLI scope**: `--confidence-threshold` is per-command (e.g., `openreview precheck --confidence-threshold 0.7`), not global. Each review-producing mode accepts the flag independently with a shared default of 0.7. Mode-specific defaults are a future option. [FR-013]
 
 ---
 
@@ -193,8 +191,8 @@ A developer tests the three-color system by passing extreme `--confidence-thresh
 
 The following [NEEDS CLARIFICATION] items were resolved via `/speckit.clarify`:
 
-1. **FR-011 — Neutral color mapping**: Neutral + high confidence → Green (three-color, not four-color). [§6.4]
-2. **FR-012 — Default threshold**: 0.7 (generous, per §6.4 "set Amber threshold generously"). [§6.4][R-6]
-3. **FR-013 — Flag scope**: Per-command with shared 0.7 default. [§6.4]
+1. **FR-011 — Neutral color mapping**: Neutral + high confidence → Green (three-color, not four-color).
+2. **FR-012 — Default threshold**: 0.7 (generous, per the "set Amber threshold generously" guidance mitigating the published F1 ≤64% accuracy ceiling).
+3. **FR-013 — Flag scope**: Per-command with shared 0.7 default.
 
 All three clarifications are reflected in the functional requirements and assumptions above. The spec is ready for planning.

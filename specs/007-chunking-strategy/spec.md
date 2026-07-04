@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "N-4 from product blueprint: Implement chunking strategy specification with RCTS (Recursive Character Text Splitting) and clause-boundary awareness. Research shows chunking strategy dominates retrieval quality (P-9, T-8). Must be specified before retrieval pipeline work."
+**Input**: User description: "Implement chunking strategy specification with RCTS (Recursive Character Text Splitting) and clause-boundary awareness. Research shows chunking strategy dominates retrieval quality (RCTS beats naive chunking per the LegalBench-RAG benchmark, and hierarchical parsing enables roughly 5× Recall@1 per the PAKTON 3-agent study). Must be specified before retrieval pipeline work."
 
 ## Clarifications
 
@@ -20,10 +20,10 @@
 - Q: How should chunks reference their source clauses? → A: Each chunk carries: source_clause_id, source_clause_title, source_clause_level, chunk_index_within_clause (0, 1, 2...), and character offset range within the clause text.
 - Q: Should overlapping chunks be used? → A: Yes, 50-token overlap (approximately 200 characters) to preserve context across chunk boundaries. Overlap is applied within clauses, not across clause boundaries.
 - Q: What is the memory budget for chunking? → A: Streaming — chunks are yielded one at a time, never accumulated. Peak memory for chunking logic itself: <10 MB (on top of the 100 MB parsing budget).
-- Q: Should chunking support hierarchical retrieval (chunk → sub-chunk → paragraph)? → A: Yes. The chunking strategy produces a hierarchical chunk structure that mirrors the clause hierarchy via parent_chunk_id references. Each chunk carries metadata (structural location, document position) per PAKTON's approach (P-13).
-- Q: What exactly is a "section summary" in hierarchical chunking? → A: Not a separate summary — hierarchical chunking preserves the clause hierarchy via parent_chunk_id references. Each chunk corresponds to a clause or sub-clause with metadata (structural location, document position). This aligns with PAKTON's approach: node-level, ancestor-aware, and descendant-aware chunks enriched with metadata (P-13).
-- Q: What is the success metric for chunking quality? → A: Retrieval Precision@5 ≥90% on the benchmark dataset (vs 6.41% P@1 baseline from P-9). Measured after retrieval pipeline is built.
-- Q: Does token counting precision matter (whitespace splitter ±5% vs. tiktoken)? → A: No — P-9 and P-13 use character-based chunking (500–1,000 chars), not token counting. Approximate tokenization is sufficient for retrieval-focused chunking.
+- Q: Should chunking support hierarchical retrieval (chunk → sub-chunk → paragraph)? → A: Yes. The chunking strategy produces a hierarchical chunk structure that mirrors the clause hierarchy via parent_chunk_id references. Each chunk carries metadata (structural location, document position) per the PAKTON 3-agent framework for legal contract QA, which establishes that node-level, ancestor-aware, descendant-aware chunks with structural metadata are required for accurate retrieval.
+- Q: What exactly is a "section summary" in hierarchical chunking? → A: Not a separate summary — hierarchical chunking preserves the clause hierarchy via parent_chunk_id references. Each chunk corresponds to a clause or sub-clause with metadata (structural location, document position). This aligns with the PAKTON approach: node-level, ancestor-aware, and descendant-aware chunks enriched with metadata.
+- Q: What is the success metric for chunking quality? → A: Retrieval Precision@5 ≥90% on the benchmark dataset (vs 6.41% P@1 baseline reported in the LegalBench-RAG study). Measured after retrieval pipeline is built.
+- Q: Does token counting precision matter (whitespace splitter ±5% vs. tiktoken)? → A: No — the LegalBench-RAG and PAKTON studies both use character-based chunking (500–1,000 chars), not token counting. Approximate tokenization is sufficient for retrieval-focused chunking.
 - Q: Should chunk IDs be unique across documents or per-document? → A: Per-document (document-wide only). Chunks are ephemeral retrieval units, not persisted records.
 - Q: How should tables and structured content within clauses be handled? → A: Flatten table rows into text and include them in the chunk. Skipping tables loses data; treating tables as atomic breaks the memory budget.
 - Q: Is there a minimum chunk size threshold below which short clauses must be merged? → A: No — FR-015 grouping rule already merges consecutive short clauses from the same article when combined size is below the target. An explicit minimum adds complexity with no gain.
@@ -51,7 +51,7 @@ A lawyer has parsed a 50-page NDA contract and wants to prepare it for retrieval
 
 A lawyer reviews a contract with nested clauses (Article → Section → Sub-section → Clause). The chunking system respects the hierarchy — chunks preserve the clause hierarchy via parent_chunk_id references. When the retrieval pipeline returns a chunk, the lawyer sees the full context (which article, which section, which sub-section).
 
-**Why this priority**: Hierarchical chunking improves retrieval accuracy by 5× (P-13). Flat chunking loses legal context — a clause about "termination" is meaningless without knowing which article it belongs to.
+**Why this priority**: Hierarchical chunking improves retrieval accuracy by 5× (per the PAKTON study). Flat chunking loses legal context — a clause about "termination" is meaningless without knowing which article it belongs to.
 
 **Independent Test**: Can be tested by chunking a contract with known hierarchy and verifying that chunks preserve the nesting structure (parent_chunk_id references).
 
@@ -171,7 +171,7 @@ A lawyer wants to chunk a parsed contract and see the output in different format
 - The `stream_clauses(path) -> Iterator[Clause]` generator from Phase 2 is the input to chunking. The `stream_chunks(clauses) -> Iterator[Chunk]` generator is the output
 - Tokenization uses a simple whitespace + punctuation splitter (no external tokenizer like tiktoken). This is sufficient for legal text and avoids adding dependencies. Token count is approximate (±5% vs. GPT tokenizer)
 - Chunk size is measured in tokens, not characters. 512 tokens ≈ 2,000 characters for English legal text (average 4 characters per token including spaces)
-- Hierarchical chunking produces a tree structure mirroring the document hierarchy: Article-level chunks -> Section-level chunks -> Sub-section chunks -> Clause chunks. Each level references its parent via parent_chunk_id. Each chunk carries metadata (structural location, document position) per PAKTON's approach (P-13)
+- Hierarchical chunking produces a tree structure mirroring the document hierarchy: Article-level chunks -> Section-level chunks -> Sub-section chunks -> Clause chunks. Each level references its parent via parent_chunk_id. Each chunk carries metadata (structural location, document position) per the PAKTON 3-agent framework
 - Overlap is applied within clauses, not across clause boundaries. Consecutive chunks within the same clause overlap by 50 tokens; chunks from different clauses do not overlap
 - Short clause grouping: if consecutive clauses from the same article have combined size < target chunk size, they are grouped into a single chunk. This reduces fragmentation for contracts with many short clauses
 - PII placeholders (e.g., [PARTY_1], [DATE_1]) are treated as regular tokens during chunking. Placeholder length is included in token count
@@ -179,4 +179,4 @@ A lawyer wants to chunk a parsed contract and see the output in different format
 - The chunking logic lives in `src/openreview_cli/chunking/` module. The CLI glue lives in `src/openreview_cli/app.py`
 - Chunking is independent of the retrieval pipeline — it produces chunks, but does not perform retrieval. The retrieval pipeline consumes chunks
 - TDD workflow: integration tests are written first (they FAIL because no chunking logic exists), then the chunking implementation makes them PASS. Unit tests cover individual functions (RCTS algorithm, clause-boundary splitting, hierarchy construction). All tests run in CI
-- Research backing: P-9 shows chunking strategy dominates retrieval quality (RCTS outperforms naive approaches). T-8 shows hierarchical chunking improves accuracy 5×. This spec implements both findings
+- Research backing: the LegalBench-RAG study shows chunking strategy dominates retrieval quality (RCTS outperforms naive approaches). The PAKTON study shows hierarchical parsing improves accuracy roughly 5×. This spec implements both findings.

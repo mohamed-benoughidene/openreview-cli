@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "Prompt management specification. Versioned prompt storage (SQLite table or YAML in config). Prompt A/B testing harness (benchmark integration). GRPO optimization workflow (offline, not runtime). Prompt-to-model binding (which prompt version with which model version). Source: G-1, P-5 (MODERATE), P-8 (MODERATE), NOW N-1"
+**Input**: User description: "Prompt management specification. Versioned prompt storage (SQLite table or YAML in config). Prompt A/B testing harness (benchmark integration). GRPO optimization workflow (offline, not runtime). Prompt-to-model binding (which prompt version with which model version). Motivated by the documented HIGH-priority gap that no prompt engineering/optimization strategy exists (accuracy floors at ~29% for structured tasks without it), the CHANCERY finding that prompt removal causes a 46-percentage-point accuracy drop, and the GRAPH-GRPO-LEX finding that GRPO optimization improves F1 from 0.66 to 0.80."
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -47,7 +47,7 @@ A developer configures which prompt version each model slot in the gateway shoul
 
 A developer has two versions of the `extract-clauses` prompt (v1 and v2) and wants to know which one extracts contract fields more accurately. They run `openreview prompt test --prompt extract-clauses --versions 1,2 --benchmark standard`. The tool runs both prompt versions through the benchmark dataset (CUAD, MAUD, or a subset) and produces a side-by-side comparison of metrics — extraction F1, precision, recall. The developer can see which version wins and by how much.
 
-**Why this priority**: The blueprint shows prompt design swings accuracy by 46pp [P-5]. Without A/B testing, choosing between prompt versions is guesswork. The benchmark harness (N-3 from the roadmap) provides the dataset infrastructure; this feature connects prompts to that infrastructure.
+**Why this priority**: The CHANCERY governance-reasoning study shows that prompt design alone swings accuracy by 46 percentage points. Without A/B testing, choosing between prompt versions is guesswork. The benchmark harness provides the dataset infrastructure; this feature connects prompts to that infrastructure.
 
 **Independent Test**: Can be tested by creating two prompt versions, running the A/B test command against a small seeded dataset, and verifying the output shows per-prompt metrics and a comparison summary.
 
@@ -64,7 +64,7 @@ A developer has two versions of the `extract-clauses` prompt (v1 and v2) and wan
 
 A developer has a prompt that works but wants to systematically improve it. They run `openreview prompt optimize --prompt extract-clauses --benchmark standard --iterations 5`. The tool runs GRPO-guided optimization offline — it generates candidate prompt variants, evaluates each against the benchmark, and selects the best performer. The optimized version is saved as a new prompt version (e.g., version 3) with metadata linking it to the optimization run. The developer can review the diff between the original and optimized prompt before deploying.
 
-**Why this priority**: Research shows GRPO optimization improves F1 by 14pp [P-8]. This is the most advanced capability — it requires the benchmark harness (N-3), the storage system (US1), and optimization logic. It is the lowest priority because it is an offline developer workflow, not a user-facing feature.
+**Why this priority**: The GRAPH-GRPO-LEX study shows GRPO optimization improves F1 from 0.66 to 0.80 (a ~14-point gain). This is the most advanced capability — it requires the benchmark harness, the storage system (US1), and optimization logic. It is the lowest priority because it is an offline developer workflow, not a user-facing feature.
 
 **Independent Test**: Can be tested by running the optimize command on a simple prompt against a small seeded benchmark, verifying a new version is created, and confirming the new version has associated metadata about the optimization run (source version, iteration count).
 
@@ -95,7 +95,7 @@ A developer has a prompt that works but wants to systematically improve it. They
 - **FR-002**: The system MUST provide CLI subcommands under `openreview prompt` for: `create` (create version 1 of a new prompt), `update` (create new version of existing prompt), `list` (show all prompts with latest version, with basic pagination for >25 entries), `show` (view specific prompt version), `delete` (remove a prompt and all its versions), and `diff` (show content changes between two versions).
 - **FR-003**: The system MUST provide CLI subcommands under `openreview prompt` for: `bind` (associate a prompt version with a model slot), `unbind` (remove a binding), and `bindings` (list all active bindings). Bindings SHALL be persisted in SQLite and loaded at pipeline startup.
 - **FR-004**: The system MUST integrate with the AI Gateway so that when a review pipeline runs, the gateway loads the prompt version specified by the active binding for each model slot. If no binding exists for a slot, the gateway MUST use the latest version of the built-in default prompt for that slot.
-- **FR-005**: The system MUST provide a `openreview prompt test` subcommand that runs one or more prompt versions through a benchmark dataset and reports per-version metrics (F1, precision, recall) and a comparison. The benchmark harness is an integration dependency (N-3 from the roadmap); this feature defines the integration contract.
+- **FR-005**: The system MUST provide a `openreview prompt test` subcommand that runs one or more prompt versions through a benchmark dataset and reports per-version metrics (F1, precision, recall) and a comparison. The benchmark harness is an integration dependency (the model-params / benchmark-harness capability already shipped); this feature defines the integration contract.
 - **FR-006**: The system MUST provide a `openreview prompt optimize` subcommand that runs GRPO-guided prompt optimization as an offline CLI process. The command SHALL: generate candidate prompt variants across N iterations, evaluate each against the benchmark dataset, select the best performer, and save it as a new version with optimization metadata (source version, iteration count, per-iteration metrics).
 - **FR-007**: The system MUST support exporting and importing prompts as YAML files for portability and version control. Export format SHALL include the prompt name, all versions, and their metadata. Import SHALL create new entries, preserving version numbers.
 - **FR-008**: The system MUST ship a set of default prompts for the built-in model slots (extraction, QA, comparison) as part of the package. These defaults SHALL be loaded into the prompt store on first use and SHALL not be overwritable by import (users create their own versions on top).
@@ -125,10 +125,10 @@ A developer has a prompt that works but wants to systematically improve it. They
 - SQLite is the primary store for prompts and bindings. YAML serves as an interchange format for export/import only.
 - Prompt versions are immutable once created (append-only versioning, no lifecycle states). An `update` creates a new version; it does not modify an existing one. Delete removes all versions of a prompt.
 - The expected data scale is medium: up to 50 prompts, with up to 20 versions each. Basic pagination is sufficient for list commands.
-- The benchmark harness (roadmap N-3) will exist and expose a programmatic API that this feature can call. The prompt management spec defines the integration contract but does not implement the benchmark harness itself.
+- The benchmark harness already exists and exposes a programmatic API that this feature can call. The prompt management spec defines the integration contract but does not implement the benchmark harness itself.
 - GRPO optimization is a developer-only workflow, not exposed to end users of the product. It runs offline, may take significant time, and requires the benchmark dataset.
 - Default prompts for built-in model slots are shipped with the package as YAML files in `src/openreview_cli/gateway/prompts/defaults/` and loaded on first use if the prompt store is empty.
-- The gateway's `ModelParams` already supports extra provider-specific parameters (roadmap N-3); prompt content is passed as part of the `messages` array, not as a separate parameter.
+- The gateway's `ModelParams` already supports extra provider-specific parameters (via the `extra_params` field — see spec 006); prompt content is passed as part of the `messages` array, not as a separate parameter.
 - Each model slot defines a set of injectable variables (`{document_type}`, `{clause_count}`, `{playbook_position}`, etc.) that the gateway resolves at pipeline runtime.
 - Prompt storage does not need encryption at rest — prompts are instruction text, not sensitive data. They are stored in the project's SQLite database alongside other application data.
 - The `openreview prompt` subcommand tree lives under the existing Typer app in `src/openreview_cli/app.py`, following the established CLI structure.

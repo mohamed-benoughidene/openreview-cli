@@ -1,11 +1,11 @@
-# NX-1: Bilateral Comparison (Experimental) — Two-Party Contract Comparison for PreCheck
+# Bilateral Comparison (Experimental) — Two-Party Contract Comparison for PreCheck
 
 **Feature ID**: 014-bilateral-comparison
 **Status**: Draft Specification — EXPERIMENTAL
 **Created**: 2026-07-03
 **Pilot Mode**: PreCheck (NDA)
 **Accuracy Target**: ≥70% initial (aspirational ≥95%)
-**Blueprint References**: [P-4], [P-13], [P-14], §4 (C-12, C-20, C-22), §6.4, §6.7, §8 (R-1, R-6, R-7, R-11), §9 (R-1, R-11), §10 (Q-1, Q-4, Q-5, Q-6), §11 (Speckit Seed)
+**Design context**: experimental bilateral comparison using the RCBSF 5-dimension risk taxonomy (Category, Location, Evidence, Issue, Suggestion); comparison accuracy target ≥70% initial, ≥95% aspirational; pilot scope is PreCheck (NDA) only.
 
 ---
 
@@ -13,13 +13,13 @@
 
 Single-party review (spec 011) answers: *"Does this clause favour me?"* Bilateral comparison answers: *"Where do my counterparty and I disagree?"* Given two versions of the same contract — one from each negotiating party — the tool identifies clause-by-clause divergences, highlights the delta, and classifies each divergence using the RCBSF 5-dimension risk taxonomy (Category, Location, Evidence, Issue, Suggestion). The output is a paired, side-by-side view with per-divergence confidence scores and a three-color (Green/Amber/Red) overall health indicator.
 
-**This is an experimental feature.** The academic literature establishes a hard ceiling on automated contract comparison: best binary discrepancy F1 ≤ 64% (P-4), and no published study validates bilateral contract comparison at all (§6.7). NX-1 ships as opt-in, labelled EXPERIMENTAL, with explicit accuracy caveats, an Amber escape hatch for uncertain comparisons, and a mandatory disclaimer against using results as legal advice.
+**This is an experimental feature.** The academic literature establishes a hard ceiling on automated contract comparison: best binary discrepancy F1 ≤ 64% (per the Better Call CLAUSE benchmark), and no published study validates bilateral contract comparison at all (no paper studies contract-vs-contract comparison — PAKTON is single-party QA, RCBSF is revision not comparison). This spec ships as opt-in, labelled EXPERIMENTAL, with explicit accuracy caveats, an Amber escape hatch for uncertain comparisons, and a mandatory disclaimer against using results as legal advice.
 
-Pilot scope: PreCheck (NDA) only [Q-4]. Single documents only (no amendments) [Q-5]. Users compare two NDAs — Party A's version and Party B's version — and receive a divergence report showing where the counterparty's position differs from the standard (never "sign this") [Q-6].
+Pilot scope: PreCheck (NDA) only — one of the three initial product modes (PreCheck → DealCheck → HireCheck). Single documents only (no amendments, no exhibits). Users compare two NDAs — Party A's version and Party B's version — and receive a divergence report showing where the counterparty's position differs from the standard (never "sign this" — the ethical framework requires descriptive language only).
 
 ### 1.1 What Bilateral Comparison Gives the User That Single-Party Does Not
 
-| Capability | Single-Party (spec 011) | Bilateral (NX-1) |
+| Capability | Single-Party (spec 011) | Bilateral (this spec) |
 |---|---|---|
 | Risk to me | ✅ Per-clause position (favourable/neutral/unfavourable) | ✅ Same, plus... |
 | Risk to me vs. counterparty | ❌ Not available | ✅ Side-by-side divergence per clause |
@@ -27,8 +27,6 @@ Pilot scope: PreCheck (NDA) only [Q-4]. Single documents only (no amendments) [Q
 | Divergence taxonomy | ❌ Not available | ✅ RCBSF 5-dimension classification per delta |
 | Counterparty strategy signal | ❌ Not available | ✅ Pattern analysis across all divergences (e.g., Party B systematically shortens confidentiality terms) |
 | Paired confidence | ❌ Not available | ✅ Per-divergence confidence + per-clause paired color |
-
-Blueprint references: [P-14] (RCBSF taxonomy), §6.7 (comparison is unsolved), §10 Q-1 (accuracy bar)
 
 ---
 
@@ -50,8 +48,6 @@ The tool parses both documents, aligns clauses by heading (e.g., both versions h
 - A mandatory disclaimer printed at the top of the output: "EXPERIMENTAL — comparison accuracy has known limitations. Do not rely on this tool for legal advice."
 - A roll-up showing the number of divergences, the distribution across RCBSF dimensions, and the overall agreement rate.
 
-Blueprint references: §10 Q-4 (PreCheck pilot), §10 Q-6 (no "sign this"), §9 R-1 (accuracy caveats)
-
 ### Scenario 2: Drilling into a Specific Divergence
 
 A senior attorney sees a Red (material divergence) flag on the "Confidentiality Term" clause pair and wants the details. They re-run with verbosity:
@@ -62,8 +58,6 @@ openreview precheck compare my-nda.pdf their-nda.pdf --verbose
 
 The expanded output shows for every divergence: the exact clause text from both sides, the RCBSF dimension and sub-type, the extraction positions for each party (favourable/neutral/unfavourable), the comparison agent's rationale for flagging a divergence, the confidence score for the divergence detection, and — if the comparison agent was uncertain — the specific reason (e.g., "heading match but semantic similarity below threshold; manual review recommended").
 
-Blueprint references: §9 R-11 (comparison uncertainty as warning category), §8 R-6 (confidence scores)
-
 ### Scenario 3: Conservative Mode for Risk-Averse Review
 
 A general counsel wants maximum sensitivity — they'd rather have false positives than miss a divergence. They run:
@@ -73,8 +67,6 @@ openreview precheck compare my-nda.pdf their-nda.pdf --confidence-threshold 0.8
 ```
 
 More comparisons are flagged as divergences (including low-confidence ones), more clauses appear Amber, and fewer material divergences are missed. The user sacrifices precision for recall and manually reviews the additional flags. The output includes a prominent caveat: "Confidence threshold set to 0.8 — output includes low-confidence comparisons. Expect higher divergence count; manually verify each."
-
-Blueprint references: §8 R-6 (generous Amber threshold), §6.4 (three-color accuracy mitigation)
 
 ### Scenario 4: Exporting a Comparison Report for Downstream Review
 
@@ -91,8 +83,6 @@ The tool writes a structured JSON report containing:
 - Summary roll-up: total matched clauses, total divergences, divergence distribution by RCBSF dimension, overall agreement rate
 - Experimental disclaimer as a top-level field
 - Schema version for downstream compatibility
-
-Blueprint references: §8 R-6 (confidence + three-color), §10 Q-1 (citation grounding)
 
 ### Scenario 5: Alignment-Only Mode
 
@@ -118,8 +108,6 @@ The system MUST align clauses across two documents so that corresponding clauses
 - The alignment engine SHALL output an alignment table: one entry per matched or unmatched clause, with the clause ID, heading, and document-side marker.
 - The alignment engine SHALL be stateless — no persistent alignment cache. Each comparison invocation re-runs alignment from scratch.
 
-Blueprint references: §6.7 (comparison is unsolved, every design choice is provisional), §10 Q-5 (single document only — no amendments)
-
 ### FR-2: Bilateral Assessment Model — Paired Assessments with Divergence
 
 The system MUST produce a paired assessment for each aligned clause.
@@ -143,19 +131,17 @@ The comparison agent SHALL detect and classify divergences between aligned claus
 
 The comparison agent SHALL:
 
-- Receive both clause texts plus both single-party assessments (position, confidence, citation, QA verdict) — [C-20, C-22]
+- Receive both clause texts plus both single-party assessments (position, confidence, citation, QA verdict).
 - Output a divergence dimension or "no divergence"
 - Output a confidence score (0.0–1.0) for the divergence classification
-- Cite the exact text from both sides supporting the divergence detection — [Q-6]
+- Cite the exact text from both sides supporting the divergence detection.
 - Mark the comparison as uncertain (Amber) when divergence detection confidence is below the user-configurable threshold — [FR-014 from spec 013]
 
 The comparison agent SHALL reuse the extraction agent's model slot. No `--comparison-model` flag is provided. This decision may be revisited if users report systematic misclassifications where a larger model would improve accuracy.
 
-The comparison agent SHALL NOT output "sign this" or "reject this" language. Output MUST always be descriptive: "differs from counterparty's standard" [Q-6].
+The comparison agent SHALL NOT output "sign this" or "reject this" language. Output MUST always be descriptive: "differs from counterparty's standard".
 
-**Known ceiling**: Binary discrepancy detection is bounded at ≤64% F1 (P-4, §6.4). The comparison agent MUST NOT claim higher accuracy. All output is provisional and labelled EXPERIMENTAL.
-
-Blueprint references: [P-14] (RCBSF 5-dimension taxonomy), [P-4] (§6.4 binary discrepancy F1 ≤64%), §8 R-11 (comparison uncertainty), §9 R-1 (accuracy caveats)
+**Known ceiling**: Binary discrepancy detection is bounded at ≤64% F1 (per the Better Call CLAUSE benchmark). The comparison agent MUST NOT claim higher accuracy. All output is provisional and labelled EXPERIMENTAL.
 
 ### FR-4: Paired Three-Color Status
 
@@ -167,24 +153,20 @@ Each clause pair SHALL display a three-color status computed from the paired ass
 | **Amber** | Uncertain — manual review recommended | Divergence detection confidence < threshold, OR QA disagreement on either side, OR extraction confidence < threshold on either side |
 | **Red** | Material divergence found | Divergence detected with confidence ≥ threshold AND no Amber trigger on either side |
 
-The three-color computation SHALL be a pure deterministic mapping at output time (no re-run of extraction, QA, or comparison) [spec 013 FR-007]. The default confidence threshold for bilateral comparisons SHALL be 0.7 (generous, per §6.4 "set Amber threshold generously").
+The three-color computation SHALL be a pure deterministic mapping at output time (no re-run of extraction, QA, or comparison) [spec 013 FR-007]. The default confidence threshold for bilateral comparisons SHALL be 0.7 (generous, per the published-F1-≤64% comparison accuracy ceiling analysis "set Amber threshold generously").
 
-The Amber threshold SHALL be set more generously for bilateral comparison than for single-party review, because bilateral divergence detection is harder and less validated §6.4. The minimum Amber escape hatch SHALL be wider: any paired divergence with confidence < 0.7 is Amber (vs. < 0.5 which triggers Amber in single-party).
-
-Blueprint references: §6.4 (three-color accuracy mitigation, binary discrepancy F1 ≤64%), §8 R-6 (generous Amber threshold), §9 R-1 (accuracy ceiling)
+The Amber threshold SHALL be set more generously for bilateral comparison than for single-party review, because bilateral divergence detection is harder and less validated the bilateral-comparison accuracy ceiling analysis. The minimum Amber escape hatch SHALL be wider: any paired divergence with confidence < 0.7 is Amber (vs. < 0.5 which triggers Amber in single-party).
 
 ### FR-5: Experimental Disclaimer and Accuracy Caveats
 
 Every comparison output — terminal and JSON — MUST include:
 
-1. **EXPERIMENTAL badge** at the top of every output: "NX-1 BILATERAL COMPARISON — EXPERIMENTAL FEATURE"
+1. **EXPERIMENTAL badge** at the top of every output: "BILATERAL COMPARISON — EXPERIMENTAL FEATURE"
 2. **Accuracy caveat**: "Comparison accuracy has known limitations (best binary discrepancy F1 ≤64% per published research). Do not rely on this tool for legal advice. All comparisons are provisional and should be reviewed by a qualified legal professional."
 3. **Per-output confidence disclosure**: The confidence threshold used and the number/percentage of Amber (uncertain) comparisons
-4. **Never "sign this"** : Output language MUST always be descriptive, never prescriptive. Use "differs from counterparty's standard" instead of "Party B is wrong" [Q-6]
+4. **Never "sign this"** : Output language MUST always be descriptive, never prescriptive. Use "differs from counterparty's standard" instead of "Party B is wrong".
 
 The disclaimer SHALL be printed to stderr on every run, not hidden behind `--verbose`.
-
-Blueprint references: §9 R-1 (accuracy risk, HIGH/HIGH), §9 R-11 (multi-party semantics never validated), §6.4 (binary discrepancy F1 ≤64%), §10 Q-6 (never "sign this")
 
 ### FR-6: Paired Report Formatter — Side-by-Side Terminal and JSON Output
 
@@ -217,19 +199,15 @@ The system SHALL support a `--align-only` flag that:
 - Completes in under 5 seconds for typical 50-page NDAs (no model inference)
 - Accepts `--format json` for machine-readable alignment output
 
-This mode is useful for previewing alignment quality before committing to the full inference pipeline. Because clause alignment is the weakest link in the comparison chain (P-4 reports citation matching at <14% F1), allowing users to inspect alignment quality directly builds trust and avoids wasted inference cost on misaligned clauses.
-
-Blueprint references: §6.4 (binary discrepancy F1 ≤64%), [P-4] (citation matching <14% F1)
+This mode is useful for previewing alignment quality before committing to the full inference pipeline. Because clause alignment is the weakest link in the comparison chain (the Better Call CLAUSE benchmark reports citation matching at <14% F1), allowing users to inspect alignment quality directly builds trust and avoids wasted inference cost on misaligned clauses.
 
 ### FR-8: Confidence Threshold on Comparison
 
-The system SHALL accept a `--confidence-threshold` flag (float 0.0–1.0, default 0.7) on the `compare` subcommand that controls the Amber boundary for divergence detection confidence. This is independent of the single-party `--confidence-threshold` (spec 013 FR-003) — the comparison threshold SHALL default to 0.7 for bilateral mode because divergence detection is provably harder than single-party assessment (§6.4).
+The system SHALL accept a `--confidence-threshold` flag (float 0.0–1.0, default 0.7) on the `compare` subcommand that controls the Amber boundary for divergence detection confidence. This is independent of the single-party `--confidence-threshold` (spec 013 FR-003) — the comparison threshold SHALL default to 0.7 for bilateral mode because divergence detection is provably harder than single-party assessment (the published-F1-≤64% comparison accuracy ceiling analysis).
 
 The system SHALL also accept a `--conservative` convenience flag that sets `--confidence-threshold 0.8` for maximum sensitivity (favours recall over precision). The `--conservative` flag SHALL be mutually exclusive with an explicit `--confidence-threshold` — using both SHALL produce an error (exit code 3).
 
-The user-facing help text for this flag SHALL include the accuracy ceiling disclosure: "Note: Bilateral comparison accuracy is bounded at approximately 64% F1 per published research (P-4). Set this threshold generously to push uncertain comparisons to Amber rather than risking false Green or Red."
-
-Blueprint references: §8 R-6 (generous Amber threshold), §6.4 (binary discrepancy F1 ≤64%), §9 R-1 (accuracy caveats — Amber escape hatch)
+The user-facing help text for this flag SHALL include the accuracy ceiling disclosure: "Note: Bilateral comparison accuracy is bounded at approximately 64% F1 per published research (the Better Call CLAUSE benchmark). Set this threshold generously to push uncertain comparisons to Amber rather than risking false Green or Red."
 
 ### FR-9: Opt-In Experimental Activation
 
@@ -242,7 +220,7 @@ openreview precheck compare <docA> <docB>
 The first run of `compare` on any machine SHALL print a one-time warning:
 
 ```
-⚠ NX-1 Bilateral Comparison is EXPERIMENTAL.
+⚠ Bilateral Comparison is EXPERIMENTAL.
 Comparison accuracy has known limitations.
 Review all results manually before relying on them.
 See https://github.com/mohamed-benoughidene/openreview-specs/014 for details.
@@ -250,21 +228,19 @@ See https://github.com/mohamed-benoughidene/openreview-specs/014 for details.
 
 This warning SHALL NOT be suppressible. It reminds users on every first invocation per machine that the feature is research-grade.
 
-Blueprint references: §8 R-7 (bilateral is opt-in experimental), §9 R-11 (never validated — experimental), §10 Q-4 (PreCheck pilot only)
-
 ### FR-10: Integration with Existing Infrastructure
 
 The bilateral comparison SHALL reuse these existing components without modification:
 
 | Component | Integration Point | Built In |
 |---|---|---|
-| `stream_clauses()` | Input — both documents parsed through the same pipeline | Phase 2, C-08 |
-| Single-party extraction + QA pipeline | Per-party assessment (reused as-is from spec 011) | C-20, C-22, spec 011 |
-| AI Gateway | Per-task model routing for extraction, QA, and comparison agents | C-12–C-18, Phase 4 |
-| Three-color confidence (spec 013) | Per-pair color computation using the same framework | spec 013 FR-001–FR-007 |
-| Prompt management | Comparison agent prompts managed via spec 009 prompt registry | N-1, spec 009 |
-| PII stripping | Active before any inference call upstream of comparison | Phase 3 |
-| Bundled NDA playbook | Single-party assessments on each side use the existing playbook | C-22, spec 011 |
+| `stream_clauses()` | Input — both documents parsed through the same pipeline | Document-parsing phase |
+| Single-party extraction + QA pipeline | Per-party assessment (reused as-is from spec 011) | Spec 011 |
+| AI Gateway | Per-task model routing for extraction, QA, and comparison agents | Spec 005 (AI Gateway) |
+| Three-color confidence (spec 013) | Per-pair color computation using the same framework | Spec 013 |
+| Prompt management | Comparison agent prompts managed via spec 009 prompt registry | Spec 009 |
+| PII stripping | Active before any inference call upstream of comparison | PII-stripping phase |
+| Bundled NDA playbook | Single-party assessments on each side use the existing playbook | Spec 011 |
 
 The system SHALL NOT modify any of these components. Integration is via public APIs only.
 
@@ -285,9 +261,9 @@ This constraint keeps peak model-inference memory within the hardware budget by 
 
 | Criterion | Target | Verifiable By |
 |---|---|---|
-| Per-clause divergence detection accuracy vs. expert-labelled NDA pair corpus | ≥70% F1 (initial), ≥95% (aspirational) | Benchmark run against seeded NDA pair corpus — [R-1], [Q-1] |
-| Comparison Amber rate on clearly identical clause pairs | ≤15% false divergence flags | Expert-labelled matched-subset — [§6.4] |
-| Comparison misses truly divergent clause pairs | ≤20% false negative rate on expert-identified divergences | Expert-labelled divergent-subset — [§6.4] |
+| Per-clause divergence detection accuracy vs. expert-labelled NDA pair corpus | ≥70% F1 (initial), ≥95% (aspirational) | Benchmark run against seeded NDA pair corpus — ≥70% initial bar per the deliberate accuracy-calibration decision (research shows citation grounding matters more than raw accuracy) |
+| Comparison Amber rate on clearly identical clause pairs | ≤15% false divergence flags | Expert-labelled matched-subset — measured against the published F1 ≤64% ceiling |
+| Comparison misses truly divergent clause pairs | ≤20% false negative rate on expert-identified divergences | Expert-labelled divergent-subset — measured against the published F1 ≤64% ceiling |
 | Clause alignment accuracy (heading-based fast path) | ≥90% correct alignment | Manual review of 50 random NDA document pairs |
 | Per-pair processing time (all-local SLM) | <10 seconds per clause pair (P95) | Timed run on reference machine |
 | Peak memory during comparison pipeline | <100 MB (ex-model, per the hardware budget) | `test_memory` profile |
@@ -299,8 +275,6 @@ This constraint keeps peak model-inference memory within the hardware budget by 
 | Offline mode works end-to-end | All-local SLM slots produce same output format | Full run with all slots set to local models |
 
 All success criteria are technology-agnostic by design.
-
-Blueprint references: [R-1] (≥70% initial, ≥95% aspirational), §6.4 (binary discrepancy F1 ≤64% ceiling), §8 R-6 (confidence + Amber), §9 R-1 (accuracy caveats — Amber escape hatch)
 
 ---
 
@@ -376,13 +350,13 @@ Aggregate statistics for a comparison run.
 
 2. **Comparison agent runs after single-party pipeline**: The comparison agent consumes already-extracted single-party assessments. It does not re-extract. This means the comparison pipeline is extraction + QA on both documents (sequential or parallel), then alignment, then comparison. Total inference cost is approximately 2× single-party plus the comparison agent pass.
 
-3. **RCBSF taxonomy is the right lens for divergence classification**: The 5-dimension taxonomy from P-14 is used as-is for bilateral divergence detection. This is an assumption because RCBSF was designed for risk-resolution in single-document review, not for cross-document divergence. If initial accuracy (≥60% dimension classification) is not met, a simplified binary (divergence / no divergence) output becomes the fallback.
+3. **RCBSF taxonomy is the right lens for divergence classification**: The 5-dimension risk taxonomy (Category, Location, Evidence, Issue, Suggestion) from the RCBSF paper is used as-is for bilateral divergence detection. This is an assumption because RCBSF was designed for risk-resolution in single-document review, not for cross-document divergence. If initial accuracy (≥60% dimension classification) is not met, a simplified binary (divergence / no divergence) output becomes the fallback.
 
-4. **Amber threshold is wider than single-party**: Because bilateral divergence detection is harder (§6.4, P-4 F1 ≤64%), the default confidence threshold for comparison is 0.7 (generous) and the default for single-party remains 0.5 (spec 013 default). Users can override both independently.
+4. **Amber threshold is wider than single-party**: Because bilateral divergence detection is harder (published F1 ≤64% per the Better Call CLAUSE benchmark), the default confidence threshold for comparison is 0.7 (generous) and the default for single-party remains 0.5 (spec 013 default). Users can override both independently.
 
 5. **No clause-level cache**: Each `compare` invocation re-runs parsing, alignment, extraction, QA, and comparison. No caching layer. This is acceptable for typical document counts (<20 pairs/day). A cache can be added if batch sizes grow.
 
-6. **Single-document format only**: Each party provides exactly one document. No amendments, no exhibits, no multi-file submissions. The system parses the first page to the last page of each document as a single contract [Q-5].
+6. **Single-document format only**: Each party provides exactly one document. No amendments, no exhibits, no multi-file submissions. The system parses the first page to the last page of each document as a single contract.
 
 7. **PII stripping is upstream**: Both documents are PII-stripped before any inference. The comparison agent never sees raw PII from either party.
 
@@ -396,9 +370,9 @@ Aggregate statistics for a comparison run.
 |---|---|---|
 | Single-party review pipeline (spec 011) | Runtime | Extraction + QA for each side |
 | Three-color confidence (spec 013) | Runtime | Color computation framework |
-| AI Gateway (C-12–C-18) | Runtime | Model routing for all three agents |
-| Prompt Registry (N-1) | Runtime | Comparison agent prompts via spec 009 |
-| stream_clauses() (C-08) | Runtime | Clause input for both documents |
+| AI Gateway | Runtime | Model routing for all three agents |
+| Prompt Registry | Runtime | Comparison agent prompts via spec 009 |
+| stream_clauses() | Runtime | Clause input for both documents |
 | Bundled NDA playbook | Content | Single-party assessments on each side |
 | Clause alignment logic | New component | Heading-based exact + fuzzy matching |
 | Comparison agent prompt set | New content | RCBSF 5-dimension divergence detection prompt |
@@ -424,18 +398,16 @@ Partial comparison is misleading when one document cannot be parsed. The tool SH
 
 The following are explicitly deferred to later phases or separate features:
 
-- **Non-NDA contract types**: NX-1 pilots with PreCheck (NDA) only. HireCheck, DealCheck, and other modes are separate features [Q-4].
-- **Amendments and exhibits**: Both parties provide a single document. Multi-file submissions (contract + amendments + exhibit A) are deferred [Q-5].
-- **Multi-party comparison (3+ parties)**: NX-1 compares exactly two parties. Three-way alignment is a future research problem.
+- **Non-NDA contract types**: This spec pilots with PreCheck (NDA) only. HireCheck, DealCheck, and other modes are separate features (the initial product-mode trio is PreCheck → DealCheck → HireCheck).
+- **Amendments and exhibits**: Both parties provide a single document. Multi-file submissions (contract + amendments + exhibit A) are deferred.
+- **Multi-party comparison (3+ parties)**: This spec compares exactly two parties. Three-way alignment is a future research problem.
 - **Redlining / tracked changes comparison**: The tool compares final texts, not change marks. Track-changes analysis is a separate feature.
-- **Automated pass/fail on entire contract**: The tool never says "sign this" or "reject this." Output is per-clause and descriptive [Q-6].
+- **Automated pass/fail on entire contract**: The tool never says "sign this" or "reject this." Output is per-clause and descriptive (per the ethical/liability framework).
 - **Negotiation recommendation engine**: The tool does not suggest negotiating positions or counter-offers. It only flags where and how the documents diverge.
 - **Web UI / dashboard**: This is a CLI tool per Principle II. No web interface for comparison results.
 - **Amendment-aware versioning**: Comparing v1.2 of Party A's document against v3.1 of Party B's document as distinct versions is deferred. Each comparison is a fresh alignment of whatever texts are provided.
-- **Opt-in anonymized data collection (`--share-data`)**: Deferred to a future spec pending constitutional amendment to Principles I/II. Not included in NX-1 scope.
-- **Bilateral PAKTON adaptation**: The PAKTON 3-agent architecture (P-13) is single-party. Adapting it for bilateral comparison (e.g., a 2-position playbook with a cycle) is deferred research. NX-1 uses a simple 2-pass single-party + comparison agent pipeline.
-
-Blueprint references: §8 R-7 (bilateral is opt-in experimental), §10 Q-4 (PreCheck pilot), §10 Q-5 (single documents only), §10 Q-6 (never "sign this")
+- **Opt-in anonymized data collection (\`--share-data\`)**: Deferred to a future spec pending constitutional amendment to Principles I/II. Not included in this spec's scope.
+- **Bilateral PAKTON adaptation**: The PAKTON 3-agent architecture is single-party. Adapting it for bilateral comparison (e.g., a 2-position playbook with a cycle) is deferred research. This spec uses a simple 2-pass single-party + comparison agent pipeline.
 
 ---
 
@@ -443,14 +415,12 @@ Blueprint references: §8 R-7 (bilateral is opt-in experimental), §10 Q-4 (PreC
 
 | Risk | Severity | Likelihood | Mitigation |
 |---|---|---|---|
-| R-1: Comparison accuracy ≤64% F1 ceiling (P-4) | HIGH | HIGH | Amber escape hatch, experimental disclaimer, user-configurable threshold, ≥70% aspirational not guaranteed |
-| R-11: Multi-party semantics never validated in literature | HIGH | MEDIUM | Experimental badge, opt-in only, per-output caveats, research data collection |
+| Comparison accuracy ≤64% F1 ceiling (Better Call CLAUSE benchmark) | HIGH | HIGH | Amber escape hatch, experimental disclaimer, user-configurable threshold, ≥70% aspirational not guaranteed |
+| Multi-party semantics never validated in published research | HIGH | MEDIUM | Experimental badge, opt-in only, per-output caveats, research data collection |
 | Clause alignment fails for non-standard headings | MEDIUM | MEDIUM | Alignment quality metric exposed in output, `--align-only` preview mode, manual alignment as escape hatch |
 | RCBSF taxonomy not suited for bilateral divergence | MEDIUM | MEDIUM | Binary fallback if dimension accuracy <60%, dimension visible in JSON for research |
-| Citation grounding <14% F1 (P-4) affects trust | LOW | HIGH | All comparisons cite exact text, but citation match quality is disclosed as experimental |
+| Citation grounding <14% F1 (Better Call CLAUSE benchmark) affects trust | LOW | HIGH | All comparisons cite exact text, but citation match quality is disclosed as experimental |
 | Users treat output as legal advice | HIGH | MEDIUM | Non-suppressible disclaimer on every run, never "sign this" language, stderr warning |
-
-Blueprint references: §9 R-1 (accuracy HIGH/HIGH), §9 R-11 (semantics MEDIUM/CRITICAL), [P-4] (binary discrepancy F1 ≤64%, citation matching <14% F1)
 
 ---
 
@@ -458,9 +428,9 @@ Blueprint references: §9 R-1 (accuracy HIGH/HIGH), §9 R-11 (semantics MEDIUM/C
 
 | Spec | Relationship |
 |---|---|
-| **011** (Single-Party Review) | NX-1 wraps and extends the single-party pipeline. Single-party assessments are reused as-is; the comparison agent is added as a new stage. The no-op comparison agent from spec 011 FR-4 is replaced with a real implementation. |
-| **013** (Three-Color Confidence) | NX-1 inherits the full three-color framework. The comparison adds paired color computation and its own `--confidence-threshold` (default 0.7). Single-party thresholds remain per spec 013 defaults. |
-| **012** (Citation Grounding) | NX-1 cites divergence detections to exact text from both parties. The grounding discriminator from spec 012 applies to each single-party assessment independently. |
+| **011** (Single-Party Review) | This spec wraps and extends the single-party pipeline. Single-party assessments are reused as-is; the comparison agent is added as a new stage. The no-op comparison agent from spec 011 FR-4 is replaced with a real implementation. |
+| **013** (Three-Color Confidence) | This spec inherits the full three-color framework. The comparison adds paired color computation and its own `--confidence-threshold` (default 0.7). Single-party thresholds remain per spec 013 defaults. |
+| **012** (Citation Grounding) | This spec cites divergence detections to exact text from both parties. The grounding discriminator from spec 012 applies to each single-party assessment independently. |
 | **009** (Prompt Management) | The comparison agent requires new prompts for RCBSF dimension classification. These are added to the prompt registry following spec 009 conventions. |
 | **010** (Benchmark Harness) | The bilateral benchmark requires a new dataset: NDA pairs with expert-labelled divergences. The benchmark harness from spec 010 is extended with a bilateral mode. |
 
@@ -468,9 +438,9 @@ Blueprint references: §9 R-1 (accuracy HIGH/HIGH), §9 R-11 (semantics MEDIUM/C
 
 ## 12. Open Data Collection (Research) — DEFERRED
 
-**DEFERRED**: `--share-data` is deferred to a future spec pending constitutional amendment to Principles I/II. Not included in NX-1 scope.
+**DEFERRED**: \`--share-data\` is deferred to a future spec pending constitutional amendment to Principles I/II. Not included in this spec's scope.
 
-Because bilateral contract comparison is an unsolved research problem (§6.7), NX-1 SHALL include an opt-in anonymized data collection mechanism:
+Because bilateral contract comparison is an unsolved research problem (no paper studies contract-vs-contract comparison), this spec SHALL include an opt-in anonymized data collection mechanism:
 
 - Users MAY opt-in via a `--share-data` flag to share anonymized comparison results (clause texts, divergence classifications, confidence scores) for research purposes.
 - Opt-in SHALL be explicitly requested after the first `compare` run (not before). The prompt SHALL explain what is collected and that no PII or raw document text is included.
@@ -479,7 +449,7 @@ Because bilateral contract comparison is an unsolved research problem (§6.7), N
 - The purpose is to build a corpus of bilateral NDA comparisons for improving future accuracy.
 - Opt-in SHALL be revocable at any time.
 
-Blueprint references: §11 (Speckit Seed — "Data collection: opt-in anonymized accuracy data"), §6.7 (no paper studies bilateral contract comparison)
+Per the Speckit feed: "Data collection: opt-in anonymized accuracy data".
 
 ---
 

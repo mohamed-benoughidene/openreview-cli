@@ -1,4 +1,4 @@
-# Single-Party Review — PAKTON 3-Agent Pipeline for Legal Contract Review
+# Single-Party Review — 3-Agent Pipeline for Legal Contract Review
 
 **Feature ID**: 011-single-party-review
 **Status**: Draft Specification
@@ -8,11 +8,9 @@
 
 Single-party review brings contract analysis to the CLI: a user uploads a contract and receives a structured, per-clause assessment scored against a 3-position playbook — favorable, neutral, or unfavorable for the reviewing party. Three agents work in sequence — extraction, QA verification, and a placeholder for future bilateral comparison — to produce citation-grounded, uncertainty-aware output.
 
-This feature operationalises the PAKTON architecture [§6.7] for the PreCheck product mode [Q-4] as the pilot. The extraction agent matches clauses against a bundled 3-position playbook (C-22) using minimal hierarchical retrieval (C-19). The QA agent verifies every extraction. The comparison agent is a no-op in single-party mode — a structural placeholder for Phase 2 bilateral review.
+This feature operationalises the 3-agent PAKTON-style architecture (extraction, QA, comparison — the comparison agent is a no-op in single-party mode) for the PreCheck product mode (NDA review — the first of three pilot modes: PreCheck → DealCheck → HireCheck). The extraction agent matches clauses against a bundled 3-position playbook (Preferred/Acceptable/Walkaway) using minimal hierarchical retrieval (BM25 + dense + RRF). The QA agent verifies every extraction.
 
-Pilot scope: NDA review via `openreview precheck review` [Q-4]. Minimum 70% accuracy bar at initial release [Q-1]. Every claim cites its source clause [Q-6]. No clause defaults to "sign this" or "reject this" — uncertain assessments are surfaced as Amber [Q-6].
-
-Blueprint references: [CON-4], [P-13], §6.7, §6.1, §6.5, Q-1, Q-4, Q-6, Q-7
+Pilot scope: NDA review via `openreview precheck review`. Initial release targets ≥70% F1 accuracy (a deliberate calibration of the accuracy bar — research shows citation grounding matters more than raw accuracy, so 70% is acceptable as a starting point that will tighten as grounding matures). Every claim cites its source clause. No clause defaults to "sign this" or "reject this" — uncertain assessments are surfaced as Amber (per the ethical/liability framework: the lawyer is responsible per ABA Opinion 512; the product must do citation grounding, never say "sign this", and default uncertain outputs to Amber).
 
 ## 2. User Scenarios
 
@@ -38,7 +36,7 @@ The tool loads the user's playbook, matches clauses against it, and produces the
 
 ### Scenario 3: Offline Review with Local SLMs
 
-A user on a plane or in a secure facility has no internet access. They have configured local SLM model slots (Ollama). The command runs identically — no cloud call is made, no PII leaves the machine. The review completes using only local inference [§6.1].
+A user on a plane or in a secure facility has no internet access. They have configured local SLM model slots (Ollama). The command runs identically — no cloud call is made, no PII leaves the machine. The review completes using only local inference (the SLM-first design, using local models as the default).
 
 ### Scenario 4: Export Structured Results for Downstream Tools
 
@@ -66,21 +64,19 @@ The tool processes each document sequentially, producing individual reports and 
 
 The extraction agent MUST, for each clause in a parsed document:
 
-- Receive the clause text as output by `stream_clauses()` [C-08]
-- Determine which playbook entry (if any) the clause maps to using minimal hierarchical retrieval (C-19)
+- Receive the clause text as output by `stream_clauses()` (the document-parser clause-streaming API built in the document-parsing phase)
+- Determine which playbook entry (if any) the clause maps to using minimal hierarchical retrieval (BM25 + dense + RRF, deferred from this spec)
 - Assign one of four positions: favorable, neutral, unfavorable, or no-match
 - Produce a confidence score (0.0–1.0) for the position assignment
 - Cite the exact source clause text supporting the assessment
 
-The extraction agent SHALL route each clause through a configurable model slot in the AI Gateway [C-12–C-18]. Per Q-7, model routing is at the task level (extraction), not per document type.
+The extraction agent SHALL route each clause through a configurable model slot in the AI Gateway. Model routing is at the task level (extraction), not per document type — the same pipeline serves all 22 product modes.
 
 The extraction agent MUST handle clauses that don't match any playbook entry gracefully — they are reported as "no-match" with no position guess.
 
-The extraction agent MUST NOT output "sign this" or "reject this" language. Uncertain assessments default to Amber [Q-6].
+The extraction agent MUST NOT output "sign this" or "reject this" language. Uncertain assessments default to Amber.
 
-Blueprint references: [P-13], §6.7, C-19, C-22, Q-6, Q-7
-
-### FR-2: 3-Position Playbook System (C-22)
+### FR-2: 3-Position Playbook System
 
 Each product mode SHALL ship with a bundled playbook defining the 3-position taxonomy for that mode's contract type:
 
@@ -100,8 +96,6 @@ Each playbook entry MUST include:
 - Exemplar language patterns per position (for retrieval matching)
 - The default position for clauses that match the category but lack specific indicators
 
-Blueprint references: [C-22], §6.5
-
 ### FR-3: QA Agent — Position Verification
 
 The QA agent SHALL run after every extraction and verify:
@@ -118,15 +112,11 @@ The QA agent SHALL receive: (a) the original clause text, (b) the extraction age
 
 The QA agent MAY be routed to a different (e.g., more accurate, larger) model slot than the extraction agent, enabling the accuracy-vs-speed trade-off: extraction runs a fast SLM, QA runs a slower but more reliable model.
 
-Blueprint references: §6.7, Q-6
-
 ### FR-4: Comparison Agent — Structural Placeholder
 
 The comparison agent SHALL exist as a structural placeholder in the pipeline. In single-party mode, it SHALL be a no-op — the extraction and QA results are passed through to the output formatter unchanged.
 
 When Phase 2 (bilateral comparison) lands, the comparison agent will compare the reviewing party's position assessment against the counterparty's position (extracted from the same clause) and flag divergences.
-
-Blueprint references: §6.7, Phase 2
 
 ### FR-5: Structured Output
 
@@ -141,23 +131,21 @@ The tool SHALL produce two output formats:
 
 The JSON schema SHALL be versioned and documented for downstream consumers.
 
-Blueprint references: [P-13], §6.5
-
 ### FR-6: Integration with Existing Infrastructure
 
 The feature SHALL reuse these existing components without modification:
 
 | Component | Integration Point | Built In |
 |-----------|-------------------|----------|
-| `stream_clauses()` | Input — clauses flow from parser through clause detector | C-08, Phase 2 |
-| RCTS chunking | Clause text is the chunk unit; no sub-clause chunking needed | C-32, Spec 007 |
-| AI Gateway | Per-task model routing for extraction and QA agents | C-12–C-18, Phase 4 |
-| Prompt management | Extraction and QA prompts managed via spec 009 prompt registry | N-1, Spec 009 |
+| `stream_clauses()` | Input — clauses flow from parser through clause detector | Document-parsing phase |
+| RCTS chunking | Clause text is the chunk unit; no sub-clause chunking needed | Spec 007 |
+| AI Gateway | Per-task model routing for extraction and QA agents | AI Gateway phase (spec 005) |
+| Prompt management | Extraction and QA prompts managed via spec 009 prompt registry | Spec 009 |
 | PII stripping | Active before any cloud API call per Principle I | Phase 3 |
 
 The feature does NOT modify any of these components. Integration is via public APIs only.
 
-### FR-7: Task-Level Model Routing (Q-7)
+### FR-7: Task-Level Model Routing
 
 The extraction agent and QA agent SHALL be independently routable to different model slots:
 
@@ -169,9 +157,7 @@ openreview precheck review nda.docx \
 
 If `--qa-model` is not specified, the QA agent SHALL use the same model slot as the extraction agent. If no model slot flags are given, the gateway's default routing applies.
 
-This enables the SLM-first architecture [§6.1]: users start with local SLMs for everything and selectively route QA to cloud models when higher accuracy is needed.
-
-Blueprint references: [Q-7], §6.1
+This enables the SLM-first architecture: users start with local SLMs for everything and selectively route QA to cloud models when higher accuracy is needed.
 
 ### FR-8: Memory and Performance Budget
 
@@ -196,8 +182,6 @@ Processing is async and concurrent across clauses where model slot supports it. 
 | Users can override playbook | Any YAML playbook loads and produces valid reports | Acceptance test with custom playbook |
 
 Criteria are technology-agnostic by design — they don't reference models, frameworks, or programming languages.
-
-Blueprint references: [Q-1] (70% accuracy bar), §6.6 (performance)
 
 ## 5. Key Entities
 
@@ -263,7 +247,7 @@ The top-level output of a review run.
 
 6. **Model routing defaults**: If no model slot flags are provided, both extraction and QA use the gateway's default routing. On a fresh install with no cloud provider configured, this means both agents run via the first available local SLM slot (typically Ollama).
 
-7. **Single-party scope only**: The comparison agent is a no-op. Bilateral comparison is explicitly Phase 2 [§6.7]. This assumption bounds the entire feature scope.
+7. **Single-party scope only**: The comparison agent is a no-op. Bilateral comparison is explicitly a separate experimental phase. This assumption bounds the entire feature scope.
 
 8. **PII stripping is upstream**: The `precheck review` command accepts the `--no-pii` flag defined in the existing CLI. PII stripping happens at the parser level, before clauses reach the extraction agent. The extraction and QA agents never see raw PII.
 
@@ -271,10 +255,10 @@ The top-level output of a review run.
 
 | Dependency | Type | Notes |
 |------------|------|-------|
-| AI Gateway (C-12–C-18) | Runtime | Model routing and inference for both agents |
-| Prompt Registry (N-1) | Runtime | Extraction and QA prompts managed via spec 009 |
-| stream_clauses() (C-08) | Runtime | Clause input pipeline |
-| RCTS chunking (C-32) | Runtime | Clause text is the chunk — already produced by parser |
+| AI Gateway | Runtime | Model routing and inference for both agents |
+| Prompt Registry | Runtime | Extraction and QA prompts managed via spec 009 |
+| stream_clauses() | Runtime | Clause input pipeline |
+| RCTS chunking | Runtime | Clause text is the chunk — already produced by parser |
 | Bundled NDA playbook | Content | First playbook shipped with PreCheck mode |
 | YAML parsing | Runtime | `pyyaml` for playbook loading (already a dep) |
 
@@ -288,12 +272,10 @@ No [NEEDS CLARIFICATION] markers remain. All scope decisions have reasonable def
 
 The following are explicitly deferred to later phases or separate features:
 
-- **Bilateral comparison**: The comparison agent is a structural no-op. Phase 2 will implement counterparty-aware comparison [§6.7].
+- **Bilateral comparison**: The comparison agent is a structural no-op. A separate experimental phase will implement counterparty-aware comparison.
 - **Multi-playbook merging**: A single review only uses one playbook (bundled or user-supplied). Combining multiple playbooks is deferred.
 - **Clause-level caching**: Each invocation re-extracts all clauses. No cache layer (see Assumptions §5).
 - **Sub-clause decomposition**: The extraction agent receives whole clauses as parsed by stream_clauses(). No splitting of complex clauses into sub-parts.
 - **Redlining / track-changes review**: The tool reviews the final document text. Change-tracking analysis is a separate feature.
 - **Document generation**: The tool does not generate redlined documents or suggested edits. It only produces structured assessments.
 - **Web UI / dashboard**: This is a CLI tool per Principle II. No web interface for review results.
-
-Blueprint references: §6.7 (Phase 2), Principle II (local CLI only)

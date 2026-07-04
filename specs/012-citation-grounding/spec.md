@@ -1,4 +1,4 @@
-# Feature Specification: Citation Grounding Discriminator (N-5)
+# Feature Specification: Citation Grounding Discriminator
 
 **Feature Branch**: `feat/citation-grounding`
 
@@ -6,9 +6,9 @@
 
 **Status**: Draft
 
-**Input**: User description: "Citation grounding discriminator — CG-DPO post-hoc checker for contract-clause grounding. Configurable strict/lenient modes. Citation provenance per claim. Integration with single-party review output. 98.5% accuracy target."
+**Input**: User description: "Citation grounding discriminator — post-hoc checker (per the Citation Grounding paper's CG-DPO design) for contract-clause grounding. Configurable strict/lenient modes. Citation provenance per claim. Integration with single-party review output. 98.5% discrimination accuracy target."
 
-**Blueprints**: C-21, P-6, T-7, §6.3, §8/R-5, R-2, R-9, Q-1, Q-6
+**Design context**: post-hoc CG-DPO discriminator (98.5% discrimination accuracy target, adapted from the Citation Grounding paper for contract clauses).
 
 ---
 
@@ -18,7 +18,7 @@
 
 A legal professional runs a single-party review on an NDA, gets back a `ReviewReport` with clause assessments, and wants to ensure every assessment claim is actually grounded in the source document before relying on it. They run the citation grounding discriminator in strict mode. Ungrounded claims are surfaced and excluded from the final output; only claims with verified provenance survive.
 
-**Why this priority**: Strict mode is the default safety mechanism. Without it, the discriminator does not prevent ungrounded outputs from reaching the user — the core liability mitigation (R-2) is not in place. This is the primary value of the feature.
+**Why this priority**: Strict mode is the default safety mechanism. Without it, the discriminator does not prevent ungrounded outputs from reaching the user — the core liability mitigation is not in place. This is the primary value of the feature.
 
 **Independent Test**: Can be fully tested by feeding a `ReviewReport` with deliberately ungrounded claims and verifying that they are excluded from output.
 
@@ -34,7 +34,7 @@ A legal professional runs a single-party review on an NDA, gets back a `ReviewRe
 
 A legal professional wants to see which claims lack grounding but does not want to automatically exclude them — they may still have value as discussion points. They run in lenient mode. All claims are returned, but each carries a grounded/ungrounded flag, and ungrounded claims are visibly marked.
 
-**Why this priority**: Lenient mode is the alternative pathway mandated by §6.3. It matches the real-world workflow where a reviewer wants full visibility before making exclusion decisions. Both modes must ship together for the feature to be complete. Tied with P1 because §6.3 explicitly requires both.
+**Why this priority**: Lenient mode is the alternative pathway mandated by the dual-mode (strict/lenient) discriminator requirement. It matches the real-world workflow where a reviewer wants full visibility before making exclusion decisions. Both modes must ship together for the feature to be complete. Tied with P1 because the post-hoc citation-grounding discriminator design explicitly requires both.
 
 **Independent Test**: Can be fully tested by feeding a `ReviewReport` with deliberately ungrounded claims and verifying all claims are returned with correct grounding flags.
 
@@ -50,7 +50,7 @@ A legal professional wants to see which claims lack grounding but does not want 
 
 A compliance officer needs to verify that a specific clause assessment (e.g., the assessment of the confidentiality clause) is properly grounded. They inspect the citation provenance for a single claim and see the exact `clause_id` and `paragraph_index` it references, plus the discriminator's confidence in that grounding.
 
-**Why this priority**: R-9 and Q-6 specifically require source citations and auditability. This story is P2 because it builds on top of grounding rather than being the grounding itself — strict mode is the prerequisite.
+**Why this priority**: The benchmark-with-audit-log requirement and the every-claim-cites-its-source requirement together drive this story. This story is P2 because it builds on top of grounding rather than being the grounding itself — strict mode is the prerequisite.
 
 **Independent Test**: Can be fully tested by running the discriminator on a known report and verifying per-claim provenance fields are populated and correct.
 
@@ -64,7 +64,7 @@ A compliance officer needs to verify that a specific clause assessment (e.g., th
 
 ### User Story 4 — Developer validates discriminator accuracy against benchmark (Priority: P3)
 
-A developer runs the discriminator against the P-6 baseline methodology — a seeded corpus of contract clauses with known grounded/ungrounded claims using adapted corruption strategies (clause_swap, category_swap, hallucination, anachronism). The system reports discrimination accuracy, precision, and recall against ground truth.
+A developer runs the discriminator against the Citation Grounding paper's baseline methodology (CG-DPO achieves 98.5% discrimination accuracy on a 1,000+ claim corpus) — a seeded corpus of contract clauses with known grounded/ungrounded claims using adapted corruption strategies (clause_swap, category_swap, hallucination, anachronism). The system reports discrimination accuracy, precision, and recall against ground truth.
 
 **Why this priority**: Accuracy validation is critical for the 98.5% target but does not deliver user-facing value until the first three stories are implemented. P3 because it is a development/QA tool.
 
@@ -85,7 +85,7 @@ A developer runs the discriminator against the P-6 baseline methodology — a se
 - **Empty claims list**: When the review report has no clause assessments, the discriminator returns an empty result set with no error.
 - **Duplicate clause IDs in source**: If the source document has duplicate clause IDs (e.g., two clauses numbered "4.3"), the discriminator must handle by qualifying with document section or flagging as ambiguous.
 - **Corrupted or mismatched encoding**: Claims or source text with encoding issues (e.g., mojibake, non-ASCII control characters) must not crash the discriminator — degraded accuracy is acceptable with a logged warning.
-- **Tie/uncertainty at threshold**: Claims where the discriminator confidence is exactly at the grounded/ungrounded boundary must default to ungrounded in strict mode and flagged as uncertain in lenient mode (R-9: 98.5% ≠ 100%).
+- **Tie/uncertainty at threshold**: Claims where the discriminator confidence is exactly at the grounded/ungrounded boundary must default to ungrounded in strict mode and flagged as uncertain in lenient mode (the 98.5% target is a deliberate ceiling, not 100%).
 - **Review report with mixed modes**: If the input `ReviewReport` contains assessments from multiple review modes (e.g., precheck and hirecheck), the discriminator must process all assessments uniformly.
 - **Zero‑length claims**: A claim that is empty or whitespace-only is treated as trivially ungrounded with a logged warning. (Ponytail: empty claim is a caller bug, guard it once at the discriminator boundary instead of patching every caller.)
 
@@ -95,20 +95,20 @@ A developer runs the discriminator against the P-6 baseline methodology — a se
 
 ### Functional Requirements
 
-- **FR-001**: System MUST accept a set of claims with their corresponding source document text and produce a grounded/ungrounded verdict per claim. The mechanism is LLM-based via the AI Gateway, reusing existing chat routing and cost tracking. Multiple claims are batched into a single prompt to mitigate per-claim latency. [P-6][T-7]
-- **FR-002**: System MUST support two modes — strict mode (ungrounded claims are excluded from output) and lenient mode (ungrounded claims are flagged but retained). Multi-provenance behavior is mode-dependent: in strict mode, claims referencing multiple clauses are flagged as uncertain (default ungrounded); in lenient mode, all matching clause provenances are assigned with a warning. [§6.3]
-- **FR-003**: System MUST store citation provenance for every grounded claim, comprising at minimum a `clause_id` and `paragraph_index` that exist in the source document. [Q-6][§6.3]
-- **FR-004**: System MUST record every discrimination decision (claim, verdict, confidence, timestamp) in an audit log that can be inspected after the run. [R-9]
-- **FR-005**: System MUST compute and report a three-component CG metric adapted from the P-6 methodology: Citation Precision (CP), Citation Relevance (CR), and Citation Locality (CL). [P-6]
+- **FR-001**: System MUST accept a set of claims with their corresponding source document text and produce a grounded/ungrounded verdict per claim. The mechanism is LLM-based via the AI Gateway, reusing existing chat routing and cost tracking. Multiple claims are batched into a single prompt to mitigate per-claim latency. (Approach per the Citation Grounding paper; near-human discrimination is achievable with RAG-augmented grounding.)
+- **FR-002**: System MUST support two modes — strict mode (ungrounded claims are excluded from output) and lenient mode (ungrounded claims are flagged but retained). Multi-provenance behavior is mode-dependent: in strict mode, claims referencing multiple clauses are flagged as uncertain (default ungrounded); in lenient mode, all matching clause provenances are assigned with a warning. (Per the post-hoc-not-prompt-guard design: strict/lenient modes are the chosen discriminator architecture.)
+- **FR-003**: System MUST store citation provenance for every grounded claim, comprising at minimum a `clause_id` and `paragraph_index` that exist in the source document. (Per the post-hoc grounding-discriminator design: provenance is stored at discrimination time, not generation time.)
+- **FR-004**: System MUST record every discrimination decision (claim, verdict, confidence, timestamp) in an audit log that can be inspected after the run. (Per the benchmark-with-audit-log requirement.)
+- **FR-005**: System MUST compute and report a three-component CG metric adapted from the Citation Grounding paper methodology: Citation Precision (CP), Citation Relevance (CR), and Citation Locality (CL).
   - **CP** (Citation Precision): percentage of grounded claims whose `clause_id` exists in the source document.
   - **CR** (Citation Relevance): percentage of grounded claims whose claim text appears within the cited clause's content.
   - **CL** (Citation Locality): average paragraph-index delta between the claim's logical position and the cited clause's position.
   - All three metrics are deterministic (no LLM required) and cheap to compute.
-- **FR-006**: System MUST integrate with the existing single-party review output (`ReviewReport` / `ClauseAssessment`), adding grounding information to each assessment. The discriminator augments the existing QA `citation_valid` check: claims where QA already flagged `citation_valid=false` are skipped (already known ungrounded) and do not receive discriminator processing. [C-21][§8/R-5]
-- **FR-007**: System MUST implement the discriminator as a post-hoc module that runs on already-generated review output, not as a prompt prefix or generation constraint. [§6.3][§8/R-5]
-- **FR-008**: System MUST adapt the four P-6 corruption strategies from court citations to contract clauses: clause_swap, category_swap, hallucination, and anachronism. [P-6]
-- **FR-009**: System MUST achieve a per-corpus discrimination accuracy of ≥98.5% when measured against a seeded corpus with known ground-truth labels using the adapted corruption strategies. [P-6][T-7]
-- **FR-010**: System MUST handle edge cases (empty claims, duplicate clause IDs, no clause structure, zero-length claims, encoding errors) without crashing; degraded accuracy or warnings are acceptable. [R-9]
+- **FR-006**: System MUST integrate with the existing single-party review output (`ReviewReport` / `ClauseAssessment`), adding grounding information to each assessment. The discriminator augments the existing QA `citation_valid` check: claims where QA already flagged `citation_valid=false` are skipped (already known ungrounded) and do not receive discriminator processing. (Per the 3-agent pipeline and the post-hoc-not-prompt-guard design decision.)
+- **FR-007**: System MUST implement the discriminator as a post-hoc module that runs on already-generated review output, not as a prompt prefix or generation constraint. (The post-hoc design is the chosen discriminator architecture; prompt-side constraints are not used.)
+- **FR-008**: System MUST adapt the four Citation Grounding paper corruption strategies from court citations to contract clauses: clause_swap, category_swap, hallucination, and anachronism.
+- **FR-009**: System MUST achieve a per-corpus discrimination accuracy of ≥98.5% when measured against a seeded corpus with known ground-truth labels using the adapted corruption strategies. (Per the Citation Grounding paper's reported CG-DPO accuracy, adapted from court citations to contract clauses.)
+- **FR-010**: System MUST handle edge cases (empty claims, duplicate clause IDs, no clause structure, zero-length claims, encoding errors) without crashing; degraded accuracy or warnings are acceptable.
 
 ### Key Entities
 
@@ -131,23 +131,23 @@ A developer runs the discriminator against the P-6 baseline methodology — a se
 
 ### Measurable Outcomes
 
-- **SC-001**: The discriminator achieves ≥98.5% discrimination accuracy across a seeded corpus of at least 1,000 contract-clause claims using the four adapted corruption strategies (clause_swap, category_swap, hallucination, anachronism). Accuracy is measured as (correct grounded + correct ungrounded) / total claims. [P-6]
-- **SC-002**: Every grounded claim in the output carries a `clause_id` and `paragraph_index` that, when checked against the source document, exist. Zero false provenances (a claim citing a non-existent clause or paragraph) in a 500-claim audit sample. [Q-6]
-- **SC-003**: In strict mode, ≥95% of claims identified as ungrounded by manual review are excluded from the output. Measured by running strict mode on a corpus where a domain expert has independently flagged ungrounded claims. [R-2]
-- **SC-004**: In lenient mode, 100% of claims in the input are present in the output. All ungrounded claims carry a visible flag distinguish them from grounded claims. [§6.3]
-- **SC-005**: The audit log, when inspected after a run, contains one entry per claim with verdict, confidence, timestamp, and reason. Zero entries missing for non-trivial claims. [R-9]
-- **SC-006**: A `ReviewReport` passed through the discriminator in either mode produces output that can be serialized (JSON/terminal table) without errors, with grounding information included. [C-21]
+- **SC-001**: The discriminator achieves ≥98.5% discrimination accuracy across a seeded corpus of at least 1,000 contract-clause claims using the four adapted corruption strategies (clause_swap, category_swap, hallucination, anachronism). Accuracy is measured as (correct grounded + correct ungrounded) / total claims. (Per the Citation Grounding paper's reported CG-DPO accuracy.)
+- **SC-002**: Every grounded claim in the output carries a `clause_id` and `paragraph_index` that, when checked against the source document, exist. Zero false provenances (a claim citing a non-existent clause or paragraph) in a 500-claim audit sample. (Per the every-claim-cites-its-source requirement.)
+- **SC-003**: In strict mode, ≥95% of claims identified as ungrounded by manual review are excluded from the output. Measured by running strict mode on a corpus where a domain expert has independently flagged ungrounded claims. (Per the liability-mitigation requirement.)
+- **SC-004**: In lenient mode, 100% of claims in the input are present in the output. All ungrounded claims carry a visible flag distinguish them from grounded claims. (Per the strict/lenient dual-mode discriminator design.)
+- **SC-005**: The audit log, when inspected after a run, contains one entry per claim with verdict, confidence, timestamp, and reason. Zero entries missing for non-trivial claims.
+- **SC-006**: A `ReviewReport` passed through the discriminator in either mode produces output that can be serialized (JSON/terminal table) without errors, with grounding information included. (Per the 3-agent pipeline integration.)
 - **SC-007**: The discriminator, when given a `ReviewReport` with 100 clause assessments, completes processing in under 60 seconds on the reference target machine (8 GB RAM, 2-core CPU, no GPU). This assumes gateway batching of multiple claims per LLM call — higher batch sizes reduce per-claim latency. Performance degrades gracefully (no crash) if the target machine is below spec. [§Constraints — hardware budget]
-- **SC-008**: No corruption type (clause_swap, category_swap, hallucination, anachronism) causes accuracy to fall below 95% when measured independently. [P-6]
+- **SC-008**: No corruption type (clause_swap, category_swap, hallucination, anachronism) causes accuracy to fall below 95% when measured independently. (Per the Citation Grounding paper's per-corruption-type accuracy.)
 
 ---
 
 ## Assumptions
 
-- **Contract clause domain adaptation is feasible**: The P-6 methodology (developed for court citations) can be adapted to contract clauses with no loss of accuracy. The four corruption strategies map cleanly: clause_swap (wrong clause ID), category_swap (wrong playbook category), hallucination (no support in any clause), anachronism (clause ordering or version mismatch). If this assumption fails, the 98.5% accuracy target may need revision, and new corruption strategies may be required.
+- **Contract clause domain adaptation is feasible**: The Citation Grounding paper methodology (developed for court citations) can be adapted to contract clauses with no loss of accuracy. The four corruption strategies map cleanly: clause_swap (wrong clause ID), category_swap (wrong playbook category), hallucination (no support in any clause), anachronism (clause ordering or version mismatch). If this assumption fails, the 98.5% accuracy target may need revision, and new corruption strategies may be required.
 - **Ground truth corpus is buildable**: A seeded corpus of ≥1,000 contract-clause claims with known grounded/ungrounded labels can be constructed for validation. The corpus requires domain-expert annotation or synthetic generation using the four corruption strategies. If corpus construction proves impractical, accuracy validation falls back to statistical sampling against a smaller expert-annotated set.
-- **Post-hoc is sufficient**: The post-hoc discriminator design (§6.3, §8/R-5) is adequate for achieving 98.5% discrimination accuracy. Since the discriminator operates on output text alone via the AI Gateway's chat interface (no access to generation internals needed), the post-hoc approach is well-matched to the architecture. Accuracy depends on the gateway LLM's capability, not on access to model internals.
-- **Hardware budget applies to discriminator**: The discriminator processing must stay within the 100 MB peak memory budget (ex-model). The P-6 reference implementation uses a 7B-parameter fine-tuned model (~14 GB), which exceeds this budget by two orders of magnitude. The LLM-based Gateway approach resolves this tension: the Gateway runs the LLM externally (no local model loaded), so the discriminator's memory overhead is limited to prompt construction and response parsing — well within 100 MB. Accuracy depends on the gateway LLM's capability, not on model size loaded locally.
+- **Post-hoc is sufficient**: The post-hoc discriminator design is adequate for achieving 98.5% discrimination accuracy. Since the discriminator operates on output text alone via the AI Gateway's chat interface (no access to generation internals needed), the post-hoc approach is well-matched to the architecture. Accuracy depends on the gateway LLM's capability, not on access to model internals.
+- **Hardware budget applies to discriminator**: The discriminator processing must stay within the 100 MB peak memory budget (ex-model). The Citation Grounding paper's reference implementation uses a 7B-parameter fine-tuned model (~14 GB), which exceeds this budget by two orders of magnitude. The LLM-based Gateway approach resolves this tension: the Gateway runs the LLM externally (no local model loaded), so the discriminator's memory overhead is limited to prompt construction and response parsing — well within 100 MB. Accuracy depends on the gateway LLM's capability, not on model size loaded locally.
 - **Existing review pipeline unchanged**: The discriminator reads from but does not mutate the existing `ReviewReport` / `ClauseAssessment` schema. Grounding data is added as new fields or a companion structure. This avoids breaking changes to the spec-011 pipeline. If schema mutation becomes necessary, it requires a coordinated change across spec 011 and 012.
 - **Single-party review only (v1)**: The discriminator integrates with the single-party review output (spec 011). Multi-party review (future spec) and other product modes will need separate integration work.
 - **Audit log is local-file based**: The audit log is written to a local file or appended to the existing report output. No audit server, no remote logging. Matches the local-first, CLI-only principle (Constitution §II).
@@ -159,7 +159,7 @@ A developer runs the discriminator against the P-6 baseline methodology — a se
 
 The following questions are resolved by informed assumption (recorded above). They are documented here so that if implementation reveals the assumption was wrong, the resolution path is clear:
 
-1. **Hardware vs accuracy tension**: The P-6 paper achieves 98.5% with a 7B LoRA model (~14 GB). The constitution mandates <100 MB peak (ex-model). The LLM-based Gateway approach resolves this tension by running the discriminator through an external LLM, keeping local memory overhead to prompt construction and response parsing. If the Gateway LLM cannot reach 98.5%, resolution path: improve prompt engineering, increase few-shot examples, switch gateway model, or accept a documented lower ceiling.
+1. **Hardware vs accuracy tension**: The Citation Grounding paper achieves 98.5% with a 7B LoRA model (~14 GB). The constitution mandates <100 MB peak (ex-model). The LLM-based Gateway approach resolves this tension by running the discriminator through an external LLM, keeping local memory overhead to prompt construction and response parsing. If the Gateway LLM cannot reach 98.5%, resolution path: improve prompt engineering, increase few-shot examples, switch gateway model, or accept a documented lower ceiling.
 2. **Corpus construction**: If building a 1,000+ claim ground-truth corpus proves too expensive or time-consuming, fall back to a smaller (200-claim) expert-annotated corpus with synthetic augmentation. The 98.5% accuracy target is then a target against the augmented corpus, not the raw expert set.
 3. **Integration depth**: The discriminator does not need access to model internals — it operates on the output text alone via the AI Gateway chat interface. If the Gateway LLM cannot reach 98.5% without logprobs or attention patterns, resolution path: extend the gateway to expose per-token logprobs for extraction calls, or accept a documented lower accuracy ceiling.
 

@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "N-3 Extend gateway ModelParams for SLM optimization"
+**Input**: User description: "Extend gateway ModelParams for SLM optimization"
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -14,7 +14,7 @@
 
 A user configures an Ollama-hosted SLM (e.g. `qwen3:8b`) for the extraction slot. To maximise quality on their 16 GB machine, they set `num_gpu: 0` (CPU-only) and `num_ctx: 4096` (reduced context to save RAM). These parameters are specific to Ollama and do not exist on cloud providers. The gateway passes them through to LiteLLM without modification, and the model runs with the requested settings.
 
-**Why this priority**: Without provider-specific pass-through, SLMs run with LiteLLM defaults that may be suboptimal or even crash the machine (e.g. trying to allocate GPU memory on a machine with no GPU). This is the core value of N-3.
+**Why this priority**: Without provider-specific pass-through, SLMs run with LiteLLM defaults that may be suboptimal or even crash the machine (e.g. trying to allocate GPU memory on a machine with no GPU). This is the core value of this feature.
 
 **Independent Test**: Can be tested by configuring `extra_params` in `config.yml` for an Ollama model slot and verifying the parameters appear in the LiteLLM call kwargs.
 

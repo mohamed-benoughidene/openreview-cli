@@ -1,9 +1,8 @@
 ---
-description: "Implementation tasks for NX-3: 3-Position Playbook with Versioning"
-blueprint_refs: "C-22, C-23, C-27, R-7, ORPHAN-2, N-4"
+description: "Implementation tasks for 3-Position Playbook with Versioning"
 ---
 
-# Tasks: NX-3 — 3-Position Playbook with Versioning
+# Tasks: 3-Position Playbook with Versioning (Preferred/Acceptable/Walkaway)
 
 **Input**: Design documents from `specs/017-playbook-versioning/`
 
@@ -22,7 +21,7 @@ blueprint_refs: "C-22, C-23, C-27, R-7, ORPHAN-2, N-4"
 
 ## Phase 1: Setup
 
-**Purpose**: Branch readiness and environment verification for NX-3
+**Purpose**: Branch readiness and environment verification for the 3-position playbook with versioning
 
 - [X] T001 Switch to `feat/017-playbook-versioning` branch and verify `uv sync` completes cleanly
 - [X] T002 Review existing `prompt_versions` pattern in `src/openreview_cli/storage/migrations/004_prompts.sql` and migration runner in `src/openreview_cli/storage/database.py` as template
@@ -38,8 +37,6 @@ blueprint_refs: "C-22, C-23, C-27, R-7, ORPHAN-2, N-4"
 **Why this is foundational**: Every other user story (US2–US7) references the renamed enum values. Until the rename is done, no new code can be written using the new vocabulary.
 
 **Independent Test**: `grep -r 'favorable\|unfavorable' src/ tests/` returns zero results (excluding the legacy-key alias path in the YAML loader). A legacy YAML playbook using old keys loads with a `DeprecationWarning`.
-
-**Blueprint**: C-22 (vocabulary rename), C-27 (colour mapping)
 
 ### Tests for US1 (write first, ensure FAIL before implementation)
 
@@ -71,8 +68,6 @@ blueprint_refs: "C-22, C-23, C-27, R-7, ORPHAN-2, N-4"
 
 **Independent Test**: Run migration 006, save a playbook version, retrieve it by version, retrieve the latest version, list all playbooks — all return correct data.
 
-**Blueprint**: C-22 (versioned storage), references prompt_versions pattern (migration 004)
-
 ### Tests for US2
 
 - [X] T015 [P] [US2] Unit test: migration 006 creates `playbook_versions` table with correct schema in `tests/unit/test_playbook_storage.py`
@@ -97,8 +92,6 @@ blueprint_refs: "C-22, C-23, C-27, R-7, ORPHAN-2, N-4"
 **Why this priority**: Import is the entry point for the storage pipeline. Without it, no playbooks enter the database and US4–US7 cannot function.
 
 **Independent Test**: `openreview playbook import tests/fixtures/playbooks/legacy-keys-nda.yaml` outputs confirmation. List shows the playbook. Importing again increments version.
-
-**Blueprint**: C-22 (versioned storage), spec.md FR-002
 
 ### Tests for US3
 
@@ -126,8 +119,6 @@ blueprint_refs: "C-22, C-23, C-27, R-7, ORPHAN-2, N-4"
 
 **Independent Test**: Import two playbooks with different names, run `list`, verify both appear with correct latest versions. Empty list shows "No playbooks saved yet."
 
-**Blueprint**: C-22, spec.md FR-003
-
 ### Tests for US4
 
 - [X] T030 [US4] Integration test: `openreview playbook list` CLI smoke test in `tests/integration/test_playbook_commands.py` — verify table output, verify empty message when no playbooks
@@ -144,11 +135,9 @@ blueprint_refs: "C-22, C-23, C-27, R-7, ORPHAN-2, N-4"
 
 **Goal**: CLI command that displays the full contents of one specific playbook version in human-readable format.
 
-**Why P2**: The primary workflow (import + use in review) works without it. Essential for audit trail (C-23) — a reviewer can inspect exactly what playbook version produced a review.
+**Why P2**: The primary workflow (import + use in review) works without it. Essential for the version-stamped audit trail — a reviewer can inspect exactly what playbook version produced a review.
 
 **Independent Test**: Import a playbook, create two versions, run `show <id> 1` and `show <id> 2`, verify outputs differ. Run `show <id> 99` and get "version not found" error.
-
-**Blueprint**: C-23 (audit trail), spec.md FR-004
 
 ### Tests for US5
 
@@ -171,8 +160,6 @@ blueprint_refs: "C-22, C-23, C-27, R-7, ORPHAN-2, N-4"
 
 **Independent Test**: Import a playbook, run `openreview precheck test.pdf --playbook <id>`, verify review completes and output references the DB-sourced playbook.
 
-**Blueprint**: C-22 (DB-sourced playbook loading), spec.md FR-005
-
 ### Tests for US6
 
 - [X] T035 [P] [US6] Unit test: `--playbook` flag calls `load_playbook_from_db()` with correct ID in `tests/unit/test_playbook_versioning.py`
@@ -189,15 +176,13 @@ blueprint_refs: "C-22, C-23, C-27, R-7, ORPHAN-2, N-4"
 
 ---
 
-## Phase 8: US7 — Version-Stamped Reviews (C-23) (Priority: P1)
+## Phase 8: US7 — Version-Stamped Reviews (Priority: P1)
 
 **Goal**: Stamp every `ReviewReport` with the exact `playbook_id` and `playbook_version` that produced it. Wire the existing `playbook_version` column in the `reviews` table. Surface the stamp in terminal output and JSON serialisation.
 
-**Why this priority**: C-23 mandates a version-stamped audit trail. Without it, review outputs are not reproducible.
+**Why this priority**: The version-stamped audit trail is a hard requirement. Without it, review outputs are not reproducible.
 
 **Independent Test**: Run a review with `--playbook nda-v2`, inspect JSON output, verify `playbook_id` and `playbook_version` are present and correct.
-
-**Blueprint**: C-23 (audit trail), ORPHAN-2, spec.md FR-006
 
 ### Tests for US7
 
@@ -317,17 +302,6 @@ The Position rename touches every file in the review module. The grep sweep in T
 
 Use `rg -rn 'favorable|neutral|unfavorable' src/ tests/` after T014 to verify completeness.
 
-### Blueprint References
-
-| Ref | Description | Primary Tasks |
-|-----|-------------|---------------|
-| C-22 | 3-position playbook persisted + versioned | T003–T014 (rename), T015–T021 (storage), T022–T029 (import), T030–T034 (list/show), T039–T040 (flag) |
-| C-23 | Reviews stamped with playbook version | T041–T047 (version stamp) |
-| C-27 | Three-colour output G/A/R | T006, T009 (colour mapping) |
-| R-7 | Scope limited to single-party review | Governance constraint across all tasks |
-| ORPHAN-2 | C-23 depends on C-22, linked to NX-3 | T041–T047 depend on T015–T021 |
-| N-4 | Versioned playbook is single-party only | Governance constraint — no bilateral or multi-party wiring |
-
 ---
 
 ## Notes
@@ -339,4 +313,4 @@ Use `rg -rn 'favorable|neutral|unfavorable' src/ tests/` after T014 to verify co
 - Commit after each task or logical group (TDD workflow)
 - Stop at any checkpoint to validate story independently
 - Zero new dependencies — `sqlite3` and `PyYAML` already in stack
-- No existing file-based playbook workflow should break (N-4, FR-009)
+- No existing file-based playbook workflow should break (single-party-only scope, FR-009)

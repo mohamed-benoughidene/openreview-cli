@@ -33,5 +33,5 @@
 
 - All items pass validation. The spec references LiteLLM in the Assumptions section (not in requirements or success criteria), which is appropriate since LiteLLM is the approved routing library per PR-1 and the constitution.
 - The spec deliberately avoids specifying internal module structure, class hierarchies, or code organization — those belong in the plan phase.
-- Provider-specific pass-through parameters (FR-012) implements product-blueprint revision R-4.
-- The spec scope aligns with product-blueprint items N-2 and C-12 through C-18.
+- Provider-specific pass-through parameters (FR-012) implements the spec revision that adds an `extra_params` pass-through field to ModelParams for provider-specific optimization (e.g. Ollama `num_gpu`, `num_ctx`).
+- The spec scope aligns with the AI Gateway roadmap item and the seven AI Gateway capabilities it delivers: provider models, routing engine, cost store, setup wizard, registry cache, YAML importer, and key redaction.
