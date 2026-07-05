@@ -34,6 +34,7 @@ openreview = "openreview_cli.app:app"
 dev = [
     "mypy>=2.1.0",
     "pytest>=9.1.1",
+    "pytest-asyncio>=0.24.0",
     "ruff>=0.15.18",
     "types-pyyaml>=6.0.12.20260518",
 ]
@@ -79,6 +80,8 @@ unfixable = ["B", "SIM"]
 "src/openreview_cli/parsing/clause_detector.py" = ["PLW0603"]
 "src/openreview_cli/benchmark/cli.py" = ["PLR0912", "PLR0915", "B008"]
 "src/openreview_cli/app.py" = ["PLR0912", "PLR0915"]
+
+"src/openreview_cli/pipeline/runner.py" = ["PLR0912", "PLR0915"]
 "src/openreview_cli/benchmark/report.py" = ["PLR0911"]
 
 [tool.ruff.format]
@@ -107,6 +110,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
+asyncio_mode = "auto"
 markers = [
     "slow: marks tests as slow (deselected by default)",
     "integration: marks integration tests (mocked APIs)",

@@ -23,6 +23,11 @@ from openreview_cli.pipeline.progress import (
     ProgressCallback,
     ProgressEvent,
 )
+from openreview_cli.recovery.coordinator import RecoverySignal
+
+if TYPE_CHECKING:
+    from openreview_cli.recovery.coordinator import RecoveryCoordinator
+    from openreview_cli.recovery.models import RecoveryContext, RecoveryReport
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +49,7 @@ class PipelineReport:
     cancelled: bool = False
     peak_memory_mb: float | None = None
     per_stage_memory_mb: dict[str, float] = field(default_factory=dict)
+    recovery_report: RecoveryReport | None = None
 
 
 class _StageOutcome(NamedTuple):
@@ -78,12 +84,14 @@ class Pipeline:
         max_memory_mb: float | None = None,
         cancellation_token: asyncio.Event | None = None,
         progress_callback: ProgressCallback | None = None,
+        recovery_coordinator: RecoveryCoordinator | None = None,
     ) -> None:
         self._stages = list(stages)
         self._memory_quota_mb = memory_quota_mb
         self._max_memory_mb = max_memory_mb
         self._cancellation_token = cancellation_token
         self._progress_callback = progress_callback
+        self._recovery_coordinator = recovery_coordinator
         self._tracemalloc_enabled = tracemalloc.is_tracing()
         self._per_stage_memory_mb: dict[str, float] = {}
         self._pending_disposable: set[str] = set()
@@ -96,7 +104,7 @@ class Pipeline:
 
         Returns:
             PipelineReport with per-stage results, total duration,
-            cancellation flag, and peak memory.
+            cancellation flag, peak memory, and optional recovery report.
 
         Raises:
             CriticalStageError: If a critical stage fails. The exception
@@ -106,6 +114,11 @@ class Pipeline:
         context: PipelineContext = {} if ctx is None else dict(ctx)
         context.setdefault("errors", [])
         context.setdefault("cancelled", False)
+
+        # Initialize recovery context if coordinator is wired
+        recovery_ctx: RecoveryContext | None = None
+        if self._recovery_coordinator is not None:
+            recovery_ctx = self._recovery_coordinator.create_context()
 
         start_time = time.monotonic()
         stage_results: list[StageResult] = []
@@ -117,16 +130,74 @@ class Pipeline:
                 context["cancelled"] = True
                 break
 
-            result = await self._execute_single_stage(context, i, stage)
-            stage_results.append(result.sr)
+            halt = False
 
-            # Dispose keys from the previous stage (CV-T-005)
-            dispose_context_keys(context, self._pending_disposable)
-            self._pending_disposable = set(stage.disposable_keys)
+            # Pre-stage recovery evaluation
+            if self._recovery_coordinator is not None and recovery_ctx is not None:
+                mem_bytes: int | None = None
+                if self._tracemalloc_enabled:
+                    current_mem, _peak = tracemalloc.get_traced_memory()
+                    mem_bytes = current_mem
+                signal = await self._recovery_coordinator.evaluate_pre_stage(
+                    stage_name=stage.name,
+                    critical=stage.critical,
+                    memory_bytes=mem_bytes,
+                    ctx=recovery_ctx,
+                )
+                if signal == RecoverySignal.HALT:
+                    critical_message = (
+                        f"Stage '{stage.name}': memory budget exceeded after degradation exhausted"
+                    )
+                    stage_results.append(
+                        StageResult(
+                            stage_name=stage.name,
+                            duration_s=0.0,
+                            error=critical_message,
+                        )
+                    )
+                    halt = True
 
-            if result.critical:
+            if not halt:
+                result = await self._execute_single_stage(context, i, stage)
+                stage_results.append(result.sr)
+
+                # Post-stage recovery update
+                if self._recovery_coordinator is not None and recovery_ctx is not None:
+                    if result.sr.error is None:
+                        recovery_ctx.completed_stages.append(stage.name)
+                        # ponytail: spec-required v1 — FR-07 data preservation tracking
+                        if result.sr.output_keys:
+                            recovery_ctx.saved_results[stage.name] = {
+                                k: context.get(k) for k in result.sr.output_keys
+                            }
+                    elif not result.critical:
+                        partial_output = {k: context.get(k) for k in result.sr.output_keys}
+
+                        async def _attempt_retry(
+                            attempt: int, _i: int = i, _stg: Stage = stage
+                        ) -> bool:
+                            outcome = await self._execute_single_stage(context, _i, _stg)
+                            return not outcome.critical and outcome.sr.error is None
+
+                        await self._recovery_coordinator.handle_stage_failure(
+                            stage_name=stage.name,
+                            error_message=result.sr.error,
+                            partial_output=partial_output,
+                            ctx=recovery_ctx,
+                            critical=False,
+                            attempt_fn=_attempt_retry,
+                        )
+
+                # Dispose keys from the previous stage (CV-T-005)
+                dispose_context_keys(context, self._pending_disposable)
+                self._pending_disposable = set(stage.disposable_keys)
+
+                if result.critical:
+                    critical_message = result.sr.error
+                    halt = True
+
+            if halt:
                 critical_failure = True
-                critical_message = result.sr.error
                 break
 
         total_duration = time.monotonic() - start_time
@@ -136,12 +207,18 @@ class Pipeline:
             _current, peak_bytes = tracemalloc.get_traced_memory()
             peak_mb = peak_bytes / (1024 * 1024)
 
+        # Build recovery report if coordinator was wired
+        recovery_report: RecoveryReport | None = None
+        if self._recovery_coordinator is not None and recovery_ctx is not None:
+            recovery_report = self._recovery_coordinator.build_report(recovery_ctx)
+
         report = PipelineReport(
             stage_results=stage_results,
             total_duration_s=total_duration,
             cancelled=bool(context.get("cancelled")),
             peak_memory_mb=peak_mb,
             per_stage_memory_mb=dict(self._per_stage_memory_mb),
+            recovery_report=recovery_report,
         )
 
         if critical_failure:

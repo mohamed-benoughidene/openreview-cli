@@ -4,7 +4,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Literal
 
-StageStatus = Literal["running", "completed", "failed", "skipped"]
+# ponytail: spec-required v1 — no consumer yet; used by recovery coordinator progress events
+StageStatus = Literal["running", "completed", "failed", "skipped", "recovering", "degraded"]
 
 
 @dataclass

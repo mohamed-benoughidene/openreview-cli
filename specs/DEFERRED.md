@@ -1142,3 +1142,360 @@ query structure).
 - **Hybrid search**: Combine vector similarity with keyword/BM25 scoring,
   especially useful for clause-number lookups ("§3.2") that embeddings
   handle poorly.
+
+---
+
+## D-27: Continuous Memory Monitoring
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 019, §7 Assumptions |
+| **Deferred at** | 2026-07-05 |
+| **Trigger** | Explicitly deferred as future enhancement |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+The recovery framework monitors memory pressure only at stage boundaries,
+not continuously during stage execution. This reduces overhead and matches
+the pipeline's stage-based execution model, but it can miss intra-stage
+memory spikes (e.g., a stage that allocates 200 MB in the middle of
+processing and frees it before the boundary check).
+
+Continuous monitoring would:
+
+1. Track memory usage during stage execution (e.g., via a background thread
+   or periodic `tracemalloc` snapshot)
+2. Trigger pre-emptive degradation if a stage is trending toward the budget
+   limit before it actually hits the ceiling
+3. Catch spikes that start and resolve within a single stage
+
+### What would need to change to unblock
+
+1. Add a continuous memory monitor (background thread or async task) that
+   samples `tracemalloc` or `psutil.Process().memory_info()` at intervals
+2. Wire the monitor into the pipeline runner so it can signal the recovery
+   coordinator mid-stage
+3. Define a policy: should continuous monitoring be on by default, or
+   opt-in via config?
+4. Add performance benchmarks to measure the monitoring overhead (sampling
+   frequency vs. CPU cost)
+5. Add integration tests for intra-stage spike detection and pre-emptive
+   degradation
+
+### Blueprint references
+
+Spec 019 §7: "Memory pressure is monitored at stage boundaries...
+Continuous monitoring is a future enhancement if stage-boundary checks miss
+intra-stage spikes."
+
+### Future features (not deferred — natural next steps)
+
+- **Adaptive sampling**: Increase monitoring frequency when memory usage
+  approaches the budget; decrease when usage is low. Reduces overhead
+  during normal operation.
+- **Per-stage budget windows**: Different stages get different memory
+  budgets; the monitor tracks each stage separately.
+
+---
+
+## D-28: Explicit Exception Type Registration / Dispatch Table
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 019 — `recovery/models.py` |
+| **Deferred at** | 2026-07-05 |
+| **Trigger** | Ponytail — heuristic v1; explicit dispatch deferred |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+`classify_error()` in `recovery/models.py` uses substring matching against
+the exception class name to classify failures into `ErrorCategory`. For
+example, any exception with "Critical" in its class name is classified as
+`stage_failure_critical`. This heuristic works for v1 but is fragile:
+renaming an exception class or a coincidental name match could cause
+misclassification.
+
+A future version should use explicit exception type registration or a
+dispatch table where each exception type (or base class) maps to a
+specific `ErrorCategory`.
+
+### What would need to change to unblock
+
+1. Replace the `exception_type` substring matching in
+   `recovery/models.py:classify_error()` with an explicit dispatch table
+   that maps exception classes (or their MRO) to `ErrorCategory`
+2. Allow stages to register custom exception-to-category mappings
+3. Keep the substring fallback for unregistered exception types
+4. Add unit tests for each registered exception type to verify correct
+   classification
+
+### Blueprint references
+
+Ponytail marker at `src/openreview_cli/recovery/models.py` line 185:
+"ponytail: exception matching heuristic, v1".
+
+### Future features (not deferred — natural next steps)
+
+- **Pluggable classifiers**: Allow third-party stages to register custom
+  error classifiers alongside exception types.
+- **Audit log of classifications**: Record every classification decision
+  with the matched rule so debugging is easier.
+
+---
+
+## D-29: Degradation Hook Consumers on Pipeline Stages
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 019 — `pipeline/base.py` |
+| **Deferred at** | 2026-07-05 |
+| **Trigger** | Ponytail — spec-required hooks defined, no stage implements them |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+The `Stage` abstract base class defines two extension hooks for graceful
+degradation:
+
+- `supports_degradation()` — returns `False` by default; override to
+  signal the stage can run with reduced resources
+- `apply_degradation(action)` — no-op by default; override to switch to a
+  lighter model, reduce batch size, or simplify processing
+
+The `graceful_degradation` recovery strategy exists and the coordinator
+knows how to call these hooks. But no concrete stage (`ParseStage`,
+`StripStage`, `ChunkStage`, `RetrieveStage`, `GenerateStage`) overrides
+either method. Degradation is defined but unreachable.
+
+### What would need to change to unblock
+
+1. For each stage, determine what degradation looks like:
+   - `ParseStage`: process fewer pages, skip OCR, skip TOC extraction
+   - `StripStage`: skip custom recognizers, use only built-in Presidio
+   - `ChunkStage`: reduce chunk overlap, increase minimum chunk size
+   - `RetrieveStage`: return top-K instead of all matching chunks
+   - `GenerateStage`: use a lighter model slot, reduce max tokens
+2. Implement `supports_degradation()` → `True` on each stage that can
+   degrade
+3. Implement `apply_degradation(action)` with the actual degradation
+   behaviour
+4. Wire the degradation actions into the `graceful_degradation` strategy's
+   action list
+5. Add integration tests that trigger memory pressure and verify the stage
+   degrades gracefully instead of crashing
+
+### Blueprint references
+
+Ponytail markers at `src/openreview_cli/pipeline/base.py` lines 82 and 91.
+Spec 019 FR-03 (degraded execution mode). The `graceful_degradation`
+strategy in `recovery/strategies/graceful_degradation.py`.
+
+### Future features (not deferred — natural next steps)
+
+- **Degradation profiles**: Pre-set degradation action lists for different
+  hardware profiles (8 GB, 16 GB, 32 GB).
+- **Auto-degradation on history**: If a stage has degraded on the last 3
+  runs of the same document type, start degraded next time.
+
+---
+
+## D-30: FR-07 Data Preservation Tracking Consumer (saved_results / StageStatus)
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 019 — `recovery/models.py`, `pipeline/runner.py`, `pipeline/progress.py` |
+| **Deferred at** | 2026-07-05 |
+| **Trigger** | Ponytail — spec-required v1 structures defined, no consumer reads them |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+Three pieces of the data preservation tracking system exist but have no
+consumer:
+
+1. **`RecoveryContext.saved_results`** (`recovery/models.py:93`): A dict
+   that stores each stage's output keys after successful completion. The
+   pipeline runner populates it (`runner.py:168`), but nothing reads it.
+2. **`StageStatus` literal** (`pipeline/progress.py:7`): Includes
+   `"recovering"` and `"degraded"` status values alongside the basic
+   `"running"`, `"completed"`, `"failed"`, `"skipped"`. These are defined
+   but no progress event emitter uses them.
+3. **`RecoveryReport.partial_results`** (`recovery/models.py:109`): A flag
+   indicating the pipeline completed with partial data. Defined but never
+   set to `True` by any code path.
+
+FR-07 requires the recovery framework to track what data survived a
+failure so the user can see what was lost and what was preserved.
+
+### What would need to change to unblock
+
+1. Wire the progress callback in the pipeline runner to emit events with
+   `"recovering"` and `"degraded"` statuses when those recovery actions
+   occur
+2. Add a consumer for `RecoveryContext.saved_results` — either a terminal
+   summary at the end of the pipeline or a field in the user-facing output
+3. Populate `RecoveryReport.partial_results` when the pipeline completes
+   with some stages failed and some completed
+4. Add output formatting that shows which stages' data survived and which
+   were lost
+5. Add integration tests for partial-results reporting
+
+### Blueprint references
+
+Ponytail markers at `recovery/models.py:93`, `pipeline/runner.py:168`,
+`pipeline/progress.py:7`. Spec 019 FR-07 (data preservation tracking).
+
+### Future features (not deferred — natural next steps)
+
+- **Data integrity verification**: When data preservation is claimed,
+  verify the stored output keys actually match the pipeline context.
+- **Selective re-run**: Allow the user to re-run only the failed stages
+  using preserved data from completed stages.
+
+---
+
+## D-31: Persistent Recovery State Across CLI Invocations
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 019, §5 Non-Goals |
+| **Deferred at** | 2026-07-05 |
+| **Trigger** | Explicitly out of scope — recovery state is per-command |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+The recovery framework keeps all state in memory for the duration of a
+single CLI command. If a pipeline run is interrupted (user Ctrl+C, system
+crash, power loss), all recovery state is lost. The user must restart the
+pipeline from scratch.
+
+Persistent recovery state would:
+
+1. Save recovery context (completed stages, partial data, current strategy
+   state) to a SQLite database or JSON file on each stage boundary
+2. On pipeline restart, detect interrupted state and resume from the last
+   successful stage
+3. Allow the framework to answer "what was the last pipeline I ran, and
+   what happened?" after a crash
+
+### What would need to change to unblock
+
+1. Choose a persistence format (SQLite table or sidecar JSON file) that
+   does not conflict with the local-first, CLI-only constitution
+2. Serialize `RecoveryContext` to the persistence store at each stage
+   boundary (or after each recovery action)
+3. Add a resume mechanism that detects saved state on pipeline startup
+4. Add cleanup logic: delete saved state on successful completion, keep
+   it on failure/interruption
+5. Add integration tests for crash-resume scenarios
+
+### Blueprint references
+
+Spec 019 §5: "Recovery state lives only for the duration of a single CLI
+command... No recovery state is persisted to disk." This is the explicit
+boundary that persistent state would cross.
+
+---
+
+## D-32: Full-dual-path / Multi-provider Parallel Execution
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 019, §5 Non-Goals |
+| **Deferred at** | 2026-07-05 |
+| **Trigger** | Explicitly out of scope — fallback is sequential |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+The recovery framework performs provider fallback sequentially: try
+provider A, if it fails, try provider B. It never calls multiple
+providers simultaneously and compares results. A full-dual-path approach
+would:
+
+1. Call two (or more) providers in parallel
+2. Compare the results for consistency
+3. If one provider returns an error and the other succeeds, use the
+   successful result
+4. If both return different results, either use a tie-breaker (fastest,
+   cheapest, most reliable) or surface the discrepancy to the user
+
+This is speculative — the current pipeline has no comparison-of-outputs
+requirement, and the latency/bandwidth cost of parallel calls on a 2-core
+machine may outweigh the benefit.
+
+### What would need to change to unblock
+
+1. Design a multi-provider call strategy that supports concurrent
+   execution (asyncio.gather or similar)
+2. Define a winner-selection policy: first response wins, cheapest wins,
+   most-reliable-provider wins, or majority vote
+3. Add a `--dual-path` flag to opted-in commands
+4. If providers disagree, surface the divergence in the recovery report
+5. Benchmark latency, throughput, and cost against the sequential baseline
+
+### Blueprint references
+
+Spec 019 §5: "The framework does not call multiple providers
+simultaneously and compare results. Fallback is sequential: one provider
+at a time, in user-specified order."
+
+### Future features (not deferred — natural next steps)
+
+- **Confidence boost**: When two providers agree on the same output,
+  mark the result with higher confidence.
+- **Cost-aware dispatch**: Use the cheapest provider by default, but
+  verify critical outputs with a stronger provider in parallel.
+
+---
+
+## D-33: Automatic Recovery Reconfiguration
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 019, §5 Non-Goals |
+| **Deferred at** | 2026-07-05 |
+| **Trigger** | Explicitly out of scope — framework reports, does not fix config |
+| **Status** | Unblocked — requires constitutional check (Principle V: user controls config) |
+
+### Description
+
+When the recovery framework detects a configuration problem (e.g., all
+configured providers are unreachable, or the only provider in the list
+returns permanent errors), it reports the issue and recommends changes.
+It does not modify the user's provider list or configuration.
+
+Automatic recovery reconfiguration would:
+
+1. Detect the configuration problem (e.g., provider outage, auth expiry)
+2. Automatically modify the provider list — either by removing the failing
+   provider, switching to a known-good alternative, or calling the setup
+   wizard to add a new provider
+3. Retry the failed operation with the reconfigured provider list
+4. Optionally save the reconfigured list back to the user's config
+
+### What would need to change to unblock
+
+1. **Constitutional check**: Principle V states users control their
+   configuration. Auto-reconfiguration may conflict unless it is
+   opt-in with explicit user consent per event.
+2. Design a reconfiguration policy: what can be auto-changed, what
+   requires confirmation, what is never auto-changed
+3. Add a `--auto-reconfigure` flag or config option that enables this
+   behaviour
+4. Wire the reconfiguration logic into the recovery coordinator (after
+   strategy exhaustion, before final error surfacing)
+5. Add integration tests that simulate provider outages and verify the
+   config is updated and the pipeline retries
+
+### Blueprint references
+
+Spec 019 §5: "The framework does not modify the user's provider list or
+config to fix an outage. It reports the issue and recommends configuration
+changes. The user makes the change manually or via the setup wizard."
+
+Constitution §V (User Control): "Configuration changes must be
+user-initiated or require explicit user confirmation."
