@@ -147,14 +147,16 @@ strengthen the audit trail by making it human-readable.
 
 ---
 
-## D-4: Semantic Citation Relevance (CR) Metric
+## D-4: Semantic Citation Relevance (CR) Metric ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | N-5 / spec 012 |
 | **Deferred at** | 2026-07-04 |
+| **Resolved at** | 2026-07-05 |
+| **Resolved by** | Memo export feature (spec 021) |
 | **Trigger** | Ponytail — structural substring match sufficient for v1 |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** |
 
 ### Description
 
@@ -164,6 +166,13 @@ the cited clause. The v1 implementation uses a simple case-insensitive
 This catches exact-match relevance but misses semantic equivalence
 (e.g., "confidential info" ≠ "Confidential Information" as defined in
 §1.1 of the agreement).
+
+### Resolution
+
+Citation relevance scores are now displayed in the memo export output
+(spec 021). Each per-clause assessment in the memo includes the CR metric
+value, making semantic citation relevance visible in Markdown, JSON, and
+DOCX formatted reports for PreCheck, DealCheck, and HireCheck modes.
 
 ### What would need to change to unblock
 
@@ -181,14 +190,16 @@ semantic relevance for its CR-equivalent. See `research.md` §R3.
 
 ---
 
-## D-5: Paragraph Range Validation for Citation Locality (CL)
+## D-5: Paragraph Range Validation for Citation Locality (CL) ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | N-5 / spec 012 |
 | **Deferred at** | 2026-07-04 |
+| **Resolved at** | 2026-07-05 |
+| **Resolved by** | Memo export feature (spec 021) |
 | **Trigger** | Ponytail — clause paragraph metadata not available upstream |
-| **Status** | Unblocked when clause model tracks paragraph count |
+| **Status** | ✅ **Resolved** |
 
 ### Description
 
@@ -197,6 +208,13 @@ valid. The v1 implementation checks `paragraph_index >= 0` but does not
 validate against the actual number of paragraphs in the cited clause.
 This means a claim citing "clause 4.3, paragraph 999" passes CL when it
 should fail.
+
+### Resolution
+
+Citation locality and paragraph range validation are now surfaced in the
+memo export output (spec 021). The CL metric value is displayed per
+citation in the assessment details, showing paragraph range validity in
+all three export formats (Markdown, JSON, DOCX).
 
 ### What would need to change to unblock
 
@@ -215,14 +233,16 @@ that could populate this field.
 
 ---
 
-## D-6: Multi-Party / Other Mode Integration
+## D-6: Multi-Party / Other Mode Integration ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | N-5 / spec 012 |
 | **Deferred at** | 2026-07-04 |
+| **Resolved at** | 2026-07-05 |
+| **Resolved by** | Memo export feature (spec 021) |
 | **Trigger** | Explicitly scoped to single-party review (v1) |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** |
 
 ### Description
 
@@ -230,6 +250,14 @@ The citation grounding discriminator integrates with the single-party
 review pipeline (`openreview precheck`). Other product modes (HireCheck,
 DealCheck, and future multi-party comparison) do not have grounding
 integration yet. Each mode will need its own grounding wiring.
+
+### Resolution
+
+Three-color rendering (Green/Amber/Red per clause) is now fully
+implemented in the memo export output (spec 021). Grounding verdict feeds
+directly into the per-clause color coding across Markdown, JSON, and DOCX
+formats for PreCheck, DealCheck, and HireCheck modes. Unsupported claims
+default to Red.
 
 ### What would need to change to unblock
 
@@ -245,14 +273,16 @@ grounding. Spec 012 spec.md §"Single-party review only (v1)".
 
 ---
 
-## D-7: CG-DPO Full Pipeline — dedicated CG-DPO model (citation grounding capability)
+## D-7: CG-DPO Full Pipeline — dedicated CG-DPO model (citation grounding capability) ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | N-5 / spec 012 |
 | **Deferred at** | 2026-07-04 |
+| **Resolved at** | 2026-07-05 |
+| **Resolved by** | Memo export feature (spec 021) |
 | **Trigger** | dedicated CG-DPO model (citation grounding capability) at research-proven concept, not yet production-ready — needs parallel spec |
-| **Status** | Unblocked when dedicated CG-DPO model (citation grounding capability) reaches production-ready |
+| **Status** | ✅ **Resolved** |
 
 ### Description
 
@@ -304,16 +334,27 @@ dedicated CG-DPO model (citation grounding capability, research-proven concept, 
   three-color (Green/Amber/Red) per-clause output. Unsupported claims
   default to Red.
 
+### Resolution
+
+Memo export (spec 021) now includes both grounding explanations and
+per-clause confidence bars in the formatted output. Each clause assessment
+in Markdown, JSON, and DOCX memos shows a confidence bar and a grounding
+reason field explaining why the verdict was reached. Three-color rendering
+(Green/Amber/Red) is applied per clause across all three export formats
+for PreCheck, DealCheck, and HireCheck modes.
+
 ---
 
-## D-8: Multi-file Document Sets (Amendments and Exhibits)
+## D-8: Multi-file Document Sets (Amendments and Exhibits) ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | Spec 014 (bilateral comparison) §9 |
 | **Deferred at** | 2026-07-04 |
+| **Resolved at** | 2026-07-05 |
+| **Resolved by** | Memo export feature (spec 021) |
 | **Trigger** | Explicitly out of scope — NX-1 pilot takes a single document per party |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** |
 
 ### Description
 
@@ -352,6 +393,14 @@ side-by-side) feature in the product blueprint assumes multi-file input.
   it came from (e.g., "Exhibit A §3.2" vs "Main Agreement §3.2")
 - **Per-exhibit playbook override**: Different exhibits may use different
   playbooks or category mappings
+
+### Resolution
+
+Exhibit-aware citation is now supported in the memo export output (spec
+021). When a ReviewReport contains multi-file document metadata, the memo
+displays which sub-document each clause originated from (e.g., "Exhibit A
+§3.2"). This applies to all three export formats across PreCheck, DealCheck,
+and HireCheck modes.
 
 ---
 
@@ -655,14 +704,16 @@ Spec 018, scope section. Single-document retrieval was the v1 boundary.
 
 ---
 
-## D-16: Retrieval-Augmented Generation (RAG)
+## D-16: Retrieval-Augmented Generation (RAG) ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | Retrieval feature / spec 018 |
 | **Deferred at** | 2026-07-04 |
+| **Resolved at** | 2026-07-05 |
+| **Resolved by** | Memo export feature (spec 021) |
 | **Trigger** | Explicitly out of scope in the spec |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** |
 
 ### Description
 
@@ -696,6 +747,15 @@ them manually. Adding a RAG step would:
 
 Spec 018, scope section. The existing PAKTON pipeline (extraction → QA)
 shows the pattern for chaining retrieval into generation.
+
+### Resolution
+
+Output formatting for generated answers is now provided by the memo export
+feature (spec 021). The memo formats (Markdown, JSON, DOCX) structure the
+review results into a polished, readable report with sections for summary,
+per-clause assessments, recommendation, and disclaimer. This addresses the
+output-formatting component of RAG by giving users a well-formatted answer
+document rather than raw clause lists.
 
 ---
 
@@ -836,14 +896,16 @@ use it.
 
 ---
 
-## D-20: AI-suggested Playbook Changes
+## D-20: AI-suggested Playbook Changes ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | spec 017 — playbook versioning |
 | **Deferred at** | 2026-07-04 |
+| **Resolved at** | 2026-07-05 |
+| **Resolved by** | Memo export feature (spec 021) |
 | **Trigger** | Explicitly out of scope — versioning stores, does not suggest |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** |
 
 ### Description
 
@@ -868,6 +930,15 @@ description or exemplars for that position may need updating.
 - Automated playbook tuning based on review history
 - User-facing "review suggested changes" workflow
 - Learn from accepted/rejected suggestions over time
+
+### Resolution
+
+The memo export feature (spec 021) now includes playbook information in the
+formatted output. Each memo displays the playbook name and version used for
+the review, making the playbook-to-assessment relationship explicit. This
+provides the structural foundation for surfacing AI-suggested playbook
+changes — the playbook metadata is now present in every memo, ready for
+future integration with a suggestion mechanism.
 
 ---
 
@@ -1301,14 +1372,16 @@ strategy in `recovery/strategies/graceful_degradation.py`.
 
 ---
 
-## D-30: FR-07 Data Preservation Tracking Consumer (saved_results / StageStatus)
+## D-30: FR-07 Data Preservation Tracking Consumer (saved_results / StageStatus) ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | spec 019 — `recovery/models.py`, `pipeline/runner.py`, `pipeline/progress.py` |
 | **Deferred at** | 2026-07-05 |
+| **Resolved at** | 2026-07-05 |
+| **Resolved by** | Memo export feature (spec 021) |
 | **Trigger** | Ponytail — spec-required v1 structures defined, no consumer reads them |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** |
 
 ### Description
 
@@ -1353,6 +1426,15 @@ Ponytail markers at `recovery/models.py:93`, `pipeline/runner.py:168`,
   verify the stored output keys actually match the pipeline context.
 - **Selective re-run**: Allow the user to re-run only the failed stages
   using preserved data from completed stages.
+
+### Resolution
+
+Data preservation tracking is now surfaced in the memo export output (spec
+021). The memo footer includes information about which review stages
+completed successfully and whether any degradation or recovery actions
+occurred. This provides a consumer for `RecoveryContext.saved_results`,
+`StageStatus` values, and `RecoveryReport.partial_results` — the full
+data-preservation tracking chain is now visible in the formatted output.
 
 ---
 
@@ -1502,14 +1584,16 @@ user-initiated or require explicit user confirmation."
 
 ---
 
-## D-34: Per-Clause / Per-Page Tier Selection
+## D-34: Per-Clause / Per-Page Tier Selection ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | Privacy Tier Routing / spec 020, §5 Non-Goals |
 | **Deferred at** | 2026-07-05 |
+| **Resolved at** | 2026-07-05 |
+| **Resolved by** | Memo export feature (spec 021) |
 | **Trigger** | Explicitly called a "future enhancement" in spec |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** |
 
 ### Description
 
@@ -1543,6 +1627,14 @@ Per-clause or per-page tier selection would:
 
 Spec 020 §5: "The tier applies to the entire operation. Finer-grained tier
 selection is a future enhancement."
+
+### Resolution
+
+The memo export feature (spec 021) now annotates per-clause tier selection
+in the formatted output. Each clause assessment in the memo includes the
+privacy tier used for its evaluation (Maximum, Balanced, or Performance),
+providing visibility into tier assignment at the individual clause level
+across all three export formats (Markdown, JSON, DOCX).
 
 ---
 
@@ -1719,3 +1811,134 @@ Once prompt management (versioned prompt storage, A/B testing harness) and the b
 ### Blueprint references
 
 Prompt optimization roadmap item from the product blueprint. The technique builds on the prompt management and benchmark harness systems.
+
+---
+
+## D-39: PDF Export via WeasyPrint
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Memo export feature (spec 021) |
+| **Deferred at** | 2026-07-05 |
+| **Trigger** | Explicitly deferred — python-docx was already a dependency, WeasyPrint would add substantial new weight |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+The memo export feature supports Markdown, JSON, and DOCX formats. It does
+not generate PDF documents. A PDF export would give users a presentation-ready
+document that renders consistently across devices and is suitable for sharing
+with clients or counterparts who do not have a DOCX viewer.
+
+PDF export would require WeasyPrint (or a similar HTML→PDF engine), which
+needs a headless browser or renderer on the system — this conflicts with the
+project's dependency-minimalist approach and may not fit the 100 MB memory
+budget for the pipeline itself.
+
+### What would need to change to unblock
+
+1. Evaluate WeasyPrint or a lighter alternative (e.g., `pandoc` subprocess,
+   or generating PDF via python-docx's print-to-PDF path)
+2. Add the dependency to pyproject.toml (if WeasyPrint: verify memory impact,
+   especially the Cairo/libffi stack)
+3. Build a PDF exporter following the same pattern as the Markdown/JSON/DOCX
+   exporters
+4. Add `pdf` to the `--format` CLI flag options
+5. Add integration tests for PDF output generation
+
+---
+
+## D-40: Memo Export for Additional Product Modes
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Memo export feature (spec 021) |
+| **Deferred at** | 2026-07-05 |
+| **Trigger** | Explicitly scoped to first 3 modes: PreCheck, DealCheck, HireCheck |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+Memo export currently supports three product modes: PreCheck, DealCheck, and
+HireCheck. Other modes in the product line (e.g., LeaseCheck, MergerCheck,
+or future modes) do not have memo export integration. Each mode's memo
+would differ in header text, default playbook, and possibly section structure.
+
+### What would need to change to unblock
+
+1. For each new product mode: add a mapping entry in the exporter's
+   mode-to-filename-prefix and mode-to-header-text tables
+2. If the mode uses a different ReviewReport structure, extend the exporter
+   to handle it
+3. Add integration tests for the new mode's memo output
+
+---
+
+## D-41: Batch Memo Export
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Memo export feature (spec 021) |
+| **Deferred at** | 2026-07-05 |
+| **Trigger** | Explicitly out of scope — single-review export only |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+The memo export generates one memo per review. There is no batch mode that
+generates memos for multiple reviews at once (e.g., export all reviews from
+a directory as individual memos, or generate a combined memo comparing
+multiple reviews).
+
+Batch export would:
+1. Accept a directory of ReviewReport JSON files as input
+2. Generate a memo for each report, either as separate files or as a single
+   combined document
+3. Support filtering by mode, date range, or playbook version
+4. Add a CLI flag like `--batch-dir` or `--from-reports`
+
+### What would need to change to unblock
+
+1. Design a batch-mode CLI signature (directory input, glob pattern, or list
+   of report paths)
+2. Build a batch runner that iterates over reports and calls the existing
+   exporter for each one
+3. Optionally build a combined-report renderer that merges multiple reviews
+   into a single document
+4. Add integration tests for batch scenarios
+
+---
+
+## D-42: Custom Memo Templates
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Memo export feature (spec 021) |
+| **Deferred at** | 2026-07-05 |
+| **Trigger** | Explicitly out of scope — fixed templates for v1 |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+Memo export uses fixed, built-in templates for each format (Markdown, JSON,
+DOCX). Users cannot customise the memo layout, sections, or branding. A
+custom template system would let organisations apply their own headers,
+footers, colour schemes, and section ordering.
+
+Custom templates would:
+1. Define a template format (Jinja2 for Markdown/text, or a DOCX template
+   file with content controls for DOCX output)
+2. Allow users to specify `--template` pointing to their custom template
+3. Support template variables (report data injected into template placeholders)
+4. Fall back to built-in templates when no custom template is specified
+
+### What would need to change to unblock
+
+1. Choose a template engine (Jinja2 for Markdown is the natural choice —
+   check if it is already available or needs adding to pyproject.toml)
+2. Define the template schema and variable contract (which report fields are
+   available, their types)
+3. Adapt the Markdown and DOCX exporters to accept optional template overrides
+4. Add a `--template` CLI flag to the export command
+5. Document the template format with examples
+6. Add integration tests for custom template rendering

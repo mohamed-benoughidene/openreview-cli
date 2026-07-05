@@ -28,7 +28,7 @@ adapters for parse/strip/chunk/retrieve/generate), and single-party contract
 review (PAKTON 3-agent pipeline: extraction, QA
 verification, report formatting), citation grounding discriminator
 (post-hoc claim verification with strict/lenient modes, CG metrics, JSONL audit trail),
-and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), playbook versioning (database storage with version tracking, position rename to preferred/acceptable/walkaway with backward compatibility, version-stamped reviews), experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status, error recovery framework (5 strategies: auto-retry, provider fallback, graceful degradation, stage isolation, user-guided recovery; coordinator orchestrates strategy chains, pipeline integration with pre-stage memory check and post-stage failure handling), **and privacy tier routing with three tiers (Maximum all-local, Balanced local embeddings + cloud reasoning, Performance cloud with PII stripped), TierRouter enforcement layer with PII fail-closed.**
+and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), playbook versioning (database storage with version tracking, position rename to preferred/acceptable/walkaway with backward compatibility, version-stamped reviews), experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status, error recovery framework (5 strategies: auto-retry, provider fallback, graceful degradation, stage isolation, user-guided recovery; coordinator orchestrates strategy chains, pipeline integration with pre-stage memory check and post-stage failure handling), **privacy tier routing with three tiers (Maximum all-local, Balanced local embeddings + cloud reasoning, Performance cloud with PII stripped), TierRouter enforcement layer with PII fail-closed, and memo export for review results (Markdown, JSON, DOCX formats with color-coded clauses, confidence scores, citation provenance, and playbook metadata).**
 The package is not yet on PyPI. APIs and the underlying spec are preliminary and
 will change.
 
@@ -242,6 +242,7 @@ uv run openreview --version
 | `src/openreview_cli/pipeline/`                      | 5-stage async pipeline — Stage ABC, runner with cancellation/progress/memory enforcement, adapters (parse/strip/chunk/retrieve/generate), error hierarchy, progress events |
 | `src/openreview_cli/recovery/`                      | Error recovery framework — 5 strategies (auto-retry, provider fallback, graceful degradation, stage isolation, user-guided), coordinator, strategy chains, pipeline integration |
 | `src/openreview_cli/review/`                       | Single-party review package (PAKTON 3-agent pipeline, delegates through async pipeline) |
+| `src/openreview_cli/review/memo/`                  | Memo export — Markdown, JSON, DOCX formatters, filename generator, models |
 | `src/openreview_cli/review/pipeline.py`            | ReviewStage — wraps extraction/QA agents as a pipeline stage |
 | `src/openreview_cli/review/playbook.py`            | Playbook loader — YAML parsing, validation, DB-backed load via `load_playbook_from_db()` |
 | `src/openreview_cli/review/playbooks/`             | Bundled YAML playbooks (e.g., `precheck-nda-v1.yaml`) |
@@ -350,6 +351,11 @@ openreview precheck review --confidence-threshold 0.3 contract.pdf  # Lower thre
 openreview precheck review --verbose contract.pdf      # Show per-clause progress
 openreview precheck review doc1.pdf doc2.pdf doc3.pdf  # Batch review
 
+# Memo export (structured review output)
+openreview precheck review --memo-format md contract.pdf                         # Markdown memo
+openreview precheck review --memo-format md --memo-format json contract.pdf      # Markdown + JSON
+openreview precheck review --memo-format docx --output-dir ./memos contract.pdf  # DOCX to custom dir
+
 # Experimental Bilateral Comparison (compare two NDAs side-by-side)
 openreview precheck compare my-nda.pdf their-nda.pdf                    # Divergence report
 openreview precheck compare my-nda.pdf their-nda.pdf --verbose           # Full RCBSF classification
@@ -445,6 +451,8 @@ openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 | `openreview precheck review --no-grounding <paths>` | Skip citation grounding entirely |
 | `openreview precheck review --verbose <paths>` | Show per-clause progress on stderr      |
 | `openreview precheck review --confidence-threshold <0.0-1.0> <paths>` | Threshold for Green/Amber/Red assignment (default 0.7) |
+| `openreview precheck review --memo-format <fmt> <path>` | Export structured memo (md, json, docx). Repeat for multiple formats. |
+| `openreview precheck review --output-dir <dir> <path>` | Directory for memo files (default: `review_results/`) |
 | `openreview precheck compare <docA> <docB>` | [Experimental] Compare two documents clause-by-clause, detect divergences |
 | `openreview precheck compare --verbose <docA> <docB>` | Show full RCBSF 5-dimension classification and rationale |
 | `openreview precheck compare --conservative <docA> <docB>` | Max sensitivity, shortcut for `--confidence-threshold 0.8` |
