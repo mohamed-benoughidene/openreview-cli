@@ -4,11 +4,16 @@ from openreview_cli.gateway.errors import (
     AuthError,
     GatewayError,
     ModelNotFoundError,
+    NoMatchingProviderError,
+    PIIUnavailableError,
     SlotNotConfiguredError,
+    TierRoutingError,
 )
-from openreview_cli.gateway.models import CostRecord, ModelEntry, ProviderInfo
+from openreview_cli.gateway.models import CostRecord, ModelEntry, PrivacyTierReport, ProviderInfo
 from openreview_cli.gateway.registry import ModelRegistry
 from openreview_cli.gateway.router import Gateway
+from openreview_cli.gateway.tier_config import PrivacyTier, TierConfig
+from openreview_cli.gateway.tier_router import TierRouter
 from openreview_cli.gateway.wizard import gateway_setup
 
 __all__ = [
@@ -21,7 +26,14 @@ __all__ = [
     "ModelEntry",
     "ModelNotFoundError",
     "ModelRegistry",
+    "NoMatchingProviderError",
+    "PIIUnavailableError",
+    "PrivacyTier",
+    "PrivacyTierReport",
     "ProviderInfo",
     "SlotNotConfiguredError",
+    "TierConfig",
+    "TierRouter",
+    "TierRoutingError",
     "gateway_setup",
 ]

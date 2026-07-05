@@ -235,3 +235,39 @@ class TestStripPiiClauses:
         ratio = t_bridge / max(t_strip, 1e-9)
         # ponytail: sanity check, not a hard perf contract — CPU noise pushes ratio to 5-6x under load
         assert ratio < 10.0, f"strip_pii_clauses {ratio:.2f}x slower than strip_pii (limit: 10.0x)"
+
+
+class TestPiiEngineIsAvailable:
+    """T006: PiiEngine.is_available() readiness check."""
+
+    def test_returns_true_when_engine_ready(self) -> None:
+        engine = PiiEngine(threshold=0.7)
+        with patch.object(engine, "_ensure_analyzer", return_value=_MockAnalyzer()):
+            assert engine.is_available() is True
+
+    def test_returns_false_on_engine_failure(self) -> None:
+        engine = PiiEngine(threshold=0.7)
+
+        class FailingAnalyzer:
+            def analyze(self, **_kw: object) -> object:
+                msg = "model not found"
+                raise RuntimeError(msg)
+
+        with patch.object(engine, "_ensure_analyzer", return_value=FailingAnalyzer()):
+            assert engine.is_available() is False
+
+    def test_caches_result(self) -> None:
+        engine = PiiEngine(threshold=0.7)
+        mock = _MockAnalyzer()
+        with patch.object(engine, "_ensure_analyzer", return_value=mock):
+            assert engine.is_available() is True
+            assert engine.is_available() is True  # second call uses cache
+        # After patching removed, cache should still hold
+        assert engine.is_available() is True
+
+
+class _MockAnalyzer:
+    """Minimal mock for Presidio AnalyzerEngine."""
+
+    def analyze(self, **_kw: object) -> list[object]:
+        return []

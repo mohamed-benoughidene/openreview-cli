@@ -1499,3 +1499,200 @@ changes. The user makes the change manually or via the setup wizard."
 
 Constitution §V (User Control): "Configuration changes must be
 user-initiated or require explicit user confirmation."
+
+---
+
+## D-34: Per-Clause / Per-Page Tier Selection
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Privacy Tier Routing / spec 020, §5 Non-Goals |
+| **Deferred at** | 2026-07-05 |
+| **Trigger** | Explicitly called a "future enhancement" in spec |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+The privacy tier currently applies to the entire CLI operation — every
+model call within a single `openreview precheck` run uses the same tier.
+There is no way to select a different tier for different clauses, pages,
+or sections of the same document.
+
+Per-clause or per-page tier selection would:
+
+1. Allow the user to mark sensitive sections (e.g., exhibits with trade
+   secrets) for Maximum tier while letting the bulk of the document run
+   under Balanced or Performance
+2. Require a mechanism to associate tier overrides with document regions
+   (page ranges, clause numbers, or section headings)
+3. Extend the config schema to support per-region tier overrides, or add
+   an inline annotation mechanism in the document
+
+### What would need to change to unblock
+
+1. Design a region-to-tier mapping format (config section, sidecar file,
+   or inline CLI flags like `--tier-maximum "§3.1-§3.5"`)
+2. Extend `TierRouter` to accept region-level tier overrides alongside
+   the operation-level tier
+3. Update `TierConfig` to carry the region override data
+4. Update the progress banner and report footer to reflect per-region tier
+   usage
+5. Add integration tests with documents that have mixed-tier sections
+
+### Blueprint references
+
+Spec 020 §5: "The tier applies to the entire operation. Finer-grained tier
+selection is a future enhancement."
+
+---
+
+## D-35: Accuracy Benchmarking Per Tier
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Privacy Tier Routing / spec 020, CL-04, §5 Non-Goals |
+| **Deferred at** | 2026-07-05 |
+| **Trigger** | Deferred to user research — trust threshold not quantified |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+The privacy tier specification defines correctness criteria (SC-01 through
+SC-05) but does not define or measure the accuracy of model inference under
+each tier. Different tiers route to different providers (local vs cloud),
+and there is no published data on whether local models produce equivalent
+accuracy for the contract review task.
+
+Accuracy benchmarking per tier would:
+
+1. Define accuracy metrics (precision, recall, F1) for extraction, QA, and
+   comparison tasks under each tier
+2. Run the benchmark harness (spec 010) separately with Maximum, Balanced,
+   and Performance configurations
+3. Compare results side-by-side to quantify the accuracy cost (if any) of
+   using local models
+4. Produce a decision framework: "If you need ≥98% F1, use Performance.
+   If 95% is acceptable, Maximum is sufficient."
+
+The trust threshold that lawyers require before adopting a given tier is a
+product question, not an implementation one, and is deferred to user
+research.
+
+### What would need to change to unblock
+
+1. Design and conduct user research to determine the accuracy thresholds
+   lawyers require per tier
+2. Add a tier-configuration dimension to the benchmark runner (spec 010)
+   so the same dataset can be evaluated under different tier configurations
+3. Define accuracy benchmarks for each tier
+4. Publish results in project documentation so users can make informed tier
+   choices
+5. Optionally add a `--benchmark-tier` flag to the benchmark harness
+
+### Blueprint references
+
+Spec 020 §5 Non-Goals, §10 CL-04 (accuracy threshold deferral).
+Checklist requirement CL-04: "Accuracy threshold — lawyers' trust threshold
+not quantified. Deferred to user research / future product spec."
+Benchmark harness at spec 010.
+
+---
+
+## D-36: Per-Operation Tier Change Detection
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Privacy Tier Routing / spec 020, CL-05, §5 Non-Goals |
+| **Deferred at** | 2026-07-05 |
+| **Trigger** | Deferred from MVP (P3 priority) — change-diff adds I/O complexity |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+The privacy tier is stable within a single operation (FR-09), but the
+system has no way to tell the user "Your tier changed from Balanced last
+run to Maximum this run." The current implementation always displays the
+current tier at the start of every operation but does not compare it
+against the previously-used tier.
+
+Per-operation tier change detection would:
+
+1. Persist the last-used tier value to a small state file on disk
+2. On each new operation, read the previous tier from the file, compare it
+   to the current tier, and display a message if they differ:
+   "Privacy tier: PERFORMANCE (changed from Maximum since last operation)"
+3. Update the state file after each operation with the current tier value
+
+This is P3 priority — useful for user awareness but not critical for
+correct operation. The MVP always shows the current tier prominently; the
+diff is informative, not actionable.
+
+### What would need to change to unblock
+
+1. Choose a state file path (e.g., `~/.local/share/openreview/last_tier.txt`
+   or `config.yml` metadata section)
+2. Write the effective tier value to the state file after each operation
+3. On operation start, read the state file and compare against the newly
+   loaded tier
+4. If tiers differ, include the change notice in the progress banner
+5. Handle missing state file (first run), corrupt file, and concurrent
+   access edge cases
+6. Add integration tests for first-run, change-detected, and no-change
+   scenarios
+
+### Blueprint references
+
+Spec 020 §5 Non-Goals, §10 CL-05 (tier change detection deferral).
+Checklist requirement CL-05: "Tier change detection — mechanism for
+'changed since last operation' notice. Dropped change-diff from MVP; always
+display current tier." User scenario P3 (nice-to-have) in spec.md §3.
+
+---
+
+## D-37: Model Registry Provider Classification Enrichment
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Privacy Tier Routing / spec 020, AD-08 (research.md) |
+| **Deferred at** | 2026-07-05 |
+| **Trigger** | URL inspection sufficient for MVP; registry schema revision deferred |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+The tier router classifies providers as local or cloud using URL inspection
+(localhost check + explicit `local` override flag). This works for all MVP
+scenarios. However, the model registry (`models.json` and `Registry` class)
+currently has no `local` metadata field. If the registry stored a canonical
+provider-location flag per model, the tier router could use it as an
+additional signal instead of relying solely on runtime URL inspection.
+
+Model registry provider classification enrichment would:
+
+1. Add an optional `local: true/false` field to the model entry schema in
+   `models.json`
+2. Update the `ProviderModel` dataclass to carry the field
+3. Teach `ProviderLocationClassifier` to check the registry metadata as
+   the highest-precedence signal (above explicit override)
+4. Update the registry refresh process (Ollama discovery, static entries)
+   to populate the field where possible
+5. Document the precedence chain: registry metadata > explicit override >
+   URL inspection
+
+### What would need to change to unblock
+
+1. Revise the model registry schema (a separate piece of work — the
+   registry has its own revision cycle)
+2. Add `local` field to `ProviderModel` in `gateway/models.py`
+3. Update `ProviderLocationClassifier` to accept an optional model entry
+   and check its `local` field first
+4. Update static entries in `models.json` to include `local` where known
+5. Update Ollama discovery to infer `local: true` automatically
+6. Add unit tests for the new registry-first classification path
+
+### Blueprint references
+
+Research decision AD-08 in `specs/020-privacy-tier-routing/research.md`:
+"No Model Registry changes for MVP. URL inspection sufficient; registry
+changes deferred." Research U8 resolution: "Registry changes are deferred
+until the registry schema is revised independently."

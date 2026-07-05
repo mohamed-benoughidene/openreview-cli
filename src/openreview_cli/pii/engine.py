@@ -23,6 +23,7 @@ class PiiEngine:
     def __init__(self, threshold: float = 0.7):
         self._threshold = threshold
         self._analyzer: Any = None
+        self._is_available_cache: bool | None = None
 
     def _ensure_analyzer(self) -> Any:
         if self._analyzer is not None:
@@ -176,8 +177,26 @@ class PiiEngine:
 
         return all_entities, warnings, sorted(set(failed_pages)), error_messages
 
+    def is_available(self) -> bool:
+        """Lightweight readiness check — probe the PII engine.
+
+        Attempts analyze("test") once per operation. Caches result in
+        _is_available_cache. Returns True if analysis succeeds, False otherwise.
+        """
+        if self._is_available_cache is not None:
+            return self._is_available_cache
+
+        try:
+            engine = self._ensure_analyzer()
+            engine.analyze(text="test", language="en")
+            self._is_available_cache = True
+        except Exception:
+            self._is_available_cache = False
+        return self._is_available_cache
+
     def close(self) -> None:
         self._analyzer = None
+        self._is_available_cache = None
 
 
 def _redact_metadata(document: Any) -> list[Any]:

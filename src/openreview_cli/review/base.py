@@ -2,9 +2,11 @@
 
 import hashlib
 import logging
+import sys
 from pathlib import Path
 from typing import Any
 
+from openreview_cli.gateway.models import PrivacyTierReport
 from openreview_cli.pii.cache import PiiCache
 from openreview_cli.pii.config_hash import compute_config_hash
 from openreview_cli.pii.engine import strip_and_persist
@@ -38,6 +40,10 @@ class ReviewCommand:
         if not self._document_path.exists():
             raise FileNotFoundError(f"Document not found: {self._document_path}")
 
+        # ponytail: PrivacyTierReport constructed from live config each run
+        privacy_report = self._build_privacy_report()
+        sys.stderr.write(privacy_report.progress_banner() + "\n")
+
         doc_hash = self._compute_hash()
         review_dir = self._output_dir / doc_hash[:12]
         review_dir.mkdir(parents=True, exist_ok=True)
@@ -59,6 +65,7 @@ class ReviewCommand:
                         "pii_entities": 0,
                         "failed_pages": [],
                         "cached": True,
+                        "privacy_report": privacy_report,
                     }
 
             clauses, document = self._parse_document()
@@ -85,6 +92,7 @@ class ReviewCommand:
                 "pii_entities": len(pii_result.entities),
                 "failed_pages": pii_result.failed_pages or [],
                 "cached": False,
+                "privacy_report": privacy_report,
             }
         else:
             clauses, document = self._parse_document()
@@ -98,7 +106,16 @@ class ReviewCommand:
                 "pii_entities": 0,
                 "failed_pages": [],
                 "cached": False,
+                "privacy_report": privacy_report,
             }
+
+    def _build_privacy_report(self) -> PrivacyTierReport:
+        """Build a PrivacyTierReport from config for tier visibility."""
+        from openreview_cli.gateway.tier_config import TierConfig
+
+        config = self._load_config()
+        tier_cfg = TierConfig.from_config(config)
+        return PrivacyTierReport(tier=tier_cfg.tier)
 
     def _compute_hash(self) -> str:
         return hashlib.sha256(self._document_path.read_bytes()).hexdigest()

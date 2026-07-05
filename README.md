@@ -28,13 +28,13 @@ adapters for parse/strip/chunk/retrieve/generate), and single-party contract
 review (PAKTON 3-agent pipeline: extraction, QA
 verification, report formatting), citation grounding discriminator
 (post-hoc claim verification with strict/lenient modes, CG metrics, JSONL audit trail),
-and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), playbook versioning (database storage with version tracking, position rename to preferred/acceptable/walkaway with backward compatibility, version-stamped reviews), experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status, and error recovery framework (5 strategies: auto-retry, provider fallback, graceful degradation, stage isolation, user-guided recovery; coordinator orchestrates strategy chains, pipeline integration with pre-stage memory check and post-stage failure handling).**
+and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), playbook versioning (database storage with version tracking, position rename to preferred/acceptable/walkaway with backward compatibility, version-stamped reviews), experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status, error recovery framework (5 strategies: auto-retry, provider fallback, graceful degradation, stage isolation, user-guided recovery; coordinator orchestrates strategy chains, pipeline integration with pre-stage memory check and post-stage failure handling), **and privacy tier routing with three tiers (Maximum all-local, Balanced local embeddings + cloud reasoning, Performance cloud with PII stripped), TierRouter enforcement layer with PII fail-closed.**
 The package is not yet on PyPI. APIs and the underlying spec are preliminary and
 will change.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
-| Unit + integration tests    | 1,323                    |
+| Unit + integration tests    | 1,407                    |
 | CLI commands                | 50                        |
 | SQLite tables               | 13                        |
 | Migrations                  | 6                         |
@@ -497,11 +497,32 @@ Secrets (API keys) live in `auth.json` at the same path.
 
 | Section              | What it controls              | Example keys                       |
 |----------------------|-------------------------------|------------------------------------|
-| `privacy`            | PII stripping, log retention  | `tier`, `strip_pii`, `log_ttl_days`|
+| `privacy`            | PII stripping, log retention, privacy tier routing  | `tier` (maximum/balanced/performance), `strip_pii`, `log_ttl_days`|
 | `gateway.models`     | LLM provider/model per task   | `reasoning.primary`, `extraction.params.temperature`, `reasoning.extra_params` |
 | `gateway.fallback`   | Retry and timeout behavior    | `retries`, `timeout`, `on_failure` |
 | `gateway.cost_limits`| Spending caps                 | `per_review_cents`, `daily_cents`  |
 | `storage`            | Data retention                | `reviews_keep_forever`, `logs_keep_days` |
+
+### Privacy tier routing
+
+The `privacy.tier` setting controls how the AI Gateway routes requests, balancing
+privacy guarantees against performance:
+
+| Tier | Routing rule | Best for |
+|------|--------------|----------|
+| **Maximum** (default) | All operations use local providers only. Cloud calls are blocked. PII fail-closed: cloud embedding and reasoning are unavailable if the PII engine cannot strip sensitive data. | Strictest privacy — no data leaves your machine. |
+| **Balanced** | Embeddings run locally (Ollama). Reasoning can use cloud providers, but PII is stripped before any cloud API call. | Privacy-focused workflows that benefit from cloud-grade reasoning on scrubbed text. |
+| **Performance** | Embeddings and reasoning both use cloud providers. PII is still stripped before cloud API calls. | Maximum speed — cloud inference for everything, with automated PII redaction. |
+
+The `TierRouter` wraps the Gateway and enforces these rules before every chat,
+embedding, or rerank call. Invalid tier values in `config.yml` log a warning and
+default to **Maximum**.
+
+```bash
+# Configure the tier
+openreview config set privacy.tier balanced
+openreview config get privacy.tier
+```
 
 ### Environment variable overrides
 

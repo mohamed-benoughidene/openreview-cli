@@ -1,0 +1,8 @@
+privacy:
+  tier: balanced
+gateway:
+  models:
+    reasoning:
+      primary: openai/gpt-4o
+    embedding:
+      primary: ollama/nomic-embed-text

@@ -1,0 +1,8 @@
+privacy:
+  tier: performance
+gateway:
+  models:
+    reasoning:
+      primary: openai/gpt-4o
+    embedding:
+      primary: openai/text-embedding-3-small

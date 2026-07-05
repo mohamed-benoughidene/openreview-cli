@@ -1,0 +1,10 @@
+privacy:
+  tier: maximum
+gateway:
+  models:
+    reasoning:
+      primary: ollama/qwen3:8b
+    extraction:
+      primary: ollama/qwen3:4b
+    embedding:
+      primary: ollama/nomic-embed-text
