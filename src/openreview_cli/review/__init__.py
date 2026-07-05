@@ -25,6 +25,9 @@ from openreview_cli.pipeline.adapters.strip import StripStage
 from openreview_cli.pipeline.runner import Pipeline
 from openreview_cli.review.base import ReviewCommand
 from openreview_cli.review.colors import AmberReason, AssessmentColor, assign_colors
+
+# Memo export public API
+from openreview_cli.review.memo import MemoExporter, MemoFormat
 from openreview_cli.review.models import ReviewReport, ReviewSummary
 from openreview_cli.review.playbook import load_bundled, load_playbook, load_playbook_from_db
 from openreview_cli.review.report import format_json, format_terminal
@@ -34,6 +37,8 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "AmberReason",
     "AssessmentColor",
+    "MemoExporter",
+    "MemoFormat",
     "ReviewCommand",
     "ReviewReport",
     "assign_colors",

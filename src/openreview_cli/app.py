@@ -4,6 +4,7 @@ import sys
 import time
 from datetime import UTC
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -43,6 +44,55 @@ def _validate_threshold(value: float | None) -> float | None:
     if value is not None and not 0.0 <= value <= 1.0:
         raise typer.BadParameter(f"confidence-threshold must be between 0.0 and 1.0, got {value}")
     return value
+
+
+def _export_memo_reports(reports: Any, memo_format: list[str], output_dir: str | None) -> None:
+    """Export memo files for all reports in the requested formats."""
+    from openreview_cli.review.memo.exporter import MemoExporter
+    from openreview_cli.review.memo.models import MemoFormat
+
+    # Validate formats
+    fmt_set: set[MemoFormat] = set()
+    for val in memo_format:
+        try:
+            fmt_set.add(MemoFormat(val))
+        except ValueError:
+            typer.echo(
+                f"Error: Unsupported export format: {val}. Supported formats: md, json, docx.",
+                err=True,
+            )
+            raise typer.Exit(code=2) from None
+
+    if not fmt_set:
+        return
+
+    out = Path(output_dir) if output_dir else Path("review_results")
+
+    exported_paths: list[str] = []
+    for report in reports:
+        try:
+            exporter = MemoExporter(
+                report=report,
+                mode="precheck",
+                output_dir=out,
+                formats=fmt_set,
+            )
+            result = exporter.export()
+            for path in result.values():
+                exported_paths.append(str(path))
+        except ValueError as e:
+            typer.echo(f"Error: {e}", err=True)
+            raise typer.Exit(code=1) from None
+        except Exception as e:
+            typer.echo(f"Warning: Memo export failed: {e}", err=True)
+
+    if exported_paths:
+        if len(exported_paths) == 1:
+            typer.echo(f"  Memo exported to: {exported_paths[0]}")
+        else:
+            typer.echo("  Memo exported to:")
+            for p in exported_paths:
+                typer.echo(f"    - {p}")
 
 
 def _init(debug: bool = False) -> None:
@@ -638,7 +688,7 @@ def precheck(
 
 @precheck_app.command()
 def review(
-    paths: list[str] = typer.Argument(  # noqa: B008
+    paths: list[str] = typer.Argument(
         ..., help="One or more document paths (PDF, DOCX). Shell glob supported."
     ),
     playbook_path: str | None = typer.Option(
@@ -650,6 +700,21 @@ def review(
     format: str = typer.Option("text", "--format", help="Output format: text or json."),
     output: str | None = typer.Option(
         None, "--output", help="Write output to file instead of stdout."
+    ),
+    memo_format: list[str] = typer.Option(
+        [],
+        "--memo-format",
+        help="Export format(s) for the review memo. "
+        "Supported values: md (Markdown), json (JSON), docx (Word document). "
+        "May be specified multiple times to produce multiple formats in one run.",
+    ),
+    output_dir: str | None = typer.Option(
+        None,
+        "--output-dir",
+        help="Directory where memo files are written. "
+        "Created automatically if it does not exist. "
+        "Defaults to review_results/ in the current working directory.",
+        envvar="OPENREVIEW_OUTPUT_DIR",
     ),
     extraction_model: str | None = typer.Option(
         None, "--extraction-model", help="Model slot for the extraction agent."
@@ -737,6 +802,10 @@ def review(
 
         for report in reports:
             typer.echo(format_terminal(report, privacy_footer=_privacy_footer))
+
+    # ── Memo export ──
+    if memo_format and reports:
+        _export_memo_reports(reports, memo_format, output_dir)
 
     if any(r.summary.amber_count > 0 for r in reports):
         typer.echo(
