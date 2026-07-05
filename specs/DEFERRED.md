@@ -1696,3 +1696,26 @@ Research decision AD-08 in `specs/020-privacy-tier-routing/research.md`:
 "No Model Registry changes for MVP. URL inspection sufficient; registry
 changes deferred." Research U8 resolution: "Registry changes are deferred
 until the registry schema is revised independently."
+
+---
+
+## D-38: GRPO Prompt Optimization (Dev Tool)
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | the product blueprint roadmap |
+| **Deferred at** | 2026-07-05 |
+| **Trigger** | Blocked on missing infrastructure. Two pieces need to exist first: (1) versioned prompt management with an A/B testing harness so optimized prompts have somewhere to live and can be measured against a baseline, (2) the benchmark harness fully integrated with prompt management so variants can be scored against labeled contracts. Additionally, the GRPO optimization technique itself is still at research stage — it was demonstrated in a paper with a 14 percentage-point F1 improvement but has not been adapted for this codebase. |
+| **Status** | When the prompt management and benchmark harness systems are operational end-to-end and integration tests confirm they can be called programmatically, this item unlocks. The GRPO technique itself also needs a feasibility study against this project's extraction pipeline. |
+
+### Description
+
+An offline developer tool that makes the extraction agent's prompts better without touching the live review pipeline. It uses a reinforcement-learning technique called Group Relative Policy Optimization — it generates many prompt variants, runs each one against a labeled contract corpus, scores the results, and surfaces the best-performing version. The developer reviews the output and decides whether to adopt it as the new production prompt.
+
+### What would need to change to unblock
+
+Once prompt management (versioned prompt storage, A/B testing harness) and the benchmark harness are fully integrated and testable, the GRPO tool can be built as a CLI subcommand that reads current prompts, generates variants, scores them, and writes the winner back as a new prompt version.
+
+### Blueprint references
+
+Prompt optimization roadmap item from the product blueprint. The technique builds on the prompt management and benchmark harness systems.
