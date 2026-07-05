@@ -79,6 +79,25 @@ class Stage(ABC):
         """
         return False
 
+    # ponytail: spec-required extension hook, no consumer yet
+    def supports_degradation(self) -> bool:
+        """Return True if this stage supports degraded execution modes.
+
+        Override to signal capacity to run with reduced resources (smaller
+        batch, lighter model, simplified processing).
+        """
+        return False
+
+    # ponytail: spec-required extension hook, no consumer yet
+    def apply_degradation(self, action: str) -> None:
+        """Apply a degradation *action* to reduce resource usage.
+
+        Called by the coordinator before re-running a stage under memory
+        pressure.  The default is a no-op; override to implement specific
+        degradation behavior (e.g., switching to a lighter model).
+        """
+        return
+
 
 def dispose_context_keys(ctx: PipelineContext, keys: set[str]) -> None:
     """Remove *keys* from *ctx*, ignoring any that are missing.

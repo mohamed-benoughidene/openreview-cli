@@ -28,13 +28,13 @@ adapters for parse/strip/chunk/retrieve/generate), and single-party contract
 review (PAKTON 3-agent pipeline: extraction, QA
 verification, report formatting), citation grounding discriminator
 (post-hoc claim verification with strict/lenient modes, CG metrics, JSONL audit trail),
-and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), playbook versioning (database storage with version tracking, position rename to preferred/acceptable/walkaway with backward compatibility, version-stamped reviews), and experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status.**
+and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), playbook versioning (database storage with version tracking, position rename to preferred/acceptable/walkaway with backward compatibility, version-stamped reviews), experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status, and error recovery framework (5 strategies: auto-retry, provider fallback, graceful degradation, stage isolation, user-guided recovery; coordinator orchestrates strategy chains, pipeline integration with pre-stage memory check and post-stage failure handling).**
 The package is not yet on PyPI. APIs and the underlying spec are preliminary and
 will change.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
-| Unit + integration tests    | 1,237                    |
+| Unit + integration tests    | 1,323                    |
 | CLI commands                | 50                        |
 | SQLite tables               | 13                        |
 | Migrations                  | 6                         |
@@ -240,6 +240,7 @@ uv run openreview --version
 | `src/openreview_cli/retrieval/`                     | Retrieval pipeline — BM25 (FTS5), dense embeddings (Ollama), RRF fusion, reranker, ingest, storage |
 | `src/openreview_cli/grounding/`                    | Citation grounding discriminator — post-hoc claim verification, strict/lenient modes, CG metrics, JSONL audit trail, corruption generators |
 | `src/openreview_cli/pipeline/`                      | 5-stage async pipeline — Stage ABC, runner with cancellation/progress/memory enforcement, adapters (parse/strip/chunk/retrieve/generate), error hierarchy, progress events |
+| `src/openreview_cli/recovery/`                      | Error recovery framework — 5 strategies (auto-retry, provider fallback, graceful degradation, stage isolation, user-guided), coordinator, strategy chains, pipeline integration |
 | `src/openreview_cli/review/`                       | Single-party review package (PAKTON 3-agent pipeline, delegates through async pipeline) |
 | `src/openreview_cli/review/pipeline.py`            | ReviewStage — wraps extraction/QA agents as a pipeline stage |
 | `src/openreview_cli/review/playbook.py`            | Playbook loader — YAML parsing, validation, DB-backed load via `load_playbook_from_db()` |
