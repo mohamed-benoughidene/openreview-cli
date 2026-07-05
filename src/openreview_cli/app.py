@@ -726,8 +726,17 @@ def review(
         else:
             typer.echo(output_str)
     else:
+        from openreview_cli.config.loader import load_config
+        from openreview_cli.config.paths import get_config_dir
+        from openreview_cli.gateway.models import PrivacyTierReport
+        from openreview_cli.gateway.tier_config import TierConfig
+
+        _cfg = load_config(get_config_dir() / "config.yml")
+        _tier_cfg = TierConfig.from_config(_cfg)
+        _privacy_footer = PrivacyTierReport(tier=_tier_cfg.tier).report_footer()
+
         for report in reports:
-            typer.echo(format_terminal(report))
+            typer.echo(format_terminal(report, privacy_footer=_privacy_footer))
 
     if any(r.summary.amber_count > 0 for r in reports):
         typer.echo(

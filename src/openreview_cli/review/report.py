@@ -14,11 +14,21 @@ from openreview_cli.review.colors import AssessmentColor
 from openreview_cli.review.models import Position, ReviewReport
 
 
-def format_terminal(report: ReviewReport) -> str:  # noqa: PLR0912, PLR0915  # ponytail: function extraction would add more complexity
+def format_terminal(  # noqa: PLR0912, PLR0915  # ponytail: function extraction would add more complexity
+    report: ReviewReport,
+    privacy_footer: str | None = None,
+) -> str:
     """Format a ``ReviewReport`` as a human-readable terminal string.
 
     Produces a Rich-styled table with per-clause position badges, confidence
     bars, Amber highlights, and a roll-up summary section.
+
+    Parameters
+    ----------
+    report : ReviewReport
+        The review report to format.
+    privacy_footer : str | None
+        Optional privacy tier footer line(s) appended at the end.
 
     Returns the rendered string (no side effects).
     """
@@ -56,6 +66,9 @@ def format_terminal(report: ReviewReport) -> str:  # noqa: PLR0912, PLR0915  # p
 
     if not report.assessments:
         console.print("[yellow]No clauses to assess.[/yellow]")
+        if privacy_footer:
+            console.print()
+            console.print(privacy_footer)
         return buf.getvalue()
 
     # Check if grounding data is present
@@ -141,6 +154,11 @@ def format_terminal(report: ReviewReport) -> str:  # noqa: PLR0912, PLR0915  # p
     if has_grounding:
         _print_grounding_summary(report, console)
     console.print()
+
+    # Privacy tier footer (FR-08, SC-05)
+    if privacy_footer:
+        console.print(privacy_footer)
+        console.print()
 
     return buf.getvalue()
 
