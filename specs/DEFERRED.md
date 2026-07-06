@@ -1945,3 +1945,149 @@ Custom templates would:
 4. Add a `--template` CLI flag to the export command
 5. Document the template format with examples
 6. Add integration tests for custom template rendering
+
+---
+
+## D-43: Playbook Warning Tests — T055/T056
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 017 — playbook versioning, Phase 10 Convergence |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Last 2 unchecked tasks in spec 017 (54/57 done) |
+| **Status** | Unblocked — warning logic from T054 exists; tests not written |
+
+### Description
+
+When both `--playbook` and `--playbook-path` are provided to `precheck review`,
+the user should get a warning saying the DB playbook takes precedence and the
+path is ignored. T054 implemented the warning logic. T055 and T056 are the tests:
+
+- **T055**: Unit test in `tests/unit/test_playbook_versioning.py` — verifies
+  the warning is emitted when both flags are present.
+- **T056**: Integration test in `tests/integration/test_playbook_commands.py` —
+  verifies end-to-end that providing both flags warns and uses the DB playbook.
+
+### What would need to change to unblock
+
+1. Write the unit test (T055) — mock both flags, assert warning emitted.
+2. Write the integration test (T056) — run `precheck review` with both flags,
+   assert stderr warns, assert DB playbook is used for the review.
+3. Run the spec 017 test suite to confirm 57/57.
+
+### Blueprint references
+
+Spec 017 tasks.md. Blueprint NOW item N-7. C-22 (3-position playbook).
+
+---
+
+## D-44: Bilateral Comparison — 20 Unchecked Tasks
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 014 — bilateral comparison (NX-1), 55/81 done |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Fixture creation gap, unblocked-but-unwritten tests, benchmark corpus needed |
+| **Status** | Partially blocked — T002-T005 need fixture PDFs; T050-T055/T058-T061 unblocked by spec 015; T077-T082 need benchmark corpus; T056 (--share-data) is D-1 |
+
+### Description
+
+Spec 014 has 55 of 81 tasks done. 20 remain unchecked (T056 is struck-through
+as D-1). Breakdown:
+
+**Phase 1 — Setup scaffolding (4 tasks):**
+- T002: Create `tests/unit/bilateral/` directory
+- T003: Create test fixtures for aligned NDA pair
+- T004: Create test fixtures for divergent NDA pair
+- T005: Create corrupt PDF test file
+
+**Phase 5 — CLI flag integration tests (5 tasks, unblocked by spec 015):**
+- T050: `--align-only` mode test
+- T051: `--format json --output` test
+- T052: `--confidence-threshold 0.8` test
+- T053: `--conservative` flag test
+- T055: `--verbose` test
+
+**Phase 5 — Deferred (1 task):**
+- T056: `--share-data` flag → D-1 (constitutional amendment pending)
+
+**Phase 5 — Error handling (4 tasks):**
+- T058: Corrupt PDF error handling test
+- T059: Missing file error handling test
+- T060: Both documents failing test
+- T061: Empty documents `--align-only` test
+
+**Phase 7 — Validation (6 tasks):**
+- T072: Run `quickstart.md` validation scenarios (blocked on T003/T004)
+- T077: [SC-1] NDA pair benchmark corpus + accuracy benchmark
+- T078: [SC-2] False-divergence test (identical pairs)
+- T079: [SC-3] False-negative test (known-divergence pairs)
+- T080: [SC-5] Performance benchmark for comparison agent
+- T081: [SC-10] RCBSF dimension accuracy test
+- T082: [SC-12] Offline-mode integration test
+
+### What would need to change to unblock
+
+1. Create NDA pair test fixtures (PDFs for aligned + divergent scenarios).
+2. Write the 5 CLI flag integration tests (T050-T053, T055) — routing is fixed
+   by spec 015, just need the test bodies.
+3. Write the 4 error handling tests (T058-T061).
+4. Build the benchmark corpus for T077-T082.
+5. Write the quickstart validation in T072 once T003/T004 are done.
+
+### Blueprint references
+
+Spec 014 tasks.md. Blueprint NOW item N-8. C-35 (bilateral comparison, experimental).
+D-1 (--share-data), D-2 (Typer CLI routing, resolved).
+
+---
+
+## D-45: PII Deferred Tasks — T033/T034/T035/T037/T039
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Phase 3 (PII Stripping) — AGENTS.md §Deferred work |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Status stale in AGENTS.md; 3 tasks complete, 5 still blocked |
+| **Status** | Mixed — T049/T050/T051 complete; T033/T035 partially unblocked; T034/T037/T039 still blocked |
+
+### Description
+
+The PII deferred tasks table in AGENTS.md (lines 286-296) tracks 8 tasks from
+Phase 3. Three are complete (T049 accuracy, T050 memory, T051 suite sweep).
+Five remain:
+
+**Partially unblocked:**
+- T033: Integration test for `--no-pii` flag. The `precheck` command has the
+  flag, but the integration test at `tests/integration/test_no_pii_flag.py`
+  is still a skeleton.
+- T035: Add `--no-pii` CLI flag to review commands. Flag exists on `precheck`,
+  but full coverage across all review commands is missing.
+
+**Still blocked:**
+- T034: Integration test for threshold-change re-strip. Blocked on config
+  change detection mechanism (T037). Trigger: config-driven re-processing.
+- T037: Config change detection (threshold hash compare). Blocked on downstream
+  cache — needs chunking/embedding phases to provide a cache to compare against.
+- T039: Missing-model integration test. Blocked on monkeypatching `spacy.load`
+  at the Presidio level — requires Presidio mocking infrastructure.
+
+### What would need to change to unblock
+
+1. T033: Populate the skeleton `test_no_pii_flag.py` with actual test cases
+   (verify PII stripping is skipped when flag is set, verify output format is
+   respected).
+2. T035: Add `--no-pii` to remaining review subcommands if any are added beyond
+   `precheck`.
+3. T034/T037: Implement config change detection (hash comparison between current
+   config and cached config). Requires a downstream cache to exist first.
+4. T039: Build Presidio-level mock that intercepts `spacy.load` to simulate
+   missing-model errors.
+
+### Blueprint references
+
+AGENTS.md §Deferred work from Phase 3. Blueprint NOW item N-9. C-10 (PII detection
+engine), C-11 (PII placeholder substitution). Spec 003 (PII stripping).
+
+Blueprint references: 003-pii-stripping, 004-complete-pii-stripping, Constitution
+Principle I (Privacy First).
