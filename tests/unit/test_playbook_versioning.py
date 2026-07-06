@@ -253,8 +253,33 @@ class TestPlaybookFlag:
         result = get_latest_playbook_version.__doc__  # just verify it exists
 
     def test_flag_precedence_over_playbook_path(self) -> None:
-        """T036: When both --playbook and --playbook-path given,
-        the loading logic must choose --playbook. Verified in CLI layer."""
+        """T036/T055: When both --playbook and --playbook-path given,
+        the loading logic must choose --playbook with a UserWarning."""
+        import warnings
+        from unittest.mock import MagicMock, patch
+
+        from openreview_cli.review import run_review
+
+        pb_mock = MagicMock()
+        with (
+            patch("openreview_cli.review.load_playbook_from_db", return_value=(pb_mock, 1)),
+            patch("openreview_cli.review.load_playbook"),
+            patch("openreview_cli.review.load_bundled"),
+            patch("openreview_cli.review.ReviewCommand"),
+            warnings.catch_warnings(record=True) as w,
+        ):
+            warnings.simplefilter("always")
+            run_review(
+                paths=["doc.pdf"],
+                playbook_id="test-pb",
+                playbook_path="/some/path.yaml",
+            )
+
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) >= 1
+        assert any(
+            "--playbook" in str(m.message) and "precedence" in str(m.message) for m in user_warnings
+        )
 
     def test_nonexistent_id_raises_error(self) -> None:
         """T037: --playbook with nonexistent ID returns None from storage layer."""

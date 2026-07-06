@@ -29,7 +29,13 @@ from openreview_cli.review.colors import AmberReason, AssessmentColor, assign_co
 # Memo export public API
 from openreview_cli.review.memo import MemoExporter, MemoFormat
 from openreview_cli.review.models import ReviewReport, ReviewSummary
-from openreview_cli.review.playbook import load_bundled, load_playbook, load_playbook_from_db
+from openreview_cli.review.playbook import (
+    VersionDiff,
+    compute_playbook_diff,
+    load_bundled,
+    load_playbook,
+    load_playbook_from_db,
+)
 from openreview_cli.review.report import format_json, format_terminal
 
 logger = logging.getLogger(__name__)
@@ -41,7 +47,9 @@ __all__ = [
     "MemoFormat",
     "ReviewCommand",
     "ReviewReport",
+    "VersionDiff",
     "assign_colors",
+    "compute_playbook_diff",
     "format_json",
     "format_terminal",
     "load_playbook_from_db",

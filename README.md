@@ -34,10 +34,10 @@ will change.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
-| Unit + integration tests    | 1,466                    |
-| CLI commands                | 50                        |
+| Unit + integration tests    | 1,662                    |
+| CLI commands                | 55                        |
 | SQLite tables               | 13                        |
-| Migrations                  | 6                         |
+| Migrations                  | 7                         |
 | CI jobs                     | 5 (lint, types, test, memory, benchmark) |
 | Memory budget (processing)  | < 100 MB (NLP model exempt) |
 | Startup (warm)              | < 0.3 s                   |
@@ -222,7 +222,7 @@ uv run openreview --version
 |-----------------------------------------------------|--------------------------------------------|
 | `src/openreview_cli/__init__.py`                    | Exposes `__version__`                      |
 | `src/openreview_cli/__main__.py`                    | Entry point: `python -m openreview_cli`    |
-| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse`, `precheck`, `chunk`, `pii`, `gateway`, `prompt`, `playbook` commands |
+| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse`, `precheck`, `chunk`, `pii`, `gateway`, `prompt`, `playbook` (8 subcommands) |
 | `src/openreview_cli/config/paths.py`                | platformdirs paths (config, data, log)     |
 | `src/openreview_cli/config/loader.py`               | Pydantic model, YAML r/w, env merge        |
 | `src/openreview_cli/config/auth.py`                 | `auth.json` handler, chmod 600             |
@@ -233,6 +233,7 @@ uv run openreview --version
 | `src/openreview_cli/storage/migrations/004_prompts.sql` | 2 tables DDL (prompt_versions, prompt_bindings) |
 | `src/openreview_cli/storage/migrations/005_benchmark.sql` | 3 tables DDL                       |
 | `src/openreview_cli/storage/migrations/006_playbooks.sql` | 1 table DDL (playbook_versions, append-only) |
+| `src/openreview_cli/storage/migrations/007_playbook_meta.sql` | 1 table DDL (playbook_meta, soft-delete, current version) |
 | `src/openreview_cli/errors.py`                      | Exit codes (5 = config, 6 = cost limit, 8 = parse error) |
 | `src/openreview_cli/parsing/`                       | Document parser — PDF, DOCX, clause detection, paragraph count per clause |
 | `src/openreview_cli/pii/`                           | PII stripping engine — Presidio, recognizers, encrypted mapping, audit trail, `strip_pii_clauses()` bridge |
@@ -284,11 +285,15 @@ uv run openreview --version
 | `tests/integration/test_prompt_lifecycle.py`        | 4 tests (create → bind → remove)           |
 | `tests/integration/test_prompt_gateway.py`          | 5 tests (gateway prompt resolution)        |
 | `tests/integration/test_prompt_memory.py`           | 1 test (memory budget < 110 MB)            |
-| `tests/unit/test_playbook.py`                       | 12 tests (playbook YAML loading, validation) |
-| `tests/unit/test_playbook_versioning.py`            | 5 tests (position rename backward compat, old YAML keys) |
-| `tests/unit/test_playbook_storage.py`               | 8 tests (playbook database CRUD, version tracking) |
-| `tests/integration/test_playbook_commands.py`       | 6 tests (playbook import/list/show CLI, `--playbook` flag) |
+| `tests/unit/test_playbook_versioning.py`            | 19 tests (YAML parsing, legacy key compat, append-only import, version-stamped report) |
+| `tests/unit/test_playbook_storage.py`               | 11 tests (migration 007, schema, CRUD for playbook_meta) |
 | `tests/unit/test_playbook_precedence.py`            | 9 tests (warning when both `--playbook` and `--playbook-path` provided) |
+| `tests/unit/test_playbook_delete.py`                | 5 tests (soft-delete, idempotency, version preservation) |
+| `tests/unit/test_playbook_history.py`               | 6 tests (version timeline, current/latest/deleted markers) |
+| `tests/unit/test_playbook_set_current.py`           | 6 tests (set current version, reactivate deleted) |
+| `tests/unit/test_playbook_management_storage.py`    | 47 tests (export, diff, full storage integration) |
+| `tests/integration/test_playbook_commands.py`       | 15 tests (playbook import/list/show CLI, `--playbook` flag) |
+| `tests/integration/test_playbook_management.py`     | 28 tests (export, diff, set-current, delete, history integration) |
 | `tests/unit/test_pipeline_base.py`                  | 7 tests (Stage ABC, StageResult)           |
 | `tests/unit/test_pipeline_errors.py`                | 11 tests (error hierarchy)                 |
 | `tests/unit/test_pipeline_progress.py`              | 3 tests (progress events)                  |
@@ -404,6 +409,11 @@ openreview prompt optimize --prompt extract-clauses --iterations 3
 openreview playbook import my-terms.yaml              # Import a YAML playbook into the database
 openreview playbook list                              # List all playbooks with their latest version
 openreview playbook show my-terms 1                   # Show a specific playbook version
+openreview playbook export my-terms --output terms.yaml   # Export a playbook to YAML
+openreview playbook diff my-terms 1 2                    # Structural diff between versions
+openreview playbook set-current my-terms 2               # Set the effective current version
+openreview playbook delete my-terms                      # Soft-delete a playbook (tombstone)
+openreview playbook history my-terms                     # Show version timeline
 
 # Review with a database-sourced playbook (version-stamped)
 openreview precheck review --playbook my-terms contract.pdf  # Load latest version from DB
@@ -493,6 +503,11 @@ openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 | `openreview playbook import <path>`  | Import a YAML playbook into the local database (append-only versioning) |
 | `openreview playbook list`           | List all playbooks with latest version and description |
 | `openreview playbook show <id> <version>` | Show the full content of a specific playbook version |
+| `openreview playbook export <id> --output <file>` | Export a playbook version to a YAML file |
+| `openreview playbook diff <id> <v1> <v2>`        | Structural diff between two playbook versions |
+| `openreview playbook set-current <id> <v>`         | Set the effective current version (re-activates if deleted) |
+| `openreview playbook delete <id>`              | Soft-delete a playbook (tombstone, restorable) |
+| `openreview playbook history <id>`             | Show version timeline with status markers |
 | `openreview benchmark`                    | Run automated evaluation (CUAD/MAUD/ContractNLI) |
 | `openreview benchmark --datasets cuad,maud` | Evaluate specific datasets                   |
 | `openreview benchmark --slots default,fast` | Compare model slots                          |

@@ -470,17 +470,30 @@ def playbook_import(
 
 
 @playbook_app.command("list")
-def playbook_list() -> None:
+def playbook_list(
+    include_deleted: bool = typer.Option(
+        False, "--include-deleted", help="Include soft-deleted playbooks."
+    ),
+) -> None:
     """List all playbooks in the local database.
 
-    Displays a table with playbook ID, description, latest version, and import date.
+    Displays a table with playbook ID, description, latest version, current version, and import date.
     """
+    import json as _json
+
+    from rich.console import Console
+    from rich.table import Table
+
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import list_playbooks
+    from openreview_cli.storage.database import (
+        get_current_version,
+        get_playbook_version,
+        list_playbooks_with_meta,
+    )
 
     db_path = get_data_dir() / "openreview.db"
     try:
-        playbooks = list_playbooks(db_path)
+        playbooks = list_playbooks_with_meta(db_path, include_deleted=include_deleted)
     except Exception as e:
         typer.echo(f"Error: Database error: {e}", err=True)
         raise typer.Exit(code=1) from None
@@ -489,24 +502,18 @@ def playbook_list() -> None:
         typer.echo("No playbooks saved yet.")
         return
 
-    import json as _json
-
-    from rich.console import Console
-    from rich.table import Table
-
     console = Console()
     table = Table(title="Playbooks")
     table.add_column("ID", style="cyan")
     table.add_column("Description", style="green")
-    table.add_column("Latest Version", style="yellow", justify="right")
+    table.add_column("Latest", style="yellow", justify="right")
+    table.add_column("Current", style="blue", justify="right")
     table.add_column("Imported", style="white")
 
-    for pb_id, version, created_at in playbooks:
+    for pb_id, version, created_at, is_deleted in playbooks:
         # Try to extract description from the latest version's content
         desc = ""
         try:
-            from openreview_cli.storage.database import get_playbook_version
-
             content = get_playbook_version(db_path, pb_id, version)
             if content:
                 parsed = _json.loads(content)
@@ -514,9 +521,20 @@ def playbook_list() -> None:
         except Exception:
             pass
 
+        # Get current version
+        cur_ver = ""
+        with contextlib.suppress(Exception):
+            cur_ver = str(get_current_version(db_path, pb_id))
+
+        cur_display = f"[green]{cur_ver} ←[/green]" if cur_ver == str(version) else cur_ver
+
+        label = ""
+        if is_deleted:
+            label = " [red](deleted)[/red]"
+
         # Format date as YYYY-MM-DD
         date_str = created_at[:10] if created_at else ""
-        table.add_row(pb_id, desc, str(version), date_str)
+        table.add_row(f"{pb_id}{label}", desc, str(version), cur_display, date_str)
 
     console.print(table)
 
@@ -605,6 +623,241 @@ def playbook_show(
                     for ex in exemplars:
                         console.print(f"       • {ex}")
             console.print()
+
+
+@playbook_app.command("export")
+def playbook_export(
+    playbook_id: str = typer.Argument(..., help="Saved playbook identifier"),
+    version: int | None = typer.Option(
+        None, "--version", help="Version to export (default: current/latest)"
+    ),
+    output: str = typer.Option(..., "--output", help="Destination file path"),
+    force: bool = typer.Option(False, "--force", help="Suppress overwrite warning"),
+) -> None:
+    """Export a playbook version from the database to a YAML file."""
+    import json
+
+    import yaml
+
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.storage.database import export_playbook_version
+
+    db_path = get_data_dir() / "openreview.db"
+    out_path = Path(output)
+
+    # Validate output parent directory exists
+    if not out_path.parent.exists():
+        typer.echo(
+            f"Error: Cannot write to '{output}': parent directory does not exist.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    # Fetch version data
+    try:
+        content = export_playbook_version(db_path, playbook_id, version)
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+    if content is None:
+        resolved_ver = version if version else 0
+        typer.echo(
+            f"Error: Version {resolved_ver} not found for playbook '{playbook_id}'.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    # Parse JSON content to dict
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError as e:
+        typer.echo(f"Error: Corrupt playbook data: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+    # Serialize to YAML
+    try:
+        yaml_str = yaml.safe_dump(
+            data, sort_keys=False, allow_unicode=True, default_flow_style=False
+        )
+    except Exception as e:
+        typer.echo(f"Error: YAML serialisation failed: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+    # Write with overwrite warning
+    if out_path.exists() and not force:
+        typer.echo(f"Warning: Overwriting existing file '{output}'.", err=True)
+
+    out_path.write_text(yaml_str, encoding="utf-8")
+    typer.echo(f"Exported playbook '{playbook_id}' to '{output}'.")
+
+
+@playbook_app.command("diff")
+def playbook_diff(
+    playbook_id: str = typer.Argument(..., help="Saved playbook identifier"),
+    v1: int = typer.Argument(..., help="First version to compare"),
+    v2: int = typer.Argument(..., help="Second version to compare"),
+) -> None:
+    """Compare two versions of a saved playbook structurally."""
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.review.playbook import compute_playbook_diff
+    from openreview_cli.storage.database import diff_playbook_versions
+
+    if v1 < 1 or v2 < 1:
+        typer.echo("Error: Versions must be positive integers.", err=True)
+        raise typer.Exit(code=2)
+
+    db_path = get_data_dir() / "openreview.db"
+
+    # Fetch version data (handles normalisation v1 > v2)
+    try:
+        data1, data2, norm_v1, norm_v2 = diff_playbook_versions(db_path, playbook_id, v1, v2)
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+    # Compute diff
+    diff = compute_playbook_diff(data1, data2)
+    diff.v1 = norm_v1
+    diff.v2 = norm_v2
+
+    # Format and display (inline format_playbook_diff)
+    lines: list[str] = []
+    lines.append(f"Changes between version {diff.v1} and {diff.v2} of {playbook_id}:")
+    lines.append("")
+
+    if diff.added_categories:
+        lines.append("New categories:")
+        for cid in diff.added_categories:
+            lines.append(f"  - {cid}")
+        lines.append("")
+
+    if diff.removed_categories:
+        lines.append("Removed categories:")
+        for cid in diff.removed_categories:
+            lines.append(f"  - {cid}")
+        lines.append("")
+
+    if diff.changed_categories:
+        lines.append("Changed categories:")
+        for cid, changes in diff.changed_categories.items():
+            lines.append(f"  {cid}:")
+            desc = changes.get("description")
+            if isinstance(desc, dict):
+                lines.append(
+                    f'    description: "{desc.get("before", "")}" \u2192 "{desc.get("after", "")}"'
+                )
+            dp = changes.get("default_position")
+            if isinstance(dp, dict):
+                lines.append(
+                    f'    default_position: "{dp.get("before", "")}" \u2192 "{dp.get("after", "")}"'
+                )
+            for ex in changes.get("exemplars_added", []):
+                lines.append(f'    exemplar added: "{ex}"')
+            for ex in changes.get("exemplars_removed", []):
+                lines.append(f'    exemplar removed: "{ex}"')
+        lines.append("")
+
+    if not diff.added_categories and not diff.removed_categories and not diff.changed_categories:
+        lines.append(f"No changes between version {diff.v1} and version {diff.v2}.")
+        lines.append("")
+
+    typer.echo("\n".join(lines))
+
+
+@playbook_app.command("set-current")
+def playbook_set_current(
+    playbook_id: str = typer.Argument(..., help="Saved playbook identifier"),
+    version: int = typer.Argument(..., help="Version number to set as current"),
+) -> None:
+    """Set the effective current version for a playbook.
+
+    Re-activates a deleted playbook if it was soft-deleted.
+    """
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.storage.database import set_current_version
+
+    if version < 1:
+        typer.echo("Error: Version must be a positive integer.", err=True)
+        raise typer.Exit(code=2)
+
+    db_path = get_data_dir() / "openreview.db"
+    try:
+        _, msg = set_current_version(db_path, playbook_id, version)
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+    typer.echo(msg)
+
+
+@playbook_app.command("delete")
+def playbook_delete(
+    playbook_id: str = typer.Argument(..., help="Saved playbook identifier"),
+) -> None:
+    """Soft-delete a playbook (tombstone, never hard-delete).
+
+    Removes from default list view. Restorable via set-current.
+    """
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.storage.database import delete_playbook
+
+    db_path = get_data_dir() / "openreview.db"
+    try:
+        _, msg = delete_playbook(db_path, playbook_id)
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+    typer.echo(msg)
+
+
+@playbook_app.command("history")
+def playbook_history(
+    playbook_id: str = typer.Argument(..., help="Saved playbook identifier"),
+) -> None:
+    """Show version timeline of a playbook.
+
+    Displays a Rich table with Version, Created, and Status columns.
+    """
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.storage.database import get_playbook_history
+
+    db_path = get_data_dir() / "openreview.db"
+    try:
+        rows, _current_version, is_deleted = get_playbook_history(db_path, playbook_id)
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+    if not rows:
+        typer.echo(f"No versions found for playbook '{playbook_id}'.")
+        return
+
+    from rich.console import Console
+    from rich.table import Table
+
+    console = Console()
+    title = f"Version History: {playbook_id}"
+    header = "(deleted)" if is_deleted else ""
+    if header:
+        title += f" [red]{header}[/red]"
+    table = Table(title=title)
+    table.add_column("Version", style="cyan", justify="right")
+    table.add_column("Created", style="white")
+    table.add_column("Status", style="yellow")
+
+    for r in rows:
+        ver = r["version"]
+        created = str(r["created_at"])
+        status_parts = []
+        if r["is_current"]:
+            status_parts.append("[green]Current[/green]")
+        if r["is_latest"]:
+            status_parts.append("[blue]Latest[/blue]")
+        table.add_row(str(ver), created, "  ".join(status_parts))
+
+    console.print(table)
 
 
 app.add_typer(playbook_app)

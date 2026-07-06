@@ -2120,3 +2120,150 @@ engine), C-11 (PII placeholder substitution). Spec 003 (PII stripping).
 
 Blueprint references: 003-pii-stripping, 004-complete-pii-stripping, Constitution
 Principle I (Privacy First).
+
+---
+
+## D-46: Playbook Undelete Command
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 024 — playbook management, R4 |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Explicitly excluded from spec scope — restore achieved via `set-current` |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+Soft-deleted playbooks can be re-activated by running `set-current <id> <version>`,
+which clears the `deleted_at` tombstone. There is no dedicated `undelete` command
+that restores a playbook to its previous current version without the user having
+to specify a version number. A `playbook undelete <id>` command would be more
+discoverable and user-friendly.
+
+### What would need to change to unblock
+
+1. Add `openreview playbook undelete <id>` subcommand in `app.py` playbook group
+2. Add a storage helper that clears `deleted_at` and preserves the existing
+   `current_version` (no version change needed)
+3. Add unit and integration tests for the undelete path
+4. Document that undelete is equivalent to `set-current <id>` with the current
+   version, but more convenient
+
+### Blueprint references
+
+Spec 024 spec.md §"Explicitly excluded": "`undelete` command (can be achieved
+via `set-current`; explicit command deferred)". Spec 024 R4 (soft-delete).
+
+---
+
+## D-47: `--json` Output Flag for Playbook Diff
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 024 — playbook management, R2 |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Explicitly excluded from spec scope — described as "optional, deferred for later polish" |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+The `playbook diff` command outputs a human-readable terminal display.
+Adding a `--json` flag would produce machine-parseable JSON output containing
+the same structured diff data (added categories, removed categories, per-category
+field-level changes). This is useful for piping into other tools or for integration
+with CI pipelines.
+
+### What would need to change to unblock
+
+1. Add `--json` flag to `playbook diff` CLI signature in `app.py`
+2. Serialize the `VersionDiff` dataclass to JSON instead of formatted text
+   when the flag is set
+3. Add unit tests for JSON output format (valid JSON, correct structure)
+4. Add integration tests verifying `playbook diff --json` produces parseable output
+
+### Blueprint references
+
+Spec 024 spec.md R2 acceptance criteria: "Output is human-readable (terminal
+formatting) and structured enough for machine parsing (JSON on `--json` or
+similar flag — optional, documented)." Spec 024 §"Explicitly excluded": "`--json`
+output flag for diff (optional, deferred for later polish)".
+
+---
+
+## D-48: Bulk Playbook Operations (Export All, Delete All)
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 024 — playbook management |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Explicitly excluded from spec scope |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+Export and delete operate on a single playbook at a time. There is no way to
+export every saved playbook to individual YAML files in one command, or to
+delete all playbooks at once. Bulk operations would help with backups and
+cleanup.
+
+Bulk export would:
+1. Accept an `--output-dir` argument and export all playbooks (current version)
+   into individual files named `<playbook_id>.yaml`
+2. Support `--version` if all playbooks should be exported at a specific version
+   number (rare but consistent)
+
+Bulk delete would:
+1. Accept `--force` to delete all playbooks without confirmation
+2. Soft-delete each playbook individually (append-only invariant preserved)
+3. Print a summary of deleted playbooks
+
+### What would need to change to unblock
+
+1. Add `--all` flag to `playbook export` and `playbook delete` commands
+2. For export: iterate over all playbooks, call the existing export logic per ID
+3. For delete: iterate over all playbooks, call the existing soft-delete per ID
+4. Add confirmation prompt for bulk delete (unless `--force` is set)
+5. Add unit and integration tests for bulk paths
+
+### Blueprint references
+
+Spec 024 §"Explicitly excluded": "Bulk operations (export all, delete all)".
+
+---
+
+## D-49: Playbook Sharing / Network Export
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 024 — playbook management |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Explicitly excluded from spec scope — local-first constraint |
+| **Status** | Unblocked — but requires constitutional review (Principle II: Local-First, CLI-Only) |
+
+### Description
+
+Export produces a YAML file on the local filesystem. There is no mechanism to
+share a playbook with another team member or machine over the network. Future
+options could include:
+
+1. Sharing via HTTP upload/download to a team server
+2. Publishing to a playbook registry (similar to model registries)
+3. Collaborative playbook editing with version control
+
+This is distinct from the existing file-based sharing (email the YAML file):
+network export would provide a structured sharing workflow with version
+resolution, conflict detection, and access control.
+
+### What would need to change to unblock
+
+1. **Constitutional check**: Network export may conflict with Principle II
+   (Local-First, CLI-Only) depending on the design. A pull-from-server design
+   (download only) is less intrusive than push-to-server.
+2. Design a sharing transport (HTTP, or local network broadcast)
+3. Add a `playbook share` or `playbook publish` subcommand
+4. Add version metadata to the share payload (playbook ID, version hash, author)
+5. Add integration tests with a mock sharing server
+
+### Blueprint references
+
+Spec 024 §"Explicitly excluded": "Playbook sharing or network export".
