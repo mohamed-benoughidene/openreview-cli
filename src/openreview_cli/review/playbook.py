@@ -1,8 +1,9 @@
-"""Playbook loader — YAML parsing, validation, bundled load."""
+"""Playbook loader — YAML parsing, validation, bundled load, export, diff."""
 
 from __future__ import annotations
 
 import warnings
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -189,4 +190,82 @@ def _parse_position_def(raw: dict[str, Any]) -> PositionDef:
     return PositionDef(
         description=str(raw["description"]),
         exemplars=[str(e) for e in exemplars],
+    )
+
+
+@dataclass
+class VersionDiff:
+    """Structured diff between two playbook versions."""
+
+    status: str  # "changed" or "unchanged"
+    v1: int
+    v2: int
+    added_categories: list[str] = field(default_factory=list)
+    removed_categories: list[str] = field(default_factory=list)
+    changed_categories: dict[str, Any] = field(default_factory=dict)
+
+
+def compute_playbook_diff(v1_data: dict[str, Any], v2_data: dict[str, Any]) -> VersionDiff:
+    """Compute structural diff between two playbook version dicts.
+
+    Returns a VersionDiff with added/removed categories and per-category
+    field changes (description, default_position, exemplars).
+    """
+    cats1 = {c["id"]: c for c in v1_data.get("categories", [])}
+    cats2 = {c["id"]: c for c in v2_data.get("categories", [])}
+
+    ids1 = set(cats1)
+    ids2 = set(cats2)
+
+    added = sorted(ids2 - ids1)
+    removed = sorted(ids1 - ids2)
+    common = ids1 & ids2
+
+    changed: dict[str, dict[str, object]] = {}
+    for cid in common:
+        c1 = cats1[cid]
+        c2 = cats2[cid]
+        ch: dict[str, object] = {}
+
+        if c1.get("description") != c2.get("description"):
+            ch["description"] = {
+                "before": c1.get("description", ""),
+                "after": c2.get("description", ""),
+            }
+
+        if c1.get("default_position") != c2.get("default_position"):
+            ch["default_position"] = {
+                "before": c1.get("default_position", ""),
+                "after": c2.get("default_position", ""),
+            }
+
+        ex1: set[str] = set()
+        ex2: set[str] = set()
+        for pos in ("preferred", "acceptable", "walkaway"):
+            p1 = c1.get(pos, {})
+            p2 = c2.get(pos, {})
+            if isinstance(p1, dict):
+                ex1.update(p1.get("exemplars", []))
+            if isinstance(p2, dict):
+                ex2.update(p2.get("exemplars", []))
+
+        ex_added = sorted(ex2 - ex1)
+        ex_removed = sorted(ex1 - ex2)
+        if ex_added:
+            ch["exemplars_added"] = ex_added
+        if ex_removed:
+            ch["exemplars_removed"] = ex_removed
+
+        if ch:
+            changed[cid] = ch
+
+    status = "unchanged" if not added and not removed and not changed else "changed"
+
+    return VersionDiff(
+        status=status,
+        v1=0,
+        v2=0,
+        added_categories=added,
+        removed_categories=removed,
+        changed_categories=changed,
     )

@@ -242,3 +242,43 @@ class TestVersionStampedReview:
 
         field_names = ReviewReport.__dataclass_fields__.keys()
         assert "playbook_id" in field_names
+
+
+# ════════════════════════════════════════════════
+# US6 — Precedence Warning (T056 convergence)
+# ════════════════════════════════════════════════
+
+
+class TestPrecedenceWarning:
+    """T056: Integration tests for --playbook + --playbook-path precedence warning."""
+
+    def test_precedence_warning_emitted_when_both_flags_given(self) -> None:
+        """T056: run_review emits UserWarning when both playbook_id and
+        playbook_path are provided."""
+        import warnings
+        from unittest.mock import MagicMock, patch
+
+        from openreview_cli.review import run_review
+
+        pb_mock = MagicMock()
+        with (
+            patch("openreview_cli.review.load_playbook_from_db", return_value=(pb_mock, 1)),
+            patch("openreview_cli.review.load_playbook"),
+            patch("openreview_cli.review.load_bundled"),
+            patch("openreview_cli.review.ReviewCommand"),
+            warnings.catch_warnings(record=True) as w,
+        ):
+            warnings.simplefilter("always")
+            reports = run_review(
+                paths=["doc.pdf"],
+                playbook_id="test-pb",
+                playbook_path="/some/path.yaml",
+            )
+
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) >= 1, "Expected UserWarning when both flags given"
+        assert any(
+            "--playbook" in str(m.message) and "precedence" in str(m.message) for m in user_warnings
+        )
+        # Verify command proceeds (non-fatal) — reports list returned
+        assert isinstance(reports, list)

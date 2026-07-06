@@ -219,8 +219,8 @@ description: "Implementation tasks for 3-Position Playbook with Versioning"
 **Purpose**: Close the remaining gap identified by `/speckit.converge` — the warning when both `--playbook` and `--playbook-path` are provided (FR-005, SC-003 acceptance scenario 3).
 
 - [X] T054 [P] [US6] Add warning in `src/openreview_cli/review/__init__.py` `run_review()` — when both `playbook_id` and `playbook_path` are non-None, emit `warnings.warn()` that the file path is ignored (precedence is DB)
-- [ ] T055 [P] [US6] Unit test: both `--playbook` and `--playbook-path` provided emits warning in `tests/unit/test_playbook_versioning.py`
-- [ ] T056 [US6] Integration test: `openreview precheck review --playbook <id> --playbook-path <path>` warns and uses DB playbook in `tests/integration/test_playbook_commands.py`
+- [X] T055 [P] [US6] Unit test: both `--playbook` and `--playbook-path` provided emits warning in `tests/unit/test_playbook_versioning.py`
+- [X] T056 [US6] Integration test: `openreview precheck review --playbook <id> --playbook-path <path>` warns and uses DB playbook in `tests/integration/test_playbook_commands.py`
 
 ---
 
