@@ -288,9 +288,7 @@ class TestCGMetrics:
         metrics = compute_cg_metrics(verdicts, source_doc, source_clauses=source_clauses)
         assert metrics.citation_locality == 1.0
 
-    def test_cl_uses_paragraph_count_field_when_set(
-        self, source_doc: MagicMock
-    ) -> None:
+    def test_cl_uses_paragraph_count_field_when_set(self, source_doc: MagicMock) -> None:
         """CL uses paragraph_count field when set on Clause, not _count_paragraphs fallback."""
         clauses = [
             Clause(

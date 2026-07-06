@@ -134,8 +134,12 @@ class MemoExporter:
             matches=matches,
             differences=differences,
             confidence_avg=getattr(summary, "avg_confidence", 0.0),
-            citation_relevance=self.report.cg_metrics.citation_relevance if self.report.cg_metrics else None,
-            citation_locality=self.report.cg_metrics.citation_locality if self.report.cg_metrics else None,
+            citation_relevance=self.report.cg_metrics.citation_relevance
+            if self.report.cg_metrics
+            else None,
+            citation_locality=self.report.cg_metrics.citation_locality
+            if self.report.cg_metrics
+            else None,
         )
 
         return MemoReport(
