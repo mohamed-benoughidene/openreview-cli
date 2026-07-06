@@ -34,7 +34,7 @@ will change.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
-| Unit + integration tests    | 1,407                    |
+| Unit + integration tests    | 1,466                    |
 | CLI commands                | 50                        |
 | SQLite tables               | 13                        |
 | Migrations                  | 6                         |
@@ -257,6 +257,7 @@ uv run openreview --version
 | `tests/unit/test_app.py`                            | 5 tests (import, version, help, memory)    |
 | `tests/unit/test_config_loader.py`                  | 6 tests (create, merge, env override)      |
 | `tests/unit/test_auth.py`                           | 5 tests (create, load, perms, providers)   |
+| `tests/unit/test_bilateral_comparison.py`           | 36 tests (precheck compare input validation, CLI flags, error handling) |
 | `tests/unit/test_database.py`                       | 7 tests (init, cost, limits, clients)      |
 | `tests/unit/test_cli_config.py`                     | 8 tests (show, get, set, validation)       |
 | `tests/unit/test_cli_client.py`                     | 5 tests (add, list, delete, --force)       |
@@ -287,6 +288,7 @@ uv run openreview --version
 | `tests/unit/test_playbook_versioning.py`            | 5 tests (position rename backward compat, old YAML keys) |
 | `tests/unit/test_playbook_storage.py`               | 8 tests (playbook database CRUD, version tracking) |
 | `tests/integration/test_playbook_commands.py`       | 6 tests (playbook import/list/show CLI, `--playbook` flag) |
+| `tests/unit/test_playbook_precedence.py`            | 9 tests (warning when both `--playbook` and `--playbook-path` provided) |
 | `tests/unit/test_pipeline_base.py`                  | 7 tests (Stage ABC, StageResult)           |
 | `tests/unit/test_pipeline_errors.py`                | 11 tests (error hierarchy)                 |
 | `tests/unit/test_pipeline_progress.py`              | 3 tests (progress events)                  |
@@ -295,6 +297,7 @@ uv run openreview --version
 | `tests/unit/test_pipeline_memory.py`                | 7 tests (memory budget enforcement)        |
 | `tests/integration/test_pipeline_e2e.py`            | 12 tests (end-to-end pipeline)            |
 | `tests/integration/test_pipeline_memory.py`         | 5 tests (pipeline memory budget)           |
+| `tests/integration/test_no_pii_flag.py`             | 19 tests (`--no-pii` flag integration with review subcommands) |
 | `tests/conftest.py`                                 | Memory tracker fixture (< 110 MB)          |
 | `.pre-commit-config.yaml`                           | 10 hooks (ruff, mypy, pytest, hygiene)     |
 | `.github/workflows/ci.yml`                          | 4 parallel CI jobs                         |
