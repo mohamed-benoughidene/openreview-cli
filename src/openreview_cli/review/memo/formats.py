@@ -84,6 +84,10 @@ def render_markdown(memo: MemoReport) -> str:
     lines.append(f"| Differences | {memo.overall.differences} |")
     lines.append(f"| Avg Confidence | {memo.overall.confidence_avg:.2f} |")
     lines.append(f"| Recommendation | **{memo.overall.recommendation.upper()}** |")
+    if memo.overall.citation_relevance is not None:
+        lines.append(f"| Citation Relevance | {memo.overall.citation_relevance:.2f} |")
+    if memo.overall.citation_locality is not None:
+        lines.append(f"| Citation Locality | {memo.overall.citation_locality:.2f} |")
     lines.append("")
 
     # Per-clause assessments
@@ -183,6 +187,12 @@ def render_docx(memo: MemoReport) -> Any:
     """
     doc = DocxDocument()
 
+    def _add_citation_row(label: str, value: float | None) -> None:
+        if value is not None:
+            p = doc.add_paragraph()
+            p.add_run(f"{label}: ").bold = True
+            p.add_run(f"{value:.2f}")
+
     # ── Title ──
     doc.add_heading(f"Memo Export: {memo.mode}", level=1)
 
@@ -211,6 +221,8 @@ def render_docx(memo: MemoReport) -> Any:
             ("Recommendation", memo.overall.recommendation.upper()),
         ],
     )
+    _add_citation_row("Citation Relevance", memo.overall.citation_relevance)
+    _add_citation_row("Citation Locality", memo.overall.citation_locality)
 
     doc.add_paragraph()  # spacer
 

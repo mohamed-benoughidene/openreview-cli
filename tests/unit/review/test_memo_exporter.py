@@ -166,6 +166,31 @@ class TestBuildMemoReport:
         # When no privacy footer, tier_info may be None
         assert memo.tier_info is not None or memo.tier_info is None
 
+    def test_citation_metrics_from_report(self) -> None:
+        """MemoSummary CR/CL fields populated from report.cg_metrics when available."""
+        from openreview_cli.grounding.models import CGMetrics
+
+        report = _make_report()
+        report.cg_metrics = CGMetrics(
+            citation_precision=0.85,
+            citation_relevance=0.72,
+            citation_locality=0.91,
+        )
+        exporter = MemoExporter(report=report, mode="precheck")
+        memo = exporter._build_memo_report()
+
+        assert memo.overall.citation_relevance == 0.72
+        assert memo.overall.citation_locality == 0.91
+
+    def test_citation_metrics_none_when_no_cg_metrics(self) -> None:
+        """MemoSummary CR/CL fields are None when report has no cg_metrics."""
+        report = _make_report()
+        exporter = MemoExporter(report=report, mode="precheck")
+        memo = exporter._build_memo_report()
+
+        assert memo.overall.citation_relevance is None
+        assert memo.overall.citation_locality is None
+
 
 class TestExport:
     def test_export_raises_on_empty(self) -> None:

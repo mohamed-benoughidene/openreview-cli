@@ -69,6 +69,8 @@ class TestMemoSummary:
         assert ms.matches == 12
         assert ms.differences == 3
         assert ms.confidence_avg == 0.87
+        assert ms.citation_relevance is None
+        assert ms.citation_locality is None
 
     def test_revise_recommendation(self) -> None:
         ms = MemoSummary(
@@ -99,6 +101,43 @@ class TestMemoSummary:
             confidence_avg=0.0,
         )
         assert ms.confidence_avg == 0.0
+
+    def test_citation_metrics_values(self) -> None:
+        # default none
+        ms = MemoSummary(
+            recommendation="approve",
+            clauses_checked=1,
+            matches=1,
+            differences=0,
+            confidence_avg=0.95,
+        )
+        assert ms.citation_relevance is None
+        assert ms.citation_locality is None
+
+        # both set
+        ms = MemoSummary(
+            recommendation="approve",
+            clauses_checked=1,
+            matches=1,
+            differences=0,
+            confidence_avg=0.95,
+            citation_relevance=0.72,
+            citation_locality=0.91,
+        )
+        assert ms.citation_relevance == 0.72
+        assert ms.citation_locality == 0.91
+
+        # partial
+        ms = MemoSummary(
+            recommendation="revise",
+            clauses_checked=1,
+            matches=0,
+            differences=1,
+            confidence_avg=0.3,
+            citation_relevance=0.5,
+        )
+        assert ms.citation_relevance == 0.5
+        assert ms.citation_locality is None
 
 
 class TestMemoClause:

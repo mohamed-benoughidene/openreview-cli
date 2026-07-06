@@ -102,6 +102,33 @@ class TestClause:
         assert clause.source_paragraph == 5
         assert clause.source_page is None
 
+    def test_paragraph_count_defaults_to_none(self) -> None:
+        clause = Clause(
+            id="c-0",
+            title=None,
+            text="text",
+            level=0,
+            parent_id=None,
+            source_page=None,
+            source_paragraph=None,
+            source_span=None,
+        )
+        assert clause.paragraph_count is None
+
+    def test_paragraph_count_set_explicitly(self) -> None:
+        clause = Clause(
+            id="c-0",
+            title=None,
+            text="para one\n\npara two\n\npara three",
+            level=0,
+            parent_id=None,
+            source_page=None,
+            source_paragraph=None,
+            source_span=None,
+            paragraph_count=3,
+        )
+        assert clause.paragraph_count == 3
+
 
 class TestDocument:
     def test_valid_document(self) -> None:

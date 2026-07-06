@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from datetime import datetime
 
     from openreview_cli.grounding.models import (
+        CGMetrics,
         CitationProvenance,
         GroundingVerdict,
     )
@@ -180,3 +181,4 @@ class ReviewReport:
     confidence_threshold: float = 0.7
     schema_version: str = "1.1.0"
     playbook_version: int | None = None
+    cg_metrics: CGMetrics | None = None

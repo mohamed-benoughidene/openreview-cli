@@ -99,7 +99,6 @@ class MemoExporter:
         if not assessments:
             raise ValueError("No review results to export. The review did not complete.")
 
-        # Build per-clause data
         clauses: list[MemoClause] = []
         for ca in assessments:
             citation = self._build_citation(ca)
@@ -135,6 +134,8 @@ class MemoExporter:
             matches=matches,
             differences=differences,
             confidence_avg=getattr(summary, "avg_confidence", 0.0),
+            citation_relevance=self.report.cg_metrics.citation_relevance if self.report.cg_metrics else None,
+            citation_locality=self.report.cg_metrics.citation_locality if self.report.cg_metrics else None,
         )
 
         return MemoReport(

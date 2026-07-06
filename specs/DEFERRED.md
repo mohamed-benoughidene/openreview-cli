@@ -153,8 +153,10 @@ strengthen the audit trail by making it human-readable.
 |-------|-------|
 | **Deferred from** | N-5 / spec 012 |
 | **Deferred at** | 2026-07-04 |
+| **Resolved at** | 2026-07-06 |
+| **Resolved by** | D-4/D-5 memo wiring (fix/d4-d5-memo-wiring) |
 | **Trigger** | Ponytail — structural substring match sufficient for v1 |
-| **Status** | Deferred — CR and CL metrics are computed internally but NOT surfaced in memo export. The memo export feature (spec 021) displays per-clause assessment categories and overall findings but does not include individual CR metric values. |
+| **Status** | ✅ **Resolved** |
 
 ### Description
 
@@ -165,16 +167,15 @@ This catches exact-match relevance but misses semantic equivalence
 (e.g., "confidential info" ≠ "Confidential Information" as defined in
 §1.1 of the agreement).
 
-### Resolution (not yet complete — reverted to deferred)
+### Resolution
 
-The memo export feature (spec 021) displays per-clause assessment categories
-and overall findings but does NOT surface individual CR metric values.
-Citation relevance (case-insensitive substring match) is computed internally
-in `compute_cg_metrics()` but is not written to the memo output schema.
-Surfacing CR requires extending the memo's assessment data model to include
-per-metric breakdowns.
+CR metric values are now surfaced in the memo export output across all
+three formats (Markdown, JSON, and DOCX). Each memo's per-clause assessment
+includes a citation grounding breakdown at the report/summary level, with
+the CR value displayed. The case-insensitive substring match remains the
+v1 implementation.
 
-### What would need to change to unblock
+### Future improvements (beyond original deferral)
 
 1. Replace the `in` operator with embedding cosine similarity or a
    lightweight cross-encoder comparison
@@ -196,8 +197,10 @@ semantic relevance for its CR-equivalent. See `research.md` §R3.
 |-------|-------|
 | **Deferred from** | N-5 / spec 012 |
 | **Deferred at** | 2026-07-04 |
+| **Resolved at** | 2026-07-06 |
+| **Resolved by** | D-4/D-5 memo wiring (fix/d4-d5-memo-wiring) |
 | **Trigger** | Ponytail — clause paragraph metadata not available upstream |
-| **Status** | Deferred — `paragraph_count` was NOT added to the `Clause` dataclass. `compute_cg_metrics()` works around this with on-the-fly paragraph counting by splitting clause text on newlines. This counts typographic lines, not semantic paragraphs. Proper paragraph range validation needs `paragraph_count` populated at parse time. |
+| **Status** | ✅ **Resolved** |
 
 ### Description
 
@@ -207,26 +210,24 @@ validate against the actual number of paragraphs in the cited clause.
 This means a claim citing "clause 4.3, paragraph 999" passes CL when it
 should fail.
 
-### Resolution (not yet complete — reverted to deferred)
+### Resolution
 
-The memo export feature (spec 021) does NOT surface CL metric values.
-`paragraph_count` was never added to the `Clause` dataclass in
-`src/openreview_cli/parsing/models.py`. The workaround in
-`compute_cg_metrics()` calls `len(clause.text.split('\n'))` at runtime,
-which counts output lines rather than semantic paragraphs. Proper
-paragraph range validation requires populating `paragraph_count` during
-the parse phase (PDF/DOCX parsers already detect paragraphs but do not
-expose a count).
+`paragraph_count` is now a field on the `Clause` dataclass, populated
+during PDF and DOCX parsing. The `compute_cg_metrics()` function in
+`grounding/metrics.py` uses `clause.paragraph_count` for citation locality
+validation (with fallback to the previous newline-split heuristic for
+clauses lacking the field). CL metric values appear in the memo export
+output across all three formats (Markdown, JSON, and DOCX) at the
+report/summary level.
 
-### What would need to change to unblock
+### Items addressed
 
-1. Add a `paragraph_count` field to the `Clause` dataclass in
+1. ✅ `paragraph_count` field added to `Clause` dataclass in
    `src/openreview_cli/parsing/models.py`
-2. Populate it during document parsing (paragraph detection already works
-   in the PDF/DOCX parsers but isn't exposed as a count)
-3. Update `compute_cg_metrics()` in
-   `src/openreview_cli/grounding/metrics.py` to validate
-   `paragraph_index < clause.paragraph_count`
+2. ✅ Populated during PDF/DOCX parsing (paragraph detection already worked
+   in the parsers, now exposed as a count)
+3. ✅ `compute_cg_metrics()` in `src/openreview_cli/grounding/metrics.py`
+   validates `paragraph_index < clause.paragraph_count` (with fallback)
 
 ### Blueprint references
 
