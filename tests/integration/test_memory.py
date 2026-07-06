@@ -130,3 +130,48 @@ def test_review_peak_memory() -> None:
     assert peak < 110 * 1024 * 1024, (
         f"Review pipeline peak memory {peak / 1024 / 1024:.1f} MB exceeds 110 MB"
     )
+
+
+@pytest.mark.memory
+def test_graph_peak_memory() -> None:
+    """T030: Verify graph build + metrics + health + view stays under 110 MB peak.
+
+    Builds a 500-node synthetic clause hierarchy and runs all graph operations.
+    """
+    import tracemalloc
+
+    from openreview_cli.graph.builder import ClauseHierarchyBuilder
+    from openreview_cli.graph.health import compute_health
+    from openreview_cli.graph.metrics import compute_metrics
+    from openreview_cli.graph.view import render_tree
+    from openreview_cli.parsing.models import Clause
+
+    # Build 500 synthetic clauses with hierarchy
+    clauses: list[Clause] = []
+    for i in range(500):
+        parent_id: str | None = f"c{i // 5}" if i > 0 else None
+        clauses.append(
+            Clause(
+                id=f"c{i}",
+                title=f"Section {i}",
+                text=f"This is clause {i} with some reference text.",
+                level=0,
+                parent_id=parent_id if parent_id != f"c{i}" else None,
+                source_page=None,
+                source_paragraph=None,
+                source_span=None,
+            )
+        )
+
+    builder = ClauseHierarchyBuilder()
+    tracemalloc.start()
+    graph = builder.build(clauses)
+    metrics = compute_metrics(graph)
+    health = compute_health(metrics)
+    _view = render_tree(graph)
+    _current, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    assert peak < 110 * 1024 * 1024, f"Graph peak memory {peak / 1024 / 1024:.1f} MB exceeds 110 MB"
+    assert len(graph.nodes) == 500
+    assert 0 <= health.score <= 100

@@ -1849,6 +1849,173 @@ def index_clear(
     typer.echo(f"Index for {file_path.name} cleared ({db_size} bytes).")
 
 
+# ── graph subcommand group ──
+
+graph_app = typer.Typer(
+    name="graph",
+    help="Build and analyse contract clause graphs.",
+    no_args_is_help=True,
+)
+
+
+@graph_app.command("build")
+def graph_build(
+    input_path: str = typer.Argument(
+        ...,
+        help="Path to a parsed contract JSON file (output of 'openreview parse --format json').",
+    ),
+    output: str = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Path for the output graph JSON file (default: {input_stem}.graph.json).",
+    ),
+) -> None:
+    """Build a directed clause graph from a parsed contract JSON file."""
+    from pathlib import Path
+
+    path = Path(input_path)
+    if not path.exists():
+        typer.echo(f"Error: File not found: {input_path}", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        from openreview_cli.graph.builder import build_from_parsed
+
+        graph = build_from_parsed(str(path))
+    except Exception as e:
+        typer.echo(f"Error: Invalid graph file: {e}", err=True)
+        raise typer.Exit(code=2) from None
+
+    if output is None:
+        output = str(path.with_suffix(".graph.json"))
+    graph.to_file(output)
+    typer.echo(f"Graph built: {len(graph.nodes)} nodes, {len(graph.edges)} edges \u2192 {output}")
+
+
+@graph_app.command("metrics")
+def graph_metrics(
+    graph_path: str = typer.Argument(
+        ..., help="Path to a graph JSON file (output of 'graph build')."
+    ),
+) -> None:
+    """Compute heuristic structural metrics from a graph JSON file."""
+    from pathlib import Path
+
+    path = Path(graph_path)
+    if not path.exists():
+        typer.echo(f"Error: File not found: {graph_path}", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        from openreview_cli.graph.models import ContractGraph
+
+        graph = ContractGraph.from_file(str(path))
+    except Exception as e:
+        typer.echo(f"Error: Invalid graph file: {e}", err=True)
+        raise typer.Exit(code=2) from None
+
+    from openreview_cli.graph.metrics import compute_metrics
+
+    metrics = compute_metrics(graph)
+
+    typer.echo("Contract Graph Metrics")
+    typer.echo("\u2500" * 22)
+    typer.echo(f"Density:              {metrics.density:.3f}")
+    typer.echo(f"Max Depth:            {metrics.max_depth}")
+    typer.echo(f"Orphan Ratio:         {metrics.orphan_ratio:.3f}")
+    typer.echo(f"Broken Cross-Refs:    {metrics.broken_ref_count}")
+    typer.echo(f"Definition Coverage:  {metrics.definition_coverage:.3f}")
+
+
+@graph_app.command("health")
+def graph_health(
+    graph_path: str = typer.Argument(
+        ..., help="Path to a graph JSON file (output of 'graph build')."
+    ),
+    weights: str | None = typer.Option(
+        None,
+        "--weights",
+        "-w",
+        help="Five custom weights: density depth orphans broken-refs coverage. "
+        "Space-separated, e.g. --weights '0.15 0.20 0.20 0.25 0.20'. "
+        "Auto-normalised to sum 1.0.",
+    ),
+) -> None:
+    """Compute a 0-100 health score from a graph JSON file."""
+    from pathlib import Path
+
+    path = Path(graph_path)
+    if not path.exists():
+        typer.echo(f"Error: File not found: {graph_path}", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        from openreview_cli.graph.models import ContractGraph
+
+        graph = ContractGraph.from_file(str(path))
+    except Exception as e:
+        typer.echo(f"Error: Invalid graph file: {e}", err=True)
+        raise typer.Exit(code=2) from None
+
+    from openreview_cli.graph.health import compute_health
+    from openreview_cli.graph.metrics import compute_metrics
+
+    metrics = compute_metrics(graph)
+
+    parsed_weights: list[float] | None = None
+    if weights is not None:
+        parts = weights.split()
+        if len(parts) != 5:
+            typer.echo("Error: --weights must contain exactly 5 values", err=True)
+            raise typer.Exit(code=2)
+        try:
+            parsed_weights = [float(w) for w in parts]
+        except ValueError:
+            typer.echo("Error: --weights values must be valid floats", err=True)
+            raise typer.Exit(code=2) from None
+        if any(w < 0 for w in parsed_weights):
+            typer.echo("Error: --weights values must be non-negative", err=True)
+            raise typer.Exit(code=2)
+
+    try:
+        health = compute_health(metrics, parsed_weights)
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=2) from None
+
+    typer.echo(f"Health Score: {health.score}/100")
+
+
+@graph_app.command("view")
+def graph_view(
+    graph_path: str = typer.Argument(
+        ..., help="Path to a graph JSON file (output of 'graph build')."
+    ),
+) -> None:
+    """Render the clause hierarchy as an indented ASCII text tree."""
+    from pathlib import Path
+
+    path = Path(graph_path)
+    if not path.exists():
+        typer.echo(f"Error: File not found: {graph_path}", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        from openreview_cli.graph.models import ContractGraph
+
+        graph = ContractGraph.from_file(str(path))
+    except Exception as e:
+        typer.echo(f"Error: Invalid graph file: {e}", err=True)
+        raise typer.Exit(code=2) from None
+
+    from openreview_cli.graph.view import render_tree
+
+    typer.echo(render_tree(graph))
+
+
+app.add_typer(graph_app)
+
 from openreview_cli.benchmark.cli import benchmark_app  # noqa: E402
 
 app.add_typer(benchmark_app)
