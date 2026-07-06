@@ -68,15 +68,15 @@ A lawyer changes the PII detection threshold in `config.yml` from the default (0
 
 ### User Story 4 - PII Accuracy Validation (Priority: P4)
 
-The development team runs the PII accuracy validation suite on a seeded corpus of 50 contracts with known PII entities (ground truth). The system computes recall (percentage of true PII detected) and precision (percentage of detections that are true PII). The validation report shows recall ≥90% and precision ≥95%, confirming the PII engine meets the product's accuracy targets.
+The development team runs the PII accuracy validation suite on a seeded corpus of 50 contracts with known PII entities (ground truth). The system computes recall (percentage of true PII detected) and precision (percentage of detections that are true PII). The validation report shows recall ≥95% and precision ≥95%, confirming the PII engine meets the product's accuracy targets.
 
 **Why this priority**: This validates the PII engine's accuracy before shipping review commands. Without accuracy validation, the team cannot confirm the engine is production-ready. Lower priority than P1-P3 because validation is a one-time gate, not a user-facing feature.
 
-**Independent Test**: Can be fully tested by running `pytest tests/integration/test_pii_accuracy.py` and verifying: (1) the test loads the seeded corpus with ground truth, (2) computes recall and precision, (3) asserts recall ≥90% and precision ≥95%. Delivers value: confidence that PII engine meets accuracy targets.
+**Independent Test**: Can be fully tested by running `pytest tests/integration/test_pii_accuracy.py` and verifying: (1) the test loads the seeded corpus with ground truth, (2) computes recall and precision, (3) asserts recall ≥95% and precision ≥95%. Delivers value: confidence that PII engine meets accuracy targets.
 
 **Acceptance Scenarios**:
 
-1. **Given** a seeded corpus of 50 contracts with ground truth PII annotations (party names, dates, amounts, addresses), **When** the accuracy validation suite runs, **Then** the system computes recall ≥90% (at least 90% of true PII detected) and precision ≥95% (at most 5% false positives).
+1. **Given** a seeded corpus of 50 contracts with ground truth PII annotations (party names, dates, amounts, addresses), **When** the accuracy validation suite runs, **Then** the system computes recall ≥95% (at least 95% of true PII detected) and precision ≥95% (at most 5% false positives).
 2. **Given** a clean-text document (no PII), **When** the accuracy validation suite runs, **Then** the system reports zero false positives (precision = 100% on clean text).
 
 ---
@@ -116,7 +116,7 @@ The development team runs the PII memory validation suite on a 500-page syntheti
 - **FR-005**: System MUST populate the PII accuracy validation corpus (`tests/fixtures/pii/seeded_contracts/ground_truth.json`) with at least 50 contracts containing annotated PII entities (party names, dates, amounts, addresses).
 - **FR-006**: System MUST implement PII accuracy validation that computes recall (percentage of true PII detected) and precision (percentage of detections that are true PII) against the ground truth corpus.
 - **FR-007**: System MUST implement PII memory validation that measures peak memory usage during PII stripping on a 500-page synthetic document using `tracemalloc`.
-- **FR-008**: System MUST ensure PII recall ≥90% on the validation corpus.
+- **FR-008**: System MUST ensure PII recall ≥95% on the validation corpus.
 - **FR-009**: System MUST ensure PII precision ≥95% on the validation corpus (at most 5% false positives).
 - **FR-010**: System MUST ensure peak memory <100 MB (excluding NLP model) during PII stripping of a 500-page document.
 - **FR-011**: System MUST ensure PII processing time <30 seconds for a 500-page document (linear scaling from 50-page baseline).
@@ -138,7 +138,7 @@ The development team runs the PII memory validation suite on a 500-page syntheti
 ### Measurable Outcomes
 
 - **SC-001**: Users can run the first review command (`openreview precheck`) on a contract and receive a PII-stripped review memo within 30 seconds for a 500-page document.
-- **SC-002**: PII recall ≥90% on the validation corpus (at least 90% of true PII entities are detected and replaced).
+- **SC-002**: PII recall ≥95% on the validation corpus (at least 95% of true PII entities are detected and replaced).
 - **SC-003**: PII precision ≥95% on the validation corpus (at most 5% of detected entities are false positives).
 - **SC-004**: Peak memory <100 MB (excluding NLP model) during PII stripping of a 500-page document.
 - **SC-005**: PII processing time <60 seconds for a 500-page document on CPU-only hardware (reference machine: 8 GB RAM, 2-core CPU, no GPU). GPU-accelerated machines will achieve faster processing, typically under 30 seconds.

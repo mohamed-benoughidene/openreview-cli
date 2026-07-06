@@ -147,16 +147,14 @@ strengthen the audit trail by making it human-readable.
 
 ---
 
-## D-4: Semantic Citation Relevance (CR) Metric ✅ RESOLVED
+## D-4: Semantic Citation Relevance (CR) Metric
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | N-5 / spec 012 |
 | **Deferred at** | 2026-07-04 |
-| **Resolved at** | 2026-07-05 |
-| **Resolved by** | Memo export feature (spec 021) |
 | **Trigger** | Ponytail — structural substring match sufficient for v1 |
-| **Status** | ✅ **Resolved** |
+| **Status** | Deferred — CR and CL metrics are computed internally but NOT surfaced in memo export. The memo export feature (spec 021) displays per-clause assessment categories and overall findings but does not include individual CR metric values. |
 
 ### Description
 
@@ -167,12 +165,14 @@ This catches exact-match relevance but misses semantic equivalence
 (e.g., "confidential info" ≠ "Confidential Information" as defined in
 §1.1 of the agreement).
 
-### Resolution
+### Resolution (not yet complete — reverted to deferred)
 
-Citation relevance scores are now displayed in the memo export output
-(spec 021). Each per-clause assessment in the memo includes the CR metric
-value, making semantic citation relevance visible in Markdown, JSON, and
-DOCX formatted reports for PreCheck, DealCheck, and HireCheck modes.
+The memo export feature (spec 021) displays per-clause assessment categories
+and overall findings but does NOT surface individual CR metric values.
+Citation relevance (case-insensitive substring match) is computed internally
+in `compute_cg_metrics()` but is not written to the memo output schema.
+Surfacing CR requires extending the memo's assessment data model to include
+per-metric breakdowns.
 
 ### What would need to change to unblock
 
@@ -190,16 +190,14 @@ semantic relevance for its CR-equivalent. See `research.md` §R3.
 
 ---
 
-## D-5: Paragraph Range Validation for Citation Locality (CL) ✅ RESOLVED
+## D-5: Paragraph Range Validation for Citation Locality (CL)
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | N-5 / spec 012 |
 | **Deferred at** | 2026-07-04 |
-| **Resolved at** | 2026-07-05 |
-| **Resolved by** | Memo export feature (spec 021) |
 | **Trigger** | Ponytail — clause paragraph metadata not available upstream |
-| **Status** | ✅ **Resolved** |
+| **Status** | Deferred — `paragraph_count` was NOT added to the `Clause` dataclass. `compute_cg_metrics()` works around this with on-the-fly paragraph counting by splitting clause text on newlines. This counts typographic lines, not semantic paragraphs. Proper paragraph range validation needs `paragraph_count` populated at parse time. |
 
 ### Description
 
@@ -209,12 +207,16 @@ validate against the actual number of paragraphs in the cited clause.
 This means a claim citing "clause 4.3, paragraph 999" passes CL when it
 should fail.
 
-### Resolution
+### Resolution (not yet complete — reverted to deferred)
 
-Citation locality and paragraph range validation are now surfaced in the
-memo export output (spec 021). The CL metric value is displayed per
-citation in the assessment details, showing paragraph range validity in
-all three export formats (Markdown, JSON, DOCX).
+The memo export feature (spec 021) does NOT surface CL metric values.
+`paragraph_count` was never added to the `Clause` dataclass in
+`src/openreview_cli/parsing/models.py`. The workaround in
+`compute_cg_metrics()` calls `len(clause.text.split('\n'))` at runtime,
+which counts output lines rather than semantic paragraphs. Proper
+paragraph range validation requires populating `paragraph_count` during
+the parse phase (PDF/DOCX parsers already detect paragraphs but do not
+expose a count).
 
 ### What would need to change to unblock
 

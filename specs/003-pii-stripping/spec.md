@@ -123,7 +123,7 @@ If the PII detection engine crashes or is unavailable (e.g., Presidio model not 
 
 ### Measurable Outcomes
 
-- **SC-001**: PII detection recall is at least 90% — of actual PII entities in a test corpus of 50 seeded documents, at least 90% are detected and replaced.
+- **SC-001**: PII detection recall is at least 95% — of actual PII entities in a test corpus of 50 seeded documents, at least 95% are detected and replaced.
 - **SC-002**: PII detection precision is at least 95% — of items the system replaces, at least 95% are genuinely PII (not legal terms or standard vocabulary).
 - **SC-003**: False replacement rate is under 5% — legal terms like "Force Majeure", "Indemnification", law firm names used as clause references, and standard contract vocabulary are NOT replaced.
 - **SC-004**: PII stripping of a 50-page document completes in under 3 seconds on the reference machine (8 GB RAM, 2-core CPU, no GPU). This target measures per-document processing time only (after the NLP model is loaded and warm). The one-time model load time is documented separately.
