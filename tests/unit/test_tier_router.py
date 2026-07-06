@@ -256,3 +256,34 @@ class TestPIIUnavailable:
             router.chat("reasoning", [{"role": "user", "content": "my secret text"}])
         msg = str(excinfo.value)
         assert "my secret text" not in msg
+
+
+# ── T040: Memory Profile (POL) ──────────────────────────────────────────────
+
+
+class TestTierRouterMemory:
+    """T040: Assert TierRouter overhead <5 MB peak."""
+
+    @pytest.mark.memory
+    def test_maximum_tier_peak_memory_budget(self) -> None:
+        """T040: TierRouter with Maximum tier must stay under 5 MB peak overhead."""
+        import tracemalloc
+
+        tracemalloc.start()
+        try:
+            _snap_before = tracemalloc.take_snapshot()
+
+            router, gw = _make_router(tier="maximum")
+            gw._config = _config_with_provider("reasoning", "ollama/llama3.1")
+            router.chat("reasoning", [{"role": "user", "content": "Hi"}])
+
+            _snap_after = tracemalloc.take_snapshot()
+            stats = _snap_after.compare_to(_snap_before, "lineno")
+            peak_delta = sum(s.size_diff for s in stats)
+        finally:
+            tracemalloc.stop()
+
+        peak_mb = peak_delta / (1024 * 1024)
+        assert peak_mb < 5, (
+            f"TierRouter.Maximum.chat() memory delta {peak_mb:.2f} MB exceeds 5 MB budget"
+        )

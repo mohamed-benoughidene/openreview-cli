@@ -26,8 +26,8 @@ description: "Task list for Privacy Tier Routing implementation"
 
 **Purpose**: Create skeleton structure and test fixture files that all phases depend on.
 
-- [ ] T001 [P] [SETUP] Create 3 tier config fixture YAMLs at `tests/fixtures/config_tier_maximum.yml`, `tests/fixtures/config_tier_balanced.yml`, `tests/fixtures/config_tier_performance.yml`
-- [ ] T002 [P] [SETUP] Create empty source file stubs at `src/openreview_cli/gateway/tier_router.py`, `src/openreview_cli/gateway/tier_config.py`
+- [X] T001 [P] [SETUP] Create 3 tier config fixture YAMLs at `tests/fixtures/config_tier_maximum.yml`, `tests/fixtures/config_tier_balanced.yml`, `tests/fixtures/config_tier_performance.yml`
+- [X] T002 [P] [SETUP] Create empty source file stubs at `src/openreview_cli/gateway/tier_router.py`, `src/openreview_cli/gateway/tier_config.py`
 
 ---
 
@@ -41,21 +41,21 @@ description: "Task list for Privacy Tier Routing implementation"
 
 ### 🧪 Tests (write FIRST, expect failure)
 
-- [ ] T003 [P] [FND] **Test PrivacyTier enum values, string parsing, case-insensitivity** in `tests/unit/test_tier_config.py`
-- [ ] T004 [P] [FND] **Test TierConfig.from_config()** with valid/missing/invalid values, default-to-Maximum behavior, warning propagation in `tests/unit/test_tier_config.py`
-- [ ] T005 [P] [FND] **Test ProviderLocationClassifier** URL-based classification (localhost, 127.0.0.1, Unix socket, external URL) in `tests/unit/test_tier_router.py`
-- [ ] T006 [P] [FND] **Test PiiEngine.is_available()** readiness check — returns True on success, False on engine failure in `tests/unit/test_pii_engine.py`
-- [ ] T007 [P] [FND] **Test PIIUnavailableError and NoMatchingProviderError** — error formatting, actionable suggestions, no raw text leakage in `tests/unit/test_gateway_errors.py`
+- [X] T003 [P] [FND] **Test PrivacyTier enum values, string parsing, case-insensitivity** in `tests/unit/test_tier_config.py`
+- [X] T004 [P] [FND] **Test TierConfig.from_config()** with valid/missing/invalid values, default-to-Maximum behavior, warning propagation in `tests/unit/test_tier_config.py`
+- [X] T005 [P] [FND] **Test ProviderLocationClassifier** URL-based classification (localhost, 127.0.0.1, Unix socket, external URL) in `tests/unit/test_tier_router.py`
+- [X] T006 [P] [FND] **Test PiiEngine.is_available()** readiness check — returns True on success, False on engine failure in `tests/unit/test_pii_engine.py`
+- [X] T007 [P] [FND] **Test PIIUnavailableError and NoMatchingProviderError** — error formatting, actionable suggestions, no raw text leakage in `tests/unit/test_gateway_errors.py`
 
 ### 🏗️ Implementation
 
-- [ ] T008 [P] [FND] Add `PrivacyTier` enum and `PrivacyTierReport` dataclass (with `progress_banner()`, `report_footer()`) to `src/openreview_cli/gateway/models.py`
-- [ ] T009 [P] [FND] Add `TierRoutingError`, `PIIUnavailableError`, `NoMatchingProviderError` to `src/openreview_cli/gateway/errors.py`
-- [ ] T010 [P] [FND] Implement `TierConfig` dataclass with `from_config()` factory (reads `privacy.tier`, defaults to Maximum, validates) in `src/openreview_cli/gateway/tier_config.py`
-- [ ] T011 [P] [FND] Implement `ProviderLocationClassifier` as a static method on `TierRouter` — `TierRouter.classify_provider(provider_config)` using `urllib.parse.urlparse()` — localhost patterns return LOCAL, all else CLOUD in `src/openreview_cli/gateway/tier_router.py`
-- [ ] T012 [FND] Add `PiiEngine.is_available()` instance method to existing `PiiEngine` class — lightweight `analyze("test")` probe, per-operation cached result. Implementation in `src/openreview_cli/pii/engine.py`.
-- [ ] T013a [FND] Wire gateway exports: add `TierRouter`, `TierConfig`, `PrivacyTier`, `PrivacyTierReport`, `PIIUnavailableError`, `NoMatchingProviderError` to `src/openreview_cli/gateway/__init__.py`
-- [ ] T013b [FND] Wire PII export: add `is_available` to `src/openreview_cli/pii/__init__.py`
+- [X] T008 [P] [FND] Add `PrivacyTier` enum and `PrivacyTierReport` dataclass (with `progress_banner()`, `report_footer()`) to `src/openreview_cli/gateway/models.py`
+- [X] T009 [P] [FND] Add `TierRoutingError`, `PIIUnavailableError`, `NoMatchingProviderError` to `src/openreview_cli/gateway/errors.py`
+- [X] T010 [P] [FND] Implement `TierConfig` dataclass with `from_config()` factory (reads `privacy.tier`, defaults to Maximum, validates) in `src/openreview_cli/gateway/tier_config.py`
+- [X] T011 [P] [FND] Implement `ProviderLocationClassifier` as a static method on `TierRouter` — `TierRouter.classify_provider(provider_config)` using `urllib.parse.urlparse()` — localhost patterns return LOCAL, all else CLOUD in `src/openreview_cli/gateway/tier_router.py`
+- [X] T012 [FND] Add `PiiEngine.is_available()` instance method to existing `PiiEngine` class — lightweight `analyze("test")` probe, per-operation cached result. Implementation in `src/openreview_cli/pii/engine.py`.
+- [X] T013a [FND] Wire gateway exports: add `TierRouter`, `TierConfig`, `PrivacyTier`, `PrivacyTierReport`, `PIIUnavailableError`, `NoMatchingProviderError` to `src/openreview_cli/gateway/__init__.py`
+- [X] T013b [FND] Wire PII export: add `is_available` to `src/openreview_cli/pii/__init__.py`
 
 **Checkpoint**: Foundation ready — enums parse, config loads, providers classify, PII readiness probes, errors render. All 5 foundational tests pass.
 
@@ -69,15 +69,15 @@ description: "Task list for Privacy Tier Routing implementation"
 
 ### 🧪 Tests (write FIRST, expect failure)
 
-- [ ] T014 [P] [US1] **Test Maximum tier rejects cloud provider call** — `router.chat()` with cloud-only config raises `NoMatchingProviderError` with tier-specific message in `tests/unit/test_tier_router.py`
-- [ ] T015 [P] [US1] **Test Maximum tier allows local provider call** — `router.chat()` with local-only config passes through to Gateway in `tests/unit/test_tier_router.py`
-- [ ] T016 [US1] **Test Maximum tier zero external HTTP requests** — integration with mocked providers, assert no HTTP request to non-localhost URL in `tests/integration/test_privacy_tier.py`
+- [X] T014 [P] [US1] **Test Maximum tier rejects cloud provider call** — `router.chat()` with cloud-only config raises `NoMatchingProviderError` with tier-specific message in `tests/unit/test_tier_router.py`
+- [X] T015 [P] [US1] **Test Maximum tier allows local provider call** — `router.chat()` with local-only config passes through to Gateway in `tests/unit/test_tier_router.py`
+- [X] T016 [US1] **Test Maximum tier zero external HTTP requests** — integration with mocked providers, assert no HTTP request to non-localhost URL in `tests/integration/test_privacy_tier.py`
 
 ### 🏗️ Implementation
 
-- [ ] T017 [US1] Implement `TierRouter.__init__(gateway, config)` and `TierRouter.chat()` — filter providers by tier rules, raise `NoMatchingProviderError` if no eligible provider in `src/openreview_cli/gateway/tier_router.py`
-- [ ] T018 [US1] Implement `TierRouter.embed()` — same filtering logic as chat, wraps `Gateway.embed()` in `src/openreview_cli/gateway/tier_router.py`
-- [ ] T019 [US1] Wire `PrivacyTierReport.progress_banner()` into review pipeline output — inject `PrivacyTierReport` into `review/base.py` `ReviewCommand` report object, display banner near start of progress output
+- [X] T017 [US1] Implement `TierRouter.__init__(gateway, config)` and `TierRouter.chat()` — filter providers by tier rules, raise `NoMatchingProviderError` if no eligible provider in `src/openreview_cli/gateway/tier_router.py`
+- [X] T018 [US1] Implement `TierRouter.embed()` — same filtering logic as chat, wraps `Gateway.embed()` in `src/openreview_cli/gateway/tier_router.py`
+- [X] T019 [US1] Wire `PrivacyTierReport.progress_banner()` into review pipeline output — inject `PrivacyTierReport` into `review/base.py` `ReviewCommand` report object, display banner near start of progress output
 
 **Checkpoint**: US1 complete — Maximum tier enforces local-only routing. Tier banner visible. 3 unit tests + 1 integration test pass.
 
@@ -91,13 +91,13 @@ description: "Task list for Privacy Tier Routing implementation"
 
 ### 🧪 Tests (write FIRST, expect failure)
 
-- [ ] T020 [P] [US2] **Test Balanced routes embeddings to local provider** — `router.embed()` with local+cloud config resolves local in `tests/unit/test_tier_router.py`
-- [ ] T021 [P] [US2] **Test Balanced routes LLM to cloud with PII stripped** — `router.chat()` resolves cloud, input is PII-stripped (verify via mock capture), raw PII absent in `tests/unit/test_tier_router.py`
-- [ ] T022 [US2] **Test Balanced tier integration** — full pipeline with mocked providers and seeded PII document, assert embedding=local, LLM=cloud, PII stripped in `tests/integration/test_privacy_tier.py`
+- [X] T020 [P] [US2] **Test Balanced routes embeddings to local provider** — `router.embed()` with local+cloud config resolves local in `tests/unit/test_tier_router.py`
+- [X] T021 [P] [US2] **Test Balanced routes LLM to cloud with PII stripped** — `router.chat()` resolves cloud, input is PII-stripped (verify via mock capture), raw PII absent in `tests/unit/test_tier_router.py`
+- [X] T022 [US2] **Test Balanced tier integration** — full pipeline with mocked providers and seeded PII document, assert embedding=local, LLM=cloud, PII stripped in `tests/integration/test_privacy_tier.py`
 
 ### 🏗️ Implementation
 
-- [ ] T023 [US2] Add Balanced routing logic to `TierRouter.chat()` and `TierRouter.embed()` — LLM → cloud allowed; embedding → local only; PII verification gate before cloud dispatch in `src/openreview_cli/gateway/tier_router.py`
+- [X] T023 [US2] Add Balanced routing logic to `TierRouter.chat()` and `TierRouter.embed()` — LLM → cloud allowed; embedding → local only; PII verification gate before cloud dispatch in `src/openreview_cli/gateway/tier_router.py`
 
 **Checkpoint**: US2 complete — Balanced tier routes by call type. PII verified before cloud egress. 2 unit tests + 1 integration test pass.
 
@@ -111,13 +111,13 @@ description: "Task list for Privacy Tier Routing implementation"
 
 ### 🧪 Tests (write FIRST, expect failure)
 
-- [ ] T024 [P] [US3] **Test Performance routes all calls to cloud** — `router.chat()` and `router.embed()` with cloud config resolve cloud in `tests/unit/test_tier_router.py`
-- [ ] T025 [P] [US3] **Test Performance strips PII before every call** — both embedding and LLM inputs are PII-stripped in `tests/unit/test_tier_router.py`
-- [ ] T026 [US3] **Test Performance tier integration** — all calls cloud, PII stripped, output shows "PERFORMANCE" banner in `tests/integration/test_privacy_tier.py`
+- [X] T024 [P] [US3] **Test Performance routes all calls to cloud** — `router.chat()` and `router.embed()` with cloud config resolve cloud in `tests/unit/test_tier_router.py`
+- [X] T025 [P] [US3] **Test Performance strips PII before every call** — both embedding and LLM inputs are PII-stripped in `tests/unit/test_tier_router.py`
+- [X] T026 [US3] **Test Performance tier integration** — all calls cloud, PII stripped, output shows "PERFORMANCE" banner in `tests/integration/test_privacy_tier.py`
 
 ### 🏗️ Implementation
 
-- [ ] T027 [US3] Add Performance routing logic to `TierRouter.chat()` and `TierRouter.embed()` — all providers allowed (including cloud), PII verification gate before every dispatch in `src/openreview_cli/gateway/tier_router.py`
+- [X] T027 [US3] Add Performance routing logic to `TierRouter.chat()` and `TierRouter.embed()` — all providers allowed (including cloud), PII verification gate before every dispatch in `src/openreview_cli/gateway/tier_router.py`
 
 **Checkpoint**: US3 complete — Performance tier routes all to cloud. PII stripped before all calls. 2 unit tests + 1 integration test pass.
 
@@ -131,15 +131,15 @@ description: "Task list for Privacy Tier Routing implementation"
 
 ### 🧪 Tests (write FIRST, expect failure)
 
-- [ ] T028 [P] [US4] **Test PIIUnavailableError raised when engine fails on Balanced** — `router.chat()` with PII unavailable raises error, no cloud call dispatched in `tests/unit/test_tier_router.py`
-- [ ] T029 [P] [US4] **Test Maximum tier unaffected by PII failure** — `router.chat()` with PII unavailable on Maximum tier proceeds normally in `tests/unit/test_tier_router.py`
-- [ ] T030 [P] [US4] **Test PII failure error contains actionable suggestions** — error message includes "PII", ≥2 actionable suggestions, no document text in `tests/unit/test_tier_router.py`
-- [ ] T031 [US4] **Test PII failure integration** — mock PII unavailable across Balanced and Performance tiers, verify fail-closed, Maximum unaffected in `tests/integration/test_privacy_tier_pii.py`
+- [X] T028 [P] [US4] **Test PIIUnavailableError raised when engine fails on Balanced** — `router.chat()` with PII unavailable raises error, no cloud call dispatched in `tests/unit/test_tier_router.py`
+- [X] T029 [P] [US4] **Test Maximum tier unaffected by PII failure** — `router.chat()` with PII unavailable on Maximum tier proceeds normally in `tests/unit/test_tier_router.py`
+- [X] T030 [P] [US4] **Test PII failure error contains actionable suggestions** — error message includes "PII", ≥2 actionable suggestions, no document text in `tests/unit/test_tier_router.py`
+- [X] T031 [US4] **Test PII failure integration** — mock PII unavailable across Balanced and Performance tiers, verify fail-closed, Maximum unaffected in `tests/integration/test_privacy_tier_pii.py`
 
 ### 🏗️ Implementation
 
-- [ ] T032 [US4] Add PII verification gate before cloud dispatch — call `PiiEngine.is_available()` (added to `pii/engine.py` in T012), raise `PIIUnavailableError` if unavailable in `src/openreview_cli/gateway/tier_router.py`
-- [ ] T033 [US4] Build actionable error messages for `PIIUnavailableError` — include 3 suggestions (switch to Maximum, fix PII engine, use --no-pii with caution) in `src/openreview_cli/gateway/errors.py`
+- [X] T032 [US4] Add PII verification gate before cloud dispatch — call `PiiEngine.is_available()` (added to `pii/engine.py` in T012), raise `PIIUnavailableError` if unavailable in `src/openreview_cli/gateway/tier_router.py`
+- [X] T033 [US4] Build actionable error messages for `PIIUnavailableError` — include 3 suggestions (switch to Maximum, fix PII engine, use --no-pii with caution) in `src/openreview_cli/gateway/errors.py`
 
 **Checkpoint**: US4 complete — PII failure blocks cloud calls with actionable error. Maximum tier still works. 3 unit tests + 1 integration test pass.
 
@@ -153,14 +153,14 @@ description: "Task list for Privacy Tier Routing implementation"
 
 ### 🧪 Tests (write FIRST, expect failure)
 
-- [ ] T034 [P] [US5] **Test TierConfig captured once at construction** — `TierConfig` loaded at init, does not re-read config on repeated calls in `tests/unit/test_tier_config.py`
-- [ ] T035 [US5] **Test config change mid-operation does not affect running op** — integration test with temp config, change tier mid-mock-operation, assert op uses original tier in `tests/integration/test_privacy_tier.py`
-- [ ] T036 [US5] **Test subsequent operation picks up new tier** — after config change, next `TierConfig.from_config()` returns new tier in `tests/unit/test_tier_config.py`
+- [X] T034 [P] [US5] **Test TierConfig captured once at construction** — `TierConfig` loaded at init, does not re-read config on repeated calls in `tests/unit/test_tier_config.py`
+- [X] T035 [US5] **Test config change mid-operation does not affect running op** — integration test with temp config, change tier mid-mock-operation, assert op uses original tier in `tests/integration/test_privacy_tier.py`
+- [X] T036 [US5] **Test subsequent operation picks up new tier** — after config change, next `TierConfig.from_config()` returns new tier in `tests/unit/test_tier_config.py`
 
 ### 🏗️ Implementation
 
-- [ ] T037 [US5] Ensure `TierConfig` is constructed once at operation start and stored in `TierRouter` — no re-read of config during operation lifetime in `src/openreview_cli/gateway/tier_router.py`
-- [ ] T038 [US5] Wire `PrivacyTierReport` into final pipeline report — inject `PrivacyTierReport.report_footer()` into `review/report.py` `ReviewReport` object, show tier summary in output footer for all tiers
+- [X] T037 [US5] Ensure `TierConfig` is constructed once at operation start and stored in `TierRouter` — no re-read of config during operation lifetime in `src/openreview_cli/gateway/tier_router.py`
+- [X] T038 [US5] Wire `PrivacyTierReport` into final pipeline report — inject `PrivacyTierReport.report_footer()` into `review/report.py` `ReviewReport` object, show tier summary in output footer for all tiers
 
 **Checkpoint**: US5 complete — tier stable per operation. Changes deferred to next invocation. 2 unit tests + 1 integration test pass.
 
@@ -170,11 +170,11 @@ description: "Task list for Privacy Tier Routing implementation"
 
 **Purpose**: Validation, hardening, and verification across all user stories.
 
-- [ ] T039 [P] [POL] Run quickstart.md validation scenarios — execute all 6 validation scenarios end-to-end
-- [ ] T040 [P] [POL] Memory profile test — assert TierRouter overhead <5 MB peak (<100 MB total, NLP model exempt) in `tests/integration/test_privacy_tier.py` or `tests/unit/test_tier_router.py` via `memory_tracker` fixture
-- [ ] T041 [P] [POL] Run full pre-commit suite — `ruff check --fix`, `ruff format`, `mypy --strict`, `pytest -m "not slow and not integration"`
-- [ ] T042 [P] [POL] Update module docstrings for all new files (`tier_router.py`, `tier_config.py`) and modified files (`models.py`, `errors.py`, `pii/engine.py`)
-- [ ] T043 [POL] Verify `PrivacyTierReport` output in final report for all 3 tiers — confirm banner displays tier name + description, footer includes tier summary + entity count
+- [X] T039 [P] [POL] Run quickstart.md validation scenarios — execute all 6 validation scenarios end-to-end
+- [X] T040 [P] [POL] Memory profile test — assert TierRouter overhead <5 MB peak (<100 MB total, NLP model exempt) in `tests/integration/test_privacy_tier.py` or `tests/unit/test_tier_router.py` via `memory_tracker` fixture
+- [X] T041 [P] [POL] Run full pre-commit suite — `ruff check --fix`, `ruff format`, `mypy --strict`, `pytest -m "not slow and not integration"`
+- [X] T042 [P] [POL] Update module docstrings for all new files (`tier_router.py`, `tier_config.py`) and modified files (`models.py`, `errors.py`, `pii/engine.py`)
+- [X] T043 [POL] Verify `PrivacyTierReport` output in final report for all 3 tiers — confirm banner displays tier name + description, footer includes tier summary + entity count
 
 ---
 
@@ -293,34 +293,36 @@ If the Model Registry schema is revised independently:
 
 **Purpose**: Close gaps found during speckit.converge assessment (2026-07-05). Core enforcement is implemented and passing; these are the remaining items for complete spec conformance.
 
-**GAP-01**: `PrivacyTierReport` dataclass does not exist anywhere in the codebase. Required by spec §8 Key Entities (PrivacyTierReport) with `progress_banner()` and `report_footer()` methods. This blocks tier visibility in user-facing output (FR-08, SC-05, T019, T038, T043).
+**GAP-01 [RESOLVED]**: `PrivacyTierReport` dataclass exists in `gateway/models.py` with `progress_banner()` and `report_footer()`. Tier visibility in user-facing output fully implemented (FR-08, SC-05, T019, T038, T043).
 
-**GAP-02**: `PrivacyTier` enum is not re-exported from `gateway/__init__.py` (T013a partial). Callers cannot `from openreview_cli.gateway import PrivacyTier`.
+**GAP-02 [RESOLVED]**: `PrivacyTier` and `PrivacyTierReport` both exported from `gateway/__init__.py`. Callers can `from openreview_cli.gateway import PrivacyTier`.
 
-**GAP-03**: Review pipeline wiring (T019, T038) — `PrivacyTierReport.progress_banner()` and `PrivacyTierReport.report_footer()` not integrated into `review/base.py` or `review/report.py`. Depends on GAP-01.
+**GAP-03 [RESOLVED]**: `PrivacyTierReport.progress_banner()` wired into `review/base.py` (line 45). `report_footer()` wired into `review/report.py` via `privacy_footer` parameter (lines 69-71, 159-160).
+
+**GAP-04 [RESOLVED]**: T040 (memory profile test) implemented — `TestTierRouterMemory.test_maximum_tier_peak_memory_budget` in `tests/unit/test_tier_router.py` uses `tracemalloc` to assert TierRouter overhead <5 MB peak.
 
 ### 🧪 Tests (write FIRST)
 
-- [ ] T044 [P] [CVG] **Test PrivacyTierReport.progress_banner()** — returns tier name + description for each tier, includes "local only" for Maximum, "PII stripped" for Balanced/Performance in `tests/unit/test_tier_config.py` or new `tests/unit/test_tier_report.py`
-- [ ] T045 [P] [CVG] **Test PrivacyTierReport.report_footer()** — returns tier summary + cloud call count + PII entity count for each tier in `tests/unit/test_tier_config.py` or new `tests/unit/test_tier_report.py`
-- [ ] T046 [P] [CVG] **Test PrivacyTier exported from gateway/__init__.py** — `from openreview_cli.gateway import PrivacyTier` resolves, values match `PrivacyTier.MAXIMUM == "maximum"` in `tests/unit/test_tier_config.py`
-- [ ] T047 [CVG] **Test review pipeline displays tier banner** — capture progress output from `ReviewCommand` (mocked) on each tier, assert banner appears with tier name in `tests/integration/test_privacy_tier.py` or new `tests/integration/test_tier_visibility.py`
-- [ ] T048 [CVG] **Test final report includes tier footer** — capture `ReviewReport` output for each tier, assert footer includes tier summary in `tests/integration/test_privacy_tier.py` or new `tests/integration/test_tier_visibility.py`
+- [X] T044 [P] [CVG] **Test PrivacyTierReport.progress_banner()** — returns tier name + description for each tier, includes "local only" for Maximum, "PII stripped" for Balanced/Performance in `tests/unit/test_tier_config.py` or new `tests/unit/test_tier_report.py`
+- [X] T045 [P] [CVG] **Test PrivacyTierReport.report_footer()** — returns tier summary + cloud call count + PII entity count for each tier in `tests/unit/test_tier_config.py` or new `tests/unit/test_tier_report.py`
+- [X] T046 [P] [CVG] **Test PrivacyTier exported from gateway/__init__.py** — `from openreview_cli.gateway import PrivacyTier` resolves, values match `PrivacyTier.MAXIMUM == "maximum"` in `tests/unit/test_tier_config.py`
+- [X] T047 [CVG] **Test review pipeline displays tier banner** — capture progress output from `ReviewCommand` (mocked) on each tier, assert banner appears with tier name in `tests/integration/test_privacy_tier.py` or new `tests/integration/test_tier_visibility.py`
+- [X] T048 [CVG] **Test final report includes tier footer** — capture `ReviewReport` output for each tier, assert footer includes tier summary in `tests/integration/test_privacy_tier.py` or new `tests/integration/test_tier_visibility.py`
 
 ### 🏗️ Implementation
 
-- [ ] T049 [P] [CVG] Add `PrivacyTierReport` dataclass to `src/openreview_cli/gateway/models.py` with:
+- [X] T049 [P] [CVG] Add `PrivacyTierReport` dataclass to `src/openreview_cli/gateway/models.py` with:
   - `tier: str` — the tier name
   - `cloud_calls_made: int = 0` — count of cloud calls dispatched
   - `pii_entities_stripped: int = 0` — count of PII entities redacted
   - `progress_banner() -> str` — returns one-line banner e.g. "Privacy tier: MAXIMUM — all inference local"
   - `report_footer() -> str` — returns multi-line footer with tier summary, e.g. "Processed under Maximum privacy tier. No data was sent to external services."
   - Banner/footer messages match spec examples in §2 Scenarios 1-3
-- [ ] T050 [CVG] Export `PrivacyTierReport` and `PrivacyTier` from `src/openreview_cli/gateway/__init__.py` — add to imports and `__all__`
-- [ ] T051 [CVG] Wire `PrivacyTierReport.progress_banner()` into `src/openreview_cli/review/base.py` — inject into `ReviewCommand` run flow, display near start of progress output
-- [ ] T052 [CVG] Wire `PrivacyTierReport.report_footer()` into `src/openreview_cli/review/report.py` — inject into `ReviewReport` output, show tier summary in footer for all tiers
+- [X] T050 [CVG] Export `PrivacyTierReport` and `PrivacyTier` from `src/openreview_cli/gateway/__init__.py` — add to imports and `__all__`
+- [X] T051 [CVG] Wire `PrivacyTierReport.progress_banner()` into `src/openreview_cli/review/base.py` — inject into `ReviewCommand` run flow, display near start of progress output
+- [X] T052 [CVG] Wire `PrivacyTierReport.report_footer()` into `src/openreview_cli/review/report.py` — inject into `ReviewReport` output, show tier summary in footer for all tiers
 
-**Convergence Checkpoint**: All 3 gaps closed. FR-01 through FR-09 fully implemented. SC-01 through SC-07 verifiable. 5 new tests (T044-T048) + 4 new implementation tasks (T049-T052) pass. Run `uv run pre-commit run --all-files` before final commit.
+**Convergence Checkpoint**: All 4 gaps closed (GAP-01/02/03/04 RESOLVED). FR-01 through FR-09 fully implemented. SC-01 through SC-07 verifiable. All 53 tasks completed — 5 convergence tests (T044-T048) + 4 convergence implementation tasks (T049-T052) + memory profile (T040) all passing. Run `uv run pre-commit run --all-files` before final commit.
 
 ## Task Summary (Updated)
 
@@ -333,11 +335,11 @@ If the Model Registry schema is revised independently:
 | Phase 5: US3 Performance | T024-T027 | 3 | 1 | P1 |
 | Phase 6: US4 PII Failure | T028-T033 | 4 | 2 | P2 |
 | Phase 7: US5 Stability | T034-T038 | 3 | 2 | P3 |
-| Phase 8: Polish | T039-T043 | 0 | 0+5 | Final |
-| **Phase 9: Convergence** | **T044-T052** | **5** | **4** | **Blocking** |
-| **Total** | **T001-T052** | **26** | **22+5** | |
+| Phase 8: Polish | T039-T043 | 1 | 0+5 | Final |
+| **Phase 9: Convergence** | **T044-T052** | **5** | **4** | **Blocking — ALL resolved** |
+| **Total** | **T001-T052** | **27** | **22+5** | **53/53 [X], 0 [ ]** |
 
-**Total**: 53 tasks (26 test tasks + 22 implementation tasks + 5 polish tasks)
+**Total**: 53 tasks (27 test tasks + 22 implementation tasks + 4 polish tasks)
 
 **Updated 2026-07-05**: Convergence phase appended after codebase assessment. Core routing enforcement (63 tests) already passing. Gaps: PrivacyTierReport dataclass, tier visibility in pipeline output, missed exports.
 
