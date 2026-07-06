@@ -6,6 +6,7 @@ help output, format selection, error propagation, and dispatch.
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -140,6 +141,7 @@ class TestCliRegistration:
     def test_compare_help_shows_all_flags(self, runner: CliRunner) -> None:
         result = runner.invoke(app, ["precheck", "compare", "--help"])
         assert result.exit_code == 0
+        output = re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", result.stdout)
         for flag in (
             "--align-only",
             "--format",
@@ -154,7 +156,7 @@ class TestCliRegistration:
             "--extraction-model",
             "--qa-model",
         ):
-            assert flag in result.stdout, f"{flag} missing from compare --help"
+            assert flag in output, f"{flag} missing from compare --help"
 
     def test_compare_help_accuracy_disclosure(self, runner: CliRunner) -> None:
         result = runner.invoke(app, ["precheck", "compare", "--help"])
