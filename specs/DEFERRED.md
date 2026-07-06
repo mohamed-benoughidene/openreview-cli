@@ -110,14 +110,18 @@ CLI flags. See `tests/integration/test_bilateral_flags.py` and
 
 ---
 
-## D-3: Playbook Version Diff
+## D-3: Playbook Version Diff ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | playbook versioning feature / spec 017 |
 | **Deferred at** | 2026-07-04 |
+| **Resolved at** | 2026-07-06 |
+| **Resolved by** | Spec 024 (playbook management) — `playbook diff` command shipped |
 | **Trigger** | Explicitly out of scope (append-only storage was the goal) |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** |
+
+**Status:** ✅ Resolved — `playbook diff` implemented in spec 024-playbook-management.
 
 ### Description
 
@@ -945,14 +949,18 @@ future integration with a suggestion mechanism.
 
 ---
 
-## D-21: Playbook Management (Edit, Delete, Rollback)
+## D-21: Playbook Management (Edit, Delete, Rollback) ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | spec 017 — playbook versioning |
 | **Deferred at** | 2026-07-04 |
+| **Resolved at** | 2026-07-06 |
+| **Resolved by** | Spec 024 (playbook management) — `playbook set-current`, `playbook delete`, `playbook history` shipped |
 | **Trigger** | Explicitly out of scope — append-only model is intentional for audit integrity |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** |
+
+**Status:** ✅ Resolved — `playbook set-current`, `playbook delete`, `playbook history` implemented in spec 024-playbook-management.
 
 ### Description
 
@@ -2267,3 +2275,64 @@ resolution, conflict detection, and access control.
 ### Blueprint references
 
 Spec 024 §"Explicitly excluded": "Playbook sharing or network export".
+
+---
+
+## D-50: Tier Change Detection Notification
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 020 — privacy tier routing, US5 extension hook |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Dropped from MVP per CL-05 resolution — tier change diff notification is non-essential |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+When a user changes `privacy.tier` in `config.yml` between operations, there is no notification that the tier has changed. The tier is simply applied silently on the next invocation. A diff notification would:
+
+1. Store the last-used tier in a state file at `~/.config/openreview/.last_tier`
+2. On next operation, compare the current tier to the stored value
+3. Display "Tier changed from {old} to {new}" if different
+4. Update the state file after displaying the notification
+
+This is purely a user-experience improvement — it does not affect correctness or security.
+
+### What would need to change to unblock
+
+1. Create a `TierTracker` class in `src/openreview_cli/gateway/tier_tracker.py` that reads/writes the last-tier state file
+2. Wire the tracker into the `TierRouter` init or the pipeline startup flow
+3. Add unit tests for tracker read/write/compare logic
+4. Add integration test verifying the notification appears after a config change
+
+### Blueprint references
+
+Spec 020 tasks.md §Extension Hooks — "US5 Tier Change Detection (Deferred)". C-18a (AI Gateway tier routing).
+
+---
+
+## D-51: Model Registry Local Flag Enhancement
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 020 — privacy tier routing, extension hook |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Dormant hook — URL-based provider classification sufficient for MVP |
+| **Status** | Unblocked — but dormant until Model Registry schema is revised independently |
+
+### Description
+
+`TierRouter.classify_provider()` determines LOCAL vs CLOUD by inspecting provider URLs via `urllib.parse.urlparse()` — anything pointing to localhost, 127.0.0.1, or Unix sockets is LOCAL; all else is CLOUD. This works for all current providers but has a gap: a provider could be served locally on a non-localhost address (e.g., a LAN-based Ollama instance) and would be misclassified as CLOUD.
+
+A future enhancement would add an optional `local: bool` field to provider model definitions in the Model Registry. When present, `TierRouter.classify_provider()` checks this flag BEFORE fallback to URL inspection. This gives users explicit control over provider locality classification.
+
+### What would need to change to unblock
+
+1. Add optional `local: bool` field to the `ProviderModel` dataclass or equivalent in `gateway/models.py`
+2. Update `TierRouter.classify_provider()` to check the registry flag before URL parsing
+3. Update the model registry schema documentation
+4. This hook is dormant — do not implement unless the Model Registry schema is revised for other reasons
+
+### Blueprint references
+
+Spec 020 tasks.md §Extension Hooks — "Model Registry Local Flag Enhancement (Deferred)". C-18a (AI Gateway tier routing), `gateway/tier_router.py` `ProviderLocationClassifier`.
