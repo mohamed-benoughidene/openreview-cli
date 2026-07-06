@@ -154,7 +154,7 @@ class TestCliRegistration:
             "--extraction-model",
             "--qa-model",
         ):
-            assert flag in result.output, f"{flag} missing from compare --help"
+            assert flag in result.stdout, f"{flag} missing from compare --help"
 
     def test_compare_help_accuracy_disclosure(self, runner: CliRunner) -> None:
         result = runner.invoke(app, ["precheck", "compare", "--help"])
