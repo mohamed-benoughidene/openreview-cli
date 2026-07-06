@@ -12,12 +12,7 @@ if TYPE_CHECKING:
     from openreview_cli.grounding.models import CGMetrics, GroundingResult
     from openreview_cli.parsing.models import Clause, Document
 
-
-def _count_paragraphs(text: str) -> int:
-    """Count paragraphs in a clause text by splitting on double newlines."""
-    if not text.strip():
-        return 1
-    return max(1, len([p for p in text.split("\n\n") if p.strip()]))
+from openreview_cli.parsing.clause_detector import _count_paragraphs
 
 
 def _compute_cp(
@@ -116,7 +111,10 @@ def compute_cg_metrics(
     if source_clauses:
         clause_exists = {c.id for c in source_clauses}
         clause_text_map = {c.id: c.text for c in source_clauses}
-        clause_paragraph_count = {c.id: _count_paragraphs(c.text) for c in source_clauses}
+        clause_paragraph_count = {
+            c.id: c.paragraph_count if c.paragraph_count is not None else _count_paragraphs(c.text)
+            for c in source_clauses
+        }
 
     cp_valid = _compute_cp(grounded, clause_exists)
     cr_valid = _compute_cr(grounded, clause_text_map, claim_text_by_index, n_grounded)

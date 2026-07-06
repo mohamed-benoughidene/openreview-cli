@@ -27,6 +27,7 @@ class Clause:
     source_page: int | None
     source_paragraph: int | None
     source_span: tuple[int, int] | None
+    paragraph_count: int | None = None
 
     def __post_init__(self) -> None:
         if not self.id:

@@ -125,6 +125,7 @@ class CGReport:
             # Lenient mode: keep all but populate grounding fields
             pass
 
+        report.cg_metrics = self.metrics
         return report
 
 

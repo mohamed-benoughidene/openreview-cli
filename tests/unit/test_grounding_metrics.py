@@ -288,6 +288,36 @@ class TestCGMetrics:
         metrics = compute_cg_metrics(verdicts, source_doc, source_clauses=source_clauses)
         assert metrics.citation_locality == 1.0
 
+    def test_cl_uses_paragraph_count_field_when_set(self, source_doc: MagicMock) -> None:
+        """CL uses paragraph_count field when set on Clause, not _count_paragraphs fallback."""
+        clauses = [
+            Clause(
+                id="1.0",
+                title="Custom",
+                text="One\n\nTwo\n\nThree\n\nFour",
+                level=1,
+                parent_id=None,
+                source_page=1,
+                source_paragraph=None,
+                source_span=None,
+                paragraph_count=2,  # explicitly fewer than actual text paragraphs
+            ),
+        ]
+        # 4 actual paragraphs (split by \n\n) but paragraph_count=2 → only indices 0,1 valid
+        verdicts = [
+            _make_verdict(0, GroundingVerdict.GROUNDED, clause_id="1.0", paragraph_index=1),
+            GroundingResult(
+                claim_index=1,
+                verdict=GroundingVerdict.GROUNDED,
+                provenances=[
+                    CitationProvenance(clause_id="1.0", paragraph_index=3, confidence=0.9)
+                ],
+            ),
+        ]
+        metrics = compute_cg_metrics(verdicts, source_doc, source_clauses=clauses)
+        # index 1 < 2 → valid. index 3 >= 2 → invalid. 1/2 = 0.5
+        assert metrics.citation_locality == 0.5
+
     def test_all_metrics_together(self, source_doc: MagicMock) -> None:
         """Mixed corpus: CP=1.0, CR=1.0, CL=0.75 (fallback: no source_clauses)."""
         verdicts = [

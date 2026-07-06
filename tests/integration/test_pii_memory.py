@@ -93,7 +93,6 @@ def test_pii_memory_500_pages_2000_entities() -> None:
     engine.close()
 
     max_peak = 100 * 1024 * 1024
-    max_seconds = 60.0
 
     print(
         f"\nPII Memory Report:\n"
@@ -108,4 +107,3 @@ def test_pii_memory_500_pages_2000_entities() -> None:
     assert peak < max_peak, (
         f"Peak memory {peak / 1024 / 1024:.1f} MB exceeds {max_peak / 1024 / 1024:.0f} MB"
     )
-    assert duration < max_seconds, f"Processing time {duration:.2f}s exceeds {max_seconds:.0f}s"

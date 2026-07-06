@@ -24,6 +24,8 @@ def _make_memo_report() -> MemoReport:
         matches=2,
         differences=2,
         confidence_avg=0.76,
+        citation_relevance=0.88,
+        citation_locality=0.95,
     )
     clauses = [
         MemoClause(
@@ -107,6 +109,14 @@ class TestRenderMarkdown:
         assert "✅" in output
         assert "⚠️" in output
         assert "❌" in output
+
+    def test_contains_citation_metrics(self) -> None:
+        memo = _make_memo_report()
+        output = render_markdown(memo)
+        assert "Citation Relevance" in output
+        assert "0.88" in output
+        assert "Citation Locality" in output
+        assert "0.95" in output
 
     def test_contains_confidence_bars(self) -> None:
         memo = _make_memo_report()
@@ -209,6 +219,19 @@ class TestRenderJson:
         assert clause["id"] == "c1"
         assert clause["color"] == "green"
 
+    def test_json_contains_citation_metrics(self) -> None:
+        memo = _make_memo_report()
+        output = render_json(memo)
+        data = json.loads(output)
+        overall = data["overall"]
+        assert overall["citation_relevance"] == 0.88
+        assert overall["citation_locality"] == 0.95
+        # No CR/CL at per-clause level
+        clauses = data["clauses"]
+        for c in clauses:
+            assert "citation_relevance" not in c
+            assert "citation_locality" not in c
+
     def test_memo_version_value(self) -> None:
         memo = _make_memo_report()
         output = render_json(memo)
@@ -264,3 +287,17 @@ class TestRenderDocx:
         memo = _make_memo_report()
         doc = render_docx(memo)
         assert len(doc.paragraphs) > 0
+
+    def test_docx_contains_citation_relevance(self) -> None:
+        memo = _make_memo_report()
+        doc = render_docx(memo)
+        texts = [p.text for p in doc.paragraphs]
+        assert any("Citation Relevance" in t for t in texts)
+        assert any("0.88" in t for t in texts)
+
+    def test_docx_contains_citation_locality(self) -> None:
+        memo = _make_memo_report()
+        doc = render_docx(memo)
+        texts = [p.text for p in doc.paragraphs]
+        assert any("Citation Locality" in t for t in texts)
+        assert any("0.95" in t for t in texts)

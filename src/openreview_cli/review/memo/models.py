@@ -40,6 +40,8 @@ class MemoSummary:
     matches: int
     differences: int
     confidence_avg: float
+    citation_relevance: float | None = None
+    citation_locality: float | None = None
 
 
 @dataclass
