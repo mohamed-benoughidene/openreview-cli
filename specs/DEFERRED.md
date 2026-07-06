@@ -2336,3 +2336,427 @@ A future enhancement would add an optional `local: bool` field to provider model
 ### Blueprint references
 
 Spec 020 tasks.md §Extension Hooks — "Model Registry Local Flag Enhancement (Deferred)". C-18a (AI Gateway tier routing), `gateway/tier_router.py` `ProviderLocationClassifier`.
+
+---
+
+## D-52: Non-English Contract Support
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 025 (contract graph modeling) — assumptions, risk register |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Explicitly out of scope for v1 — cross-references must follow English legal conventions |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+Cross-reference detection regex patterns only match English legal phrasing ("Section X.Y", "as defined in Section X.Y", "pursuant to Section X.Y"). Definition detection patterns assume quoted terms or capitalised phrases followed by English keywords ("means", "shall mean", "refers to"). Non-English contracts using different convention patterns (e.g., "Artikel X.Y" in German, "Article X.Y" in French) are not detected.
+
+Cross-jurisdiction support is also deferred — US convention is the v1 target. UK/EU contracts use more narrative style with fewer explicit cross-references and definitions in separate schedules. Civil law jurisdictions (France, Germany) use article numbering with fewer explicit definitions in the text body.
+
+### What would need to change to unblock
+
+1. Add locale-specific regex pattern sets to `CrossReferenceDetector` and `DefinitionDetector`
+2. Add a `--locale` or `--jurisdiction` CLI flag to select pattern set
+3. Document the supported jurisdictions and pattern conventions
+4. Add integration tests with non-English contract fixtures
+5. Future spec may add jurisdiction-specific detector profiles as a dedicated feature
+
+### Spec references
+
+Spec 025 spec.md §Assumptions (line 283): "Non-English contracts are out of scope for v1."
+Spec 025 research.md §6 (Cross-Jurisdiction Validation Gap): "Cross-jurisdiction support is deferred; a future spec may add jurisdiction-specific detector profiles."
+Spec 025 plan.md risk register (line 235): "Non-English contract cross-references not detected — explicitly out of scope for v1."
+
+### Future features (not deferred — natural next steps)
+
+- **Language-agnostic cross-reference detection**: Move beyond regex to lightweight syntactic patterns that work across languages (e.g., any capitalised numbered reference regardless of surrounding words).
+- **Jurisdiction-aware health scoring**: Adjust health score weights or metrics based on jurisdiction (e.g., UK contracts may have different expected orphan ratios).
+- **Auto-detection of contract language/jurisdiction**: Infer the locale from the text (using Neri or similar lightweight classifier) and select the appropriate pattern set automatically.
+
+---
+
+## D-53: ML-Based Cross-Reference Detection
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 025 (contract graph modeling) — explicitly excluded, deferred to future spec |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Spec boundary — v1 uses regex only; ML detection deferred to a future spec |
+| **Status** | Unblocked — no constitutional conflict, but needs a dedicated spec for ML integration |
+
+### Description
+
+Current cross-reference detection uses hardcoded regex patterns (`CrossReferenceDetector`). These patterns catch explicit references like "Section 3.2" and "as defined in Section 3.2" but miss implicit or context-dependent cross-references such as "the foregoing definition", "the aforementioned clause", or references that span multiple sentences or use synonyms.
+
+ML-based detection would train or fine-tune a model to classify clause pairs as "cross-referenced" or "not cross-referenced" based on their text and context, capturing references that the regex patterns miss.
+
+### What would need to change to unblock
+
+1. Design an ML detection approach (spaCy sentence similarity, fine-tuned Legal-BERT classifier, or cross-encoder reranking)
+2. Create a labelled dataset of cross-reference pairs from real contracts for training/evaluation
+3. Build the ML detector module alongside the existing regex-based detector (not as a replacement — the ML detector adds coverage, it does not remove the regex baseline)
+4. Wire the ML detector into `ClauseHierarchyBuilder` as an optional second pass after regex detection
+5. Add a `--detector regex|ml|hybrid` CLI flag for the `graph build` command
+6. Measure recall improvement against the regex baseline on a test corpus
+7. Ensure ML model fits within the 100 MB memory budget or can be loaded/unloaded as needed
+
+### Spec references
+
+Spec 025 spec.md §Explicitly excluded (line 326): "ML-based cross-reference detection (deferred to future spec)."
+Spec 025 plan.md §Deferred Tasks (line 260): "ML-based cross-reference detection (deferred to future spec)."
+Spec 025 spec.md §Scope Boundaries (line 317): "Heuristic-only metric computation (no ML)."
+
+### Future features (not deferred — natural next steps)
+
+- **Hybrid detection mode**: Run regex first (fast, high precision), then ML on remaining unmatched clauses (slower, higher recall). Combine results.
+- **Cross-reference confidence scores**: Surface ML confidence alongside each cross-reference edge in the graph output so users can filter by confidence.
+- **Active learning loop**: When users manually add cross-references via a future edit feature, feed those corrections back as training data.
+
+---
+
+## D-54: Graph Query Capability (Beyond Basic View)
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 025 (contract graph modeling) — research.md trade-off |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Ponytail — view command sufficient for v1 inspection needs |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+The only inspection tool for the contract graph is the `openreview graph view` command, which renders the entire clause hierarchy as an indented ASCII tree. There is no way to query the graph: "find all clauses that reference Section 4", "show me clauses that define a term used in Section 7.2", or "list all orphan clauses".
+
+Advanced querying would provide a structured way to search, filter, and navigate the graph based on node metadata, edge types, or graph-traversal paths.
+
+### What would need to change to unblock
+
+1. Define a query language or filter syntax (simple key=value filters, or a mini-DSL for graph traversal)
+2. Add a `openreview graph query <graph_path> <expression>` CLI subcommand
+3. Support filtering by: edge type, node label pattern, node level, metadata fields, depth from root
+4. Support traversal queries: "all nodes reachable from node X via cross_ref edges", "shortest path between node X and node Y"
+5. Add output formatting: filtered tree, table, or JSON list
+6. Add integration tests for query scenarios
+
+### Spec references
+
+Spec 025 research.md §4 (line 93): "No query capability... Advanced querying is deferred."
+Spec 025 spec.md §Scope Boundaries: "Interactive graph exploration" explicitly excluded.
+
+### Future features (not deferred — natural next steps)
+
+- **Graph search by text**: Search node text content alongside graph structure — "find all clauses mentioning 'indemnification' AND referencing Section 5."
+- **Query result highlighting**: In view mode, highlight the matched nodes in the tree so the user sees context.
+- **Saved queries**: Persist named queries in config or a queries file for re-use across contracts.
+
+---
+
+## D-55: Formal Health Score Validation Study
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 025 (contract graph modeling) — research.md |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Explicitly out of scope for v1 — no published benchmark or labelled dataset exists |
+| **Status** | Unblocked — requires a labelled dataset of contracts with expert-assigned quality scores |
+
+### Description
+
+The 0-100 health score formula (density, max_depth, orphan_ratio, broken_ref_count, definition_coverage with configurable weights) is a novel heuristic proposal. It cannot be calibrated against external ground truth because no published benchmark or labelled dataset of contract quality scores exists.
+
+Current validation relies on:
+- Sanity checks (perfect graph → score 100, pathological graph → score 0)
+- User feedback
+- Internal consistency testing
+
+A formal validation study would require a labelled dataset of contracts with expert-assigned structural quality scores, against which the formula can be calibrated via linear regression or other supervised methods.
+
+### What would need to change to unblock
+
+1. Curate or commission a labelled dataset of contracts with expert quality scores (ideally 100+ contracts across multiple domains)
+2. Run the health score formula on each contract
+3. Compare heuristic scores against expert scores (correlation, MAE, RMSE)
+4. If correlation is poor, calibrate the formula via regression against the labelled data
+5. Publish the validation results in project documentation so users have confidence in the score
+6. Optionally, add a `--calibrate` mode that takes labelled data and outputs optimised weights
+
+### Spec references
+
+Spec 025 research.md §5 (line 109): "A formal validation study would require a labelled dataset of contracts with expert-assigned quality scores. This is out of scope for v1."
+Spec 025 plan.md risk register (line 233): "Health score weights not validated empirically."
+
+### Future features (not deferred — natural next steps)
+
+- **Domain-specific health profiles**: Different contract types (NDA, employment, lease) may have different ideal weight profiles — calibrate per domain.
+- **Health score over time**: Track health score across contract versions to see if structural quality is improving or degrading.
+- **Health score explanation**: Show which factor most penalised the score: "Your contract scored 72/100. Main penalty: broken cross-references (3 broken refs)."
+
+---
+
+## D-56: Multi-Contract Graph Comparison
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 025 (contract graph modeling) — explicitly excluded |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Spec boundary — single-contract analysis only for v1 |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+All graph commands (`build`, `metrics`, `health`, `view`) operate on a single contract at a time. There is no way to compare the clause structure of two or more contracts — for example, to see how two versions of an NDA differ in their clause hierarchy, or to compare the structural complexity of several contracts in a portfolio.
+
+Multi-contract comparison would allow users to:
+- Overlay two graphs and highlight nodes/edges that differ
+- Compare metrics (density, depth, orphan ratio) side-by-side across contracts
+- Identify structural patterns that appear across a contract portfolio
+
+### What would need to change to unblock
+
+1. Design a graph comparison algorithm that identifies added/removed/changed nodes and edges between two graphs
+2. Build a comparison output that highlights the differences (terminal diff or structured table)
+3. Add a `openreview graph diff <graph_a> <graph_b>` CLI subcommand
+4. Optionally, build a portfolio summary that aggregates metrics across many graphs
+5. Add integration tests with known-different contract pairs
+
+### Spec references
+
+Spec 025 spec.md §Explicitly excluded (line 333): "Multi-contract graph comparison."
+Spec 025 plan.md §Deferred Tasks (line 257): "Multi-contract graph comparison (excluded by spec)."
+
+### Future features (not deferred — natural next steps)
+
+- **Alignment-based graph comparison**: Instead of naive node-by-node diff, align the clause hierarchies first (like bilateral comparison) and then compare aligned pairs.
+- **Merge graph from multiple contract versions**: Build a composite graph showing how a contract's structure evolved across redlines or amendments.
+- **Portfolio health dashboard**: Aggregate health scores across all contracts in a directory or project and present a summary.
+
+---
+
+## D-57: Visual Graph Rendering (DOT / SVG / PNG)
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 025 (contract graph modeling) — explicitly excluded |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Spec boundary — ASCII tree view is the v1 output format |
+| **Status** | Unblocked — but requires dependency evaluation (Graphviz or similar) |
+
+### Description
+
+The `openreview graph view` command produces an indented ASCII text tree. There is no visual graph rendering — no DOT output for Graphviz, no SVG, no PNG. Visual rendering would let users see the clause hierarchy as a directed graph, making structural patterns (orphans, dense cross-referencing, depth) more immediately apparent.
+
+Visual rendering would:
+1. Produce DOT format output (for Graphviz processing) as an intermediate step
+2. Optionally render to SVG or PNG using Graphviz or a pure-Python layout engine
+3. Support edge labels showing reference types (parent_child, cross_ref, def_ref)
+
+### What would need to change to unblock
+
+1. Evaluate dependency options: Graphviz (system binary + Python bindings), or a pure-Python layout engine (less capable, zero deps)
+2. If using Graphviz: add system dependency documentation and optional Python bindings
+3. Build a DOT exporter from `ContractGraph` (nodes → DOT nodes, edges → DOT edges with labels)
+4. Add `--format dot|svg|png` flag to `openreview graph view`
+5. Ensure the visual rendering does not load entire graph into memory twice (graph already loaded for view)
+6. Add integration tests that verify DOT output is valid DOT syntax
+
+### Spec references
+
+Spec 025 spec.md §Explicitly excluded (line 301): "Graphviz / DOT rendering."
+Spec 025 spec.md §Explicitly excluded (line 329): "Visual graph rendering (DOT, SVG, PNG)."
+Spec 025 plan.md §Deferred Tasks (line 259): "Visual graph rendering (DOT/SVG/PNG — excluded by spec)."
+
+### Future features (not deferred — natural next steps)
+
+- **Interactive web viewer**: A local HTML page that loads the graph JSON and renders it with D3.js or vis.js — viewable in a browser, no server needed.
+- **Graph export to image**: `openreview graph view --format png --output graph.png` for inclusion in memos or reports.
+- **Colour-coded nodes**: Colour nodes by type (definition, cross-referencing, orphan) in the visual output.
+
+---
+
+## D-58: Interactive Graph Exploration
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 025 (contract graph modeling) — explicitly excluded |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Spec boundary — CLI-only constraint prevents interactive browsing |
+| **Status** | Unblocked — but requires constitutional review against Principle II (CLI-Only) |
+
+### Description
+
+The graph can be inspected via the `view` command (static ASCII tree) and `metrics` (statistics). There is no interactive way to browse the graph — click a node to expand its connections, search by text, filter by edge type, or follow cross-references interactively.
+
+Interactive exploration would need either:
+- A TUI (terminal user interface) using a library like Textual or Rich's live display
+- A local web interface opened in the browser (constitutional question: does a local web page violate the "no web server" rule?)
+
+### What would need to change to unblock
+
+1. **Constitutional check**: A local web page opened via `openreview graph explore --open-browser` that serves a static HTML page from disk (no server process) is likely compatible with Principle II. A long-running web server is not.
+2. Choose an approach: TUI (textual app) or static HTML (D3.js embedded, loaded from file://)
+3. Build the exploration interface: graph rendering + node selection + connection highlighting + search
+4. Add a `openreview graph explore` subcommand that opens the interface
+5. Test with large graphs (5000+ nodes) to ensure the interface is responsive
+
+### Spec references
+
+Spec 025 spec.md §Explicitly excluded (line 330): "Interactive graph exploration."
+
+---
+
+## D-59: Persistent Graph Storage in SQLite
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 025 (contract graph modeling) — explicitly excluded |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Spec boundary — "`Persistence beyond JSON files (no SQLite schema changes)`" |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+Graphs are serialised to JSON files on disk. There is no SQLite storage for graph data. Each graph operation (`build`, `metrics`, `health`, `view`) loads the graph JSON file from disk, processes it, and discards it. Graphs are not indexed, searchable, or queryable through the SQLite database that already exists for PII mapping, playbook versioning, and gateway cost tracking.
+
+JSON files are intentionally chosen:
+- Portable and human-readable
+- Can be inspected or used by external tools
+- No schema migrations needed
+- Graphs are cheap to regenerate (<1s for 500 nodes)
+- SQLite complexity not justified for v1
+
+Persistent SQLite storage would:
+1. Store `ContractGraph` nodes and edges as SQLite tables
+2. Allow SQL queries against the graph data (e.g., "find all nodes with broken cross-refs")
+3. Enable cross-contract queries ("which contracts have orphan ratio > 0.1?")
+4. Integrate with the existing database for consolidated data management
+
+### What would need to change to unblock
+
+1. Design SQLite schema for graph nodes (columns: graph_id, node_id, label, text, level, metadata JSON) and edges (columns: graph_id, source_id, target_id, edge_type, metadata JSON)
+2. Add graph storage methods to the existing storage layer
+3. Build migration path for existing JSON graph files to SQLite
+4. Keep JSON export as an option (portability concern)
+5. Add integration tests for persist/load cycle
+
+### Spec references
+
+Spec 025 spec.md §Explicitly excluded (line 307): "Persistence beyond JSON files (no SQLite schema changes)."
+Spec 025 spec.md §Scope Boundaries (line 332): "Persistent graph storage in SQLite (JSON files only)."
+Spec 025 plan.md §Deferred Tasks (line 261): "Persistent graph storage in SQLite (JSON files only per spec)."
+Spec 025 research.md §4 (line 91): "Persistence beyond JSON files (no SQLite schema changes)."
+
+### Future features (not deferred — natural next steps)
+
+- **Graph version history**: Track which graph was built from which parsed document version — enables audit trail for structural changes.
+- **Cross-contract aggregate queries**: SQL queries across all stored graphs for portfolio-level analysis.
+- **Incremental graph updates**: When a parse is re-run, update only the changed nodes/edges in SQLite instead of rebuilding the entire graph.
+
+---
+
+## D-60: Real-Time Graph Building During Parse Streaming
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 025 (contract graph modeling) — explicitly excluded |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Spec boundary — graph building is a separate post-parse step |
+| **Status** | Unblocked — no constitutional conflict, requires pipeline framework changes |
+
+### Description
+
+Graph building currently requires a complete parsed clause list (`openreview parse contract.pdf --format json > clauses.json`, then `openreview graph build clauses.json`). It cannot build the graph incrementally as clauses are being parsed during the document streaming pipeline.
+
+Real-time graph building would:
+1. Accept clauses as they stream out of the parser (one clause at a time)
+2. Build the graph incrementally — adding nodes as clauses arrive, detecting cross-refs against already-added clauses
+3. Show partial graph progress during parsing
+4. Eliminate the two-step build flow for users who want a graph alongside their parsed result
+
+### What would need to change to unblock
+
+1. Design an incremental build mode for `ClauseHierarchyBuilder` that accepts clauses one at a time
+2. Handle the constraint that cross-references can only be resolved against clauses already seen (or add a second pass at the end)
+3. Wire the incremental builder into the parse stream pipeline (pipeline framework spec 018)
+4. Add a `openreview parse --graph` flag that builds the graph during parsing
+5. Add integration tests with streaming-parsed documents
+
+### Spec references
+
+Spec 025 spec.md §Explicitly excluded (line 331): "Real-time graph building during parse streaming."
+Spec 025 spec.md §Assumptions (line 287): "The existing `parsing` module produces valid clause lists. Graph building is a downstream consumer, not a parser."
+
+---
+
+## D-61: Contract Clause Similarity / Clustering
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 025 (contract graph modeling) — explicitly excluded |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Spec boundary — no new dependencies allowed for v1 |
+| **Status** | Unblocked — requires embedding pipeline or a similarity library |
+
+### Description
+
+The graph models clause structure (hierarchy, cross-references, definitions) but does not analyse clause text similarity. Two clauses that use near-identical language but live in different parts of the hierarchy would not be flagged as similar.
+
+Clause similarity/clustering would:
+1. Compute pairwise text similarity between all clauses in a contract
+2. Cluster similar clauses and flag potential duplication
+3. Add a visual indicator in the view or metrics output
+4. Help identify boilerplate clauses, repeated definitions, or potential drafting errors
+
+### What would need to change to unblock
+
+1. Choose a similarity method: TF-IDF cosine similarity (stdlib + sklearn or pure numpy), or embedding comparison (requires the embedding pipeline from the AI Gateway)
+2. Build a clause similarity scanner that outputs similarity pairs above a configurable threshold
+3. Add similarity/clustering data to `GraphMetrics` or a separate `SimilarityReport`
+4. Optionally, add a `openreview graph similar` CLI subcommand
+5. Handle the 100 MB memory constraint when computing pairwise similarity for large contracts (500+ clauses)
+
+### Spec references
+
+Spec 025 spec.md §Explicitly excluded (line 335): "Contract clause similarity / clustering."
+Spec 025 spec.md §Explicitly excluded (line 336): "Any new dependencies beyond stdlib + existing project deps."
+Spec 025 plan.md §Deferred Tasks (line 262): "Contract clause similarity / clustering (excluded by spec)."
+
+### Future features (not deferred — natural next steps)
+
+- **Duplicate clause detection**: Beyond similarity, detect clauses that are textually identical or near-identical — useful for identifying boilerplate repetition.
+- **Cross-contract similarity**: Compare clause text across contracts to find standard-form clauses that appear in multiple documents.
+- **Clause type clustering**: Group clauses by function (definition, obligation, condition, termination) based on text patterns — a lightweight alternative to full clause classification.
+
+---
+
+## D-62: GRPO Training Pipeline / GPU Support
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 025 (contract graph modeling) — explicitly excluded |
+| **Deferred at** | 2026-07-06 |
+| **Trigger** | Spec boundary — no ML training, no GPU support in v1 |
+| **Status** | Unblocked when a future ML spec lands |
+
+### Description
+
+The graph system uses heuristic-only metrics with no ML training pipeline. GRPO (Group Relative Policy Optimization) training, GPU support, and any ML model training or fine-tuning are excluded from v1.
+
+These features would enable:
+- Training a dedicated cross-reference detection model (see D-53)
+- Fine-tuning health score weights based on labelled data
+- ML-based clause clustering (see D-61)
+- GPU-accelerated graph processing for large contract portfolios
+
+### What would need to change to unblock
+
+1. This is not a standalone feature — it unblocks when a general ML/GPU training spec is created for the project
+2. The project would need to add ML dependencies (torch, transformers, or similar)
+3. GPU support would require updating the hardware budget and constraints documentation
+4. Any ML training would need labelled datasets (contract text pairs for cross-reference detection, expert quality scores for health score calibration)
+
+### Spec references
+
+Spec 025 spec.md §Explicitly excluded (line 327): "GRPO training pipeline."
+Spec 025 spec.md §Explicitly excluded (line 328): "GPU support."
+Spec 025 spec.md §Scope Boundaries (line 317): "Heuristic-only metric computation (no ML)."

@@ -28,7 +28,7 @@ adapters for parse/strip/chunk/retrieve/generate), and single-party contract
 review (PAKTON 3-agent pipeline: extraction, QA
 verification, report formatting), citation grounding discriminator
 (post-hoc claim verification with strict/lenient modes, CG metrics, JSONL audit trail),
-and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), playbook versioning (database storage with version tracking, position rename to preferred/acceptable/walkaway with backward compatibility, version-stamped reviews), experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status, error recovery framework (5 strategies: auto-retry, provider fallback, graceful degradation, stage isolation, user-guided recovery; coordinator orchestrates strategy chains, pipeline integration with pre-stage memory check and post-stage failure handling), **privacy tier routing with three tiers (Maximum all-local, Balanced local embeddings + cloud reasoning, Performance cloud with PII stripped), TierRouter enforcement layer with PII fail-closed, and memo export for review results (Markdown, JSON, DOCX formats with color-coded clauses, confidence scores, citation provenance, citation relevance/locality metrics, and playbook metadata).**
+and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), playbook versioning (database storage with version tracking, position rename to preferred/acceptable/walkaway with backward compatibility, version-stamped reviews), experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status, error recovery framework (5 strategies: auto-retry, provider fallback, graceful degradation, stage isolation, user-guided recovery; coordinator orchestrates strategy chains, pipeline integration with pre-stage memory check and post-stage failure handling), **privacy tier routing with three tiers (Maximum all-local, Balanced local embeddings + cloud reasoning, Performance cloud with PII stripped), TierRouter enforcement layer with PII fail-closed, and memo export for review results (Markdown, JSON, DOCX formats with color-coded clauses, confidence scores, citation provenance, citation relevance/locality metrics, and playbook metadata), and contract graph modeling (directed clause graph, 0–100 heuristic health score, tree view).**
 The package is not yet on PyPI. APIs and the underlying spec are preliminary and
 will change.
 
@@ -222,7 +222,7 @@ uv run openreview --version
 |-----------------------------------------------------|--------------------------------------------|
 | `src/openreview_cli/__init__.py`                    | Exposes `__version__`                      |
 | `src/openreview_cli/__main__.py`                    | Entry point: `python -m openreview_cli`    |
-| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse`, `precheck`, `chunk`, `pii`, `gateway`, `prompt`, `playbook` (8 subcommands) |
+| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse`, `precheck`, `chunk`, `pii`, `gateway`, `prompt`, `playbook`, `benchmark`, `graph` (11 subcommand groups) |
 | `src/openreview_cli/config/paths.py`                | platformdirs paths (config, data, log)     |
 | `src/openreview_cli/config/loader.py`               | Pydantic model, YAML r/w, env merge        |
 | `src/openreview_cli/config/auth.py`                 | `auth.json` handler, chmod 600             |
@@ -240,6 +240,7 @@ uv run openreview --version
 | `src/openreview_cli/chunking/`                      | Chunking engine — RCTS splitting, clause-boundary-aware, streaming |
 | `src/openreview_cli/gateway/`                       | AI Gateway — router, registry, cost, models, redaction, wizard |
 | `src/openreview_cli/retrieval/`                     | Retrieval pipeline — BM25 (FTS5), dense embeddings (Ollama), RRF fusion, reranker, ingest, storage |
+| `src/openreview_cli/graph/`                         | Contract graph modeling — directed clause graph, structural metrics, 0–100 heuristic health score, ASCII tree view |
 | `src/openreview_cli/grounding/`                    | Citation grounding discriminator — post-hoc claim verification, strict/lenient modes, CG metrics, JSONL audit trail, corruption generators |
 | `src/openreview_cli/pipeline/`                      | 5-stage async pipeline — Stage ABC, runner with cancellation/progress/memory enforcement, adapters (parse/strip/chunk/retrieve/generate), error hierarchy, progress events |
 | `src/openreview_cli/recovery/`                      | Error recovery framework — 5 strategies (auto-retry, provider fallback, graceful degradation, stage isolation, user-guided), coordinator, strategy chains, pipeline integration |
@@ -327,6 +328,14 @@ openreview parse contract.pdf --format json  # JSON output
 openreview chunk contract.json              # Split clauses into chunks (512 tokens, 50 overlap)
 openreview chunk contract.json --format json  # JSON output with metadata
 openreview chunk contract.json --summary      # One-line chunk summary
+
+# Contract graph modeling (directed clause graph)
+openreview parse contract.pdf --format json > contract.json  # Parse to JSON first
+openreview graph build contract.json                           # Build clause graph
+openreview graph view contract.graph.json                      # Render as ASCII tree
+openreview graph metrics contract.graph.json                   # Structural metrics
+openreview graph health contract.graph.json                    # Heuristic 0-100 health score
+openreview graph health --weights '0.10 0.25 0.25 0.25 0.15' contract.graph.json  # Custom weights
 
 # Retrieval (hybrid BM25 + dense search)
 openreview ingest contract.pdf            # Parse, chunk, embed, and index a document
@@ -508,6 +517,12 @@ openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 | `openreview playbook set-current <id> <v>`         | Set the effective current version (re-activates if deleted) |
 | `openreview playbook delete <id>`              | Soft-delete a playbook (tombstone, restorable) |
 | `openreview playbook history <id>`             | Show version timeline with status markers |
+| `openreview graph build <input>`          | Build a directed clause graph from a parsed contract JSON file |
+| `openreview graph build <input> -o <out>` | Build with custom output path                |
+| `openreview graph metrics <graph>`        | Compute structural metrics: density, depth, orphan ratio, broken cross-refs, definition coverage |
+| `openreview graph health <graph>`         | Compute a 0–100 heuristic health score (default weights: density 0.15, depth 0.20, orphans 0.20, broken-refs 0.25, coverage 0.20) |
+| `openreview graph health --weights '...' <graph>` | Custom weights (5 space-separated floats, auto-normalised) |
+| `openreview graph view <graph>`           | Render the clause hierarchy as an indented ASCII tree |
 | `openreview benchmark`                    | Run automated evaluation (CUAD/MAUD/ContractNLI) |
 | `openreview benchmark --datasets cuad,maud` | Evaluate specific datasets                   |
 | `openreview benchmark --slots default,fast` | Compare model slots                          |
