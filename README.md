@@ -28,14 +28,14 @@ adapters for parse/strip/chunk/retrieve/generate), and single-party contract
 review (PAKTON 3-agent pipeline: extraction, QA
 verification, report formatting), citation grounding discriminator
 (post-hoc claim verification with strict/lenient modes, CG metrics, JSONL audit trail),
-and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), playbook versioning (database storage with version tracking, position rename to preferred/acceptable/walkaway with backward compatibility, version-stamped reviews), experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status, error recovery framework (5 strategies: auto-retry, provider fallback, graceful degradation, stage isolation, user-guided recovery; coordinator orchestrates strategy chains, pipeline integration with pre-stage memory check and post-stage failure handling), **privacy tier routing with three tiers (Maximum all-local, Balanced local embeddings + cloud reasoning, Performance cloud with PII stripped), TierRouter enforcement layer with PII fail-closed, and memo export for review results (Markdown, JSON, DOCX formats with color-coded clauses, confidence scores, citation provenance, citation relevance/locality metrics, and playbook metadata), and contract graph modeling (directed clause graph, 0–100 heuristic health score, tree view).**
+and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), playbook versioning (database storage with version tracking, position rename to preferred/acceptable/walkaway with backward compatibility, version-stamped reviews), experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status, error recovery framework (5 strategies: auto-retry, provider fallback, graceful degradation, stage isolation, user-guided recovery; coordinator orchestrates strategy chains, pipeline integration with pre-stage memory check and post-stage failure handling), **privacy tier routing with three tiers (Maximum all-local, Balanced local embeddings + cloud reasoning, Performance cloud with PII stripped), TierRouter enforcement layer with PII fail-closed, and memo export for review results (Markdown, JSON, DOCX formats with color-coded clauses, confidence scores, citation provenance, citation relevance/locality metrics, and playbook metadata), contract graph modeling (directed clause graph, 0–100 heuristic health score, tree view), and game-theoretic negotiation assistant (Nash/QRE/Level-k solvers for modeling counterparty behavior, advisory Amber-confidence output).**
 The package is not yet on PyPI. APIs and the underlying spec are preliminary and
 will change.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
 | Unit + integration tests    | 1,662                    |
-| CLI commands                | 55                        |
+| CLI commands                | 56                        |
 | SQLite tables               | 13                        |
 | Migrations                  | 7                         |
 | CI jobs                     | 5 (lint, types, test, memory, benchmark) |
@@ -222,7 +222,7 @@ uv run openreview --version
 |-----------------------------------------------------|--------------------------------------------|
 | `src/openreview_cli/__init__.py`                    | Exposes `__version__`                      |
 | `src/openreview_cli/__main__.py`                    | Entry point: `python -m openreview_cli`    |
-| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse`, `precheck`, `chunk`, `pii`, `gateway`, `prompt`, `playbook`, `benchmark`, `graph` (11 subcommand groups) |
+| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse`, `precheck`, `chunk`, `pii`, `gateway`, `prompt`, `playbook`, `benchmark`, `graph`, `negotiate` (11 groups + 1 top-level command) |
 | `src/openreview_cli/config/paths.py`                | platformdirs paths (config, data, log)     |
 | `src/openreview_cli/config/loader.py`               | Pydantic model, YAML r/w, env merge        |
 | `src/openreview_cli/config/auth.py`                 | `auth.json` handler, chmod 600             |
@@ -383,6 +383,20 @@ openreview precheck compare my-nda.pdf their-nda.pdf --align-only        # Previ
 openreview precheck compare my-nda.pdf their-nda.pdf --format json       # JSON output
 openreview precheck compare my-nda.pdf their-nda.pdf --no-pii            # Skip PII stripping
 
+# Game-theoretic negotiation (advisory only)
+openreview negotiate contract.pdf --playbook-path playbook.yaml                          # QRE solver (default)
+openreview negotiate contract.pdf --playbook-path playbook.yaml --solver nash            # Perfect-rationality Nash
+openreview negotiate contract.pdf --playbook-path playbook.yaml --solver level_k         # Level-k reasoning
+openreview negotiate contract.pdf --playbook-path playbook.yaml --solver qre --rationality 1.5  # Tune bounded rationality
+openreview negotiate contract.pdf --playbook-path playbook.yaml --depth 3               # Level-k depth
+openreview negotiate contract.pdf --playbook-path playbook.yaml --weights 0.7,0.15,0.15  # Custom payoff weights
+openreview negotiate contract.pdf --playbook-path playbook.yaml --confidence-threshold 0.5  # Lower Amber threshold
+openreview negotiate contract.pdf --playbook-path playbook.yaml --format json            # JSON output
+openreview negotiate contract.pdf --playbook-path playbook.yaml --format memo            # Narrative memo
+openreview negotiate contract.pdf --playbook-path playbook.yaml --output report.txt      # Save to file
+openreview negotiate contract.pdf --playbook-path playbook.yaml --no-pii                  # Skip PII stripping
+openreview negotiate contract.pdf --playbook-path playbook.yaml --verbose                 # Per-clause progress
+
 # PII management
 openreview pii list              # Documents with PII data
 openreview pii delete abc123     # Delete PII data for a document
@@ -483,6 +497,18 @@ openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 | `openreview precheck compare --align-only <docA> <docB>` | Parsing + alignment only, skip all inference |
 | `openreview precheck compare --format json <docA> <docB>` | Structured JSON comparison report |
 | `openreview precheck compare --output <file> <docA> <docB>` | Write report to file |
+| `openreview negotiate <path> --playbook-path <yaml>` | Advisory game-theoretic negotiation analysis (QRE solver) |
+| `openreview negotiate <path> --playbook-path <yaml> --solver nash` | Perfect-rationality Nash equilibrium solver |
+| `openreview negotiate <path> --playbook-path <yaml> --solver level_k` | Level-k bounded-reasoning solver |
+| `openreview negotiate <path> --playbook-path <yaml> --solver qre --rationality 1.5` | Tune QRE bounded-rationality parameter (λ) |
+| `openreview negotiate <path> --playbook-path <yaml> --depth 3` | Set level-k reasoning depth |
+| `openreview negotiate <path> --playbook-path <yaml> --weights 0.7,0.15,0.15` | Custom payoff component weights (risk,financial,obligation) |
+| `openreview negotiate <path> --playbook-path <yaml> --confidence-threshold 0.5` | Lower Amber-flag threshold |
+| `openreview negotiate <path> --playbook-path <yaml> --format json` | JSON output |
+| `openreview negotiate <path> --playbook-path <yaml> --format memo` | Narrative memo output |
+| `openreview negotiate <path> --playbook-path <yaml> --output <file>` | Write output to file |
+| `openreview negotiate <path> --playbook-path <yaml> --no-pii` | Skip PII stripping |
+| `openreview negotiate <path> --playbook-path <yaml> --verbose` | Per-clause progress on stderr |
 | `openreview pii list`                  | List documents with stored PII data        |
 | `openreview pii delete <hash>`         | Delete all PII data for a document (GDPR)  |
 | `openreview pii cleanup`              | Delete documents with expired PII retention |

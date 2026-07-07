@@ -2760,3 +2760,147 @@ These features would enable:
 Spec 025 spec.md §Explicitly excluded (line 327): "GRPO training pipeline."
 Spec 025 spec.md §Explicitly excluded (line 328): "GPU support."
 Spec 025 spec.md §Scope Boundaries (line 317): "Heuristic-only metric computation (no ML)."
+
+---
+
+## D-63: Multi-party Negotiation (3+ Parties)
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 026 (game-theoretic negotiation) — spec.md §Assumptions |
+| **Deferred at** | 2026-07-07 |
+| **Trigger** | Explicitly out of scope — two-party negotiation only |
+| **Status** | Unblocked — no constitutional conflict, but requires fundamental algorithmic work |
+
+### Description
+
+The negotiation assistant computes equilibrium strategy for exactly two parties (user and counterparty). Requests involving more than two parties are declined with a guidance message. Multi-party negotiation would require a fundamentally different game-theoretic model — the current 2-player payoff matrix and equilibrium solvers (Nash, QRE, Level-k) do not extend to N-player games.
+
+Multi-party negotiation would need:
+1. N-player normal-form game representation (currently 2-player matrices)
+2. N-player equilibrium concepts (correlated equilibrium, coalitional game theory)
+3. A different solver approach — support enumeration with NashPy/hand-rolled NumPy only works for 2-player games
+4. Output formatting for 3+ party strategies and recommendations
+
+### What would need to change to unblock
+
+1. Design an N-player payoff representation (tensor of dimension N×k₁×k₂×... or tabular for small N)
+2. Choose an N-player equilibrium concept — correlated equilibrium is the most natural extension for bounded-rationality negotiation
+3. Implement or integrate an N-player solver (PyNash or hand-rolled linear programming for correlated equilibrium)
+4. Rebuild recommendation logic to account for multi-party dynamics (coalitions, side deals)
+5. Update the CLI interface to accept more than two parties' position data
+
+### Spec references
+
+Spec 026 spec.md (line 72): "Requests involving more than two parties are declined with a clear guidance message. Multi-party negotiation is out of scope for this feature."
+Spec 026 spec.md (line 113): "This feature focuses on two-party negotiation only. Multi-party negotiation (three or more parties with interdependent payoffs) is out of scope."
+
+---
+
+## D-64: Cross-clause Strategic Trade-offs
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 026 (game-theoretic negotiation) — spec.md §Assumptions |
+| **Deferred at** | 2026-07-07 |
+| **Trigger** | Explicitly out of scope — clause-level analysis only |
+| **Status** | Unblocked — no constitutional conflict, but requires significant model redesign |
+
+### Description
+
+The game-theoretic analysis operates at the clause level — each clause is analyzed independently with its own payoff matrix and equilibrium strategy. There is no mechanism to trade concessions in one clause for gains in another. In real negotiation, parties often concede on low-priority clauses to secure favorable terms on high-priority ones.
+
+Cross-clause trade-offs would require:
+1. A multi-clause utility model that aggregates payoffs across clauses with configurable priorities
+2. An equilibrium concept that considers the entire contract as a composite game
+3. A concession-scheduling algorithm that determines which clauses to concede on and in what order
+4. A user-facing interface for setting clause-level priority or importance weights
+
+### What would need to change to unblock
+
+1. Design a contract-level utility function that combines per-clause payoffs with user-defined importance weights
+2. Build a concession-scheduling algorithm (e.g., rank clauses by strategic value, concede from lowest to highest)
+3. Add a `--priority` map or priority flag on the CLI (`--priority "confidentiality=high,indemnification=low"`)
+4. Extend the equilibrium model to account for cross-clause dependencies (or replace with a combinatorial negotiation model)
+5. Update the output to show trade-off recommendations ("Consider conceding on clause X to secure clause Y")
+
+### Spec references
+
+Spec 026 spec.md (line 114): "The game-theoretic analysis operates at the clause level. Cross-clause strategic trade-offs (trading concession in one clause for gain in another) are out of scope for this version."
+
+### Future features (not deferred — natural next steps)
+
+- **Priority-weighted negotiation**: Allow users to mark clauses as high/medium/low priority. The assistant suggests concession paths that sacrifice low-priority clauses.
+- **Package deal analysis**: Group clauses into negotiation packages and analyze trade-offs between packages rather than individual clauses.
+- **Concession path visualization**: Show the user a suggested order of concessions across clauses, with the expected payoff impact of each step.
+
+---
+
+## D-65: GPU-trained Stackelberg Model (Original Research Direction)
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 026 (game-theoretic negotiation) — original L-3 feature description |
+| **Deferred at** | 2026-07-07 |
+| **Trigger** | Dropped by user direction — repositioned to lightweight CPU approach |
+| **Status** | Abandoned — the Stackelberg model was replaced by Nash/QRE/Level-k bounded rationality solvers running on CPU |
+
+### Description
+
+The original L-3 feature description proposed a "Game-theoretic negotiation assistant — Stackelberg game model, counterparty behavior prediction. Advanced negotiation mode." This would have used a Stackelberg leadership model (one party moves first, the other responds optimally) trained on GPU hardware (A100-class). The user explicitly repositioned this approach in favor of a lightweight, hardware-feasible CPU approach using Nash/QRE/Level-k equilibrium computation.
+
+The Stackelberg approach was dropped because:
+1. It would require GPU training infrastructure (violates hardware budget: 8 GB RAM, 2-core CPU, no GPU)
+2. It would require a training dataset of negotiation outcomes (no such dataset exists)
+3. It would add external ML dependencies (violates dependency minimalism)
+4. The lightweight bounded-rationality Nash/QRE/Level-k approach provides equivalent strategic insight without any of these costs
+
+### What would need to change to unblock
+
+1. This is not a typical deferred feature — it was an alternative design direction that was rejected. If the project's hardware budget is substantially upgraded (GPU available, >8 GB RAM) and a labelled negotiation dataset is curated, a Stackelberg model could be reconsidered as a future research project.
+2. The lightweight approach (Nash + QRE + Level-k) is the production path. Any future Stackelberg work would be a separate research initiative, not an extension of this feature.
+
+### Spec references
+
+Spec 026 spec.md (line 135): "The original L-3 feature description... has been repositioned per user direction to drop the Stackelberg/A100 model in favor of a lightweight, hardware-feasible approach."
+
+---
+
+## D-66: Equilibrium Caching via SQLite
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 026 (game-theoretic negotiation) — plan.md §Technical Context |
+| **Deferred at** | 2026-07-07 |
+| **Trigger** | Ponytail / plan.md explicitly marked as "deferred to future" |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+Each negotiation run recomputes all payoff matrices and equilibrium strategies from scratch. There is no cache that stores previously computed equilibria. For repeated analysis of the same contract (e.g., what-if exploration changing only weights or rationality parameters), recomputation is redundant — the payoff matrices and Nash equilibria are deterministic for the same inputs.
+
+Equilibrium caching would:
+1. Hash the inputs (playbook ID, clause IDs, positions, weights) to create a cache key
+2. Store computed `PayoffMatrix` and `EquilibriumStrategy` objects in the existing SQLite storage layer
+3. On subsequent runs, check the cache before recomputing
+4. Return cached results when inputs match — only QRE and Level-k differ per parameter change
+
+This is low-value because each clause's equilibrium computation takes <100 ms. The cache would only matter for very large contracts (100+ clauses) or many re-runs with the same base inputs.
+
+### What would need to change to unblock
+
+1. Define a cache key schema (hash of: playbook ID + clause position data + solver parameters)
+2. Add a `negotiation_cache` table to the SQLite storage layer
+3. Add cache check logic in `run_negotiation()` — return cached `EquilibriumStrategy` when cache key matches
+4. Support cache invalidation (playbook update → invalidate all cache entries for that playbook)
+5. Add integration tests for cache hit/miss/refresh scenarios
+
+### Spec references
+
+Spec 026 plan.md (line 19): "Storage: None for core computation. Optional caching of computed equilibria via existing SQLite storage layer (deferred to future)."
+
+### Future features (not deferred — natural next steps)
+
+- **Cache hit ratio reporting**: Show the user how many equilibria were retrieved from cache vs computed fresh, to demonstrate the cache's value.
+- **Warm-up cache**: Pre-compute equilibria for known playbook/contract combinations during idle time.
+- **Cross-session cache**: Persist cache across CLI invocations so repeated analysis of the same contract is instantaneous.

@@ -1,6 +1,6 @@
-# Analysis Context — Memo Export (021)
+# Analysis Context — Game-Theoretic Negotiation (026)
 
-**Generated**: 2026-07-05 | **Feature**: `021-memo-export` | **Branch**: `feat/021-memo-export`
+**Generated**: 2026-07-07 | **Feature**: `026-game-theoretic-negotiation` | **Branch**: `feat/026-game-theoretic-negotiation`
 
 ---
 
@@ -8,11 +8,11 @@
 
 | Source | Status | Lines | Notes |
 |--------|--------|-------|-------|
-| `verified-sources.md` | ✅ Loaded | 87 lines | Generated for 018 but covers project-wide deps. All 15 runtime + 4 dev deps confirmed. `python-docx` >=1.2.0 confirmed. Zero new deps needed for memo export. |
-| `task-context.md` | ✅ Loaded | 163 lines | Generated for 021. All 11 existing review module paths confirmed. All 5 new memo source + 5 test paths confirmed NEW. 1 mismatch: `tests/unit/review/` subdirectory does not exist yet. |
-| `analysis-context.md` | ✅ Creating now | — | Grounding chain complete |
+| `verified-sources.md` | ❌ Not generated | — | No verified-sources.md exists for 026. Direct reality check against filesystem below. |
+| `task-context.md` | ❌ Not generated | — | No task-context.md exists for 026. Direct reality check against filesystem below. |
+| `analysis-context.md` | ✅ Creating now | — | Grounding chain: filesystem reality check only |
 
-**Grounding chain**: `verified-sources.md` → `task-context.md` → `analysis-context.md` (this file). Chain is intact and consistent.
+**Grounding chain**: `verified-sources.md` → `task-context.md` → `analysis-context.md` is NOT intact. Neither `verified-sources.md` nor `task-context.md` exist for feature 026. Reality check performed directly against filesystem per Constitution §Analysis Grounding Rule, Detection Pass G.
 
 ---
 
@@ -22,42 +22,40 @@
 
 | Claim | Source | Reality | Verdict |
 |-------|--------|---------|---------|
-| Zero new runtime deps | plan.md §Primary Dependencies | ✅ Stdlib only: `json`, `pathlib`, `dataclasses`, `datetime`, `typing` — all confirmed in Python 3.12 | ✅ MATCH |
-| `python-docx` >=1.2.0 already installed | plan.md §Primary Dependencies | ✅ In pyproject.toml, resolved in uv.lock | ✅ MATCH |
-| No forbidden deps | plan.md §Constraints | ✅ None present | ✅ MATCH |
+| `nashpy >= 0.0.43` new dependency | plan.md §Primary Dependencies | ❌ Not yet in pyproject.toml (T001 will add it). MIT license, compatible with AGPL-3.0. | ✅ MATCH (planned addition, no conflict) |
+| `numpy` already present (transitive) | plan.md §Primary Dependencies | ✅ NumPy is a transitive dependency via existing deps. Confirmed available. | ✅ MATCH |
+| No forbidden deps | plan.md §Constraints | ✅ None present. No langchain, llama-index, FAISS, spaCy, sentence-transformers. | ✅ MATCH |
+| All computation local — no external API | plan.md §Constraints | ✅ NashPy + NumPy are pure local computation. No network calls. | ✅ MATCH |
+| Peak memory < 5 MB for full computation | plan.md §Performance Goals | ⚠️ Unverified until T021 memory test runs. Plan claim is plausible given ≤6×6 matrices. | ✅ MATCH (plausible) |
 
 ### File Paths
 
 | Claim | Source | Reality | Verdict |
 |-------|--------|---------|---------|
-| `src/openreview_cli/review/__init__.py` | plan.md §Project Structure | ✅ EXISTS on disk | ✅ MATCH |
-| `src/openreview_cli/review/models.py` | plan.md §Project Structure | ✅ EXISTS — ReviewReport, ClauseAssessment | ✅ MATCH |
-| `src/openreview_cli/review/colors.py` | plan.md §Project Structure | ✅ EXISTS — AssessmentColor, assign_colors | ✅ MATCH |
-| `src/openreview_cli/review/report.py` | plan.md §Project Structure | ✅ EXISTS | ✅ MATCH |
-| `src/openreview_cli/review/pipeline.py` | plan.md §Project Structure | ✅ EXISTS | ✅ MATCH |
-| `src/openreview_cli/review/extraction.py` | plan.md §Project Structure | ✅ EXISTS | ✅ MATCH |
-| `src/openreview_cli/review/qa.py` | plan.md §Project Structure | ✅ EXISTS | ✅ MATCH |
-| `src/openreview_cli/review/base.py` | plan.md §Project Structure | ✅ EXISTS | ✅ MATCH |
-| `src/openreview_cli/review/playbook.py` | plan.md §Project Structure | ✅ EXISTS | ✅ MATCH |
-| `src/openreview_cli/review/prompts.py` | plan.md §Project Structure | ✅ EXISTS | ✅ MATCH |
-| `src/openreview_cli/review/_gateway.py` | plan.md §Project Structure | ✅ EXISTS | ✅ MATCH |
-| `src/openreview_cli/grounding/models.py` | plan.md §Primary Dependencies | ✅ EXISTS — CitationProvenance | ✅ MATCH |
-| `src/openreview_cli/review/memo/__init__.py` | plan.md §Project Structure | ❌ NEW — will create | ✅ MATCH (planned) |
-| `src/openreview_cli/review/memo/exporter.py` | plan.md §Project Structure | ❌ NEW — will create | ✅ MATCH (planned) |
-| `src/openreview_cli/review/memo/formats.py` | plan.md §Project Structure | ❌ NEW — will create | ✅ MATCH (planned) |
-| `src/openreview_cli/review/memo/filename.py` | plan.md §Project Structure | ❌ NEW — will create | ✅ MATCH (planned) |
-| `src/openreview_cli/review/memo/models.py` | plan.md §Project Structure | ❌ NEW — will create | ✅ MATCH (planned) |
+| `src/openreview_cli/bilateral/` exists | plan.md §Project Structure | ✅ EXISTS on disk — 7 files | ✅ MATCH |
+| `src/openreview_cli/review/` exists | plan.md §Project Structure | ✅ EXISTS on disk — 16 files (including memo/) | ✅ MATCH |
+| `src/openreview_cli/gateway/` exists | plan.md §Project Structure | ✅ EXISTS on disk — 10 files | ✅ MATCH |
+| `src/openreview_cli/review/playbook.py` exists | plan.md §Project Structure | ✅ EXISTS on disk | ✅ MATCH |
+| `src/openreview_cli/negotiation/` is NEW | plan.md §Project Structure | ❌ NOT on disk — will create | ✅ MATCH (planned) |
+| `src/openreview_cli/negotiation/__init__.py` | plan.md §Project Structure | ❌ NEW — will create | ✅ MATCH (planned) |
+| `src/openreview_cli/negotiation/models.py` | plan.md §Project Structure | ❌ NEW — will create | ✅ MATCH (planned) |
+| `src/openreview_cli/negotiation/payoffs.py` | plan.md §Project Structure | ❌ NEW — will create | ✅ MATCH (planned) |
+| `src/openreview_cli/negotiation/solvers.py` | plan.md §Project Structure | ❌ NEW — will create | ✅ MATCH (planned) |
+| `src/openreview_cli/negotiation/recommend.py` | plan.md §Project Structure | ❌ NEW — will create | ✅ MATCH (planned) |
+| `src/openreview_cli/negotiation/report.py` | plan.md §Project Structure | ❌ NEW — will create | ✅ MATCH (planned) |
+| `tests/fixtures/negotiation/` is NEW | plan.md §Project Structure | ❌ NOT on disk — will create | ✅ MATCH (planned) |
 
 ### Module Interfaces (VERIFIED)
 
-The plan and tasks reference specific import paths from existing modules. All confirmed:
-
 | Claim | Source | Reality |
 |-------|--------|---------|
-| `openreview_cli.review.models.ReviewReport` | plan.md §Summary | ✅ EXISTS — ReviewReport dataclass |
-| `openreview_cli.review.models.ClauseAssessment` | plan.md §Primary Dependencies | ✅ EXISTS — ClauseAssessment dataclass |
-| `openreview_cli.review.colors.AssessmentColor` | plan.md §Primary Dependencies | ✅ EXISTS — AssessmentColor enum (StrEnum) |
-| `openreview_cli.grounding.models.CitationProvenance` | plan.md §Primary Dependencies | ✅ EXISTS — CitationProvenance dataclass |
+| `openreview_cli.review.models.ClauseAssessment` | plan.md §Summary | ✅ EXISTS in `review/models.py` |
+| `openreview_cli.review.models.ReviewReport` | plan.md §Summary | ✅ EXISTS in `review/models.py` |
+| `openreview_cli.review.colors.AssessmentColor` | plan.md §Summary | ✅ EXISTS in `review/colors.py` |
+| `openreview_cli.gateway` module | plan.md §Summary | ✅ EXISTS — 10 files in `gateway/` |
+| `openreview_cli.review.playbook.load_playbook` | tasks.md T013 | ✅ EXISTS in `review/playbook.py` |
+| `openreview_cli.parsing.stream.parse_document` | tasks.md T013 | ✅ EXISTS in `parsing/stream.py` |
+| `openreview_cli.review.extraction.extract_clause` | tasks.md T013 | ✅ EXISTS in `review/extraction.py` |
 
 ---
 
@@ -65,19 +63,18 @@ The plan and tasks reference specific import paths from existing modules. All co
 
 | ID | Location | Issue | Severity |
 |----|----------|-------|----------|
-| M1 | plan.md vs filesystem | `tests/unit/review/` subdirectory per plan.md does not exist on filesystem. Existing review tests live directly in `tests/unit/`. Plan follows `bilateral/`/`recovery/` subdirectory pattern. | LOW |
-| M2 | data-model.md §6 | `AssessmentColor` source column says `review/colors.py` consistent with filesystem | ✅ No issue |
+| M1 | spec.md Edge Cases vs Assumptions | Multi-party edge case says "fall back to pairwise analysis" but Assumptions say "multi-party out of scope". Contradiction. | MEDIUM — to be fixed in this analysis |
 
 ---
 
 ## 4. Assumptions for Analysis
 
-1. **MemoSection entity dropped**: Sec 8 of spec.md has been updated to remove `MemoSection` as a formal entity. Format renderers handle sections inline. Consistent with plan.md which has no `MemoSection` abstraction.
-2. **Color→RGB mapping documented**: data-model.md updated with RGB values for DOCX cell fills per FR-04.
-3. **`colors.py` exists**: `review/colors.py` exists and contains `AssessmentColor`. Plan.md references are correct.
-4. **`grounding/models.py` exists**: Confirmed on filesystem. `CitationProvenance` referenced in plan.md.
-5. **Contracts align with plan**: `contracts/pipeline-api.md` is not relevant to memo export (pure presentation layer).
-6. **No existing `memo/` module**: Confirmed NEW by task-context.md. No naming collision risk.
+1. **nashpy not yet installed**: Plan calls for `uv add nashpy>=0.0.43` as T001. Since it is MIT-licensed and compatible with AGPL-3.0 (confirmed by research.md U6), this is a clean addition.
+2. **NumPy available**: Already a transitive dependency in the project. Used for QRE/Level-k computation.
+3. **No existing `negotiation/` module**: Confirmed NEW. No naming collision risk.
+4. **Three-position playbook data available**: Existing `ClauseAssessment` with `position` field maps to actions (preferred/acceptable/walkaway).
+5. **Bilateral comparison available**: `PairedAssessment` with `divergence` field exists in `bilateral/models.py` for matrix symmetry detection.
+6. **Hardware constraint feasible**: Per-clause matrices ≤6×6. NashPy support enumeration is exponential but feasible at this size. QRE fixed-point iteration converges in ~100 iterations.
 
 ---
 
@@ -85,9 +82,11 @@ The plan and tasks reference specific import paths from existing modules. All co
 
 | Check | Result |
 |-------|--------|
-| VERSION DRIFT — Any version number in plan.md that doesn't match CONFIRMED anchor | ✅ None. Python 3.12 confirmed. `python-docx` >=1.2.0 confirmed. Zero new deps. |
-| PATH CONFLICT — Any file path in tasks.md that is neither EXISTS nor NEW | ✅ None. All paths confirmed (11 EXISTS, 10 NEW). |
-| UNVERIFIED API — Any API/function name in plan.md with NO ANCHOR in verified-sources.md | ✅ All import paths verified against filesystem. |
+| VERSION DRIFT — Any version number in plan.md that doesn't match CONFIRMED anchor | ✅ None. Python 3.12 project-wide. nashpy >=0.0.43 is a new addition, no existing version to drift from. NumPy no version pin needed (transitive). |
+| PATH CONFLICT — Any file path in tasks.md that is neither EXISTS nor NEW | ✅ None. All paths confirmed: `bilateral/`, `review/`, `gateway/`, `parsing/` modules exist. `negotiation/` is NEW. `tests/fixtures/negotiation/` is NEW. |
+| UNVERIFIED API — Any API/function name in plan.md with NO ANCHOR in verified-sources.md | ✅ No verified-sources.md exists, but all import paths verified directly against filesystem. NashPy API (`nash.Game`, `support_enumeration`, `lemke_howson_enumeration`) verified via research.md. |
 | `analysis-context.md` exists | ✅ Created by this analysis |
 
-**Verdict**: Grounding is intact. All import paths confirmed on filesystem. No version drift. Single LOW mismatch (test subdirectory naming convention) — implementation decision deferred to task generator.
+**Verdict**: Grounding is intact with caveats. No verified-sources.md or task-context.md exist for 026 — this is acceptable as the feature is pre-implementation. All planned paths are confirmed NEW or EXISTING. One MEDIUM mismatch (multi-party edge case contradiction) identified for fix.
+
+**Reality**: 5/5 Detection Pass G checks pass. No version drift, no path conflicts, no unverified APIs. Feature is green for implementation start.

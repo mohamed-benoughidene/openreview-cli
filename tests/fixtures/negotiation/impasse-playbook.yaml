@@ -1,0 +1,41 @@
+id: test-negotiation-impasse
+mode: precheck
+metadata:
+  version: "1.0.0"
+  description: Playbook where all positions are walkaway (impasse)
+  author: test
+categories:
+  - id: confidentiality
+    name: Confidentiality
+    description: Confidentiality obligations
+    preferred:
+      description: Must have full disclosure rights
+      exemplars:
+        - "full disclosure"
+    acceptable:
+      description: Limited disclosure with review rights
+      exemplars:
+        - "limited disclosure"
+    walkaway:
+      description: Any confidentiality restriction is unacceptable
+      exemplars:
+        - "no restriction"
+        - "unlimited disclosure"
+    default_position: walkaway
+  - id: term
+    name: Term
+    description: Duration of obligations
+    preferred:
+      description: No time limit
+      exemplars:
+        - "no time limit"
+    acceptable:
+      description: Very long term
+      exemplars:
+        - "very long term"
+    walkaway:
+      description: Any fixed term is unacceptable
+      exemplars:
+        - "any fixed term"
+        - "perpetual"
+    default_position: walkaway
