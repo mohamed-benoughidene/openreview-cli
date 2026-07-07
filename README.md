@@ -28,7 +28,7 @@ adapters for parse/strip/chunk/retrieve/generate), and single-party contract
 review (PAKTON 3-agent pipeline: extraction, QA
 verification, report formatting), citation grounding discriminator
 (post-hoc claim verification with strict/lenient modes, CG metrics, JSONL audit trail),
-and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), playbook versioning (database storage with version tracking, position rename to preferred/acceptable/walkaway with backward compatibility, version-stamped reviews), experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status, error recovery framework (5 strategies: auto-retry, provider fallback, graceful degradation, stage isolation, user-guided recovery; coordinator orchestrates strategy chains, pipeline integration with pre-stage memory check and post-stage failure handling), **privacy tier routing with three tiers (Maximum all-local, Balanced local embeddings + cloud reasoning, Performance cloud with PII stripped), TierRouter enforcement layer with PII fail-closed, and memo export for review results (Markdown, JSON, DOCX formats with color-coded clauses, confidence scores, citation provenance, citation relevance/locality metrics, and playbook metadata), contract graph modeling (directed clause graph, 0–100 heuristic health score, tree view), and game-theoretic negotiation assistant (Nash/QRE/Level-k solvers for modeling counterparty behavior, advisory Amber-confidence output).**
+and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), playbook versioning (database storage with version tracking, position rename to preferred/acceptable/walkaway with backward compatibility, version-stamped reviews), experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status, error recovery framework (5 strategies: auto-retry, provider fallback, graceful degradation, stage isolation, user-guided recovery; coordinator orchestrates strategy chains, pipeline integration with pre-stage memory check and post-stage failure handling), **privacy tier routing with three tiers (Maximum all-local, Balanced local embeddings + cloud reasoning, Performance cloud with PII stripped), TierRouter enforcement layer with PII fail-closed, and memo export for review results (Markdown, JSON, DOCX formats with color-coded clauses, confidence scores, citation provenance, citation relevance/locality metrics, and playbook metadata), contract graph modeling (directed clause graph, 0–100 heuristic health score, tree view), and game-theoretic negotiation assistant (Nash/QRE/Level-k solvers for modeling counterparty behavior, advisory Amber-confidence output), and three new product modes (LicenseCheck for SaaS license agreements, LeaseCheck for commercial leases, PrivacyCheck for data processing agreements), each with a bundled playbook, mode-specific prompts, and memo export support.**
 The package is not yet on PyPI. APIs and the underlying spec are preliminary and
 will change.
 
@@ -222,7 +222,7 @@ uv run openreview --version
 |-----------------------------------------------------|--------------------------------------------|
 | `src/openreview_cli/__init__.py`                    | Exposes `__version__`                      |
 | `src/openreview_cli/__main__.py`                    | Entry point: `python -m openreview_cli`    |
-| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse`, `precheck`, `chunk`, `pii`, `gateway`, `prompt`, `playbook`, `benchmark`, `graph`, `negotiate` (11 groups + 1 top-level command) |
+| `src/openreview_cli/app.py`                         | Typer app — `config`, `client`, `parse`, `precheck`, `licensecheck`, `leasecheck`, `privacycheck`, `chunk`, `pii`, `gateway`, `prompt`, `playbook`, `benchmark`, `graph`, `negotiate` (14 top-level commands) |
 | `src/openreview_cli/config/paths.py`                | platformdirs paths (config, data, log)     |
 | `src/openreview_cli/config/loader.py`               | Pydantic model, YAML r/w, env merge        |
 | `src/openreview_cli/config/auth.py`                 | `auth.json` handler, chmod 600             |
@@ -248,7 +248,7 @@ uv run openreview --version
 | `src/openreview_cli/review/memo/`                  | Memo export — Markdown, JSON, DOCX formatters, filename generator, models, citation metrics in summary |
 | `src/openreview_cli/review/pipeline.py`            | ReviewStage — wraps extraction/QA agents as a pipeline stage |
 | `src/openreview_cli/review/playbook.py`            | Playbook loader — YAML parsing, validation, DB-backed load via `load_playbook_from_db()` |
-| `src/openreview_cli/review/playbooks/`             | Bundled YAML playbooks (e.g., `precheck-nda-v1.yaml`) |
+| `src/openreview_cli/review/playbooks/`             | Bundled YAML playbooks: `precheck-nda-v1.yaml`, `saas-license-v1.yaml`, `commercial-lease-v1.yaml`, `dpa-v1.yaml` |
 | `src/openreview_cli/prompts/`                       | Prompt management — versioned storage, binding, CLI |
 | `src/openreview_cli/prompts/models.py`              | Pydantic models (Prompt, PromptVersion, PromptBinding) |
 | `src/openreview_cli/prompts/store.py`               | PromptStore — SQLite CRUD, versioning, resolve() |
@@ -349,6 +349,11 @@ openreview index-clear contract.pdf       # Remove document index
 
 # Review (PII is stripped automatically)
 openreview precheck contract.pdf           # NDA review with PII stripping
+openreview licensecheck contract.pdf       # SaaS license agreement review
+openreview leasecheck contract.pdf         # Commercial lease agreement review
+openreview privacycheck contract.pdf       # Data Processing Agreement review
+openreview licensecheck review contract.pdf          # Full PAKTON pipeline for SaaS license review
+openreview privacycheck review --memo-format md contract.pdf  # PrivacyCheck with memo export
 openreview precheck --no-pii contract.pdf  # Skip PII stripping
 openreview precheck --pii-threshold 0.7 contract.pdf  # Tune sensitivity
 openreview precheck --force-reprocess contract.pdf    # Bypass cache
@@ -475,6 +480,9 @@ openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 | `openreview index-status <path>`       | Show index metadata               |
 | `openreview index-clear <path>`        | Remove document index             |
 | `openreview precheck <path>`           | NDA review with automatic PII stripping    |
+| `openreview licensecheck <path>`       | SaaS license agreement review (LicenseCheck) |
+| `openreview leasecheck <path>`         | Commercial lease agreement review (LeaseCheck) |
+| `openreview privacycheck <path>`       | Data Processing Agreement review (PrivacyCheck) |
 | `openreview precheck --no-pii <path>`  | NDA review, skip PII (raw text in output)  |
 | `openreview precheck review <paths...>`| PAKTON 3-agent review (extraction + QA + report) against a playbook |
 | `openreview precheck review --playbook <id> <paths>` | Review with the latest version of a database-stored playbook (version-stamped report) |

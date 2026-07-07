@@ -182,3 +182,4 @@ class ReviewReport:
     schema_version: str = "1.1.0"
     playbook_version: int | None = None
     cg_metrics: CGMetrics | None = None
+    mode: str = "precheck"

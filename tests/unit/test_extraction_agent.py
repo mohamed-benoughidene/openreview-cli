@@ -53,9 +53,9 @@ class TestExtractionAgent:
 
     def test_build_extraction_messages_includes_clause(self) -> None:
         """Extraction messages should contain the clause text."""
-        from openreview_cli.review.prompts import build_extraction_messages
+        from openreview_cli.review.prompts import _build_extraction_messages_common
 
-        messages = build_extraction_messages(
+        messages = _build_extraction_messages_common(
             clause_text="Confidential Info shall be kept secret for 3 years.",
             category_id="confidentiality-term",
             category_name="Confidentiality Term",
@@ -91,6 +91,7 @@ class TestExtractionAgent:
             clause_id="clause-001",
             category=sample_playbook.categories[0],
             extraction_model="test-slot",
+            mode="precheck",
         )
         assert result.position == Position.PREFERRED
         assert result.confidence == 0.85
@@ -115,6 +116,7 @@ class TestExtractionAgent:
             clause_id="clause-099",
             category=sample_playbook.categories[0],
             extraction_model="test-slot",
+            mode="precheck",
         )
         # Falls back to category default_position (acceptable)
         assert result.position == Position.ACCEPTABLE

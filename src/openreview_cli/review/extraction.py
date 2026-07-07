@@ -14,7 +14,7 @@ from typing import Any
 
 from openreview_cli.review._gateway import call_gateway_chat
 from openreview_cli.review.models import Category, ClauseAssessment, Playbook, Position, QAVerdict
-from openreview_cli.review.prompts import build_extraction_messages as _build_extraction_messages
+from openreview_cli.review.prompts import _build_extraction_messages_common
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,7 @@ def extract_clause(
     clause_id: str,
     category: Category | None,
     extraction_model: str,
+    mode: str = "precheck",
 ) -> ClauseAssessment:
     """Run extraction for a single clause against a playbook category.
 
@@ -75,7 +76,8 @@ def extract_clause(
             qa_model=extraction_model,
         )
 
-    messages = _build_extraction_messages(
+    messages = _build_extraction_messages_common(
+        mode=mode,
         clause_text=clause_text,
         category_id=category.id,
         category_name=category.name,

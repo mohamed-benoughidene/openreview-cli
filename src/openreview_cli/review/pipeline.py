@@ -53,6 +53,7 @@ class ReviewStage(Stage):
         confidence_threshold: float = 0.7,
         playbook_version: int | None = None,
         verbose: bool = False,
+        mode: str = "precheck",
     ) -> None:
         """Initialise the review stage.
 
@@ -78,6 +79,7 @@ class ReviewStage(Stage):
         self._confidence_threshold = confidence_threshold
         self._playbook_version = playbook_version
         self._verbose = verbose
+        self._mode = mode
         self.report: ReviewReport | None = None
         self.document: Any = None
         self.clauses: list[Any] | None = []
@@ -112,6 +114,7 @@ class ReviewStage(Stage):
                 clause_id=clause.clause_id,
                 category=category,
                 extraction_model=self._extraction_model,
+                mode=self._mode,
             )
 
             if category is not None and assessment.playbook_category != "no-match":
@@ -146,6 +149,7 @@ class ReviewStage(Stage):
             generated_at=datetime.now(UTC),
             confidence_threshold=self._confidence_threshold,
             playbook_version=self._playbook_version,
+            mode=self._mode,
         )
         self.report = report
         return {"review_report": report, "review_assessments": []}
@@ -203,6 +207,7 @@ class ReviewStage(Stage):
             generated_at=datetime.now(UTC),
             confidence_threshold=self._confidence_threshold,
             playbook_version=self._playbook_version,
+            mode=self._mode,
         )
 
 

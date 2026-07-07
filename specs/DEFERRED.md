@@ -2904,3 +2904,176 @@ Spec 026 plan.md (line 19): "Storage: None for core computation. Optional cachin
 - **Cache hit ratio reporting**: Show the user how many equilibria were retrieved from cache vs computed fresh, to demonstrate the cache's value.
 - **Warm-up cache**: Pre-compute equilibria for known playbook/contract combinations during idle time.
 - **Cross-session cache**: Persist cache across CLI invocations so repeated analysis of the same contract is instantaneous.
+
+---
+
+## D-67: Per-Mode Model Routing Overrides (FR4)
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 027 (product modes LicenseCheck, LeaseCheck, PrivacyCheck) — FR4 |
+| **Deferred at** | 2026-07-07 |
+| **Trigger** | Explicitly out of scope — task-level routing is the established pattern; per-mode overrides add complexity without demonstrated need |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+All three new modes (LicenseCheck, LeaseCheck, PrivacyCheck) use the same
+model slot configuration as PreCheck, DealCheck, and HireCheck. There is no
+way to route a specific mode to a different model or provider. The blueprint
+specifies task-level model routing (extraction vs QA vs comparison), not
+document-type routing. Per-mode overrides would let a user say "use GPT-4
+for LicenseCheck but Llama for LeaseCheck" without changing the global
+model config.
+
+Per-mode model routing would:
+
+1. Add a `model` field or section to the product mode configuration so each
+   mode can specify preferred provider/model overrides
+2. Extend `TierRouter` or the Gateway router to check for mode-level
+   overrides before falling back to the task-level slot
+3. Add a `--mode-model` flag to override at invocation time
+4. Surface the effective model per mode in the memo output and audit log
+5. Document the precedence chain: CLI flag > mode config > task slot >
+   global default
+
+### What would need to change to unblock
+
+1. Define a mode-level model override schema (in config.yml or per-mode
+   settings)
+2. Update `Gateway.chat()` to accept an optional `mode` parameter and check
+   for mode-level overrides
+3. Add `--mode-model` CLI flag to each mode subcommand
+4. Update `ReviewReport` metadata to record the effective model per mode
+5. Add integration tests verifying mode-level override takes precedence
+   over task-level slot
+
+### Spec references
+
+Spec 027 spec.md line 71: "Per-mode model routing overrides are deferred as
+out of scope." Spec 027 spec.md line 124: "FR4 (per-mode model routing
+overrides): Deferred as out of scope."
+
+### Future features (not deferred — natural next steps)
+
+- **Document-type routing**: Instead of per-mode, route by document type
+  (NDA vs SaaS license vs DPA) — useful when a user has a mixed document
+  set.
+- **Per-client model profiles**: Save preferred model configurations for
+  specific clients or counterparties.
+
+---
+
+## D-68: PrivacyCheck Question Expansion (Cross-Border Transfer, Sub-Processor)
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 027 (PrivacyCheck) — Assumptions #5 |
+| **Deferred at** | 2026-07-07 |
+| **Trigger** | Deliberately scoped to 3 questions for consistency; cross-border transfer and sub-processor questions deferred to PrivacyCheck v2 |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+PrivacyCheck uses 3 high-level questions per position, following the same
+pattern as PreCheck, DealCheck, HireCheck, and the other two spec 027 modes.
+Two important DPA topics are folded into the existing questions rather than
+having dedicated questions:
+
+- **Cross-border transfer adequacy**: Whether the DPA permits data transfers
+  outside the EEA/UK and whether adequate safeguards (SCCs, BCRs, adequacy
+  decision) are in place. Currently covered implicitly under the data
+  processing scope question.
+- **Sub-processor management**: Whether the processor must notify and obtain
+  consent before engaging a sub-processor, and whether the controller has a
+  right to object. Currently folded into the sub-processor change
+  notification question.
+
+Dedicated questions for these topics would give users more precise signal
+on two high-risk DPA clauses.
+
+### What would need to change to unblock
+
+1. Expand the PrivacyCheck playbook (dpa-v1.yaml) to 4 or 5 questions per
+   position, adding dedicated cross-border transfer and sub-processor
+   questions
+2. Create a new playbook version (dpa-v2.yaml) or update the current one
+3. Update the prompt templates to include the new questions in the
+   extraction and QA templates
+4. Update PrivacyCheck documentation and help text to reflect the expanded
+   question set
+5. Add integration tests that verify the new questions appear in the review
+   output
+
+### Spec references
+
+Spec 027 spec.md line 100: "Cross-border transfer and sub-processor
+questions are folded into the 3 high-level questions or deferred to
+PrivacyCheck v2." Spec 027 spec.md line 125: "Cross-border transfer and
+sub-processor questions are folded into the 3 high-level questions or
+deferred to a future PrivacyCheck v2."
+
+### Future features (not deferred — natural next steps)
+
+- **Configurable question count**: Let users choose between 3-question
+  (fast) and 5-question (comprehensive) mode for PrivacyCheck.
+- **Jurisdiction-specific DPA profiles**: Different question sets for GDPR,
+  CCPA, LGPD, and other privacy regimes.
+
+---
+
+## D-69: Mode-Specific Confidence Thresholds
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 027 (product modes) — Scope Boundaries |
+| **Deferred at** | 2026-07-07 |
+| **Trigger** | Deferred until shared-threshold pattern is validated across all modes |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+All product modes (PreCheck, DealCheck, HireCheck, LicenseCheck, LeaseCheck,
+PrivacyCheck) share the same initial confidence thresholds for three-color
+output (Green/Amber/Red). There is no way to tune thresholds per mode —
+e.g., requiring higher confidence for LeaseCheck (where a false positive
+means signing an unfavourable lease) than for PrivacyCheck (where Amber is
+acceptable because DPA terms are typically renegotiable).
+
+Mode-specific confidence thresholds would:
+
+1. Add a `confidence_threshold` field to the product mode configuration
+   schema
+2. Allow each mode to specify its own Green/Amber boundary and Amber/Red
+   boundary
+3. Surface the effective thresholds in the memo output and progress banner
+4. Add a `--threshold` CLI flag to override at invocation time (per mode
+   if the flag is mode-aware)
+5. Document the recommended thresholds for each domain based on accuracy
+   benchmarking
+
+### What would need to change to unblock
+
+1. Validate the shared-threshold pattern across all 6 modes with real user
+   feedback — does one threshold fit all, or do lawyers want stricter
+   standards for certain contract types?
+2. Design a per-mode threshold schema in config.yml or mode definition
+3. Update the three-color rendering logic to accept mode-specific thresholds
+4. Add `--threshold` CLI flag to each mode subcommand
+5. Add integration tests with different threshold values per mode
+
+### Spec references
+
+Spec 027 spec.md line 118: "Mode-specific confidence thresholds — all modes
+share the same initial thresholds. Deferred until the shared-threshold
+pattern is validated." Spec 027 spec.md line 126: "Mode-specific thresholds
+are deferred until the pattern is validated."
+
+### Future features (not deferred — natural next steps)
+
+- **Adaptive thresholds**: Learn optimal thresholds per mode based on user
+  feedback (which assessments the user agrees/disagrees with).
+- **Per-client threshold profiles**: Save different threshold sets for
+  different clients or contract counterparties.
+- **Threshold benchmarking**: Run the benchmark harness at different
+  thresholds to produce a precision/recall curve for each mode.

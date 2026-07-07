@@ -176,3 +176,49 @@ class TestFormatJson:
         data = json.loads(output)
         assert isinstance(data, list)
         assert len(data) == 2
+
+    def test_mode_field_present_in_json(self) -> None:
+        """JSON output envelope includes mode field matching the invoked subcommand."""
+        report = _make_report()
+        data = json.loads(format_json(report))
+        assert "mode" in data
+        assert data["mode"] == "precheck"
+
+    def test_mode_field_reflects_constructed_mode(self) -> None:
+        """JSON output mode field matches the mode passed to ReviewReport constructor."""
+        dm = DocMeta(filename="license.pdf", page_count=10, clause_count=5, pii_stripped=True)
+        report = ReviewReport(
+            document=dm,
+            assessments=[],
+            summary=ReviewSummary(),
+            playbook_id="saas-license-v1",
+            generated_at=datetime.now(UTC),
+            mode="licensecheck",
+        )
+        data = json.loads(format_json(report))
+        assert data["mode"] == "licensecheck"
+
+    def test_mode_field_in_batch_json(self) -> None:
+        """Each report in batch JSON output has its own mode field."""
+        dm1 = DocMeta(filename="a.pdf", page_count=1, clause_count=1, pii_stripped=False)
+        dm2 = DocMeta(filename="b.pdf", page_count=2, clause_count=2, pii_stripped=False)
+        report1 = ReviewReport(
+            document=dm1,
+            assessments=[],
+            summary=ReviewSummary(),
+            playbook_id="p1",
+            generated_at=datetime.now(UTC),
+            mode="licensecheck",
+        )
+        report2 = ReviewReport(
+            document=dm2,
+            assessments=[],
+            summary=ReviewSummary(),
+            playbook_id="p2",
+            generated_at=datetime.now(UTC),
+            mode="privacycheck",
+        )
+        data = json.loads(format_json([report1, report2]))
+        assert isinstance(data, list)
+        assert data[0]["mode"] == "licensecheck"
+        assert data[1]["mode"] == "privacycheck"

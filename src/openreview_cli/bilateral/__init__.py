@@ -278,6 +278,7 @@ def _process_document(
             clause_id=clause.id,
             category=category,
             extraction_model=extraction_model,
+            mode="precheck",
         )
 
         # Phase 3: QA verification

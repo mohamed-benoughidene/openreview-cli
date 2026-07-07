@@ -67,6 +67,7 @@ def run_review(  # noqa: PLR0912
     verbose: bool = False,
     grounding_mode: str | None = None,
     confidence_threshold: float = 0.7,
+    mode: str = "precheck",
 ) -> list[ReviewReport]:
     """Run the PAKTON 3-agent review pipeline on one or more documents.
 
@@ -144,6 +145,7 @@ def run_review(  # noqa: PLR0912
                 no_pii=no_pii,
                 verbose=verbose,
                 confidence_threshold=confidence_threshold,
+                mode=mode,
             )
         except Exception as exc:
             logger.warning("Failed to process %s: %s", doc_path, exc)
@@ -198,6 +200,7 @@ def _run_review_doc_pipeline(
     no_pii: bool,
     verbose: bool,
     confidence_threshold: float,
+    mode: str = "precheck",
 ) -> tuple[ReviewReport, list[Any]] | None:
     """Run a pipeline for a single document using the pipeline framework.
 
@@ -217,6 +220,7 @@ def _run_review_doc_pipeline(
         confidence_threshold=confidence_threshold,
         playbook_version=playbook_version,
         verbose=verbose,
+        mode=mode,
     )
 
     stages: list[Any] = [ParseStage()]
