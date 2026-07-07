@@ -46,6 +46,14 @@ def _validate_threshold(value: float | None) -> float | None:
     return value
 
 
+def _validate_enum(value: str, options: tuple[str, ...], name: str) -> None:
+    """Validate a CLI option against an enum-like set of values."""
+    if value not in options:
+        joined = "', '".join(options)
+        typer.echo(f"Error: --{name} must be '{joined}', got '{value}'", err=True)
+        raise typer.Exit(code=2)
+
+
 def _export_memo_reports(reports: Any, memo_format: list[str], output_dir: str | None) -> None:
     """Export memo files for all reports in the requested formats."""
     from openreview_cli.review.memo.exporter import MemoExporter
@@ -2015,6 +2023,196 @@ def graph_view(
 
 
 app.add_typer(graph_app)
+
+
+# ── negotiate command ──
+
+
+@app.command()
+def negotiate(
+    doc_path: str = typer.Argument(..., help="Path to a PDF or DOCX contract document."),
+    playbook_path: str | None = typer.Option(
+        None, "--playbook-path", help="Path to a custom YAML playbook."
+    ),
+    solver: str = typer.Option(
+        "qre",
+        "--solver",
+        help="Equilibrium solver: nash, qre, or level_k.",
+    ),
+    rationality: float = typer.Option(
+        1.0,
+        "--rationality",
+        help="Rationality parameter for QRE solver (λ). Higher = more rational.",
+    ),
+    depth: int = typer.Option(
+        2,
+        "--depth",
+        help="Depth of reasoning for level-k solver (k).",
+    ),
+    weights: str | None = typer.Option(
+        None,
+        "--weights",
+        help="Payoff component weights as comma-separated values: "
+        "risk,financial,obligation (e.g. 0.7,0.15,0.15). "
+        "Must sum to ~1.0.",
+    ),
+    confidence_threshold: float = typer.Option(
+        0.7,
+        "--confidence-threshold",
+        "-ct",
+        help="Confidence threshold for Amber flagging (0.0-1.0).",
+    ),
+    no_pii: bool = typer.Option(False, "--no-pii", help="Skip PII stripping."),
+    verbose: bool = typer.Option(False, "--verbose", help="Show per-clause progress."),
+    output: str | None = typer.Option(
+        None, "--output", help="Write output to file instead of stdout."
+    ),
+    format: str = typer.Option("table", "--format", help="Output format: table, json, memo."),
+) -> None:
+    """Run a game-theoretic negotiation analysis on a contract document.
+
+    Builds clause-level payoff matrices from playbook positions and
+    computes equilibrium strategies using the selected solver (default:
+    bounded-rationality QRE). Produces per-clause recommendations with
+    confidence annotations.
+
+    This is an EXPERIMENTAL feature. All output is advisory only.
+    """
+    _validate_enum(solver, ("nash", "qre", "level_k"), "solver")
+    _validate_enum(format, ("table", "json", "memo"), "format")
+
+    if not 0.0 <= confidence_threshold <= 1.0:
+        typer.echo(
+            "Error: --confidence-threshold must be between 0.0 and 1.0",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    path = Path(doc_path)
+    if not path.exists():
+        typer.echo(f"Error: File not found: {doc_path}", err=True)
+        raise typer.Exit(code=1)
+
+    # Build assessments from document + playbook
+    from openreview_cli.parsing.stream import parse_document
+    from openreview_cli.review.extraction import match_category as _match_category
+    from openreview_cli.review.models import ClauseAssessment, Position, QAVerdict
+    from openreview_cli.review.playbook import load_bundled, load_playbook
+
+    if playbook_path:
+        pb_path = Path(playbook_path)
+        if not pb_path.exists():
+            typer.echo(f"Error: Playbook not found: {playbook_path}", err=True)
+            raise typer.Exit(code=1)
+        playbook = load_playbook(pb_path)
+    else:
+        playbook = load_bundled()
+
+    # Parse document
+    doc, clauses = parse_document(str(path))
+
+    # Build ClauseAssessment objects for each clause
+    assessments: list[ClauseAssessment] = []
+    for clause in clauses:
+        clause_text = getattr(clause, "text", str(clause)) or str(clause)
+        clause_id_str = getattr(
+            clause, "heading", getattr(clause, "id", f"clause_{len(assessments) + 1}")
+        )
+
+        # Match clause heading to playbook category for position extraction
+        heading = str(clause_id_str)
+        cat = _match_category(heading, playbook)
+
+        if cat is not None:
+            playbook_cat_id = cat.id
+            position = cat.default_position
+            # ponytail: confidence from playbook, default 0.7
+            pb_confidence = 0.7
+            if hasattr(cat, "preferred") and hasattr(cat.preferred, "description"):
+                pb_confidence = 0.75  # Slight bump when playbook has position details
+        else:
+            playbook_cat_id = "no-match"
+            position = Position.PREFERRED
+            pb_confidence = 0.5  # Lower confidence when no playbook match
+
+        assessment = ClauseAssessment(
+            clause_id=clause_id_str,
+            clause_text=str(clause_text)[:200],
+            playbook_category=playbook_cat_id,
+            position=position,
+            confidence=pb_confidence,
+            citation="",
+            qa_verdict=QAVerdict.agree,
+            extraction_model="bundled",
+            qa_model="bundled",
+        )
+        assessments.append(assessment)
+
+    if not assessments:
+        typer.echo("Error: No clauses found in document.", err=True)
+        raise typer.Exit(code=2)
+
+    if verbose:
+        doc_filename = doc.filename if hasattr(doc, "filename") else str(path)
+        typer.echo(f"Loaded {len(assessments)} clauses from {doc_filename}", err=True)
+
+    # Parse weights string
+    weights_dict: dict[str, float] | None = None
+    if weights:
+        parts = [float(x) for x in weights.split(",")]
+        if len(parts) == 3:
+            weights_dict = {"risk": parts[0], "financial": parts[1], "obligation": parts[2]}
+
+    from openreview_cli.negotiation import (
+        format_json,
+        format_memo,
+        format_terminal,
+        run_negotiation,
+    )
+
+    try:
+        report = run_negotiation(
+            assessments=assessments,
+            solver=solver,
+            weights=weights_dict,
+            rationality=rationality,
+            depth=depth,
+            confidence_threshold=confidence_threshold,
+            playbook_id=playbook.id if hasattr(playbook, "id") else "bundled",
+        )
+    except FileNotFoundError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=2) from None
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=3) from None
+
+    if format == "json":
+        output_str = format_json(report)
+        if output:
+            Path(output).write_text(output_str, encoding="utf-8")
+        else:
+            typer.echo(output_str)
+    elif format == "memo":
+        output_str = format_memo(report)
+        if output:
+            Path(output).write_text(output_str, encoding="utf-8")
+        else:
+            typer.echo(output_str)
+    else:
+        output_str = format_terminal(report)
+        typer.echo(output_str)
+
+    # Amber warning
+    if report.summary.amber_count > 0:
+        typer.echo(
+            f"⚠  {report.summary.amber_count} clause(s) flagged Amber — review recommended.",
+            err=True,
+        )
+
 
 from openreview_cli.benchmark.cli import benchmark_app  # noqa: E402
 

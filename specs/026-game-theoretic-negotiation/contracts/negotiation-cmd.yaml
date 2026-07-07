@@ -1,0 +1,97 @@
+# CLI Command Contract: `openreview negotiate`
+# Schema version: 1.0.0
+# Purpose: Define the Typer subcommand for the negotiation assistant.
+
+command:
+  name: negotiate
+  help: >
+    Compute game-theoretic equilibrium strategy and counteroffer
+    recommendations for a contract using bounded-rationality models.
+
+  arguments:
+    - name: doc_path
+      type: Path
+      help: "Path to the contract document (.pdf or .docx)"
+      required: true
+
+  options:
+    - option:
+        name: "--playbook"
+        type: Optional[str]
+        help: "Playbook name (default: bundled NDA playbook)"
+        default: null
+    - option:
+        name: "--playbook-path"
+        type: Optional[Path]
+        help: "Path to custom playbook YAML file"
+        default: null
+    - option:
+        name: "--solver"
+        type: str
+        help: "Equilibrium solver: nash, qre, level_k (default: qre)"
+        choices: ["nash", "qre", "level_k"]
+        default: "qre"
+    - option:
+        name: "--rationality"
+        type: float
+        help: "Rationality parameter lambda for QRE (default: 1.0)"
+        default: 1.0
+    - option:
+        name: "--depth"
+        type: int
+        help: "Level-k depth (default: 2)"
+        default: 2
+    - option:
+        name: "--weights"
+        type: str
+        help: "Comma-separated payoff weights: risk,financial,obligation"
+        default: "0.33,0.33,0.34"
+    - option:
+        name: "--confidence-threshold"
+        type: float
+        help: "Amber threshold 0.0-1.0 (default: 0.7)"
+        default: 0.7
+    - option:
+        name: "--no-pii"
+        type: bool
+        help: "Skip PII stripping (default: false)"
+        default: false
+    - option:
+        name: "--verbose"
+        type: bool
+        help: "Print per-clause progress to stderr"
+        default: false
+    - option:
+        name: "--output"
+        type: Optional[Path]
+        help: "Write report to file (default: stdout)"
+        default: null
+    - option:
+        name: "--format"
+        type: str
+        help: "Output format: table, json, memo (default: table)"
+        choices: ["table", "json", "memo"]
+        default: "table"
+
+  examples:
+    - example:
+        description: "Basic negotiation analysis with QRE solver"
+        command: "openreview negotiate contract.pdf"
+    - example:
+        description: "Nash equilibrium with custom confidence threshold"
+        command: "openreview negotiate contract.pdf --solver nash --confidence-threshold 0.8"
+    - example:
+        description: "What-if exploration with adjusted weights"
+        command: "openreview negotiate contract.pdf --weights 0.5,0.3,0.2 --rationality 2.0"
+    - example:
+        description: "JSON output for programmatic consumption"
+        command: "openreview negotiate contract.pdf --format json --output strategy.json"
+
+  behavior:
+    disclaimer: "EXPERIMENTAL and advisory only. Review with qualified legal counsel."
+    language_rules:
+      - "Use suggests, indicates, recommends considering"
+      - "Never sign this or reject this"
+      - "Annotate all assumptions explicitly"
+      - "Mark low-confidence recommendations as Amber"
+      - "Use conditional language for predictions"

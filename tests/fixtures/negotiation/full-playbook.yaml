@@ -1,0 +1,65 @@
+id: test-negotiation-nda
+mode: precheck
+metadata:
+  version: "1.0.0"
+  description: Test NDA playbook for negotiation unit tests
+  author: test
+categories:
+  - id: confidentiality
+    name: Confidentiality
+    description: Confidentiality obligations
+    preferred:
+      description: Mutual confidentiality with standard exceptions
+      exemplars:
+        - "mutual confidentiality"
+        - "standard exceptions"
+        - "mutual NDA"
+    acceptable:
+      description: One-way confidentiality or limited exceptions
+      exemplars:
+        - "one-way confidentiality"
+        - "limited exceptions"
+    walkaway:
+      description: No confidentiality or unlimited disclosure
+      exemplars:
+        - "no confidentiality"
+        - "unlimited disclosure"
+    default_position: preferred
+  - id: term
+    name: Term
+    description: Duration of obligations
+    preferred:
+      description: 2-year term
+      exemplars:
+        - "2-year term"
+        - "two year"
+    acceptable:
+      description: 3-year term
+      exemplars:
+        - "3-year term"
+        - "three year"
+    walkaway:
+      description: Perpetual term
+      exemplars:
+        - "perpetual"
+        - "indefinite"
+    default_position: preferred
+  - id: governing_law
+    name: Governing Law
+    description: Choice of law
+    preferred:
+      description: Neutral jurisdiction
+      exemplars:
+        - "neutral jurisdiction"
+        - "arbitration"
+    acceptable:
+      description: Either party's home jurisdiction
+      exemplars:
+        - "either party"
+        - "home jurisdiction"
+    walkaway:
+      description: Unfavorable or no governing law
+      exemplars:
+        - "unfavorable"
+        - "no governing law"
+    default_position: preferred

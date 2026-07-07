@@ -1,0 +1,23 @@
+id: test-negotiation-partial
+mode: precheck
+metadata:
+  version: "1.0.0"
+  description: Partial playbook with only user positions
+  author: test
+categories:
+  - id: confidentiality
+    name: Confidentiality
+    description: Confidentiality obligations
+    preferred:
+      description: Mutual confidentiality with standard exceptions
+      exemplars:
+        - "mutual confidentiality"
+    acceptable:
+      description: One-way confidentiality
+      exemplars:
+        - "one-way confidentiality"
+    walkaway:
+      description: No confidentiality
+      exemplars:
+        - "no confidentiality"
+    default_position: preferred
