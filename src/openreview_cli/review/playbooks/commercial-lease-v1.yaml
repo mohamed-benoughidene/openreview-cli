@@ -1,0 +1,317 @@
+# Bundled Commercial Lease Playbook — LeaseCheck Mode v1
+# Covers standard commercial lease agreement clauses.
+# Users may override with --playbook <path>.
+
+id: "commercial-lease-v1"
+mode: "leasecheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Standard commercial lease agreement review playbook for
+    LeaseCheck mode. Covers rent escalation, maintenance
+    obligations, subletting, term length, operating expenses,
+    security deposits, and use restrictions.
+  author: "openreview"
+
+categories:
+  # ── Rent Escalation ─────────────────────────────────────────
+  - id: "rent-escalation"
+    name: "Rent Escalation"
+    description: >
+      Terms governing annual rent increases — tied to CPI,
+      fixed percentages, or market-rate adjustments.
+    preferred:
+      description: >
+        Rent escalation tied to CPI with a reasonable cap (3-5%).
+        No double-escalation (CPI + fixed percentage).
+      exemplars:
+        - "Annual rent increase tied to CPI with a [NUMBER]% cap"
+        - "Rent increases by no more than [NUMBER]% per year"
+        - "Escalation is based on CPI, not to exceed [NUMBER]% annually"
+    acceptable:
+      description: >
+        Fixed percentage escalation (2-4% annually) or CPI without
+        a cap. Market-rate adjustments with right to contest.
+      exemplars:
+        - "Annual rent increase of [NUMBER]% per year"
+        - "Rent adjusted annually based on CPI"
+        - "Rent may be adjusted to fair market value at renewal"
+    walkaway:
+      description: >
+        Unpredictable escalation — uncapped CPI + fixed percentage,
+        or landlord may increase rent at its sole discretion.
+      exemplars:
+        - "Annual rent increase of CPI plus [NUMBER]%, no cap"
+        - "Landlord may increase rent to fair market value at any time"
+        - "Rent escalation is at Landlord's sole discretion"
+    default_position: "acceptable"
+
+  # ── Maintenance Obligations ─────────────────────────────────
+  - id: "maintenance-obligations"
+    name: "Maintenance Obligations"
+    description: >
+      Division of maintenance responsibilities — structural vs
+      cosmetic, landlord vs tenant obligations.
+    preferred:
+      description: >
+        Landlord responsible for structural repairs, major systems
+        (HVAC, electrical, plumbing), and common areas. Tenant
+        responsible only for interior cosmetic maintenance.
+      exemplars:
+        - "Landlord shall maintain the roof, foundation, structural elements, and major systems"
+        - "Tenant is responsible only for interior non-structural repairs"
+        - "Landlord shall maintain all common areas and exterior elements"
+    acceptable:
+      description: >
+        Shared maintenance with clear allocation. Tenant
+        responsible for some major systems with reimbursement.
+      exemplars:
+        - "Landlord maintains structural components; Tenant maintains interior"
+        - "HVAC maintenance is shared; Landlord covers capital replacements"
+        - "Tenant reimburses Landlord for shared maintenance costs on a pro-rata basis"
+    walkaway:
+      description: >
+        Tenant responsible for all maintenance, including
+        structural and major systems, with no cap on pass-through
+        costs.
+      exemplars:
+        - "Tenant shall maintain and repair all portions of the Premises at its sole cost"
+        - "Tenant is responsible for HVAC replacement and structural repairs"
+        - "All maintenance costs are passed through to Tenant with no cap"
+    default_position: "acceptable"
+
+  # ── Subletting & Assignment ─────────────────────────────────
+  - id: "subletting-assignment"
+    name: "Subletting & Assignment"
+    description: >
+      Tenant's right to sublet the premises or assign the lease
+      to a third party.
+    preferred:
+      description: >
+        Tenant may sublet or assign with landlord consent not to
+        be unreasonably withheld. No recapture right for landlord.
+      exemplars:
+        - "Tenant may sublet the Premises or assign this Lease with Landlord's consent, not to be unreasonably withheld"
+        - "Tenant may assign to an affiliate without Landlord's consent"
+        - "No recapture right — Landlord cannot terminate and re-let at higher rent"
+    acceptable:
+      description: >
+        Subletting/assignment permitted with landlord consent
+        (reasonable standard). Landlord may recapture if
+        subtenant is a competitor.
+      exemplars:
+        - "Tenant may sublet with Landlord's prior written consent, not to be unreasonably withheld"
+        - "Landlord may recapture space if proposed subtenant is a competitor"
+        - "Assignment to affiliates requires Landlord's consent, not to be unreasonably withheld"
+    walkaway:
+      description: >
+        No subletting or assignment permitted, or landlord has
+        absolute discretion to refuse, or recapture right allows
+        landlord to terminate and re-let at higher rent.
+      exemplars:
+        - "Tenant may not sublet or assign this Lease without Landlord's prior written consent, which may be withheld in Landlord's sole discretion"
+        - "Any subletting or assignment requires Landlord's absolute approval"
+        - "Landlord may recapture the Premises upon any proposed assignment"
+    default_position: "acceptable"
+
+  # ── Term Length & Renewal ───────────────────────────────────
+  - id: "term-length-renewal"
+    name: "Term Length & Renewal"
+    description: >
+      Initial lease term, renewal options, and expansion rights.
+    preferred:
+      description: >
+        Flexible term length (3-5 years) with multiple renewal
+        options. Tenant has right of first refusal on adjacent
+        space.
+      exemplars:
+        - "Initial term of [NUMBER] years with [NUMBER] renewal options of [NUMBER] years each"
+        - "Tenant has the right of first refusal on adjacent space"
+        - "Renewal terms are at the same rent escalations as the initial term"
+    acceptable:
+      description: >
+        Standard 5-7 year term with 1-2 renewal options. Market
+        rent at renewal.
+      exemplars:
+        - "Initial term of [NUMBER] years with [NUMBER] [NUMBER]-year renewal option"
+        - "Tenant may renew by providing notice [NUMBER] days before expiration"
+        - "Renewal rent at fair market value"
+    walkaway:
+      description: >
+        Long initial term (10+ years) with no renewal options,
+        or renewal at landlord's sole discretion.
+      exemplars:
+        - "Initial term of [NUMBER] years with no renewal options"
+        - "Renewal is at Landlord's sole discretion"
+        - "Tenant must provide [NUMBER] days' notice to renew"
+    default_position: "acceptable"
+
+  # ── Operating Expenses & CAM Charges ────────────────────────
+  - id: "operating-expenses"
+    name: "Operating Expenses & CAM Charges"
+    description: >
+        Tenant's share of operating expenses, common area
+        maintenance (CAM) charges, and audit rights.
+    preferred:
+      description: >
+        Operating expenses capped at fixed percentage, with full
+        audit rights and no capital improvement pass-through.
+      exemplars:
+        - "Tenant's share of operating expenses is capped at [NUMBER]% per year"
+        - "Tenant may audit operating expenses annually"
+        - "Capital improvements are excluded from operating expenses"
+    acceptable:
+      description: >
+        Standard CAM / operating expense pass-through with
+        reasonable exclusions (leasing commissions, legal fees).
+        Audit rights with 12-month lookback.
+      exemplars:
+        - "Tenant pays its pro-rata share of operating expenses"
+        - "Operating expenses exclude leasing commissions, legal fees, and capital improvements"
+        - "Tenant may audit expenses with [NUMBER] days' notice"
+    walkaway:
+      description: >
+        No cap on operating expenses, no audit rights, or
+        capital improvements and management fees included in
+        pass-through.
+      exemplars:
+        - "Tenant shall pay all operating expenses without limitation"
+        - "Tenant has no right to audit operating expenses"
+        - "Operating expenses include capital improvements and a [NUMBER]% management fee"
+    default_position: "acceptable"
+
+  # ── Security Deposit ────────────────────────────────────────
+  - id: "security-deposit"
+    name: "Security Deposit"
+    description: >
+      Amount, terms, and return conditions for the security
+      deposit.
+    preferred:
+      description: >
+        Security deposit equal to 1-2 months' rent. Interest
+        accrues to tenant. Return within 30 days of lease end
+        with itemized deductions.
+      exemplars:
+        - "Security deposit of [NUMBER] month(s)' rent"
+        - "Security deposit bears interest at [NUMBER]% per year"
+        - "Deposit returned within [NUMBER] days of lease expiration with itemized deductions"
+    acceptable:
+      description: >
+        Security deposit of 2-3 months' rent. Return within
+        30-60 days with reasonable deductions.
+      exemplars:
+        - "Security deposit of [NUMBER] months' Base Rent"
+        - "Landlord shall return deposit within [NUMBER] days, less any amounts for damages"
+        - "Deposit may be applied to last month's rent"
+    walkaway:
+      description: >
+        Security deposit exceeds 3 months' rent, no interest,
+        extended return period (90+ days), or Landlord may use
+        deposit for any purpose.
+      exemplars:
+        - "Security deposit of [NUMBER] months' rent"
+        - "Landlord may commingle deposit with its own funds"
+        - "Deposit returned within [NUMBER] days, at Landlord's sole discretion"
+    default_position: "acceptable"
+
+  # ── Termination for Convenience ─────────────────────────────
+  - id: "termination-convenience"
+    name: "Termination for Convenience"
+    description: >
+      Right of either party to terminate the lease early for
+      any reason, and associated buyout terms.
+    preferred:
+      description: >
+        Mutual or tenant-only termination for convenience with
+        reasonable notice (60 days) and a defined buyout
+        formula.
+      exemplars:
+        - "Tenant may terminate this Lease for convenience with [NUMBER] days' notice"
+        - "Buyout is equal to [NUMBER] months' rent"
+        - "Tenant may terminate if the Premises become unsuitable for its business"
+    acceptable:
+      description: >
+        Termination for convenience with a buyout of 3-6 months'
+        rent. Notice period of 60-90 days.
+      exemplars:
+        - "Tenant may terminate with [NUMBER] days' notice and a buyout of [NUMBER] months' rent"
+        - "Either party may terminate on [NUMBER] days' notice"
+        - "Early termination available after the first [NUMBER] years"
+    walkaway:
+      description: >
+        No termination for convenience (tenant locked in for
+        full term), or landlord-only termination right, or
+        buyout requires payment of all remaining rent.
+      exemplars:
+        - "Tenant may not terminate this Lease prior to the expiration date"
+        - "Landlord may terminate this Lease for convenience; Tenant may not"
+        - "Early termination requires payment of all remaining rent through the end of the term"
+    default_position: "acceptable"
+
+  # ── Triple-Net / Pass-Through ───────────────────────────────
+  - id: "triple-net"
+    name: "Triple-Net / Pass-Through"
+    description: >
+      Triple-net lease structure where tenant pays taxes,
+      insurance, and maintenance in addition to base rent.
+    preferred:
+      description: >
+        Gross lease (landlord pays all costs) or modified
+        gross with clear caps on pass-through expenses.
+      exemplars:
+        - "Base rent includes all operating expenses, taxes, and insurance"
+        - "Tenant's only additional costs are utilities and janitorial"
+        - "Pass-through expenses are capped at [NUMBER]% annually"
+    acceptable:
+      description: >
+        Standard triple-net lease with reasonable caps and
+        exclusions. Tenant pays pro-rata share of taxes,
+        insurance, and CAM.
+      exemplars:
+        - "Tenant pays its pro-rata share of taxes, insurance, and CAM"
+        - "Pass-through expenses exclude capital improvements and management fees"
+        - "Annual increase in pass-through expenses is capped at [NUMBER]%"
+    walkaway:
+      description: >
+        Full triple-net with no caps, including capital
+        improvements and replacement reserves. No exclusions.
+      exemplars:
+        - "Tenant shall pay all taxes, insurance, maintenance, and capital improvements"
+        - "There is no cap on pass-through expenses"
+        - "Tenant is responsible for structural repairs and replacements"
+    default_position: "acceptable"
+
+  # ── Use Restrictions ────────────────────────────────────────
+  - id: "use-restrictions"
+    name: "Use Restrictions"
+    description: >
+      Permitted use of the premises and any exclusive-use
+      clauses that limit the tenant's business operations.
+    preferred:
+      description: >
+        Broad permitted use clause. No exclusive-use clauses
+        that restrict tenant's business. Reasonable hours of
+        operation.
+      exemplars:
+        - "The Premises may be used for any lawful business purpose"
+        - "No exclusive-use rights granted to other tenants that restrict Tenant's business"
+        - "Tenant may operate during all hours permitted by law"
+    acceptable:
+      description: >
+        Standard permitted use tied to business type (office,
+        retail, etc.). Exclusive-use clauses limited to specific
+        categories.
+      exemplars:
+        - "The Premises shall be used for general office purposes"
+        - "Exclusive-use rights are limited to [CATEGORY]"
+        - "Tenant may operate during normal business hours"
+    walkaway:
+      description: >
+        Narrow permitted use that restricts future business
+        changes. Broad exclusive-use clauses for other tenants
+        that significantly limit operations.
+      exemplars:
+        - "The Premises may only be used for [SPECIFIC BUSINESS TYPE]"
+        - "Other tenants have exclusive rights to [BROAD CATEGORY] which conflicts with Tenant's business"
+        - "Tenant may not change its use without Landlord's consent"
+    default_position: "acceptable"

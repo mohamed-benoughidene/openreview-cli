@@ -1,0 +1,312 @@
+# Bundled SaaS License Playbook — LicenseCheck Mode v1
+# Covers standard SaaS/software license agreement clauses.
+# Users may override with --playbook <path>.
+
+id: "saas-license-v1"
+mode: "licensecheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Standard SaaS/software license agreement review playbook for
+    LicenseCheck mode. Covers license grant, auto-renewal, liability
+    caps, data-deletion obligations, IP ownership, indemnification,
+    and pricing terms.
+  author: "openreview"
+
+categories:
+  # ── License Grant & Scope ───────────────────────────────────
+  - id: "license-grant"
+    name: "License Grant & Scope"
+    description: >
+      Defines the scope of the software license — perpetual vs term,
+      user/machine limits, and permitted use cases.
+    preferred:
+      description: >
+        Perpetual license grant sufficient for stated use. No
+        arbitrary usage restrictions beyond what the licensee needs.
+      exemplars:
+        - "Licensor grants Licensee a perpetual, non-exclusive license to use the Software"
+        - "Licensee may use the Software for its internal business purposes"
+        - "The license grant includes all updates and patches during the term"
+    acceptable:
+      description: >
+        Term license with standard scope. Usage restrictions are
+        reasonable and industry-typical.
+      exemplars:
+        - "Licensor grants a non-exclusive, non-transferable license for the term of this Agreement"
+        - "Licensee is licensed for [NUMBER] users / seats"
+        - "Usage is limited to Licensee's internal operations"
+    walkaway:
+      description: >
+        Overly restrictive license scope — limits use to specific
+        departments, prohibits competitive use broadly, or grants
+        a non-exclusive license with no right to use.
+      exemplars:
+        - "Licensee may only use the Software in its [DEPARTMENT] department"
+        - "Licensee may not use the Software in any business competitive with Licensor"
+        - "Licensor grants no right to use the Software for any purpose"
+    default_position: "preferred"
+
+  # ── Auto-Renewal & Term ─────────────────────────────────────
+  - id: "auto-renewal"
+    name: "Auto-Renewal & Term"
+    description: >
+      Terms around subscription renewal — automatic renewal,
+      notice periods, and termination rights.
+    preferred:
+      description: >
+        No auto-renewal, or auto-renewal with a transparent notice
+        period (30+ days) and easy opt-out.
+      exemplars:
+        - "This Agreement shall auto-renew unless either party provides [NUMBER] days' notice"
+        - "Licensee may terminate at any time without penalty"
+        - "Notice of non-renewal may be given at any time before the renewal date"
+    acceptable:
+      description: >
+        Auto-renewal with standard notice period (15-30 days).
+        Either party may decline renewal.
+      exemplars:
+        - "This Agreement shall automatically renew for successive [NUMBER]-month periods"
+        - "Either party may provide notice of non-renewal [NUMBER] days before the end of the current term"
+    walkaway:
+      description: >
+        Auto-renewal with no notice period, silent renewal, or
+        multi-year lock-in with no termination right.
+      exemplars:
+        - "This Agreement shall automatically renew indefinitely unless Licensee provides [NUMBER] days' notice"
+        - "Licensee may not terminate this Agreement before the end of the initial term"
+        - "Non-renewal notice must be provided at least [NUMBER] days before the end of the term"
+    default_position: "acceptable"
+
+  # ── Liability Cap ───────────────────────────────────────────
+  - id: "liability-cap"
+    name: "Liability Cap"
+    description: >
+      Limit on each party's liability — typically expressed as a
+      multiple of fees paid.
+    preferred:
+      description: >
+        Liability cap is reasonable — multiple of fees (2-3x) or
+        a meaningful fixed amount. No exclusions that gut the cap.
+      exemplars:
+        - "Each party's aggregate liability shall not exceed the fees paid in the [NUMBER] months preceding the claim"
+        - "Liability cap of $[AMOUNT] or [NUMBER]x annual fees, whichever is greater"
+    acceptable:
+      description: >
+        Standard liability cap at 1x annual fees. Standard
+        exclusions (IP infringement, breach of confidentiality).
+      exemplars:
+        - "Licensor's aggregate liability shall not exceed the fees paid by Licensee in the [NUMBER] months prior"
+        - "Neither party's liability shall exceed [NUMBER]x the total fees paid under this Agreement"
+    walkaway:
+      description: >
+        Liability cap at 1x fees or below, or cap applies only to
+        one party, or overly broad exclusions eliminate meaningful
+        recourse.
+      exemplars:
+        - "Licensor's aggregate liability shall not exceed [AMOUNT]"
+        - "Liability cap of [NUMBER]x monthly fees"
+        - "Licensor has no liability for any indirect, consequential, or special damages"
+    default_position: "acceptable"
+
+  # ── Data Deletion on Termination ────────────────────────────
+  - id: "data-deletion"
+    name: "Data Deletion on Termination"
+    description: >
+      Obligation to delete or return customer data after contract
+      termination or expiration.
+    preferred:
+      description: >
+        Clear data-deletion obligation within a reasonable time
+        frame (30-60 days). Customer can request export before
+        deletion.
+      exemplars:
+        - "Upon termination, Licensor shall delete all Customer Data within [NUMBER] days"
+        - "Licensee may request an export of its data before deletion"
+        - "Licensor shall provide a certification of deletion upon request"
+    acceptable:
+      description: >
+        Data-deletion clause exists but timeline is standard (60-90
+        days) or requires customer request.
+      exemplars:
+        - "Either party shall return or destroy the other's Confidential Information upon request"
+        - "Customer Data shall be deleted within [NUMBER] days of termination"
+        - "Upon termination, Licensor will make Customer Data available for export for [NUMBER] days"
+    walkaway:
+      description: >
+        No data-deletion obligation, or Licensor may retain data
+        indefinitely, or deletion is at Licensor's sole discretion.
+      exemplars:
+        - "Licensor has no obligation to delete Customer Data after termination"
+        - "Customer Data may be retained for Licensor's business purposes"
+        - "Deletion is at Licensor's discretion and may incur additional fees"
+    default_position: "acceptable"
+
+  # ── IP Ownership ────────────────────────────────────────────
+  - id: "ip-ownership"
+    name: "IP Ownership"
+    description: >
+      Ownership of intellectual property — both pre-existing IP
+      and anything created during the engagement.
+    preferred:
+      description: >
+        Each party retains ownership of its pre-existing IP. No
+        grant-back license to customer improvements. Feedback
+        license is narrow and non-exclusive.
+      exemplars:
+        - "Each party retains all rights in its pre-existing Intellectual Property"
+        - "Licensee retains ownership of any modifications or improvements it makes"
+        - "Licensee grants Licensor a non-exclusive license to use feedback for product improvement"
+    acceptable:
+      description: >
+        Standard IP ownership clause. Licensor retains ownership of
+        the software. Customer owns its data.
+      exemplars:
+        - "Licensor retains all rights, title, and interest in the Software"
+        - "Licensee retains ownership of its Customer Data"
+        - "Any suggestions or feedback may be used by Licensor without obligation"
+    walkaway:
+      description: >
+        Licensor claims ownership of customer data or improvements,
+        or there is a broad grant-back license that gives Licensor
+        rights to customer IP.
+      exemplars:
+        - "Licensee hereby assigns all improvements and modifications to Licensor"
+        - "Licensee grants Licensor a worldwide, perpetual, irrevocable license to any feedback"
+        - "All data submitted through the Software becomes Licensor's property"
+    default_position: "acceptable"
+
+  # ── Indemnification ─────────────────────────────────────────
+  - id: "indemnification"
+    name: "Indemnification"
+    description: >
+        Mutual (or one-sided) indemnification obligations for IP
+        infringement, data breaches, and other liabilities.
+    preferred:
+      description: >
+        Mutual indemnification for IP infringement. Licensor
+        indemnifies against third-party IP claims. Each party
+        indemnifies for its own breach.
+      exemplars:
+        - "Each party agrees to indemnify the other for third-party claims arising from its breach"
+        - "Licensor shall defend and indemnify Licensee against any third-party IP infringement claim"
+        - "Indemnification obligations survive termination"
+    acceptable:
+      description: >
+        Standard mutual indemnification with reasonable exclusions.
+        Licensor indemnifies for IP claims but excludes
+        combinations or modifications by customer.
+      exemplars:
+        - "Licensor will indemnify Licensee against third-party claims that the Software infringes IP"
+        - "Indemnification excludes claims arising from Licensee's modification or combination of the Software"
+        - "Each party indemnifies the other for claims arising from its negligence or breach"
+    walkaway:
+      description: >
+        One-sided indemnification (customer indemnifies licensor
+        only), or licensor has no IP indemnification obligation,
+        or indemnification cap is lower than the liability cap.
+      exemplars:
+        - "Licensee agrees to indemnify Licensor against all third-party claims"
+        - "Licensor has no obligation to indemnify Licensee for IP infringement claims"
+        - "Indemnification obligations are capped at [AMOUNT], which is less than the general liability cap"
+    default_position: "acceptable"
+
+  # ── Pricing & Fee Changes ───────────────────────────────────
+  - id: "pricing-changes"
+    name: "Pricing & Fee Changes"
+    description: >
+      Terms governing price increases, fee changes, and additional
+      usage costs during the subscription term.
+    preferred:
+      description: >
+        No unilateral price increases during the current term.
+        Any fee change requires mutual agreement or is tied to
+        a published price list with adequate notice.
+      exemplars:
+        - "Fees shall remain fixed during the initial term and any renewal term"
+        - "Licensor may increase fees on renewal with [NUMBER] days' notice"
+        - "Price increases are tied to CPI with a [NUMBER]% cap"
+    acceptable:
+      description: >
+        Licensor may increase fees on renewal with reasonable
+        notice (30-60 days). Customer may terminate if increase
+        exceeds a threshold.
+      exemplars:
+        - "Licensor may increase fees effective the next renewal period with [NUMBER] days' notice"
+        - "If fees increase by more than [NUMBER]%, Licensee may terminate without penalty"
+        - "Fee increases are limited to [NUMBER]% annually"
+    walkaway:
+      description: >
+        Licensor may increase fees at any time without notice, or
+        price increases are tied to usage that customer cannot
+        control, or there is no notice period for fee changes.
+      exemplars:
+        - "Licensor reserves the right to change fees at any time upon notice"
+        - "Usage overage fees may be changed without notice"
+        - "Price increases may be applied immediately upon publication"
+    default_position: "acceptable"
+
+  # ── Service Levels & Uptime ─────────────────────────────────
+  - id: "service-levels"
+    name: "Service Levels & Uptime"
+    description: >
+      Service level commitments — uptime guarantees, credits,
+      and support response times.
+    preferred:
+      description: >
+        Clear uptime SLA (99.9%+), service credits for downtime,
+        and defined support response times.
+      exemplars:
+        - "Licensor shall maintain uptime of at least [NUMBER]%"
+        - "Service credits accrue for each hour of downtime exceeding the SLA"
+        - "Critical issue response time of [NUMBER] hours"
+    acceptable:
+      description: >
+        Standard uptime commitment (99.5-99.9%) with reasonable
+        exclusions for maintenance and force majeure.
+      exemplars:
+        - "Licensor will use commercially reasonable efforts to maintain [NUMBER]% uptime"
+        - "Service credits are available for extended downtime"
+        - "Support is available during business hours with [NUMBER]-hour response"
+    walkaway:
+      description: >
+        No uptime commitment, no service credits, or SLA has broad
+        exclusions that make it effectively meaningless.
+      exemplars:
+        - "Licensor provides the Software 'as is' with no uptime guarantee"
+        - "Downtime excludes any period during which Licensor performs maintenance"
+        - "No service level credits are available under any circumstances"
+    default_position: "acceptable"
+
+  # ── Termination for Convenience ─────────────────────────────
+  - id: "termination-convenience"
+    name: "Termination for Convenience"
+    description: >
+      Rights of either party to terminate the agreement without
+      cause, and any associated obligations or penalties.
+    preferred:
+      description: >
+        Mutual termination for convenience with reasonable notice
+        (30 days) and no penalty. Pro-rata refund of prepaid fees.
+      exemplars:
+        - "Either party may terminate this Agreement for convenience with [NUMBER] days' notice"
+        - "Upon termination for convenience, Licensor shall refund any prepaid fees on a pro-rata basis"
+        - "Licensee may terminate for convenience at any time"
+    acceptable:
+      description: >
+        One or both parties may terminate for convenience with
+        30-90 days' notice. No refund of prepaid fees.
+      exemplars:
+        - "Either party may terminate this Agreement for any reason with [NUMBER] days' notice"
+        - "Licensee may terminate for convenience, but no refund of prepaid fees will be provided"
+        - "Termination for convenience is available after the initial term"
+    walkaway:
+      description: >
+        Licensor-only termination for convenience, or termination
+        requires payment of all remaining fees, or no termination
+        right exists.
+      exemplars:
+        - "Licensor may terminate this Agreement at any time for convenience"
+        - "Licensee may not terminate this Agreement before the end of the term"
+        - "Upon termination for convenience, all remaining fees become immediately due and payable"
+    default_position: "acceptable"

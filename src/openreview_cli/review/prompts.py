@@ -1,9 +1,4 @@
-"""Prompt templates for the extraction and QA agents.
-
-Each template is a function that returns the system + user message list
-for the AI Gateway's ``chat()`` method. Templates are kept in one file
-for auditability — prompt changes here directly affect model behaviour.
-"""
+"""Prompt templates for the extraction and QA agents."""
 
 from __future__ import annotations
 
@@ -18,62 +13,6 @@ def _parse_json(raw: str, fallback: dict[str, Any]) -> dict[str, Any]:
     except (json.JSONDecodeError, ValueError):
         return fallback
     return data  # type: ignore[no-any-return]
-
-
-def build_extraction_messages(
-    clause_text: str,
-    category_id: str,
-    category_name: str,
-    category_description: str,
-    preferred_desc: str,
-    preferred_exemplars: list[str],
-    acceptable_desc: str,
-    acceptable_exemplars: list[str],
-    walkaway_desc: str,
-    walkaway_exemplars: list[str],
-    default_position: str,
-) -> list[dict[str, str]]:
-    """Build messages for the extraction agent.
-
-    Returns a list of ``{"role": ..., "content": ...}`` dicts ready for
-    ``Gateway.chat(extraction_slot, messages)``.
-    """
-    system = (
-        "You are a legal contract analyst. Your task is to classify a single "
-        "clause from a Non-Disclosure Agreement against a 3-position playbook. "
-        "Respond ONLY with valid JSON — no preamble, no explanation."
-    )
-
-    pref_ex = "\n".join(f'  - "{e}"' for e in preferred_exemplars)
-    acc_ex = "\n".join(f'  - "{e}"' for e in acceptable_exemplars)
-    walk_ex = "\n".join(f'  - "{e}"' for e in walkaway_exemplars)
-
-    user = (
-        f"## Category: {category_name}\n"
-        f"{category_description}\n\n"
-        f"### Preferred\n"
-        f"{preferred_desc}\n"
-        f"Exemplars:\n{pref_ex}\n\n"
-        f"### Acceptable\n"
-        f"{acceptable_desc}\n"
-        f"Exemplars:\n{acc_ex}\n\n"
-        f"### Walkaway\n"
-        f"{walkaway_desc}\n"
-        f"Exemplars:\n{walk_ex}\n\n"
-        f"### Default position (if no specific indicators match)\n"
-        f"{default_position}\n\n"
-        f"## Clause to classify\n"
-        f"```\n{clause_text}\n```\n\n"
-        "Return JSON:\n"
-        "{\n"
-        '  "position": "preferred" | "acceptable" | "walkaway" | "no-match",\n'
-        '  "confidence": 0.0-1.0,\n'
-        '  "citation": "exact quoted text from the clause supporting your assessment",\n'
-        '  "category_match": true | false\n'
-        "}"
-    )
-
-    return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
 def build_qa_messages(
@@ -206,3 +145,99 @@ def parse_qa_response(raw: str) -> dict[str, Any]:
         "category_valid": bool(data.get("category_valid", False)),
         "confidence_valid": bool(data.get("confidence_valid", False)),
     }
+
+
+# ── System Prompts ──────────────────────────────────────────────────────────
+
+BASE_SYSTEM_PROMPT = (
+    "You are a legal contract analyst{specialization}. Your task is to classify "
+    "a single clause from a {domain} against a 3-position playbook. "
+    "{vocabulary}"
+    "Respond ONLY with valid JSON \u2014 no preamble, no explanation."
+)
+
+MODE_VOCABULARY: dict[str, dict[str, str]] = {
+    "precheck": {
+        "specialization": "",
+        "domain": "Non-Disclosure Agreement",
+        "vocabulary": "",
+    },
+    "licensecheck": {
+        "specialization": " specializing in SaaS and software license agreements",
+        "domain": "SaaS license agreement",
+        "vocabulary": (
+            "Domain vocabulary: SaaS, license grant, royalty, subscription, "
+            "auto-renewal, liability cap, IP ownership, indemnification. "
+        ),
+    },
+    "leasecheck": {
+        "specialization": " specializing in commercial lease agreements",
+        "domain": "commercial lease",
+        "vocabulary": (
+            "Domain vocabulary: commercial lease, rent escalation, CAM charges, "
+            "triple-net, subletting, security deposit, termination for convenience. "
+        ),
+    },
+    "privacycheck": {
+        "specialization": " specializing in data protection and privacy law",
+        "domain": "Data Processing Agreement (DPA)",
+        "vocabulary": (
+            "Domain vocabulary: data controller, data processor, processing purpose, "
+            "sub-processor, breach notification, data retention, DPA. "
+        ),
+    },
+}
+
+
+def _build_extraction_messages_common(
+    clause_text: str,
+    category_id: str,
+    category_name: str,
+    category_description: str,
+    preferred_desc: str,
+    preferred_exemplars: list[str],
+    acceptable_desc: str,
+    acceptable_exemplars: list[str],
+    walkaway_desc: str,
+    walkaway_exemplars: list[str],
+    default_position: str,
+    mode: str = "precheck",
+) -> list[dict[str, str]]:
+    """Common extraction message builder — shared by all mode-specific prompts.
+
+    Builds the user message with category and position data, using a
+    mode-specific system prompt derived from ``MODE_VOCABULARY[mode]``.
+    """
+    vocab = MODE_VOCABULARY[mode]
+    system_prompt = BASE_SYSTEM_PROMPT.format(**vocab)
+
+    pref_ex = "\n".join(f'  - "{e}"' for e in preferred_exemplars)
+    acc_ex = "\n".join(f'  - "{e}"' for e in acceptable_exemplars)
+    walk_ex = "\n".join(f'  - "{e}"' for e in walkaway_exemplars)
+
+    user = (
+        f"## Category: {category_name}\n"
+        f"{category_description}\n\n"
+        f"### Preferred\n"
+        f"{preferred_desc}\n"
+        f"Exemplars:\n{pref_ex}\n\n"
+        f"### Acceptable\n"
+        f"{acceptable_desc}\n"
+        f"Exemplars:\n{acc_ex}\n\n"
+        f"### Walkaway\n"
+        f"{walkaway_desc}\n"
+        f"Exemplars:\n{walk_ex}\n\n"
+        f"### Default position (if no specific indicators match)\n"
+        f"{default_position}\n\n"
+        f"## Clause to classify\n"
+        f"```\n{clause_text}\n```\n\n"
+        "Return JSON:\n"
+        "{\n"
+        '  "position": "preferred" | "acceptable" | "walkaway" | "no-match",\n'
+        '  "confidence": 0.0-1.0,\n'
+        '  "citation": "exact quoted text from the clause supporting your assessment",\n'
+        '  "category_match": true | false\n'
+        "}"
+    )
+
+    return [{"role": "system", "content": system_prompt}, {"role": "user", "content": user}]

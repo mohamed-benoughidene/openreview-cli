@@ -72,6 +72,7 @@ class TestRunReviewPublicAPI:
             no_pii: bool,
             verbose: bool,
             confidence_threshold: float,
+            mode: str = "precheck",
         ) -> tuple[ReviewReport, list[Any]] | None:
             return (
                 ReviewReport(

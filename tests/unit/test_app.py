@@ -40,3 +40,29 @@ def test_warm_startup_latency(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -
     runner.invoke(app, ["--version"])
     elapsed = time.perf_counter() - start
     assert elapsed < 0.5, f"warm startup took {elapsed:.3f}s, expected <0.5s"
+
+
+# ── Product mode CLI registration tests ───────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("command", "keyword"),
+    [
+        ("licensecheck", "license"),
+        ("leasecheck", "lease"),
+        ("privacycheck", "data processing"),
+    ],
+)
+def test_product_mode_help_contains_mode(command: str, keyword: str) -> None:
+    result = runner.invoke(app, [command, "--help"])
+    assert result.exit_code == 0
+    assert keyword in result.stdout.lower() or command in result.stdout
+
+
+@pytest.mark.parametrize(
+    "command",
+    ["licensecheck", "leasecheck", "privacycheck"],
+)
+def test_product_mode_shows_confidence_threshold(command: str) -> None:
+    result = runner.invoke(app, [command, "--help"])
+    assert "--confidence-threshold" in result.stdout or "-ct" in result.stdout

@@ -17,7 +17,12 @@ from openreview_cli.review.models import (
     PositionDef,
 )
 
-BUNDLED_PLAYBOOK_PATH = Path(__file__).parent / "playbooks" / "precheck-nda-v1.yaml"
+BUNDLED_PLAYBOOKS: dict[str, Path] = {
+    "precheck": Path(__file__).parent / "playbooks" / "precheck-nda-v1.yaml",
+    "licensecheck": Path(__file__).parent / "playbooks" / "saas-license-v1.yaml",
+    "leasecheck": Path(__file__).parent / "playbooks" / "commercial-lease-v1.yaml",
+    "privacycheck": Path(__file__).parent / "playbooks" / "dpa-v1.yaml",
+}
 
 
 class PlaybookLoadError(ValueError):
@@ -26,7 +31,7 @@ class PlaybookLoadError(ValueError):
 
 def load_bundled() -> Playbook:
     """Load the bundled NDA playbook shipped with PreCheck mode."""
-    return load_playbook(BUNDLED_PLAYBOOK_PATH)
+    return load_playbook(BUNDLED_PLAYBOOKS["precheck"])
 
 
 def load_playbook(path: Path) -> Playbook:

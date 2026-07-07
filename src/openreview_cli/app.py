@@ -54,8 +54,32 @@ def _validate_enum(value: str, options: tuple[str, ...], name: str) -> None:
         raise typer.Exit(code=2)
 
 
-def _export_memo_reports(reports: Any, memo_format: list[str], output_dir: str | None) -> None:
-    """Export memo files for all reports in the requested formats."""
+def _privacy_footer() -> str:
+    """Build the privacy-tier footer for terminal reports."""
+    from openreview_cli.config.loader import load_config
+    from openreview_cli.config.paths import get_config_dir
+    from openreview_cli.gateway.models import PrivacyTierReport
+    from openreview_cli.gateway.tier_config import TierConfig
+
+    _cfg = load_config(get_config_dir() / "config.yml")
+    _tier_cfg = TierConfig.from_config(_cfg)
+    return PrivacyTierReport(tier=_tier_cfg.tier).report_footer()
+
+
+def _export_memo_reports(
+    reports: Any,
+    memo_format: list[str],
+    output_dir: str | None,
+    mode: str = "precheck",
+) -> None:
+    """Export memo files for all reports in the requested formats.
+
+    Args:
+        reports: List of ReviewReport objects.
+        memo_format: List of format strings (md, json, docx).
+        output_dir: Optional output directory path.
+        mode: Mode name used as filename prefix (e.g. "licensecheck").
+    """
     from openreview_cli.review.memo.exporter import MemoExporter
     from openreview_cli.review.memo.models import MemoFormat
 
@@ -81,7 +105,7 @@ def _export_memo_reports(reports: Any, memo_format: list[str], output_dir: str |
         try:
             exporter = MemoExporter(
                 report=report,
-                mode="precheck",
+                mode=mode,
                 output_dir=out,
                 formats=fmt_set,
             )
@@ -101,6 +125,39 @@ def _export_memo_reports(reports: Any, memo_format: list[str], output_dir: str |
             typer.echo("  Memo exported to:")
             for p in exported_paths:
                 typer.echo(f"    - {p}")
+
+
+def _emit_reviews(
+    reports: list[Any],
+    format: str,
+    output: str | None,
+    privacy_footer_ref: str | None,
+    memo_format: list[str],
+    output_dir: str | None,
+    mode: str = "precheck",
+) -> None:
+    """Shared post-processing: format output, export memos, emit amber warning."""
+    from openreview_cli.review import format_json, format_terminal
+
+    if not reports:
+        typer.echo("No documents processed.", err=True)
+        raise typer.Exit(code=1)
+
+    if format == "json":
+        output_str = format_json(reports)
+        if output:
+            Path(output).write_text(output_str, encoding="utf-8")
+        else:
+            typer.echo(output_str)
+    else:
+        for report in reports:
+            typer.echo(format_terminal(report, privacy_footer=privacy_footer_ref))
+
+    if memo_format:
+        _export_memo_reports(reports, memo_format, output_dir, mode=mode)
+
+    if any(r.summary.amber_count > 0 for r in reports):
+        typer.echo("⚠  Some clauses flagged Amber — review recommended.", err=True)
 
 
 def _init(debug: bool = False) -> None:
@@ -1020,7 +1077,7 @@ def review(
         )
         raise typer.Exit(code=1)
 
-    from openreview_cli.review import format_json, format_terminal, run_review
+    from openreview_cli.review import run_review
 
     try:
         reports = run_review(
@@ -1033,6 +1090,7 @@ def review(
             verbose=verbose,
             grounding_mode=None if no_grounding else grounding_mode,
             confidence_threshold=confidence_threshold,
+            mode="precheck",
         )
     except FileNotFoundError as e:
         typer.echo(f"Error: {e}", err=True)
@@ -1041,38 +1099,7 @@ def review(
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=2) from None
 
-    if not reports:
-        typer.echo("No documents processed.", err=True)
-        raise typer.Exit(code=1)
-
-    if format == "json":
-        output_str = format_json(reports)
-        if output:
-            Path(output).write_text(output_str, encoding="utf-8")
-        else:
-            typer.echo(output_str)
-    else:
-        from openreview_cli.config.loader import load_config
-        from openreview_cli.config.paths import get_config_dir
-        from openreview_cli.gateway.models import PrivacyTierReport
-        from openreview_cli.gateway.tier_config import TierConfig
-
-        _cfg = load_config(get_config_dir() / "config.yml")
-        _tier_cfg = TierConfig.from_config(_cfg)
-        _privacy_footer = PrivacyTierReport(tier=_tier_cfg.tier).report_footer()
-
-        for report in reports:
-            typer.echo(format_terminal(report, privacy_footer=_privacy_footer))
-
-    # ── Memo export ──
-    if memo_format and reports:
-        _export_memo_reports(reports, memo_format, output_dir)
-
-    if any(r.summary.amber_count > 0 for r in reports):
-        typer.echo(
-            "⚠  Some clauses flagged Amber — review recommended.",
-            err=True,
-        )
+    _emit_reviews(reports, format, output, _privacy_footer(), memo_format, output_dir)
 
 
 app.add_typer(precheck_app)
@@ -2221,6 +2248,136 @@ app.add_typer(benchmark_app)
 from openreview_cli.prompts.cli import prompt_app  # noqa: E402
 
 app.add_typer(prompt_app)
+
+# ── Product mode CLI registration ─────────────────────────────────────────
+
+
+def _register_product_mode(
+    app: typer.Typer,
+    name: str,
+    help_text: str,
+    path_help: str,
+) -> None:
+    """Register a product-mode CLI command on *app*."""
+
+    @app.command(name=name, help=help_text)
+    def _cmd(
+        path: str = typer.Argument(..., help=path_help),
+        no_pii: bool = typer.Option(False, "--no-pii", help="Skip PII stripping."),
+        playbook_path: str | None = typer.Option(
+            None, "--playbook", help="Path to a custom YAML playbook override."
+        ),
+        format: str = typer.Option("text", "--format", help="Output format: text or json."),
+        output: str | None = typer.Option(
+            None, "--output", help="Write output to file instead of stdout."
+        ),
+        memo_format: list[str] = typer.Option(
+            [],
+            "--memo-format",
+            help="Export format(s) for the review memo. Supported: md, json, docx.",
+        ),
+        output_dir: str | None = typer.Option(
+            None,
+            "--output-dir",
+            help="Directory for memo files. Defaults to review_results/.",
+        ),
+        verbose: bool = typer.Option(False, "--verbose", help="Show per-clause progress."),
+        confidence_threshold: float = typer.Option(
+            DEFAULT_CONFIDENCE_THRESHOLD,
+            "--confidence-threshold",
+            "-ct",
+            help="Confidence threshold for Green/Amber/Red (0.0-1.0).",
+            callback=_validate_threshold,
+        ),
+    ) -> None:
+        _run_product_review(
+            mode=name,
+            path=path,
+            no_pii=no_pii,
+            playbook_path=playbook_path,
+            format=format,
+            output=output,
+            memo_format=memo_format,
+            output_dir=output_dir,
+            verbose=verbose,
+            confidence_threshold=confidence_threshold,
+        )
+
+
+_register_product_mode(
+    app,
+    name="licensecheck",
+    help_text="Review a SaaS/software license agreement with LicenseCheck.",
+    path_help="Path to a SaaS/software license agreement (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="leasecheck",
+    help_text="Review a commercial lease agreement with LeaseCheck.",
+    path_help="Path to a commercial lease agreement (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="privacycheck",
+    help_text="Review a Data Processing Agreement with PrivacyCheck.",
+    path_help="Path to a Data Processing Agreement (PDF or DOCX).",
+)
+
+
+# ── Shared product review logic ─────────────────────────────────────────────
+
+
+def _run_product_review(
+    mode: str,
+    path: str,
+    no_pii: bool,
+    playbook_path: str | None,
+    format: str,
+    output: str | None,
+    memo_format: list[str],
+    output_dir: str | None,
+    verbose: bool,
+    confidence_threshold: float,
+) -> None:
+    """Run a review using a mode-specific bundled playbook.
+
+    Shared implementation for licensecheck, leasecheck, and privacycheck.
+    """
+    from openreview_cli.review.playbook import BUNDLED_PLAYBOOKS
+
+    # Resolve playbook path
+    resolved_playbook_path = playbook_path or str(BUNDLED_PLAYBOOKS[mode])
+
+    from openreview_cli.review import run_review
+
+    try:
+        reports = run_review(
+            paths=[path],
+            playbook_path=resolved_playbook_path,
+            extraction_model="extraction",
+            qa_model=None,
+            no_pii=no_pii,
+            verbose=verbose,
+            confidence_threshold=confidence_threshold,
+            mode=mode,
+        )
+    except FileNotFoundError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=2) from None
+
+    _emit_reviews(
+        reports,
+        format,
+        output,
+        _privacy_footer() if not no_pii else None,
+        memo_format,
+        output_dir,
+        mode=mode,
+    )
+
 
 if __name__ == "__main__":
     app()
