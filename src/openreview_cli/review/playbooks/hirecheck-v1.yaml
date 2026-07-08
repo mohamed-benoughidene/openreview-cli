@@ -1,0 +1,241 @@
+# Bundled Hire Check Playbook — HireCheck Mode v1
+# Covers standard employment agreement clauses.
+# Sources: Common employment contract clauses from Cohen Levy
+# Legal, Practical Law employment agreement checklist, and
+# general employment contract best practices. Tailored for
+# solo/small-business use.
+# Users may override with --playbook <path>.
+
+id: "hirecheck-v1"
+mode: "hirecheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Standard employment agreement review playbook for HireCheck
+    mode. Covers compensation and benefits, termination and
+    severance, IP assignment, non-compete and non-solicit,
+    confidentiality, and dispute resolution.
+  author: "openreview"
+
+categories:
+  # ── Compensation & Benefits ──────────────────────────────────
+  - id: "compensation-benefits"
+    name: "Compensation & Benefits"
+    description: >
+      Base salary, bonus structure, equity, benefits, and
+      expense reimbursement.
+    preferred:
+      description: >
+        Competitive base salary with clear bonus formula (e.g.,
+        percentage of salary based on performance metrics).
+        Equity or profit-sharing included. Full benefits
+        (health, dental, retirement). Reasonable expense
+        reimbursement policy.
+      exemplars:
+        - "Annual base salary of [AMOUNT] with a target bonus of [NUMBER]%"
+        - "Employee shall receive [NUMBER] stock options vesting over [NUMBER] years"
+        - "Employee is eligible for health, dental, and retirement benefits"
+    acceptable:
+      description: >
+        Standard base salary with discretionary bonus. Basic
+        benefits package. Expense reimbursement for
+        pre-approved costs.
+      exemplars:
+        - "Annual base salary of [AMOUNT], eligible for discretionary bonus"
+        - "Employee shall receive standard health benefits"
+        - "Pre-approved business expenses shall be reimbursed within [NUMBER] days"
+    walkaway:
+      description: >
+        Below-market salary with no bonus or benefits.
+        No expense reimbursement, or reimbursement at
+        employer's sole discretion.
+      exemplars:
+        - "Base salary of [AMOUNT] with no bonus or benefits"
+        - "Employee is responsible for all business expenses"
+        - "Expense reimbursement is at Employer's sole discretion"
+    default_position: "acceptable"
+
+  # ── Termination & Severance ──────────────────────────────────
+  - id: "termination-severance"
+    name: "Termination & Severance"
+    description: >
+      Grounds for termination (with cause, without cause,
+      resignation), notice periods, and severance package.
+    preferred:
+      description: >
+        Termination without cause requires advance notice (2-4
+        weeks) or pay in lieu. Severance package of 1-3 months'
+        salary for termination without cause. Clear definition
+        of 'cause' (theft, fraud, material misconduct).
+      exemplars:
+        - "Employer may terminate without cause with [NUMBER] weeks' notice or pay in lieu"
+        - "Employee shall receive [NUMBER] months' severance if terminated without cause"
+        - "'Cause' is limited to theft, fraud, or material breach of duty"
+    acceptable:
+      description: >
+        Termination without cause with standard notice (2 weeks).
+        Severance of 1-2 weeks per year of service. Cause
+        includes poor performance after remediation.
+      exemplars:
+        - "Either party may terminate employment with [NUMBER] weeks' notice"
+        - "Severance of [NUMBER] week(s) per year of service on termination without cause"
+        - "Cause includes failure to perform duties after written warning"
+    walkaway:
+      description: >
+        Termination without cause with no notice or severance.
+        Overly broad definition of 'cause' (including poor
+        performance at employer's discretion). Employee must
+        repay bonuses or benefits on termination.
+      exemplars:
+        - "Employer may terminate employment at any time without notice or severance"
+        - "'Cause' includes any conduct deemed unsatisfactory by Employer"
+        - "Employee must repay all bonuses if terminated within [NUMBER] months"
+    default_position: "acceptable"
+
+  # ── Intellectual Property Assignment ─────────────────────────
+  - id: "ip-assignment"
+    name: "Intellectual Property Assignment"
+    description: >
+      Assignment of inventions and IP created during employment,
+      including pre-existing IP carve-outs.
+    preferred:
+      description: >
+        Employee assigns only IP created within scope of
+        employment using employer resources. Pre-existing IP
+        is clearly excluded with a schedule of prior inventions.
+        No assignment of IP created outside work hours without
+        using employer resources.
+      exemplars:
+        - "Employee assigns all inventions made within the scope of employment using Employer's resources"
+        - "Pre-existing IP listed in Schedule [X] is excluded from assignment"
+        - "Inventions created on the Employee's own time without Employer's resources remain the Employee's"
+    acceptable:
+      description: >
+        Employee assigns all work-related IP created during
+        employment. Pre-existing IP exclusion with disclosure
+        requirement.
+      exemplars:
+        - "Employee assigns all IP created during employment that relates to the Employer's business"
+        - "Employee shall disclose pre-existing IP on a schedule attached to this Agreement"
+        - "Employee agrees to assist Employer in obtaining patents for assigned IP"
+    walkaway:
+      description: >
+        Employee assigns all IP created during employment,
+        including inventions made outside work hours with
+        personal resources. No pre-existing IP exclusion.
+      exemplars:
+        - "Employee assigns all inventions made during employment, regardless of time or resources used"
+        - "No exclusion for pre-existing IP"
+        - "Employee assigns all IP conceived during the term of employment, without limitation"
+    default_position: "acceptable"
+
+  # ── Non-Compete & Non-Solicit ────────────────────────────────
+  - id: "non-compete-solicit"
+    name: "Non-Compete & Non-Solicit"
+    description: >
+      Restrictions on competition, solicitation of clients,
+      and solicitation of employees after termination.
+    preferred:
+      description: >
+        No non-compete clause (or limited to senior executives).
+        Non-solicit of clients limited to active clients the
+        employee worked with. Non-solicit of employees limited
+        to 6-12 months. Reasonable geographic and time scope.
+      exemplars:
+        - "No non-compete restriction applies after termination"
+        - "Employee may not solicit clients they worked with in the [NUMBER] months before termination"
+        - "Non-solicit of employees is limited to [NUMBER] months and [NUMBER] miles"
+    acceptable:
+      description: >
+        Non-compete limited to 6-12 months in a reasonable
+        geographic area. Non-solicit of clients and employees
+        with reasonable scope.
+      exemplars:
+        - "Employee agrees not to compete within [NUMBER] miles for [NUMBER] months"
+        - "Employee shall not solicit any client of Employer for [NUMBER] months"
+        - "Employee shall not induce any employee to leave Employer"
+    walkaway:
+      description: >
+        Non-compete longer than 12 months, no geographic
+        limitation, or covers any business the employer might
+        engage in. Non-solicit of 'any client' without
+        limitation. Broad 'no-hire' restrictions.
+      exemplars:
+        - "Employee shall not engage in any business competitive with Employer for [NUMBER] years"
+        - "Employee shall not solicit any client or potential client of Employer"
+        - "Employee shall not hire any employee or former employee of Employer"
+    default_position: "acceptable"
+
+  # ── Confidentiality ──────────────────────────────────────────
+  - id: "confidentiality"
+    name: "Confidentiality"
+    description: >
+      Protection of employer's confidential information, trade
+      secrets, and proprietary knowledge.
+    preferred:
+      description: >
+        Mutual confidentiality (employer protects employee's
+        personal information). Clear definition of confidential
+        information excluding general skills and knowledge.
+        Duration of 2-3 years (or indefinite for trade secrets).
+        Whistleblower protections and right to disclose to
+        government agencies.
+      exemplars:
+        - "Confidential Information excludes Employee's general skills, knowledge, and experience"
+        - "Confidentiality obligations survive termination for [NUMBER] years"
+        - "Nothing in this clause prevents Employee from reporting violations of law"
+    acceptable:
+      description: >
+        Standard confidentiality with broad definition. Duration
+        of 1-2 years post-termination. Reasonable exceptions.
+      exemplars:
+        - "Employee shall protect Employer's Confidential Information during and after employment"
+        - "Confidential Information includes business plans, financial data, and customer lists"
+        - "Employee shall return all Confidential Information on termination"
+    walkaway:
+      description: >
+        Indefinite confidentiality with no exclusions. No
+        whistleblower protection. Employee must return all
+        materials including personal notes. Non-disclosure
+        that prevents future employment.
+      exemplars:
+        - "Confidentiality obligations survive indefinitely"
+        - "Employee shall return all materials, including personal notes and records"
+        - "Employee may not disclose any information about Employer's business for any reason"
+    default_position: "acceptable"
+
+  # ── Dispute Resolution ───────────────────────────────────────
+  - id: "dispute-resolution"
+    name: "Dispute Resolution"
+    description: >
+      Governing law, mandatory arbitration, class action waiver,
+      and legal fee provisions for employment disputes.
+    preferred:
+      description: >
+        Employee-friendly governing law. Optional arbitration
+        (employee can choose litigation or arbitration). No
+        class action waiver. Prevailing party entitled to legal
+        fees.
+      exemplars:
+        - "Disputes shall be governed by the laws of [STATE/PROVINCE]"
+        - "Either party may elect binding arbitration or litigation"
+        - "The prevailing party shall be entitled to recover its legal costs"
+    acceptable:
+      description: >
+        Mandatory binding arbitration with neutral venue.
+        Each party bears its own legal costs. No class
+        action waiver or mutual agreement on waiver.
+      exemplars:
+        - "Any dispute shall be resolved through binding arbitration"
+        - "Arbitration shall be conducted in [CITY] by a neutral arbitrator"
+        - "Each party shall bear its own legal costs"
+    walkaway:
+      description: >
+        Mandatory arbitration in a distant venue. Class action
+        waiver without mutual agreement. Employee waives right
+        to jury trial. Employee bears all arbitration costs.
+      exemplars:
+        - "Employee waives the right to a jury trial in any dispute"
+        - "Employee waives the right to participate in a class action"
+        - "Employee shall bear all arbitration costs"
+    default_position: "acceptable"

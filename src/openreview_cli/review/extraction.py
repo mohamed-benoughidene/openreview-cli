@@ -24,15 +24,26 @@ def match_category(clause_heading: str, playbook: Playbook) -> Category | None:
 
     Case-insensitive substring matching against category ``name`` and ``id``.
     This is the **fast path** — no model inference needed.
+
+    Two-pass strategy:
+    1. Prefer exact substring match on name or ID.
+    2. Fall back to word-split match (any word in heading >3 chars found in name).
+    This prevents common words (e.g. "processor", "data") in a later category's
+    body from falsely winning against an exact ID match in an earlier category.
     """
     lower_heading = clause_heading.lower()
+
+    # Pass 1: exact substring match on name or ID
     for cat in playbook.categories:
         if cat.name.lower() in lower_heading or cat.id.lower() in lower_heading:
             return cat
-        # Also check if any key word from the heading matches the category
+
+    # Pass 2: word-split fallback
+    for cat in playbook.categories:
         for word in lower_heading.split():
             if len(word) > 3 and word in cat.name.lower():
                 return cat
+
     return None
 
 

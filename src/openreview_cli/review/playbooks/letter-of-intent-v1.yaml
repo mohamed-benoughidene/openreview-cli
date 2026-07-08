@@ -1,0 +1,227 @@
+# Bundled Letter of Intent Playbook — LOICheck Mode v1
+# Covers standard letter of intent / memorandum of understanding
+# clauses for solo/small-business review.
+# Sources: Common LOI clause categories from Practical Law,
+# Cornell LII (letters of intent overview), and general
+# small-business M&A best practices.
+# Users may override with --playbook <path>.
+
+id: "letter-of-intent-v1"
+mode: "loicheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Standard letter of intent / memorandum of understanding
+    review playbook for LOICheck mode. Covers binding
+    provisions, exclusivity, breakup fees, due diligence
+    access, and expiration.
+  author: "openreview"
+
+categories:
+  # ── Binding Provisions ─────────────────────────────────────────
+  - id: "binding-provisions"
+    name: "Binding Provisions"
+    description: >
+      Which parts of the LOI are legally binding versus
+      non-binding. Typical split: binding for confidentiality,
+      exclusivity, breakup fees; non-binding for business
+      terms.
+    preferred:
+      description: >
+        Clearly distinguishes binding and non-binding
+        provisions. Only confidentiality, exclusivity, and
+        breakup fees are binding. Business terms (price,
+        structure) explicitly non-binding. No binding
+        representations or warranties.
+      exemplars:
+        - "Only provisions under the headings 'Confidentiality' and 'Exclusivity' are legally binding"
+        - "The parties intend this Letter of Intent to be non-binding except for Section X"
+        - "No binding agreement shall exist until execution of a definitive agreement"
+    acceptable:
+      description: >
+        Binding/non-binding distinction present but ambiguous
+        on some provisions. Most business terms non-binding.
+        Confidentiality and exclusivity binding. Legal
+        language clear but could be more explicit.
+      exemplars:
+        - "This LOI is intended to reflect the parties' current understanding and is not binding"
+        - "Except for the provisions relating to exclusivity, this LOI does not create any legal obligations"
+        - "The parties agree to negotiate in good faith, subject to the non-binding nature of this LOI"
+    walkaway:
+      description: >
+        No distinction between binding and non-binding
+        provisions. LOI reads as binding agreement throughout.
+        Representations and warranties included as binding.
+        Good-faith negotiation commitment enforceable.
+        Entire LOI stated as binding.
+      exemplars:
+        - "The parties agree to be bound by all terms and conditions set forth in this LOI"
+        - "This Letter of Intent constitutes a binding agreement between the parties"
+        - "The parties shall negotiate exclusively toward a definitive agreement incorporating these terms"
+    default_position: "acceptable"
+
+  # ── Exclusivity / No-Shop ─────────────────────────────────────
+  - id: "exclusivity-no-shop"
+    name: "Exclusivity / No-Shop"
+    description: >
+      Restrictions on the seller's ability to solicit or
+      accept competing offers during the exclusivity period.
+      Duration, scope, and exceptions.
+    preferred:
+      description: >
+        No-shop clause with reasonable duration (30-60 days).
+        Clear scope covering mergers, acquisitions, and asset
+        sales. Fiduciary-out exception permitting response to
+        unsolicited superior proposals. Mutual exclusivity or
+        none.
+      exemplars:
+        - "Seller shall not solicit or initiate discussions with third parties for [NUMBER] days"
+        - "Exclusivity period of [NUMBER] days from the date of this LOI"
+        - "Seller may respond to unsolicited proposals if required by fiduciary duties"
+    acceptable:
+      description: >
+        No-shop clause with moderate duration (60-90 days).
+        Window-shop allowed (seller may review but not
+        negotiate). No fiduciary-out but limited to specified
+        period. Reasonable geographic and business scope.
+      exemplars:
+        - "Seller shall not entertain acquisition proposals from third parties during the exclusivity period"
+        - "Exclusivity applies to the business being acquired and lasts for [NUMBER] days"
+        - "Seller shall notify Buyer of any unsolicited proposals received during the exclusivity period"
+    walkaway:
+      description: >
+        No-shop clause with long duration (90+ days) or no
+        stated limit. No fiduciary-out exception. Covers all
+        business activities including financing. Tail period
+        extends exclusivity post-termination. One-sided
+        exclusivity binding seller only.
+      exemplars:
+        - "Seller shall not engage in any discussions with third parties for any purpose during this period"
+        - "Exclusivity period of [LONG NUMBER] months or until a definitive agreement is signed"
+        - "No-shop obligation survives termination of this LOI for [NUMBER] months"
+    default_position: "acceptable"
+
+  # ── Breakup Fees ───────────────────────────────────────────────
+  - id: "breakup-fees"
+    name: "Breakup Fees"
+    description: >
+      Fees payable if the transaction fails under specified
+      circumstances — reverse breakup fee, expense
+      reimbursement, tail periods, and triggering events.
+    preferred:
+      description: >
+        No breakup fee or reciprocal breakup fees. Expense
+        reimbursement only for actual third-party costs.
+        Trigger events limited to intentional breach or
+        acceptance of superior proposal. Mutual or none.
+      exemplars:
+        - "Neither party shall be obligated to pay a breakup fee in any circumstance"
+        - "If the transaction fails due to regulatory denial, no breakup fee is payable"
+        - "Each party shall bear its own costs and expenses"
+    acceptable:
+      description: >
+        Breakup fee of 2-3% of transaction value. Triggered
+        by acceptance of superior proposal or breach of
+        exclusivity. Expense reimbursement for due diligence
+        costs up to a cap. Reverse breakup fee in favour of
+        seller for buyer's financing failure.
+      exemplars:
+        - "If Seller accepts a superior proposal, Seller shall pay Buyer a breakup fee of [AMOUNT]"
+        - "Buyer shall reimburse Seller for reasonable due diligence expenses up to [AMOUNT]"
+        - "Reverse breakup fee payable to Seller if Buyer fails to secure financing"
+    walkaway:
+      description: >
+        High breakup fee (5%+ of transaction value). Triggered
+        by any transaction failure including regulatory denial
+        or third-party objection. No reverse breakup fee.
+        Seller bears all buyer's costs. Expense reimbursement
+        uncapped. No material adverse change exception.
+      exemplars:
+        - "Seller shall pay Buyer a breakup fee equal to [HIGH PERCENTAGE] of the transaction value"
+        - "Breakup fee is payable if the transaction does not close for any reason"
+        - "Seller shall reimburse Buyer for all costs and expenses incurred in connection with the transaction"
+    default_position: "acceptable"
+
+  # ── Due Diligence Access ───────────────────────────────────────
+  - id: "due-diligence-access"
+    name: "Due Diligence Access"
+    description: >
+      Seller's obligation to provide access to records,
+      facilities, management, and other information for
+      buyer's due diligence investigation.
+    preferred:
+      description: >
+        Reasonable access to records, facilities, and
+        management. Defined due diligence period (30-60 days).
+        Confidentiality obligations on buyer. Standard NDAs
+        govern use of information. Scope limitations for
+        competitively sensitive information.
+      exemplars:
+        - "Seller shall provide Buyer with reasonable access to records, facilities, and management"
+        - "Due diligence period shall be [NUMBER] days from the date of this LOI"
+        - "Access to competitively sensitive information may be limited with appropriate protections"
+    acceptable:
+      description: >
+        Access to records and facilities upon reasonable
+        notice. Due diligence period negotiable but not
+        explicitly defined. Buyer may bring advisors. Basic
+        confidentiality governs information. No formal data
+        room or organized process.
+      exemplars:
+        - "Buyer and its representatives may inspect Seller's facilities and records upon reasonable notice"
+        - "Seller shall make available such information as Buyer may reasonably request"
+        - "Due diligence shall be conducted pursuant to a separate confidentiality agreement"
+    walkaway:
+      description: >
+        No due diligence access rights. Buyer must rely on
+        seller-provided information only. No access to
+        facilities, employees, or advisors. Due diligence
+        period extremely short or none. Seller may revoke
+        access at any time.
+      exemplars:
+        - "Buyer acknowledges that it has not relied on any due diligence in entering this LOI"
+        - "Seller shall provide only the documents listed in Schedule A and no others"
+        - "Buyer's right to conduct due diligence is subject to Seller's sole discretion"
+    default_position: "acceptable"
+
+  # ── Expiration ─────────────────────────────────────────────────
+  - id: "expiration"
+    name: "Expiration"
+    description: >
+      How and when the LOI expires. Definitive agreement
+      timeline, good-faith negotiation commitment, automatic
+      expiration, and withdrawal rights.
+    preferred:
+      description: >
+        LOI expires automatically after defined period (60-90
+        days) if no definitive agreement signed. No binding
+        good-faith negotiation obligation. Either party may
+        withdraw without penalty. Clear sunset clause with
+        notice of non-extension.
+      exemplars:
+        - "This LOI shall automatically expire on [DATE] if a definitive agreement is not executed"
+        - "Either party may withdraw from negotiations at any time without liability"
+        - "The parties have no obligation to enter into a definitive agreement"
+    acceptable:
+      description: >
+        LOI expires after a defined period with automatic
+        extension provision. Good-faith negotiation commitment
+        but not specifically enforceable. Notice period for
+        withdrawal. Party may terminate LOI with written
+        notice before expiry.
+      exemplars:
+        - "This LOI shall expire [NUMBER] days from the date hereof unless extended by mutual agreement"
+        - "The parties agree to negotiate in good faith toward a definitive agreement"
+        - "Either party may terminate this LOI upon written notice to the other party"
+    walkaway:
+      description: >
+        No expiration date or sunset clause. LOI remains open
+        indefinitely. Binding obligation to negotiate in good
+        faith with specific performance remedy. Party cannot
+        withdraw without cause. Definitive agreement deadline
+        not specified.
+      exemplars:
+        - "This LOI shall remain in effect until a definitive agreement is executed"
+        - "The parties shall continue to negotiate exclusively until a definitive agreement is reached"
+        - "Each party's obligation to negotiate in good faith is specifically enforceable"
+    default_position: "acceptable"

@@ -1,0 +1,216 @@
+# Bundled Consulting Agreement Playbook — ConsultCheck Mode v1
+# Covers standard consulting/services agreement clauses for
+# solo/small-business review.
+# Sources: Common consulting agreement clause categories from
+# Practical Law, Cornell LII (independent contractor overview),
+# and general small-business contract best practices.
+# Users may override with --playbook <path>.
+
+id: "consulting-agreement-v1"
+mode: "consultcheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Standard consulting services agreement review playbook for
+    ConsultCheck mode. Covers SOW specificity, payment terms,
+    IP ownership, confidentiality, and termination rights.
+  author: "openreview"
+
+categories:
+  # ── SOW Specificity ────────────────────────────────────────────
+  - id: "sow-specificity"
+    name: "SOW Specificity"
+    description: >
+      Level of detail in the Statement of Work — scope of
+      services, deliverables, timeline, acceptance criteria,
+      and change-order process.
+    preferred:
+      description: >
+        Detailed SOW with measurable deliverables, specific
+        timeline/milestones, written acceptance criteria,
+        and formal change-order process. Clear scope boundaries
+        preventing scope creep.
+      exemplars:
+        - "Services shall be performed in accordance with the SOW attached as Exhibit A"
+        - "Each SOW shall specify deliverables, timeline, fees, and acceptance criteria"
+        - "Changes to scope require a written change order signed by both parties"
+    acceptable:
+      description: >
+        SOW with general description of services and estimated
+        timeline. Acceptance criteria present but informal.
+        Change-order process exists but may be oral or implied.
+      exemplars:
+        - "Consultant shall provide the services described in Exhibit A"
+        - "Deliverables shall be delivered within a reasonable timeframe"
+        - "Either party may propose changes to the scope of work"
+    walkaway:
+      description: >
+        No written SOW or scope definition. Services described
+        vaguely with no timeline, deliverables, or acceptance
+        criteria. No change-order process. Unilateral scope
+        changes allowed.
+      exemplars:
+        - "Consultant agrees to perform such services as Client may request from time to time"
+        - "Scope of work may be modified by Client at any time without notice"
+        - "Deliverables shall be delivered as mutually agreed"
+    default_position: "acceptable"
+
+  # ── Payment Terms ──────────────────────────────────────────────
+  - id: "payment-terms"
+    name: "Payment Terms"
+    description: >
+      Compensation structure — hourly rate, fixed fee, retainer,
+      expense reimbursement, invoicing schedule, late payment
+      terms, and payment holdback rights.
+    preferred:
+      description: >
+        Clear fee schedule with explicit rates or fixed fees.
+        Net-30 payment terms. Full expense reimbursement for
+        pre-approved expenses. Late payment charges (1.5%
+        monthly). No unilateral payment holdback.
+      exemplars:
+        - "Consultant shall invoice monthly at the rates set forth in the SOW"
+        - "All invoices are due within 30 days of receipt"
+        - "Client shall reimburse Consultant for all pre-approved reasonable expenses"
+    acceptable:
+      description: >
+        Fee schedule present but with some ambiguity on rates
+        or hours. Net-45 payment terms. Expense reimbursement
+        with reasonable limits. Late payment charges may be
+        capped or negotiable.
+      exemplars:
+        - "Consultant shall be compensated at a rate to be mutually agreed upon"
+        - "Invoices shall be paid within 45 days of receipt"
+        - "Expenses require prior written approval and are reimbursed within budget limits"
+    walkaway:
+      description: >
+        No fee schedule or payment terms. Payment tied to
+        subjective satisfaction. Net-60 or longer payment terms.
+        No expense reimbursement. Client has unilateral right
+        to withhold payment for any reason.
+      exemplars:
+        - "Consultant shall be paid upon Client's satisfaction with the deliverables"
+        - "Payment terms are net-60 or longer from date of invoice"
+        - "Client may withhold payment pending resolution of any dispute"
+    default_position: "acceptable"
+
+  # ── IP Ownership ───────────────────────────────────────────────
+  - id: "ip-ownership"
+    name: "IP Ownership"
+    description: >
+      Ownership of work product, pre-existing materials,
+      inventions, and intellectual property created during
+      the engagement.
+    preferred:
+      description: >
+        Consultant retains ownership of pre-existing materials
+        and grants a license to Client. Work product ownership
+        clearly defined with license back to Consultant.
+        Special carve-outs for tools, methodologies, and
+        know-how.
+      exemplars:
+        - "Consultant retains all rights in pre-existing materials and grants Client a perpetual license"
+        - "Work product ownership vests in Client upon full payment"
+        - "Consultant's tools, methodologies, and know-how remain Consultant's property"
+    acceptable:
+      description: >
+        Work product is work-for-hire owned by Client.
+        Consultant retains ownership of pre-existing materials
+        with license to Client. No explicit carve-out for
+        tools and methodologies.
+      exemplars:
+        - "All deliverables are work-for-hire and owned exclusively by Client"
+        - "Consultant grants Client a license to pre-existing materials incorporated into deliverables"
+        - "Ownership of work product transfers upon Client's acceptance and payment"
+    walkaway:
+      description: >
+        All work product (including pre-existing materials)
+        becomes Client's sole property. Consultant assigns
+        all inventions and IP including background IP. No
+        license back to Consultant. Consultant cannot use
+        work product for future engagements.
+      exemplars:
+        - "All work product, including Consultant's pre-existing materials, becomes Client's property"
+        - "Consultant assigns all rights in all inventions conceived during the engagement"
+        - "Consultant shall have no right to use deliverables for any other client"
+    default_position: "acceptable"
+
+  # ── Confidentiality ────────────────────────────────────────────
+  - id: "confidentiality"
+    name: "Confidentiality"
+    description: >
+      Treatment of confidential information, exclusions,
+      duration of confidentiality obligations, and permitted
+      disclosures.
+    preferred:
+      description: >
+        Mutual confidentiality obligations. Standard exclusions
+        (public knowledge, independently developed, received
+        from third party). Defined confidentiality period of
+        2-5 years. Permitted disclosures for legal/regulatory
+        compliance.
+      exemplars:
+        - "Both parties agree to hold each other's confidential information in confidence"
+        - "Confidentiality obligations survive termination for a period of [NUMBER] years"
+        - "Standard exclusions apply including independently developed information"
+    acceptable:
+      description: >
+        Mutual confidentiality with one-sided exceptions or
+        shorter duration (1-2 years). Confidentiality period
+        reasonable. Disclosure permitted with notice to
+        disclosing party.
+      exemplars:
+        - "Recipient shall not disclose Confidential Information for [NUMBER] years"
+        - "Confidential Information excludes information that becomes public through no fault of Recipient"
+        - "Recipient may disclose Confidential Information if required by law with prompt notice"
+    walkaway:
+      description: >
+        One-sided confidentiality (only Consultant bound).
+        No exclusions or unlimited duration. No permitted
+        disclosures, including legal/regulatory requirements.
+        Irreparable harm presumption with no opportunity to
+        challenge.
+      exemplars:
+        - "Consultant shall hold all Client information in confidence indefinitely"
+        - "Confidentiality obligations survive forever and are not subject to any exclusions"
+        - "Breach of confidentiality shall cause irreparable harm entitling Client to injunctive relief"
+    default_position: "acceptable"
+
+  # ── Termination Rights ─────────────────────────────────────────
+  - id: "termination-rights"
+    name: "Termination Rights"
+    description: >
+        Right to terminate the agreement — for cause, for
+        convenience, notice periods, termination fees, and
+        post-termination obligations.
+    preferred:
+      description: >
+        Mutual termination for convenience with 30-day notice.
+        Termination for cause with cure period. No termination
+        fee. Post-termination obligations limited to payment
+        for work completed and return of materials.
+      exemplars:
+        - "Either party may terminate this Agreement for any reason upon [NUMBER] days' written notice"
+        - "Termination for material breach requires [NUMBER] days' cure period"
+        - "Upon termination, Consultant is entitled to payment for all work completed"
+    acceptable:
+      description: >
+        Mutual termination for convenience with longer notice
+        (60-90 days). Termination for cause with 30-day cure.
+        Reasonable termination fee or wind-down costs.
+        Post-termination transition assistance.
+      exemplars:
+        - "Either party may terminate this Agreement for convenience upon [NUMBER] days' notice"
+        - "Client may terminate for convenience with payment for work completed plus a termination fee"
+        - "Consultant shall provide reasonable transition assistance upon termination"
+    walkaway:
+      description: >
+        No termination for convenience. Client-only termination
+        rights. Termination for any reason with no cure period.
+        No payment for work in progress upon termination.
+        Unilateral post-termination obligations on Consultant.
+      exemplars:
+        - "Client may terminate this Agreement at any time for any reason or no reason"
+        - "Consultant shall not be entitled to any payment for work in progress upon termination"
+        - "Consultant's obligations survive termination but Client's payment obligations do not"
+    default_position: "acceptable"

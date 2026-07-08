@@ -1,0 +1,175 @@
+# Bundled Indemnification Playbook — IndemnityCheck Mode v1
+# Covers standard indemnification agreement clauses for
+# solo/small-business review.
+# Sources: Common indemnification clause categories from Practical
+# Law, Cornell LII (indemnification overview), and general
+# small-business contract best practices. Tailored for
+# solo/small-business use.
+# Users may override with --playbook <path>.
+
+id: "indemnification-v1"
+mode: "indemnitycheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Standard indemnification agreement review playbook for
+    IndemnityCheck mode. Covers scope of indemnity, liability
+    caps, survival periods, and defense obligations.
+  author: "openreview"
+
+categories:
+  # ── Indemnity Scope ──────────────────────────────────────────
+  - id: "indemnity-scope"
+    name: "Indemnity Scope"
+    description: >
+      Breadth of the indemnification obligation — what claims
+      are covered, who is indemnified, and whether indemnity
+      is mutual or one-sided.
+    preferred:
+      description: >
+        Mutual indemnification covering third-party claims
+        (IP infringement, bodily injury, property damage,
+        breach of contract). Both parties indemnify each
+        other on equivalent terms.
+      exemplars:
+        - "Each party shall indemnify the other against third-party claims"
+        - "Mutual indemnification for IP infringement, property damage, and personal injury"
+        - "Indemnity covers all claims arising from the indemnifying party's breach"
+    acceptable:
+      description: >
+        Mutual indemnification with narrower coverage (IP
+        only, or capped at fees paid). One-sided indemnity
+        in favour of the smaller party with reasonable scope.
+      exemplars:
+        - "Vendor indemnifies Buyer against third-party IP infringement claims"
+        - "Indemnification is limited to claims arising from gross negligence or wilful misconduct"
+        - "Each party indemnifies the other for breach of confidentiality"
+    walkaway:
+      description: >
+        One-sided indemnity favouring the larger party only.
+        Indemnity covers all claims with no exclusions or
+        caps. Indemnifying party must defend at its sole cost
+        with no control over settlement.
+      exemplars:
+        - "Buyer agrees to indemnify Vendor against any and all third-party claims"
+        - "Indemnitor shall defend and hold harmless the Indemnitee from any loss"
+        - "Indemnitee has sole control over defence and settlement of any claim"
+    default_position: "acceptable"
+
+  # ── Liability Cap ────────────────────────────────────────────
+  - id: "liability-cap"
+    name: "Liability Cap"
+    description: >
+      Limit on the indemnifying party's total liability —
+      typically a multiple of fees paid or a fixed dollar
+      amount. Exclusions for gross negligence, fraud, and
+      IP infringement.
+    preferred:
+      description: >
+        Mutual liability cap at 2-3x annual fees. Standard
+        exclusions only (gross negligence, fraud, death or
+        personal injury, IP infringement by indemnitor).
+        No cap on indemnification obligations.
+      exemplars:
+        - "Each party's aggregate liability shall not exceed the fees paid in the previous [NUMBER] months"
+        - "Liability cap does not apply to indemnification obligations, fraud, or gross negligence"
+        - "Neither party excludes liability for death or personal injury"
+    acceptable:
+      description: >
+        Mutual liability cap at 1x annual fees or a fixed
+        amount. Standard carve-outs for confidentiality
+        breach, indemnity, and statutory liabilities.
+      exemplars:
+        - "Aggregate liability shall not exceed the total fees paid under this Agreement"
+        - "Liability cap excludes breach of confidentiality and indemnification obligations"
+        - "Neither party shall be liable for indirect or consequential damages"
+    walkaway:
+      description: >
+        No liability cap (uncapped liability) or extremely
+        low cap. One-sided cap (buyer's liability capped but
+        vendor has no cap). Exclusion of all consequential
+        damages without mutual exception.
+      exemplars:
+        - "Vendor's liability shall not exceed [LOW AMOUNT], Buyer's liability is uncapped"
+        - "Aggregate liability is limited to [AMOUNT] regardless of the cause of action"
+        - "Neither party shall be liable for any indirect, special, or consequential damages"
+    default_position: "acceptable"
+
+  # ── Survival Period ──────────────────────────────────────────
+  - id: "survival-period"
+    name: "Survival Period"
+    description: >
+      How long indemnification obligations survive after
+      termination or expiration of the agreement. General
+      survival versus specific survival for indemnity.
+    preferred:
+      description: >
+        Indemnification obligations survive indefinitely or
+        for a long period (5+ years). General survival for
+        all obligations of 2-3 years. Clear distinction
+        between general survival and indemnity survival.
+      exemplars:
+        - "Indemnification obligations shall survive termination indefinitely"
+        - "General obligations survive for [NUMBER] years; indemnity survives for [NUMBER] years"
+        - "Survival periods are clearly stated for each type of obligation"
+    acceptable:
+      description: >
+        Indemnification survives for 2-3 years post-termination.
+        General survival for 1-2 years. Standard exceptions
+        for confidentiality and trade secrets.
+      exemplars:
+        - "Indemnification obligations survive termination for [NUMBER] years"
+        - "All representations and warranties survive for [NUMBER] months after termination"
+        - "Confidentiality obligations survive termination for [NUMBER] years"
+    walkaway:
+      description: >
+        All obligations end immediately on termination. No
+        survival period for indemnification. Short survival
+        (less than 12 months) that may be insufficient for
+        claims to arise.
+      exemplars:
+        - "All obligations cease immediately upon termination of this Agreement"
+        - "No obligation survives the termination of this Agreement"
+        - "All claims must be brought within [LOW NUMBER] months of termination"
+    default_position: "acceptable"
+
+  # ── Defense Obligations ──────────────────────────────────────
+  - id: "defense-obligations"
+    name: "Defense Obligations"
+    description: >
+      Duty to defend third-party claims, including control
+      over defence, choice of counsel, settlement authority,
+      and cooperation obligations.
+    preferred:
+      description: >
+        Indemnitor has duty to defend at its own cost. Mutual
+        consent required for settlement. Indemnitee may
+        participate with its own counsel at its own expense.
+        Indemnitor must use counsel reasonably acceptable to
+        indemnitee.
+      exemplars:
+        - "Indemnitor shall assume the defence of any covered claim at its own expense"
+        - "Settlement requires the prior written consent of both parties"
+        - "Indemnitee may participate in the defence with its own counsel at its own cost"
+    acceptable:
+      description: >
+        Indemnitor has duty to defend with right to control
+        defence. Indemnitor may settle without consent if
+        full release is granted. Indemnitee to provide
+        reasonable cooperation.
+      exemplars:
+        - "Indemnitor shall defend any claim and may settle with the Indemnitee's consent"
+        - "Indemnitor may settle a claim without consent if it includes a full release of the Indemnitee"
+        - "Indemnitee shall provide reasonable cooperation in the defence of any claim"
+    walkaway:
+      description: >
+        Indemnitor has no duty to defend (only duty to
+        indemnify after final judgment). Indemnitee must
+        tender sole control of defence to indemnitor.
+        Indemnitor may settle without indemnitee's consent
+        regardless of impact.
+      exemplars:
+        - "Indemnitor's obligation is limited to indemnification after a final judgment"
+        - "Indemnitee must tender the defence to Indemnitor with no right to participate"
+        - "Indemnitor may settle any claim without the Indemnitee's consent"
+    default_position: "acceptable"

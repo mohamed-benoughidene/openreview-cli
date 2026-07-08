@@ -1,0 +1,226 @@
+# Bundled Work-for-Hire Playbook — WorkCheck Mode v1
+# Covers standard independent contractor/work-for-hire agreement
+# clauses for solo/small-business review.
+# Sources: Common independent contractor clause categories from
+# Practical Law, Cornell LII (independent contractor overview),
+# IRS 20-factor test, and general small-business best practices.
+# Users may override with --playbook <path>.
+
+id: "work-for-hire-v1"
+mode: "workcheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Standard independent contractor / work-for-hire agreement
+    review playbook for WorkCheck mode. Covers worker
+    classification, IP ownership, payment terms, non-compete
+    restrictions, and termination.
+  author: "openreview"
+
+categories:
+  # ── Worker Classification ─────────────────────────────────────
+  - id: "worker-classification"
+    name: "Worker Classification"
+    description: >
+      Whether the agreement properly reflects independent
+      contractor status rather than employment. Control over
+      work methods, benefits, exclusivity, and integration
+      into business operations.
+    preferred:
+      description: >
+        Clear independent contractor classification with no
+        employment indicators. Consultant controls work
+        methods and schedule. No benefits, no exclusivity, no
+        uniform or branding requirements. Contractor provides
+        own equipment.
+      exemplars:
+        - "Contractor retains sole control over the manner and means of performing services"
+        - "Contractor is not entitled to employment benefits, workers compensation, or unemployment insurance"
+        - "Contractor may perform services for other clients during the term"
+    acceptable:
+      description: >
+        Independent contractor classification with some
+        employment-like controls. Contractor sets schedule
+        but client may set deadlines. Limited integration
+        but no benefits. Reasonable direction on deliverables.
+      exemplars:
+        - "Contractor is an independent contractor and not an employee"
+        - "Contractor shall perform services in accordance with the project schedule"
+        - "Contractor may hire subcontractors with Client's approval"
+    walkaway:
+      description: >
+        Agreement contains employment indicators: exclusive
+        services, client controls work hours/methods, client
+        provides equipment, non-compete restrictions,
+        benefits-adjacent language, indefinite duration.
+      exemplars:
+        - "Contractor shall devote full-time efforts to Client's projects"
+        - "Client shall provide all equipment and materials necessary for the services"
+        - "Contractor shall work exclusively for Client during the term of this Agreement"
+    default_position: "acceptable"
+
+  # ── IP Ownership ───────────────────────────────────────────────
+  - id: "ip-ownership"
+    name: "IP Ownership"
+    description: >
+      Assignment of intellectual property rights in work
+      product. Work-for-hire designation, pre-existing
+      materials, invention assignment, and license back
+      to contractor.
+    preferred:
+      description: >
+        Work product is work-for-hire to the extent permitted
+        by law. Contractor retains ownership of pre-existing
+        materials and grants client a license. Contractor's
+        tools and methodologies remain contractor's property.
+        Full payment condition for IP transfer.
+      exemplars:
+        - "Deliverables are work-for-hire; pre-existing materials remain Contractor's property"
+        - "Contractor grants Client a perpetual license to pre-existing materials incorporated into deliverables"
+        - "Assignment of rights is contingent upon full payment of all fees due"
+    acceptable:
+      description: >
+        All work product is work-for-hire owned by client.
+        Contractor assigns all IP created during engagement.
+        Contractor retains no rights to deliverables.
+        Pre-existing materials licensed to client.
+      exemplars:
+        - "All work product shall be owned exclusively by Client as work-for-hire"
+        - "Contractor hereby assigns all rights in all works created under this Agreement"
+        - "Pre-existing materials incorporated into deliverables are licensed to Client"
+    walkaway:
+      description: >
+        Contractor assigns all IP including pre-existing
+        materials and background IP. No license back to
+        contractor. Contractor cannot use work product for
+        portfolio or future work. Assignment extends to
+        improvements and derivative works.
+      exemplars:
+        - "Contractor assigns all rights in all inventions, including pre-existing IP, to Client"
+        - "Contractor retains no license or right to use any work product created under this Agreement"
+        - "Assignment includes all improvements, modifications, and derivative works"
+    default_position: "acceptable"
+
+  # ── Payment Terms ──────────────────────────────────────────────
+  - id: "payment-terms"
+    name: "Payment Terms"
+    description: >
+      Compensation, invoicing schedule, payment deadlines,
+      expense reimbursement, late fees, and conditions
+      precedent to payment.
+    preferred:
+      description: >
+        Clear rate or fixed fee. Net-30 payment. Expense
+        reimbursement for pre-approved costs. Late payment
+        charges (1.5% monthly). Payment not conditioned on
+        client satisfaction. Milestone payments tied to
+        objective deliverables.
+      exemplars:
+        - "Contractor shall be paid at the rates set forth in the SOW within 30 days of invoice"
+        - "Reasonable out-of-pocket expenses shall be reimbursed within 30 days of submission"
+        - "Late payments shall accrue interest at 1.5% per month"
+    acceptable:
+      description: >
+        Rate or fee schedule present. Net-45 or milestone-based
+        payment. Expense reimbursement with reasonable caps.
+        Payment subject to acceptance of deliverables with
+        defined process.
+      exemplars:
+        - "Invoices are due within 45 days of receipt"
+        - "Payment milestones tied to delivery and acceptance of work product"
+        - "Expenses require prior written approval"
+    walkaway:
+      description: >
+        No fixed rate or fee schedule. Payment tied to
+        subjective satisfaction. Net-60+ terms. No expense
+        reimbursement. Client may withhold payment for any
+        dispute. Payment contingent on client's receipt of
+        payment from third parties.
+      exemplars:
+        - "Contractor shall be paid upon Client's approval of the deliverables"
+        - "Payment shall be made within 60 days of Client's receipt of invoice"
+        - "Client may withhold payment pending resolution of any dispute"
+    default_position: "acceptable"
+
+  # ── Non-Compete Restrictions ───────────────────────────────────
+  - id: "non-compete-restrictions"
+    name: "Non-Compete Restrictions"
+    description: >
+      Restrictions on contractor's ability to work for
+      competitors or other clients. Scope, duration, and
+      geographic limits of non-compete and non-solicit
+      provisions.
+    preferred:
+      description: >
+        No non-compete clause. Non-solicit limited to client's
+        employees and active customers. Duration of 6-12
+        months. Reasonably scoped to contractor's actual work
+        for client. Contractor may work for any other client.
+      exemplars:
+        - "Contractor is free to provide services to other clients during and after the term"
+        - "Non-solicitation is limited to Client's employees with whom Contractor worked"
+        - "Contractor agrees not to solicit Client's active customers for a period of [NUMBER] months"
+    acceptable:
+      description: >
+        Non-compete limited to client's industry or direct
+        competitors. Duration of 12-24 months. Non-solicit
+        covers all employees and customers. Geographic
+        limitation reasonable relative to territory served.
+      exemplars:
+        - "Contractor agrees not to provide services to direct competitors for [NUMBER] months"
+        - "Non-solicitation applies to all Client's employees for [NUMBER] months post-termination"
+        - "Non-compete is limited to the geographic territory where Contractor provided services"
+    walkaway:
+      description: >
+        Broad non-compete with no time, geographic, or scope
+        limits. Non-solicit covers all employees, customers,
+        and prospects. Duration exceeds 24 months. Non-compete
+        covers entire industry regardless of contractor's role.
+        Enforceability questionable.
+      exemplars:
+        - "Contractor shall not provide services to any competitor of Client"
+        - "Non-compete applies for [LONG DURATION] years after termination"
+        - "Contractor shall not solicit any Client employee, customer, or prospect"
+    default_position: "acceptable"
+
+  # ── Termination ────────────────────────────────────────────────
+  - id: "termination"
+    name: "Termination"
+    description: >
+      Termination rights — for cause, for convenience, notice
+      periods, termination fees, post-termination obligations,
+      and return of materials.
+    preferred:
+      description: >
+        Mutual termination for convenience with 14-30 days
+        notice. Termination for cause with cure period.
+        Contractor entitled to payment for work completed.
+        Reasonable post-termination transition. No non-compete
+        after termination.
+      exemplars:
+        - "Either party may terminate this Agreement for any reason upon [NUMBER] days' written notice"
+        - "Upon termination, Contractor shall be paid for all services performed through the effective date"
+        - "Contractor shall return Client materials and may retain copies of deliverables for portfolio"
+    acceptable:
+      description: >
+        Mutual termination for convenience with 30-60 days
+        notice. Termination for cause with cure period.
+        Payment for work completed through termination.
+        Transition assistance required. Post-termination
+        restrictions limited.
+      exemplars:
+        - "Either party may terminate for convenience upon [NUMBER] days' notice"
+        - "Client may terminate for cause immediately upon written notice"
+        - "Contractor shall provide transition assistance for a period not to exceed [NUMBER] days"
+    walkaway:
+      description: >
+        Client-only termination rights. Termination for
+        convenience with no notice or immediate termination.
+        No payment for work in progress. Termination for
+        cause with no cure period. Contractor bears all
+        wind-down costs.
+      exemplars:
+        - "Client may terminate this Agreement at any time without notice or cause"
+        - "Contractor shall not be entitled to any payment for work in progress upon termination"
+        - "All rights in work product vest in Client upon termination regardless of payment status"
+    default_position: "acceptable"

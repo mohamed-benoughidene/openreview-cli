@@ -1,0 +1,232 @@
+# Bundled Subcontractor Agreement Playbook — SubCheck Mode v1
+# Covers standard subcontractor agreement clauses for
+# solo/small-business review.
+# Sources: Common subcontractor clause categories from
+# Practical Law, Cornell LII (subcontractor overview),
+# FAR flow-down clauses, and general small-business
+# contract best practices.
+# Users may override with --playbook <path>.
+
+id: "subcontractor-agreement-v1"
+mode: "subcheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Standard subcontractor agreement review playbook for
+    SubCheck mode. Covers flow-through obligations, payment
+    terms, broad-form indemnity, change-order process, and
+    termination rights.
+  author: "openreview"
+
+categories:
+  # ── Flow-Through / Prime Contract ──────────────────────────────
+  - id: "flow-through"
+    name: "Flow-Through / Prime Contract"
+    description: >
+      Extent to which prime contract obligations and terms
+      flow down to the subcontractor. Notice of prime contract
+      terms, compliance obligations, and incorporation by
+      reference.
+    preferred:
+      description: >
+        Subcontractor receives copy of relevant prime contract
+        terms. Flow-down of only applicable provisions. No
+        blanket incorporation by reference. Subcontractor
+        may review prime contract before signing. Flow-down
+        limited to scope of subcontracted work.
+      exemplars:
+        - "Prime contract terms applicable to Subcontractor's scope are set forth in Exhibit A"
+        - "Subcontractor shall comply with all laws and regulations applicable to the work"
+        - "Subcontractor is entitled to review the relevant prime contract provisions"
+    acceptable:
+      description: >
+        General flow-down of prime contract obligations with
+        some exclusions. Incorporation by reference with right
+        to review. Subcontractor assumes obligations
+        reasonably related to scope of work. Notice of prime
+        contract changes.
+      exemplars:
+        - "Subcontractor agrees to be bound by the terms of the prime contract applicable to the work"
+        - "Flow-down provisions are limited to those that pertain to Subcontractor's scope of work"
+        - "Contractor shall notify Subcontractor of any prime contract modifications affecting the work"
+    walkaway:
+      description: >
+        Blanket incorporation by reference of entire prime
+        contract with no exclusions. Subcontractor cannot
+        review prime contract. Flow-down of all prime
+        contract terms regardless of scope. Subcontractor
+        bears all prime contractor liabilities including
+        unrelated defaults.
+      exemplars:
+        - "The prime contract is incorporated by reference in its entirety"
+        - "Subcontractor assumes all obligations of Contractor under the prime contract"
+        - "Subcontractor shall not be entitled to review the prime contract"
+    default_position: "acceptable"
+
+  # ── Payment Terms ──────────────────────────────────────────────
+  - id: "payment-terms"
+    name: "Payment Terms"
+    description: >
+      Compensation structure, invoicing, payment timing,
+      retainage, expense reimbursement, late payment terms,
+      and pay-when-paid / pay-if-paid clauses.
+    preferred:
+      description: >
+        Fixed price or clear unit pricing. Net-30 payment terms
+        from invoice. No retainage or reasonable retainage (5-10%)
+        with release upon acceptance. No pay-if-paid clause.
+        Late payment charges. Progress payments for long-term
+        projects.
+      exemplars:
+        - "Subcontractor shall submit invoices monthly and shall be paid within 30 days"
+        - "Retainage of [PERCENTAGE]% shall be released upon final acceptance of the work"
+        - "Contractor shall pay Subcontractor regardless of Contractor's receipt of payment from owner"
+    acceptable:
+      description: >
+        Reasonable pricing with some flexibility. Net-45
+        payment terms. Retainage of 10-15% with partial
+        release schedule. Pay-when-paid clause (reasonable
+        timing). Expense reimbursement for pre-approved costs.
+      exemplars:
+        - "Subcontractor shall be paid within 45 days of receipt of a correct invoice"
+        - "Retainage shall be released upon completion and acceptance of the work"
+        - "Contractor shall pay Subcontractor within [NUMBER] days of Contractor's receipt of payment"
+    walkaway:
+      description: >
+        Pay-if-paid clause (builder's risk of owner's
+        non-payment passed to subcontractor). Net-60+ payment
+        terms. High retainage (20%+) or indefinite withhold.
+        No interest on late payments. Unilateral payment
+        deductions. No progress payments.
+      exemplars:
+        - "Contractor's obligation to pay Subcontractor is contingent upon Contractor's receipt of payment"
+        - "Contractor may retain [HIGH PERCENTAGE]% of each progress payment until final completion"
+        - "Contractor may deduct from amounts due any claimed damages or backcharges"
+    default_position: "acceptable"
+
+  # ── Broad-Form Indemnity ───────────────────────────────────────
+  - id: "broad-form-indemnity"
+    name: "Broad-Form Indemnity"
+    description: >
+      Indemnification obligations — scope, triggers, exceptions,
+      duty to defend, and whether indemnity is mutual or
+      one-sided.
+    preferred:
+      description: >
+        Mutual indemnification for third-party claims arising
+        from negligence or breach. Each party indemnifies for
+        its own negligence. Proportionate liability. No
+        broad-form or no-fault indemnity. Mutual duty to
+        defend with consent rights.
+      exemplars:
+        - "Each party shall indemnify the other for claims arising from its own negligence or breach"
+        - "Indemnification is limited to the extent of each party's proportionate fault"
+        - "No party shall be obligated to indemnify for claims arising from the other party's negligence"
+    acceptable:
+      description: >
+        Mutual indemnification but subcontractor's indemnity
+        broader than contractor's. Indemnity for all third-party
+        claims except those caused by contractor's sole
+        negligence. Reasonable scope for typical subcontractor
+        work.
+      exemplars:
+        - "Subcontractor shall indemnify Contractor for claims arising from Subcontractor's work"
+        - "Indemnity excludes claims caused by Contractor's sole negligence or wilful misconduct"
+        - "Subcontractor's indemnity is limited to the scope of subcontracted work"
+    walkaway:
+      description: >
+        Broad-form indemnity where subcontractor indemnifies
+        contractor for all claims including those caused by
+        contractor's own negligence. Indemnity covers
+        contractor's breach of third-party contracts. No
+        monetary cap on indemnity. Duty to defend with no
+        settlement control.
+      exemplars:
+        - "Subcontractor shall indemnify and hold harmless Contractor from any and all claims"
+        - "Indemnity includes claims arising from the sole negligence of Contractor"
+        - "Subcontractor shall defend Contractor at Subcontractor's sole cost and expense"
+    default_position: "acceptable"
+
+  # ── Change-Order Process ───────────────────────────────────────
+  - id: "change-order-process"
+    name: "Change-Order Process"
+    description: >
+      Procedure for changes to scope, schedule, or pricing.
+      Written change order requirements, pricing of changes,
+      time impact, and change-order dispute resolution.
+    preferred:
+      description: >
+        Written change order required for any scope, schedule,
+        or price change. Time and material pricing for changes
+        with reasonable rates. Schedule adjustments automatic.
+        Change-order dispute resolved through standard dispute
+        process. No free work.
+      exemplars:
+        - "All changes to the scope of work must be documented in a written change order signed by both parties"
+        - "Changes shall be priced at Subcontractor's then-current standard rates"
+        - "Subcontractor shall not be required to perform changed work until the change order is executed"
+    acceptable:
+      description: >
+        Written change order preferred but oral changes
+        permitted with written confirmation. Changes priced
+        at agreed rates or negotiated. Schedule impact
+        addressed on case-by-case basis. Minor changes allowed
+        without formal change order.
+      exemplars:
+        - "Changes to the work shall be documented in writing but oral change directives may be confirmed"
+        - "Subcontractor shall price changes at rates agreed upon at the time of the change"
+        - "Changes resulting in schedule delays shall be addressed through a revised schedule"
+    walkaway:
+      description: >
+        No formal change-order process. Contractor may change
+        scope unilaterally. Subcontractor must perform
+        additional work at original rates or no additional
+        compensation. Schedule extensions at contractor's
+        discretion. Change-order disputes decided by
+        contractor.
+      exemplars:
+        - "Contractor may modify the scope of work at any time without Subcontractor's consent"
+        - "Additional work shall be performed at no additional cost to Contractor"
+        - "Contractor's determination of change order pricing shall be final and binding"
+    default_position: "acceptable"
+
+  # ── Termination Rights ─────────────────────────────────────────
+  - id: "termination-rights"
+    name: "Termination Rights"
+    description: >
+      Grounds for termination, notice periods, termination for
+      convenience, payment upon termination, and surviving
+      obligations.
+    preferred:
+      description: >
+        Mutual termination for convenience with 30-day notice.
+        Termination for cause with cure period. Subcontractor
+        paid for work completed plus reasonable demobilization
+        costs. No termination for convenience without payment.
+        Clear surviving obligations.
+      exemplars:
+        - "Either party may terminate this Agreement for convenience upon [NUMBER] days' notice"
+        - "Subcontractor shall be paid for all work completed plus reasonable termination costs"
+        - "Termination for material breach requires [NUMBER] days' written notice and opportunity to cure"
+    acceptable:
+      description: >
+        Contractor may terminate for convenience. Subcontractor
+        may terminate only for contractor's breach. Payment for
+        work completed through termination. Reasonable wind-down
+        period. Surviving obligations limited.
+      exemplars:
+        - "Contractor may terminate for convenience upon [NUMBER] days' written notice"
+        - "Subcontractor may terminate only if Contractor breaches and fails to cure within [NUMBER] days"
+        - "Subcontractor shall be paid for work completed through the effective date of termination"
+    walkaway:
+      description: >
+        Contractor-only termination rights. Termination for
+        convenience with no notice or payment. No payment for
+        work in progress upon termination. Subcontractor bears
+        demobilization costs. Termination for cause with no
+        cure period.
+      exemplars:
+        - "Contractor may terminate this Agreement at any time without notice or cause"
+        - "Subcontractor shall not be entitled to any compensation for work not yet accepted"
+        - "Upon termination, Subcontractor shall remove equipment and restore the site at its own cost"
+    default_position: "acceptable"

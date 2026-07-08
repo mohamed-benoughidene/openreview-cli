@@ -3077,3 +3077,246 @@ are deferred until the pattern is validated."
   different clients or contract counterparties.
 - **Threshold benchmarking**: Run the benchmark harness at different
   thresholds to produce a precision/recall curve for each mode.
+
+---
+
+## D-70: Complex Settlement Scenarios (SettlementCheck v2)
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 028 (product modes batch 1) — spec.md §Risks, plan.md §Risks |
+| **Deferred at** | 2026-07-08 |
+| **Trigger** | Explicitly out of scope — SettlementCheck targets common small-business settlement scenarios only |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+SettlementCheck targets the most common small-business settlement scenarios:
+simple mutual releases, payment-for-release agreements, and standard
+confidentiality/non-disparagement provisions. Complex settlement agreements
+are out of scope for v1:
+
+- **Structured settlements** with ongoing obligations (periodic payments,
+  performance milestones, future contingent payments)
+- **Class action settlements** with multiple plaintiff classes and claims
+  administrators
+- **Multi-party releases** involving three or more parties and cross-indemnities
+- **Regulatory settlements** with government agencies (SEC, FTC, state AGs)
+  that include ongoing compliance or reporting obligations
+- **Bankruptcy settlement** agreements with court approval requirements
+
+The current 5-category playbook (release scope, payment terms, confidentiality,
+unknown claims waiver, breach consequences) cannot capture these scenarios'
+material terms.
+
+### What would need to change to unblock
+
+1. Research the most common complex settlement structures small businesses
+   encounter (likely regulatory or bankruptcy-adjacent scenarios)
+2. Design a SettlementCheck v2 playbook with expanded categories or a
+   tiered approach (simple vs. complex mode)
+3. Update the extraction prompt template to handle complex vocabulary
+   (claims administrator, settlement class, Bar date, etc.)
+4. Add integration tests with complex settlement fixture documents
+5. Update the spec and help text to describe the expanded scope
+
+### Spec references
+
+Spec 028 spec.md (line 251): "Complex settlements remain out of scope for v1."
+Spec 028 plan.md (line 262): "Complex settlements out of scope for v1."
+
+### Future features (not deferred — natural next steps)
+
+- **Settlement type auto-detection**: Detect whether the document is a simple
+  or complex settlement and select the appropriate playbook automatically.
+- **Ongoing obligation tracker**: For structured settlements, track payment
+  milestones and compliance deadlines.
+
+---
+
+## D-71: LOI-to-Final-Agreement Bilateral Comparison
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 028 (product modes batch 1) — spec.md §Scope Boundaries |
+| **Deferred at** | 2026-07-08 |
+| **Trigger** | Explicitly out of scope — bilateral comparison is its own spec (014) |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+LOICheck reviews a single letter of intent or memorandum of understanding.
+It does not compare an LOI to the final executed agreement. In practice,
+startups and small businesses often sign an LOI and later receive a
+definitive agreement that differs materially from the non-binding terms.
+
+Comparing an LOI to a final agreement would:
+
+1. Accept two documents: the LOI and the final agreement
+2. Align clauses by topic (purchase price, exclusivity, confidentiality,
+   breakup fees) rather than by clause number
+3. Flag provisions in the final agreement that were not mentioned in the LOI
+   (surprise terms)
+4. Flag LOI provisions that were dropped or changed in the final agreement
+5. Show whether binding provisions in the LOI (confidentiality, exclusivity)
+   carry through to the final agreement
+
+This is a specific instance of bilateral comparison (spec 014) applied to the
+LOI-to-definitive-agreement lifecycle. The general bilateral infrastructure
+would need to exist first, then this use case adds a domain-specific
+comparison playbook.
+
+### What would need to change to unblock
+
+1. Bilateral comparison must be operational (spec 014 tasks complete)
+2. Design an LOI-to-final-agreement comparison playbook that maps LOI
+   provisions to definitive-agreement clauses by semantic topic
+3. Add a subcommand or flag (e.g., `openreview loicheck compare loi.pdf final.pdf`)
+4. Add integration tests with an LOI/final-agreement pair where known
+   discrepancies exist
+
+### Spec references
+
+Spec 028 spec.md (line 233): "Bilateral comparison between LOI and final
+agreement (deferred to a future capability)."
+
+### Future features (not deferred — natural next steps)
+
+- **Term-sheet comparison** for investment rounds: compare a term sheet to
+  the final investment agreement — similar pattern, different domain.
+- **Multi-stage deal tracking**: Track a deal across all its documents
+  (term sheet → LOI → definitive agreement → closing documents).
+
+---
+
+## D-72: Per-Mode Accuracy Benchmark Scripts
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 028 (product modes batch 1) — spec.md §In Scope gap |
+| **Deferred at** | 2026-07-08 |
+| **Trigger** | Gap between spec "in scope" list and task breakdown — skeleton scripts exist but are not populated with real test documents or accuracy measurements |
+| **Status** | Unblocked — no constitutional conflict, requires fixture documents and labelled data per mode |
+
+### Description
+
+The spec lists "Accuracy benchmark per mode (at least 5 test documents each)"
+and "PII benchmark note per mode" as in-scope items. These were not captured
+in the original task breakdown and were added as retroactive tasks. Both are
+marked complete but contain skeleton implementations:
+
+- **Accuracy benchmark scripts**: One script per mode in `scripts/benchmarks/`
+  that runs a mock pipeline and reports placeholder metrics. Real accuracy
+  measurement requires labelled test documents per mode (at least 5 per mode)
+  and a live AI provider call.
+- **PII benchmark notes**: One note per mode documenting which PII entity types
+  each contract type typically contains. Skeleton texts exist but have not been
+  validated against real contracts.
+
+### What would need to change to unblock
+
+1. For each of the 6 modes: create 5+ labelled test documents with known
+   ground-truth assessments
+2. Replace the mock pipeline calls with real AI Gateway calls
+3. Run the benchmarks and record precision/recall/F1 per mode
+4. Validate PII entity type notes against real contracts of each type
+5. Publish the accuracy baselines in project documentation
+
+### Spec references
+
+Spec 028 spec.md §In Scope (accuracy benchmark and PII benchmark note per mode).
+Spec 028 tasks.md Phase 10 convergence tasks.
+
+---
+
+## D-73: last_indexed.json Upgrade to SQLite Meta-DB
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Retrieval ingestion — `src/openreview_cli/retrieval/ingest.py` line 71 |
+| **Deferred at** | 2026-07-08 |
+| **Trigger** | Ponytail — small JSON file sufficient for single-document tracking; upgrade deferred until cross-document queries land |
+| **Status** | Unblocked — but should not be implemented unless cross-document retrieval (D-15) or auto re-indexing (D-17) is underway |
+
+### Description
+
+The ingest module tracks the most recently indexed document via
+`last_indexed.json`, a small JSON file in the index database directory. When
+the `openreview retrieve` command is run without a file argument, it falls
+back to this file to find the document path.
+
+The ponytail comment on line 71 suggests upgrading to a SQLite meta-database
+if cross-document queries ever land. A SQLite meta-DB would:
+
+1. Store a history of indexed documents with timestamps, file hashes, and
+   embedding configurations
+2. Support cross-document queries (D-15) by tracking which documents are
+   in the index and their metadata
+3. Provide a foundation for auto re-indexing (D-17) by comparing stored
+   config hashes against current config
+4. Replace the ad-hoc JSON file pattern with the project's established
+   SQLite storage pattern
+
+### What would need to change to unblock
+
+1. This is a dependent D-ID — it unlocks when cross-document retrieval (D-15)
+   or auto re-indexing (D-17) is implemented
+2. Design a SQLite schema for indexed document metadata (path, hash, timestamp,
+   embedding config, chunk count)
+3. Replace `last_indexed.json` read/write with SQLite operations
+4. Migrate existing JSON state to SQLite (or start fresh)
+5. Add integration tests for the meta-DB operations
+
+### Spec references
+
+Ponytail marker at `src/openreview_cli/retrieval/ingest.py` line 71: "Upgrade
+to SQLite meta-DB if cross-document queries ever land."
+
+### Future features (not deferred — natural next steps)
+
+- **Index health reporting**: Show which documents are in the index, when they
+  were last indexed, and whether their embedding config is current.
+- **Selective re-indexing**: Re-index only documents whose file hash or config
+  hash has changed, rather than re-indexing the entire collection.
+
+---
+
+## D-74: PII Engine Temp Placeholder Resilience
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | PII engine — `src/openreview_cli/pii/engine.py` line 17 |
+| **Deferred at** | 2026-07-08 |
+| **Trigger** | Ponytail — module-level constant overwritten by `assign_placeholders` during pipeline execution |
+| **Status** | Unblocked — no constitutional conflict, just not built yet |
+
+### Description
+
+`_TEMP_PH = "[TEMP_0]"` is a module-level constant in `engine.py` that serves
+as a placeholder during PII analysis. It gets overwritten by
+`assign_placeholders()` during pipeline execution. The ponytail marker
+acknowledges this is a deliberate but fragile pattern:
+
+- If `assign_placeholders()` is ever skipped (e.g., a short-circuit path in
+  the PII stripping flow), the raw `[TEMP_0]` string leaks into the output
+- If the placeholder assignment order changes, `[TEMP_0]` may appear in
+  stripped text
+- The module-level mutable state makes the engine less testable (tests that
+  don't call `assign_placeholders` may see stale or unintended placeholders)
+
+### What would need to change to unblock
+
+1. Replace the module-level `_TEMP_PH` with a per-instance or per-call
+   placeholder that does not rely on mutation of module state
+2. Ensure every code path through the PII engine calls `assign_placeholders`
+   or provides an explicit placeholder upfront
+3. Add a guard that detects unassigned `[TEMP_0]` strings in the output and
+   raises or warns
+4. Add unit tests that exercise the short-circuit paths and verify no raw
+   placeholders leak
+
+### Spec references
+
+Ponytail marker at `src/openreview_cli/pii/engine.py` line 17.
+
+---

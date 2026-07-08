@@ -1,0 +1,72 @@
+[
+  {
+    "path": "tests/fixtures/benchmark/licensecheck/doc_1.pdf",
+    "expected_categories": [
+      {
+        "category_id": "license-grant",
+        "expected_position": "preferred"
+      },
+      {
+        "category_id": "auto-renewal",
+        "expected_position": "preferred"
+      }
+    ],
+    "doc_index": 1
+  },
+  {
+    "path": "tests/fixtures/benchmark/licensecheck/doc_2.pdf",
+    "expected_categories": [
+      {
+        "category_id": "liability-cap",
+        "expected_position": "acceptable"
+      },
+      {
+        "category_id": "data-deletion",
+        "expected_position": "walkaway"
+      }
+    ],
+    "doc_index": 2
+  },
+  {
+    "path": "tests/fixtures/benchmark/licensecheck/doc_3.pdf",
+    "expected_categories": [
+      {
+        "category_id": "ip-ownership",
+        "expected_position": "preferred"
+      },
+      {
+        "category_id": "indemnification",
+        "expected_position": "acceptable"
+      }
+    ],
+    "doc_index": 3
+  },
+  {
+    "path": "tests/fixtures/benchmark/licensecheck/doc_4.pdf",
+    "expected_categories": [
+      {
+        "category_id": "pricing-changes",
+        "expected_position": "preferred"
+      },
+      {
+        "category_id": "service-levels",
+        "expected_position": "preferred"
+      }
+    ],
+    "doc_index": 4
+  },
+  {
+    "path": "tests/fixtures/benchmark/licensecheck/doc_5.pdf",
+    "expected_categories": [
+      {
+        "category_id": "license-grant",
+        "expected_position": "preferred"
+      },
+      {
+        "category_id": "auto-renewal",
+        "expected_position": "preferred"
+      }
+    ],
+    "doc_index": 5
+  }
+]

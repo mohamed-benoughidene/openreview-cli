@@ -1,0 +1,226 @@
+# Bundled Deal Check Playbook — DealCheck Mode v1
+# Covers standard commercial vendor/service agreement clauses.
+# Sources: Common vendor agreement clauses from Pactly,
+# BCLP Vendor Service Contract Checklist, Sirion.ai vendor
+# agreement best practices. Tailored for solo/small-business use.
+# Users may override with --playbook <path>.
+
+id: "dealcheck-v1"
+mode: "dealcheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Standard commercial vendor/service agreement review playbook for
+    DealCheck mode. Covers payment terms, deliverables and timeline,
+    termination rights, liability and indemnification, confidentiality,
+    and dispute resolution.
+  author: "openreview"
+
+categories:
+  # ── Payment Terms ────────────────────────────────────────────
+  - id: "payment-terms"
+    name: "Payment Terms"
+    description: >
+      Pricing, invoicing schedule, payment due dates, late fees,
+      and any auto-escalation of fees.
+    preferred:
+      description: >
+        Clear fixed pricing with predictable invoicing (net-30).
+        Late fees are reasonable (1-1.5% monthly). No unilateral
+        price increases during term.
+      exemplars:
+        - "Vendor shall invoice on a monthly basis, payment due within [NUMBER] days"
+        - "Late payment charge of [NUMBER]% per month on overdue amounts"
+        - "Fees shall remain fixed during the initial term"
+    acceptable:
+      description: >
+        Standard net-30/60 payment terms. Late fees of up to 1.5%
+        monthly. Price increases on renewal with notice.
+      exemplars:
+        - "All invoices are due within [NUMBER] days of receipt"
+        - "A late fee of [NUMBER]% will be applied to overdue payments"
+        - "Pricing may be adjusted annually with [NUMBER] days' notice"
+    walkaway:
+      description: >
+        Unilateral price changes with no notice, excessive late
+        fees (3%+ monthly), or payment terms shorter than net-15.
+      exemplars:
+        - "Vendor may change pricing at any time without notice"
+        - "Late fee of [NUMBER]% per month on all overdue amounts"
+        - "Payment is due upon receipt of invoice"
+    default_position: "acceptable"
+
+  # ── Deliverables & Timeline ──────────────────────────────────
+  - id: "deliverables-timeline"
+    name: "Deliverables & Timeline"
+    description: >
+      Scope of work, delivery milestones, acceptance criteria,
+      and remedies for late delivery.
+    preferred:
+      description: >
+        Clearly defined deliverables with measurable acceptance
+        criteria. Milestone-based delivery with service credits
+        for delays. Right to terminate if delays exceed a
+        reasonable period.
+      exemplars:
+        - "Deliverables shall meet the acceptance criteria defined in Schedule [X]"
+        - "Service credits of [NUMBER]% accrue for each week of delay"
+        - "Buyer may terminate if delivery is delayed by more than [NUMBER] days"
+    acceptable:
+      description: >
+        Defined scope with standard acceptance periods (10-30
+        days). Liquidated damages for material delays or right
+        to terminate after extended delay.
+      exemplars:
+        - "Buyer shall have [NUMBER] days to inspect and accept deliverables"
+        - "Vendor shall use reasonable efforts to meet the delivery schedule"
+        - "Either party may terminate if delivery is delayed by more than [NUMBER] days"
+    walkaway:
+      description: >
+        No defined deliverables or timeline. No remedy for late
+        delivery. Vendor may unilaterally change scope.
+      exemplars:
+        - "Deliverables and timelines will be mutually agreed in writing"
+        - "Vendor shall not be liable for any delays in delivery"
+        - "Vendor may modify the scope of work at its discretion"
+    default_position: "acceptable"
+
+  # ── Termination Rights ───────────────────────────────────────
+  - id: "termination-rights"
+    name: "Termination Rights"
+    description: >
+      Grounds for termination (for cause, for convenience),
+      notice periods, and post-termination obligations.
+    preferred:
+      description: >
+        Mutual termination for convenience with 30-day notice.
+        Termination for cause on material breach with cure
+        period. Pro-rata refund of prepaid fees on termination
+        for convenience.
+      exemplars:
+        - "Either party may terminate for convenience with [NUMBER] days' notice"
+        - "Buyer may terminate for cause if Vendor breaches and fails to cure within [NUMBER] days"
+        - "Upon termination, Vendor shall refund any prepaid fees on a pro-rata basis"
+    acceptable:
+      description: >
+        Termination for cause with 30-day cure period. Either
+        party may terminate on material breach. No refund of
+        prepaid fees on convenience termination.
+      exemplars:
+        - "Either party may terminate this Agreement on material breach with [NUMBER] days' notice"
+        - "Buyer may terminate if Vendor fails to perform and does not cure within [NUMBER] days"
+        - "Upon termination, each party shall return the other's Confidential Information"
+    walkaway:
+      description: >
+        Vendor-only termination for convenience, no cure period,
+        or Buyer must pay all remaining fees on termination.
+      exemplars:
+        - "Vendor may terminate this Agreement at any time for convenience"
+        - "Buyer may not terminate this Agreement before the end of the term"
+        - "Upon termination, all remaining fees become immediately due and payable"
+    default_position: "acceptable"
+
+  # ── Liability & Indemnification ──────────────────────────────
+  - id: "liability-indemnification"
+    name: "Liability & Indemnification"
+    description: >
+      Limits on each party's liability, mutual indemnification
+      obligations, and exclusions.
+    preferred:
+      description: >
+        Mutual indemnification for IP infringement and breach.
+        Liability cap at 2-3x annual fees. Standard exclusions
+        only (gross negligence, wilful misconduct).
+      exemplars:
+        - "Each party shall indemnify the other for third-party IP infringement claims"
+        - "Aggregate liability shall not exceed the fees paid in the [NUMBER] months preceding the claim"
+        - "Neither party excludes liability for gross negligence, fraud, or death or personal injury"
+    acceptable:
+      description: >
+        Mutual indemnification with reasonable exclusions.
+        Liability cap at 1x annual fees. Standard exclusion
+        for indirect and consequential damages.
+      exemplars:
+        - "Vendor indemnifies Buyer against third-party claims that the Services infringe IP"
+        - "Each party's aggregate liability shall not exceed the total fees paid under this Agreement"
+        - "Neither party shall be liable for indirect, incidental, or consequential damages"
+    walkaway:
+      description: >
+        One-sided indemnification (Buyer indemnifies Vendor
+        only), no cap on Vendor liability but low cap on Buyer
+        liability, or Vendor disclaims all warranties.
+      exemplars:
+        - "Buyer agrees to indemnify Vendor against all third-party claims"
+        - "Vendor's aggregate liability shall not exceed [AMOUNT]"
+        - "Vendor disclaims all warranties, express or implied"
+    default_position: "acceptable"
+
+  # ── Confidentiality ──────────────────────────────────────────
+  - id: "confidentiality"
+    name: "Confidentiality"
+    description: >
+      Protection of confidential information, exclusions,
+      duration of confidentiality obligations.
+    preferred:
+      description: >
+        Mutual confidentiality obligations. Clear definition of
+        confidential information. Duration of 2-3 years post-
+        termination. Standard exclusions (public knowledge,
+        independently developed).
+      exemplars:
+        - "Each party shall protect the other's Confidential Information using reasonable care"
+        - "Confidential Information includes all business, technical, and financial information"
+        - "Confidentiality obligations survive termination for [NUMBER] years"
+    acceptable:
+      description: >
+        Mutual confidentiality with standard exclusions. Duration
+        of 1-2 years post-termination. Limited to written
+        information marked confidential.
+      exemplars:
+        - "Confidential Information means information disclosed in writing and marked confidential"
+        - "Obligations of confidentiality survive termination for [NUMBER] years"
+        - "Neither party shall disclose Confidential Information without the other's consent"
+    walkaway:
+      description: >
+        One-sided confidentiality (Buyer's info only), indefinite
+        duration, or no confidentiality obligations at all.
+      exemplars:
+        - "Buyer's Confidential Information shall be protected; Vendor's information is not subject to confidentiality"
+        - "Confidentiality obligations survive indefinitely"
+        - "Neither party has any obligation to protect the other's confidential information"
+    default_position: "acceptable"
+
+  # ── Dispute Resolution ───────────────────────────────────────
+  - id: "dispute-resolution"
+    name: "Dispute Resolution"
+    description: >
+        Governing law, jurisdiction, dispute resolution mechanism
+        (mediation, arbitration, litigation).
+    preferred:
+      description: >
+        Buyer-friendly governing law and venue. Multi-step
+        dispute resolution (negotiation, mediation, then
+        arbitration or litigation). Prevailing party entitled
+        to legal costs.
+      exemplars:
+        - "This Agreement shall be governed by the laws of [STATE/PROVINCE]"
+        - "Any dispute shall first be resolved through negotiation, then mediation, then binding arbitration"
+        - "The prevailing party shall be entitled to recover its legal costs"
+    acceptable:
+      description: >
+        Neutral venue and governing law. Standard dispute
+        resolution clause (mediation then litigation).
+        Each party bears its own legal costs.
+      exemplars:
+        - "This Agreement shall be governed by the laws of [STATE/PROVINCE]"
+        - "Disputes shall be resolved through binding arbitration in [CITY]"
+        - "Each party shall bear its own legal costs"
+    walkaway:
+      description: >
+        Vendor-only venue, inconvenient forum, or waiver of
+        jury trial or class action without mutual agreement.
+      exemplars:
+        - "All disputes shall be resolved in [VENDOR'S JURISDICTION]"
+        - "Buyer waives its right to a jury trial"
+        - "Buyer waives its right to participate in a class action"
+    default_position: "acceptable"
