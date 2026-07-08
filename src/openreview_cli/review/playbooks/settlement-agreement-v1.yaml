@@ -1,0 +1,230 @@
+# Bundled Settlement Agreement Playbook — SettlementCheck Mode v1
+# Covers standard settlement and release agreement clauses for
+# solo/small-business review.
+# Sources: Common settlement agreement clause categories from
+# Practical Law, Cornell LII (settlement overview), IRS Section
+# 104 (tax treatment of settlements), and general small-business
+# dispute resolution best practices.
+# Users may override with --playbook <path>.
+
+id: "settlement-agreement-v1"
+mode: "settlementcheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Standard settlement and release agreement review playbook
+    for SettlementCheck mode. Covers release scope, payment
+    terms, confidentiality, waiver of unknown claims, and
+    breach consequences.
+  author: "openreview"
+
+categories:
+  # ── Release Scope ──────────────────────────────────────────────
+  - id: "release-scope"
+    name: "Release Scope"
+    description: >
+        Breadth of the release — claims released, parties
+        released, exclusions, and whether release is mutual
+        or one-sided.
+    preferred:
+      description: >
+        Mutual general release of all claims arising from the
+        dispute. Clear exclusions for ongoing obligations,
+        enforcement of settlement terms, and claims that
+        cannot be waived by law. Parties specifically
+        identified including related entities.
+      exemplars:
+        - "Each party releases the other from all claims arising out of the dispute described in the Recitals"
+        - "This release does not apply to any obligations set forth in this Settlement Agreement"
+        - "Excluded from this release are claims that cannot be waived by applicable law"
+    acceptable:
+      description: >
+        Mutual release with reasonable scope but some ambiguity
+        on exclusions. Release covers known claims but may not
+        explicitly address unknown claims. Releasors clearly
+        identified.
+      exemplars:
+        - "Claimant releases Respondent from any and all claims arising from or relating to the dispute"
+        - "Release excludes claims arising from future breach of this Agreement"
+        - "The release extends to the parties' respective predecessors, successors, and assigns"
+    walkaway:
+      description: >
+        One-sided release (only one party releases claims).
+        Release of all possible claims with no exclusions
+        for statutory rights. Release of non-parties without
+        consideration. Release of future claims unrelated to
+        dispute.
+      exemplars:
+        - "Claimant releases Respondent from all claims, known or unknown, that ever existed"
+        - "Claimant waives all rights under Section 1542 of the California Civil Code"
+        - "This release applies to any and all claims regardless of when they arose"
+    default_position: "acceptable"
+
+  # ── Payment Terms / Timing ─────────────────────────────────────
+  - id: "payment-terms-timing"
+    name: "Payment Terms / Timing"
+    description: >
+      Settlement amount, payment schedule (lump sum vs.
+      instalments), delivery method, and consequences of
+      late or non-payment.
+    preferred:
+      description: >
+        Lump-sum payment within 30 days of execution. Clear
+        payment instructions (wire, certified cheque). No
+        conditions precedent to payment. Default interest on
+        late payments. Payment explicitly characterised (tax
+        treatment noted but not tax advice).
+      exemplars:
+        - "Respondent shall pay Claimant [AMOUNT] within [NUMBER] days of the Effective Date"
+        - "Payment shall be made by wire transfer to the account specified in writing"
+        - "Late payment shall accrue interest at the rate of [PERCENTAGE]% per annum"
+    acceptable:
+      description: >
+        Instalment payments over defined schedule. Reasonable
+        conditions precedent to payment (e.g., signed release).
+        Late payment triggers acceleration of remaining
+        instalments. Payment by certified cheque or electronic
+        transfer.
+      exemplars:
+        - "Respondent shall make [NUMBER] monthly payments of [AMOUNT] commencing on [DATE]"
+        - "Late payment of any instalment shall accelerate all remaining amounts due"
+        - "Payment obligations are subject to Claimant's execution and delivery of this Agreement"
+    walkaway:
+      description: >
+        No fixed payment schedule. Payment tied to future
+        uncertain events. Instalments with no acceleration
+        on default. Payment by personal cheque with no
+        dishonour protection. No interest on late payments.
+        Promissory note with no security.
+      exemplars:
+        - "Respondent shall pay Claimant within a reasonable time of resolution of the insurance claim"
+        - "Payment shall be made in [NUMBER] monthly payments without acceleration on default"
+        - "Respondent may pay by personal cheque without any security for payment"
+    default_position: "acceptable"
+
+  # ── Confidentiality / Non-Disparagement ────────────────────────
+  - id: "confidentiality-non-disparagement"
+    name: "Confidentiality / Non-Disparagement"
+    description: >
+      Confidentiality of settlement terms and existence of
+      agreement. Non-disparagement obligations on each party.
+      Permitted disclosures (legal, tax, family).
+    preferred:
+      description: >
+        Mutual confidentiality of terms and existence of
+        settlement. Mutual non-disparagement. Permitted
+        disclosures for legal, accounting, tax, and immediate
+        family members. Standard exceptions (legal process,
+        regulatory). Agreement to direct inquiries to counsel.
+      exemplars:
+        - "The terms and existence of this Agreement shall remain confidential"
+        - "Each party agrees not to disparage the other party in any manner"
+        - "Confidentiality does not apply to disclosures required by law or to professional advisors"
+    acceptable:
+      description: >
+        Mutual confidentiality of terms. Mutual non-disparagement
+        but may have limited scope. Permitted disclosures but
+        not comprehensively listed. Standard legal process
+        exception.
+      exemplars:
+        - "The parties agree to keep the terms of this Agreement strictly confidential"
+        - "Neither party shall make any negative statements about the other"
+        - "Disclosure may be made to attorneys, accountants, and immediate family members"
+    walkaway:
+      description: >
+        One-sided confidentiality (only claimant bound).
+        One-sided non-disparagement. No exceptions for legal
+        or tax disclosures. Confidentiality extends to all
+        facts underlying the dispute. Violation triggers
+        repayment of settlement with penalty.
+      exemplars:
+        - "Claimant shall not disclose the terms of this Agreement to any person"
+        - "Claimant shall not make any statement, positive or negative, about Respondent"
+        - "Breach of confidentiality shall require repayment of the full settlement amount plus a penalty"
+    default_position: "acceptable"
+
+  # ── Waiver of Unknown Claims ───────────────────────────────────
+  - id: "waiver-unknown-claims"
+    name: "Waiver of Unknown Claims"
+    description: >
+      Waiver of claims the releasing party does not yet know
+      about. Specific mention of statutory provisions (e.g.
+      California Civil Code Section 1542), advisability of
+      consulting counsel, knowing and voluntary waiver.
+    preferred:
+      description: >
+        Mutual waiver of unknown claims with explicit reference
+        to applicable statute (e.g. Cal. Civ. Code Section
+        1542). Statement that party has been advised to
+        consult counsel and does so knowingly and voluntarily.
+        Waiver limited to claims arising from the specific
+        dispute.
+      exemplars:
+        - "Each party expressly waives all rights under Section 1542 of the California Civil Code"
+        - "The parties acknowledge they have been advised to consult legal counsel before signing"
+        - "This waiver of unknown claims is limited to those arising from the facts alleged in the dispute"
+    acceptable:
+      description: >
+        Waiver of unknown claims included but without explicit
+        statutory reference. Party acknowledges they may later
+        discover additional claims. General release deemed to
+        cover unknown claims. Reasonable scope.
+      exemplars:
+        - "This release extends to claims that are unknown, unanticipated, or unsuspected"
+        - "The parties acknowledge the possibility of unknown claims and nevertheless agree to the release"
+        - "This release covers all claims of every kind that exist or may exist as of the Effective Date"
+    walkaway:
+      description: >
+        Waiver of all unknown claims with no limitation to
+        the dispute at hand. No acknowledgment of right to
+        consult counsel. Release covers future claims not yet
+        arising. No explicit statutory waiver but broad
+        "unknown" waiver that may be unenforceable.
+      exemplars:
+        - "Claimant waives any and all claims that may arise in the future"
+        - "This release applies to all claims, known or unknown, of every kind whatsoever"
+        - "Claimant represents they have not relied on any advice from Respondent regarding this waiver"
+    default_position: "acceptable"
+
+  # ── Breach Consequences ────────────────────────────────────────
+  - id: "breach-consequences"
+    name: "Breach Consequences"
+    description: >
+      Remedies for breach of the settlement agreement,
+      including acceleration, liquidated damages, repayment,
+      reinstatement of original claims, and dispute resolution
+      for breach claims.
+    preferred:
+      description: >
+        Cure period for any breach. Only material breaches
+        trigger remedies. Remedy limited to specific performance
+        or damages. No clawback of settlement amounts for
+        non-material breach. Standard dispute resolution for
+        breach claims. No liquidated damages penalty.
+      exemplars:
+        - "Claimant shall provide [NUMBER] days' written notice and opportunity to cure before claiming breach"
+        - "Remedies for breach are limited to the enforcement of the terms of this Agreement"
+        - "Breach of confidentiality shall entitle the non-breaching party to seek injunctive relief"
+    acceptable:
+      description: >
+        Accelerated payment of remaining instalments on breach.
+        Repayment of settlement amounts on material breach.
+        Reasonable liquidated damages clause. Dispute resolved
+        through designated court or arbitration. Cure period
+        for curable breaches.
+      exemplars:
+        - "Breach of any material term shall accelerate all remaining payments"
+        - "In the event of a material breach, Claimant may seek reinstatement of original claims"
+        - "Any dispute arising from this Agreement shall be resolved in [COURT/ARBITRATION]"
+    walkaway:
+      description: >
+        Full clawback of all settlement amounts on any breach,
+        even non-material. Liquidated damages that are
+        disproportionate to actual harm. No cure period. Breach
+        determined unilaterally by one party. Original claims
+        revived with accrued interest and penalties.
+      exemplars:
+        - "Any breach of this Agreement shall entitle Respondent to a full refund of all amounts paid"
+        - "Respondent may determine breach in its sole discretion and demand immediate repayment"
+        - "Upon breach, Claimant shall repay [HIGH MULTIPLE] times the settlement amount received"
+    default_position: "acceptable"

@@ -10,6 +10,7 @@ from openreview_cli.review.playbook import (
     PlaybookLoadError,
     load_playbook,
 )
+from openreview_cli.review.prompts import MODE_VOCABULARY
 
 PLAYBOOKS_DIR = (
     Path(__file__).resolve().parent.parent.parent
@@ -30,6 +31,14 @@ class TestBundledPlaybooks:
             ("licensecheck", "saas-license-v1.yaml"),
             ("leasecheck", "commercial-lease-v1.yaml"),
             ("privacycheck", "dpa-v1.yaml"),
+            ("dealcheck", "dealcheck-v1.yaml"),
+            ("hirecheck", "hirecheck-v1.yaml"),
+            ("indemnitycheck", "indemnification-v1.yaml"),
+            ("consultcheck", "consulting-agreement-v1.yaml"),
+            ("workcheck", "work-for-hire-v1.yaml"),
+            ("loicheck", "letter-of-intent-v1.yaml"),
+            ("subcheck", "subcontractor-agreement-v1.yaml"),
+            ("settlementcheck", "settlement-agreement-v1.yaml"),
         ],
     )
     def test_playbook_loads_successfully(self, mode: str, filename: str) -> None:
@@ -50,6 +59,14 @@ class TestBundledPlaybooks:
             ("licensecheck", "saas-license-v1.yaml"),
             ("leasecheck", "commercial-lease-v1.yaml"),
             ("privacycheck", "dpa-v1.yaml"),
+            ("dealcheck", "dealcheck-v1.yaml"),
+            ("hirecheck", "hirecheck-v1.yaml"),
+            ("indemnitycheck", "indemnification-v1.yaml"),
+            ("consultcheck", "consulting-agreement-v1.yaml"),
+            ("workcheck", "work-for-hire-v1.yaml"),
+            ("loicheck", "letter-of-intent-v1.yaml"),
+            ("subcheck", "subcontractor-agreement-v1.yaml"),
+            ("settlementcheck", "settlement-agreement-v1.yaml"),
         ],
     )
     def test_playbook_has_valid_categories(self, mode: str, filename: str) -> None:
@@ -70,7 +87,20 @@ class TestBundledPlaybooks:
 
     def test_bundled_playbooks_mapping_all_modes(self) -> None:
         """Verify BUNDLED_PLAYBOOKS dict covers all known modes."""
-        expected_modes = {"precheck", "licensecheck", "leasecheck", "privacycheck"}
+        expected_modes = {
+            "precheck",
+            "licensecheck",
+            "leasecheck",
+            "privacycheck",
+            "dealcheck",
+            "hirecheck",
+            "indemnitycheck",
+            "consultcheck",
+            "workcheck",
+            "loicheck",
+            "subcheck",
+            "settlementcheck",
+        }
         assert set(BUNDLED_PLAYBOOKS) == expected_modes
 
     def test_bundled_playbook_paths_exist(self) -> None:
@@ -83,7 +113,7 @@ class TestBundledPlaybooks:
 
 
 class TestNewModePlaybooks:
-    """Domain-specific validation for LicenseCheck, LeaseCheck, PrivacyCheck playbooks."""
+    """Domain-specific validation for product-mode playbooks."""
 
     @pytest.mark.parametrize(
         "mode, filename, expected_categories",
@@ -91,6 +121,14 @@ class TestNewModePlaybooks:
             ("licensecheck", "saas-license-v1.yaml", 9),
             ("leasecheck", "commercial-lease-v1.yaml", 9),
             ("privacycheck", "dpa-v1.yaml", 8),
+            ("dealcheck", "dealcheck-v1.yaml", 6),
+            ("hirecheck", "hirecheck-v1.yaml", 6),
+            ("indemnitycheck", "indemnification-v1.yaml", 4),
+            ("consultcheck", "consulting-agreement-v1.yaml", 5),
+            ("workcheck", "work-for-hire-v1.yaml", 5),
+            ("loicheck", "letter-of-intent-v1.yaml", 5),
+            ("subcheck", "subcontractor-agreement-v1.yaml", 5),
+            ("settlementcheck", "settlement-agreement-v1.yaml", 5),
         ],
     )
     def test_category_count(self, mode: str, filename: str, expected_categories: int) -> None:
@@ -125,7 +163,19 @@ class TestNewModePlaybooks:
 
     def test_playbook_yaml_structure(self) -> None:
         """Verify YAML structure has required top-level keys."""
-        for filename in ("saas-license-v1.yaml", "commercial-lease-v1.yaml", "dpa-v1.yaml"):
+        for filename in (
+            "saas-license-v1.yaml",
+            "commercial-lease-v1.yaml",
+            "dpa-v1.yaml",
+            "dealcheck-v1.yaml",
+            "hirecheck-v1.yaml",
+            "indemnification-v1.yaml",
+            "consulting-agreement-v1.yaml",
+            "work-for-hire-v1.yaml",
+            "letter-of-intent-v1.yaml",
+            "subcontractor-agreement-v1.yaml",
+            "settlement-agreement-v1.yaml",
+        ):
             path = PLAYBOOKS_DIR / filename
             raw = yaml.safe_load(path.read_text(encoding="utf-8"))
             assert isinstance(raw, dict), f"{filename} is not a mapping"
@@ -133,3 +183,32 @@ class TestNewModePlaybooks:
                 assert key in raw, f"{filename} missing required key '{key}'"
             assert isinstance(raw["categories"], list), f"{filename} categories not a list"
             assert len(raw["categories"]) > 0, f"{filename} has no categories"
+
+
+class TestModeVocabulary:
+    """Validate MODE_VOCABULARY entries for all product modes."""
+
+    @pytest.mark.parametrize(
+        "mode",
+        [
+            "precheck",
+            "licensecheck",
+            "leasecheck",
+            "privacycheck",
+            "dealcheck",
+            "hirecheck",
+            "indemnitycheck",
+            "consultcheck",
+            "workcheck",
+            "loicheck",
+            "subcheck",
+            "settlementcheck",
+        ],
+    )
+    def test_mode_vocabulary_entry_exists(self, mode: str) -> None:
+        assert mode in MODE_VOCABULARY, f"MODE_VOCABULARY missing '{mode}' entry"
+        entry = MODE_VOCABULARY[mode]
+        assert "specialization" in entry, f"MODE_VOCABULARY['{mode}'] missing 'specialization'"
+        assert "domain" in entry, f"MODE_VOCABULARY['{mode}'] missing 'domain'"
+        assert "vocabulary" in entry, f"MODE_VOCABULARY['{mode}'] missing 'vocabulary'"
+        assert len(entry["domain"]) > 0, f"MODE_VOCABULARY['{mode}'] domain empty"

@@ -186,6 +186,83 @@ MODE_VOCABULARY: dict[str, dict[str, str]] = {
             "sub-processor, breach notification, data retention, DPA. "
         ),
     },
+    "dealcheck": {
+        "specialization": " specializing in commercial vendor and service agreements",
+        "domain": "vendor/service agreement",
+        "vocabulary": (
+            "Domain vocabulary: payment terms, deliverables, milestone, "
+            "termination for convenience, liability cap, indemnification, "
+            "confidentiality, governing law. "
+        ),
+    },
+    "hirecheck": {
+        "specialization": " specializing in employment agreements",
+        "domain": "employment agreement",
+        "vocabulary": (
+            "Domain vocabulary: compensation, bonus, equity, severance, "
+            "IP assignment, non-compete, non-solicit, confidentiality, "
+            "arbitration, at-will employment. "
+        ),
+    },
+    "indemnitycheck": {
+        "specialization": " specializing in indemnification agreements",
+        "domain": "indemnification agreement",
+        "vocabulary": (
+            "Domain vocabulary: indemnify, hold harmless, defense, liability cap, "
+            "survival, third-party claim, broad form, limited form, mutual, sole, "
+            "duty to defend, settlement, obligation to indemnify. "
+        ),
+    },
+    "consultcheck": {
+        "specialization": " specializing in consulting services agreements",
+        "domain": "consulting services agreement",
+        "vocabulary": (
+            "Domain vocabulary: statement of work, deliverable, milestone, "
+            "hourly rate, fixed fee, IP ownership, work product, pre-existing "
+            "materials, expense reimbursement, termination for convenience, "
+            "scope of work, acceptance criteria, change order. "
+        ),
+    },
+    "workcheck": {
+        "specialization": " specializing in independent contractor and work-for-hire agreements",
+        "domain": "independent contractor / work-for-hire agreement",
+        "vocabulary": (
+            "Domain vocabulary: independent contractor, work-for-hire, "
+            "worker classification, IP assignment, pre-existing materials, "
+            "non-compete, non-solicit, payment milestone, invoice, benefits, "
+            "termination for convenience, scope of work. "
+        ),
+    },
+    "loicheck": {
+        "specialization": " specializing in letters of intent and MOUs",
+        "domain": "letter of intent / memorandum of understanding",
+        "vocabulary": (
+            "Domain vocabulary: letter of intent, non-binding, exclusivity, "
+            "no-shop, breakup fee, reverse breakup fee, due diligence, "
+            "definitive agreement, good faith negotiation, fiduciary-out, "
+            "expiration, tail period, material adverse change. "
+        ),
+    },
+    "subcheck": {
+        "specialization": " specializing in subcontractor agreements",
+        "domain": "subcontractor agreement",
+        "vocabulary": (
+            "Domain vocabulary: subcontractor, prime contract, flow-down, "
+            "incorporation by reference, pay-when-paid, pay-if-paid, retainage, "
+            "change order, broad-form indemnity, backcharge, demobilization, "
+            "termination for convenience, scope of work. "
+        ),
+    },
+    "settlementcheck": {
+        "specialization": " specializing in settlement and release agreements",
+        "domain": "settlement and release agreement",
+        "vocabulary": (
+            "Domain vocabulary: release, settlement, mutual release, "
+            "non-disparagement, waiver of unknown claims, Section 1542, "
+            "liquidated damages, acceleration, clawback, reinstatement, "
+            "lump sum, instalments, accrual, consideration. "
+        ),
+    },
 }
 
 

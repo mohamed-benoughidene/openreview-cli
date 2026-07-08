@@ -1,0 +1,72 @@
+[
+  {
+    "path": "tests/fixtures/benchmark/consultcheck/doc_1.pdf",
+    "expected_categories": [
+      {
+        "category_id": "sow-specificity",
+        "expected_position": "walkaway"
+      },
+      {
+        "category_id": "payment-terms",
+        "expected_position": "preferred"
+      }
+    ],
+    "doc_index": 1
+  },
+  {
+    "path": "tests/fixtures/benchmark/consultcheck/doc_2.pdf",
+    "expected_categories": [
+      {
+        "category_id": "ip-ownership",
+        "expected_position": "acceptable"
+      },
+      {
+        "category_id": "confidentiality",
+        "expected_position": "preferred"
+      }
+    ],
+    "doc_index": 2
+  },
+  {
+    "path": "tests/fixtures/benchmark/consultcheck/doc_3.pdf",
+    "expected_categories": [
+      {
+        "category_id": "sow-specificity",
+        "expected_position": "preferred"
+      },
+      {
+        "category_id": "payment-terms",
+        "expected_position": "acceptable"
+      }
+    ],
+    "doc_index": 3
+  },
+  {
+    "path": "tests/fixtures/benchmark/consultcheck/doc_4.pdf",
+    "expected_categories": [
+      {
+        "category_id": "payment-terms",
+        "expected_position": "acceptable"
+      },
+      {
+        "category_id": "ip-ownership",
+        "expected_position": "acceptable"
+      }
+    ],
+    "doc_index": 4
+  },
+  {
+    "path": "tests/fixtures/benchmark/consultcheck/doc_5.pdf",
+    "expected_categories": [
+      {
+        "category_id": "confidentiality",
+        "expected_position": "walkaway"
+      },
+      {
+        "category_id": "termination-rights",
+        "expected_position": "preferred"
+      }
+    ],
+    "doc_index": 5
+  }
+]

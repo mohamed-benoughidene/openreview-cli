@@ -1,0 +1,72 @@
+[
+  {
+    "path": "tests/fixtures/benchmark/leasecheck/doc_1.pdf",
+    "expected_categories": [
+      {
+        "category_id": "rent-escalation",
+        "expected_position": "walkaway"
+      },
+      {
+        "category_id": "maintenance-obligations",
+        "expected_position": "preferred"
+      }
+    ],
+    "doc_index": 1
+  },
+  {
+    "path": "tests/fixtures/benchmark/leasecheck/doc_2.pdf",
+    "expected_categories": [
+      {
+        "category_id": "subletting-assignment",
+        "expected_position": "preferred"
+      },
+      {
+        "category_id": "term-length-renewal",
+        "expected_position": "preferred"
+      }
+    ],
+    "doc_index": 2
+  },
+  {
+    "path": "tests/fixtures/benchmark/leasecheck/doc_3.pdf",
+    "expected_categories": [
+      {
+        "category_id": "operating-expenses",
+        "expected_position": "preferred"
+      },
+      {
+        "category_id": "security-deposit",
+        "expected_position": "preferred"
+      }
+    ],
+    "doc_index": 3
+  },
+  {
+    "path": "tests/fixtures/benchmark/leasecheck/doc_4.pdf",
+    "expected_categories": [
+      {
+        "category_id": "termination-convenience",
+        "expected_position": "preferred"
+      },
+      {
+        "category_id": "triple-net",
+        "expected_position": "acceptable"
+      }
+    ],
+    "doc_index": 4
+  },
+  {
+    "path": "tests/fixtures/benchmark/leasecheck/doc_5.pdf",
+    "expected_categories": [
+      {
+        "category_id": "rent-escalation",
+        "expected_position": "acceptable"
+      },
+      {
+        "category_id": "maintenance-obligations",
+        "expected_position": "preferred"
+      }
+    ],
+    "doc_index": 5
+  }
+]

@@ -2322,6 +2322,54 @@ _register_product_mode(
     help_text="Review a Data Processing Agreement with PrivacyCheck.",
     path_help="Path to a Data Processing Agreement (PDF or DOCX).",
 )
+_register_product_mode(
+    app,
+    name="dealcheck",
+    help_text="Review a vendor/service agreement with DealCheck.",
+    path_help="Path to a vendor or service agreement (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="hirecheck",
+    help_text="Review an employment agreement with HireCheck.",
+    path_help="Path to an employment agreement (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="indemnitycheck",
+    help_text="Review an indemnification agreement with IndemnityCheck.",
+    path_help="Path to an indemnification agreement (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="consultcheck",
+    help_text="Review a consulting services agreement with ConsultCheck.",
+    path_help="Path to a consulting services agreement (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="workcheck",
+    help_text="Review an independent contractor/work-for-hire agreement with WorkCheck.",
+    path_help="Path to an independent contractor agreement (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="loicheck",
+    help_text="Review a letter of intent or MOU with LOICheck.",
+    path_help="Path to a letter of intent or MOU (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="subcheck",
+    help_text="Review a subcontractor agreement with SubCheck.",
+    path_help="Path to a subcontractor agreement (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="settlementcheck",
+    help_text="Review a settlement/release agreement with SettlementCheck.",
+    path_help="Path to a settlement or release agreement (PDF or DOCX).",
+)
 
 
 # ── Shared product review logic ─────────────────────────────────────────────
