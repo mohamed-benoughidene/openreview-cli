@@ -30,6 +30,11 @@ BUNDLED_PLAYBOOKS: dict[str, Path] = {
     "loicheck": Path(__file__).parent / "playbooks" / "letter-of-intent-v1.yaml",
     "subcheck": Path(__file__).parent / "playbooks" / "subcontractor-agreement-v1.yaml",
     "settlementcheck": Path(__file__).parent / "playbooks" / "settlement-agreement-v1.yaml",
+    "assetcheck": Path(__file__).parent / "playbooks" / "asset-transfer-v1.yaml",
+    "buycheck": Path(__file__).parent / "playbooks" / "asset-purchase-v1.yaml",
+    "engagecheck": Path(__file__).parent / "playbooks" / "engagement-letter-v1.yaml",
+    "guaranteecheck": Path(__file__).parent / "playbooks" / "personal-guarantee-v1.yaml",
+    "loancheck": Path(__file__).parent / "playbooks" / "loan-agreement-v1.yaml",
 }
 
 

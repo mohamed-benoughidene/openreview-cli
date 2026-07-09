@@ -1,0 +1,164 @@
+# Bundled Loan Agreement Playbook — LoanCheck Mode v1
+id: "loan-agreement-v1"
+mode: "loancheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Bundled loan agreement playbook for LoanCheck mode. Covers loan
+    terms, default, collateral, covenants, and cross-default in loan
+    agreements and promissory notes.
+  author: "openreview"
+
+categories:
+  - id: "loan-terms"
+    name: "Loan Terms & Repayment"
+    description: >
+      Loan amount, interest rate (fixed/variable, APR), repayment
+      schedule, maturity date, and prepayment penalties.
+    preferred:
+      description: >
+        Fixed interest rate with transparent APR. Monthly payments
+        amortized over term. No prepayment penalty, or nominal
+        penalty only in early years.
+      exemplars:
+        - "Principal: $[AMOUNT]. Interest: [RATE]% per annum fixed. Maturity: [DATE]. Monthly payments of $[AMOUNT]"
+        - "Borrower may prepay all or part of the outstanding principal at any time without prepayment premium or penalty"
+    acceptable:
+      description: >
+        Variable rate with clear index and margin. Standard
+        amortization. Prepayment penalty limited to [NUMBER]
+        months interest.
+      exemplars:
+        - "Interest shall accrue at a variable rate equal to [INDEX] + [MARGIN]%. Borrower may prepay subject to a [NUMBER]% prepayment premium"
+    walkaway:
+      description: >
+        No stated interest rate, balloon payment with no
+        amortization, penalties exceeding 6 months interest,
+        or interest-only period without principal reduction.
+      exemplars:
+        - "Interest shall be at Lender's prime rate plus [NUMBER]%, adjustable daily at Lender's discretion"
+        - "The entire principal balance shall be due and payable on the Maturity Date. Prepayment penalty: [NUMBER]% of remaining balance"
+    default_position: "acceptable"
+
+  - id: "default-acceleration"
+    name: "Default & Acceleration"
+    description: >
+      Events of default, cure periods, acceleration rights,
+      and remedies upon default.
+    preferred:
+      description: >
+        Limited events of default (non-payment, material breach,
+        bankruptcy). Cure periods for all defaults (at least
+        10 days for payment, 30 days for non-payment). No
+        automatic acceleration.
+      exemplars:
+        - "Events of Default include: (i) failure to pay within [NUMBER] days of due date; (ii) material breach uncured for [NUMBER] days"
+        - "Upon Default, Lender may accelerate the Loan by written notice. No automatic acceleration"
+    acceptable:
+      description: >
+        Standard default events with cure periods for payment
+        and non-payment defaults. Acceleration on notice.
+      exemplars:
+        - "Default includes failure to pay when due, breach of representations, or bankruptcy. [NUMBER] days cure for non-payment"
+    walkaway:
+      description: >
+        Broad events of default (including material adverse change,
+        cross-default to unrelated obligations). No cure periods.
+        Automatic acceleration without notice.
+      exemplars:
+        - "Events of Default include any material adverse change in Borrower's financial condition, as determined by Lender in its sole discretion"
+        - "All Obligations shall automatically accelerate upon the occurrence of any Event of Default, without notice or demand"
+    default_position: "acceptable"
+
+  - id: "collateral"
+    name: "Collateral & Security Interest"
+    description: >
+      Collateral securing the loan, scope of security interest,
+      after-acquired property, and perfection requirements.
+    preferred:
+      description: >
+        Security interest in specific identified collateral.
+        No after-acquired property clause, or limited to
+        replace assets. Negative pledge for additional
+        encumbrances.
+      exemplars:
+        - "Borrower grants Lender a security interest in the Collateral described in Exhibit A. No after-acquired property clause"
+        - "Borrower shall not create or permit any additional liens on the Collateral without Lender's consent"
+    acceptable:
+      description: >
+        Security interest in defined asset categories.
+        After-acquired property limited to same categories.
+      exemplars:
+        - "Borrower grants a security interest in all equipment, inventory, and accounts receivable"
+    walkaway:
+      description: >
+        Blanket lien on all assets, including after-acquired
+        property. No exclusion for consumer goods or exempt
+        assets.
+      exemplars:
+        - "Borrower grants Lender a security interest in all of Borrower's assets, whether now owned or hereafter acquired"
+        - "The security interest covers all personal property of Borrower, including all proceeds and products thereof"
+    default_position: "acceptable"
+
+  - id: "covenants"
+    name: "Affirmative & Negative Covenants"
+    description: >
+      Borrower promises to do (or refrain from doing) certain
+      things. Affirmative covenants (insurance, reporting) and
+      negative covenants (debt, dividends, asset sales).
+    preferred:
+      description: >
+        Standard affirmative covenants (insurance, tax payment,
+        financial reporting). Limited negative covenants tied
+        to financial health. No overly restrictive operational
+        restrictions.
+      exemplars:
+        - "Borrower shall maintain insurance, pay taxes, and provide annual financial statements within [NUMBER] days of year-end"
+        - "Borrower shall not incur additional debt exceeding $[AMOUNT] without Lender's consent"
+    acceptable:
+      description: >
+        Typical loan covenants with reasonable thresholds.
+        Affirmative and negative covenants with materiality
+        qualifiers.
+      exemplars:
+        - "Borrower shall not sell material assets outside the Ordinary Course of Business without Lender's consent"
+    walkaway:
+      description: >
+        Overly restrictive negative covenants preventing normal
+        business operations. Financial covenants with no cure.
+        No materiality qualifiers.
+      exemplars:
+        - "Borrower shall not incur any additional debt, make any capital expenditures, or pay dividends without Lender's prior written consent"
+        - "Borrower shall maintain a Debt Service Coverage Ratio of not less than [NUMBER]:1.00, tested quarterly"
+    default_position: "acceptable"
+
+  - id: "cross-default"
+    name: "Cross-Default & Remedies"
+    description: >
+      Cross-default provisions tying this loan to defaults on
+      other obligations, and the scope of remedies available
+      to the lender.
+    preferred:
+      description: >
+        No cross-default, or cross-default limited to material
+        debt above a significant threshold. Remedies limited to
+        standard acceleration and foreclosure.
+      exemplars:
+        - "Cross-default applies only to other indebtedness of Borrower exceeding $[AMOUNT]"
+        - "Lender's remedies upon Default are limited to acceleration of the Loan and foreclosure on the Collateral"
+    acceptable:
+      description: >
+        Cross-default to material debt over threshold. Standard
+        remedies with notice requirements.
+      exemplars:
+        - "A default under any other agreement with aggregate obligations exceeding $[AMOUNT] shall constitute an Event of Default"
+    walkaway:
+      description: >
+        Cross-default to all other obligations regardless of
+        amount or materiality. Broad remedies including equity
+        conversion, appointment of receiver, and admission of
+        judgment.
+      exemplars:
+        - "A default by Borrower under any other agreement with any creditor shall constitute an Event of Default"
+        - "Lender shall have all rights and remedies available at law or in equity, including without limitation specific performance"
+    default_position: "acceptable"

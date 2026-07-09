@@ -263,6 +263,54 @@ MODE_VOCABULARY: dict[str, dict[str, str]] = {
             "lump sum, instalments, accrual, consideration. "
         ),
     },
+    "assetcheck": {
+        "specialization": " specializing in asset transfer and assignment agreements",
+        "domain": "asset transfer agreement",
+        "vocabulary": (
+            "Domain vocabulary: asset, assignment, bill of sale, "
+            "as-is, warranty, encumbrance, transfer, delivery, "
+            "excluded assets, purchase price. "
+        ),
+    },
+    "buycheck": {
+        "specialization": " specializing in asset purchase and business acquisition agreements",
+        "domain": "asset purchase agreement",
+        "vocabulary": (
+            "Domain vocabulary: purchase price, asset list, "
+            "assumed liabilities, representations, warranties, "
+            "indemnification, non-compete, bulk sale, earn-out, "
+            "closing conditions. "
+        ),
+    },
+    "engagecheck": {
+        "specialization": " specializing in professional services engagement letters",
+        "domain": "engagement letter",
+        "vocabulary": (
+            "Domain vocabulary: scope of services, deliverables, "
+            "fees, expenses, IP ownership, work product, "
+            "confidentiality, limitation of liability, non-solicit, "
+            "termination. "
+        ),
+    },
+    "guaranteecheck": {
+        "specialization": " specializing in personal guarantee and suretyship agreements",
+        "domain": "personal guarantee",
+        "vocabulary": (
+            "Domain vocabulary: personal guarantee, limited guarantee, "
+            "continuing guarantee, waiver of defenses, subrogation, "
+            "confession of judgment, maximum liability, survival. "
+        ),
+    },
+    "loancheck": {
+        "specialization": " specializing in loan agreements and promissory notes",
+        "domain": "loan agreement",
+        "vocabulary": (
+            "Domain vocabulary: principal, interest, APR, "
+            "maturity, prepayment, default, acceleration, "
+            "collateral, security interest, covenant, "
+            "cross-default, events of default. "
+        ),
+    },
 }
 
 

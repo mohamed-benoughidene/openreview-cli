@@ -39,6 +39,11 @@ class TestBundledPlaybooks:
             ("loicheck", "letter-of-intent-v1.yaml"),
             ("subcheck", "subcontractor-agreement-v1.yaml"),
             ("settlementcheck", "settlement-agreement-v1.yaml"),
+            ("assetcheck", "asset-transfer-v1.yaml"),
+            ("buycheck", "asset-purchase-v1.yaml"),
+            ("engagecheck", "engagement-letter-v1.yaml"),
+            ("guaranteecheck", "personal-guarantee-v1.yaml"),
+            ("loancheck", "loan-agreement-v1.yaml"),
         ],
     )
     def test_playbook_loads_successfully(self, mode: str, filename: str) -> None:
@@ -67,6 +72,11 @@ class TestBundledPlaybooks:
             ("loicheck", "letter-of-intent-v1.yaml"),
             ("subcheck", "subcontractor-agreement-v1.yaml"),
             ("settlementcheck", "settlement-agreement-v1.yaml"),
+            ("assetcheck", "asset-transfer-v1.yaml"),
+            ("buycheck", "asset-purchase-v1.yaml"),
+            ("engagecheck", "engagement-letter-v1.yaml"),
+            ("guaranteecheck", "personal-guarantee-v1.yaml"),
+            ("loancheck", "loan-agreement-v1.yaml"),
         ],
     )
     def test_playbook_has_valid_categories(self, mode: str, filename: str) -> None:
@@ -100,6 +110,11 @@ class TestBundledPlaybooks:
             "loicheck",
             "subcheck",
             "settlementcheck",
+            "assetcheck",
+            "buycheck",
+            "engagecheck",
+            "guaranteecheck",
+            "loancheck",
         }
         assert set(BUNDLED_PLAYBOOKS) == expected_modes
 
@@ -129,6 +144,11 @@ class TestNewModePlaybooks:
             ("loicheck", "letter-of-intent-v1.yaml", 5),
             ("subcheck", "subcontractor-agreement-v1.yaml", 5),
             ("settlementcheck", "settlement-agreement-v1.yaml", 5),
+            ("assetcheck", "asset-transfer-v1.yaml", 5),
+            ("buycheck", "asset-purchase-v1.yaml", 5),
+            ("engagecheck", "engagement-letter-v1.yaml", 5),
+            ("guaranteecheck", "personal-guarantee-v1.yaml", 5),
+            ("loancheck", "loan-agreement-v1.yaml", 5),
         ],
     )
     def test_category_count(self, mode: str, filename: str, expected_categories: int) -> None:
@@ -175,6 +195,11 @@ class TestNewModePlaybooks:
             "letter-of-intent-v1.yaml",
             "subcontractor-agreement-v1.yaml",
             "settlement-agreement-v1.yaml",
+            "asset-transfer-v1.yaml",
+            "asset-purchase-v1.yaml",
+            "engagement-letter-v1.yaml",
+            "personal-guarantee-v1.yaml",
+            "loan-agreement-v1.yaml",
         ):
             path = PLAYBOOKS_DIR / filename
             raw = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -203,6 +228,11 @@ class TestModeVocabulary:
             "loicheck",
             "subcheck",
             "settlementcheck",
+            "assetcheck",
+            "buycheck",
+            "engagecheck",
+            "guaranteecheck",
+            "loancheck",
         ],
     )
     def test_mode_vocabulary_entry_exists(self, mode: str) -> None:

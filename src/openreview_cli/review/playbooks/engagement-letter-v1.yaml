@@ -1,0 +1,155 @@
+# Bundled Engagement Letter Playbook — EngageCheck Mode v1
+id: "engagement-letter-v1"
+mode: "engagecheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Bundled engagement letter playbook for EngageCheck mode. Covers
+    SOW, fees, IP, confidentiality, and termination in professional
+    services engagement letters.
+  author: "openreview"
+
+categories:
+  - id: "scope-of-work"
+    name: "Scope of Services & Deliverables"
+    description: >
+      Defines the specific services to be performed, deliverables
+      to be produced, and acceptance criteria.
+    preferred:
+      description: >
+        Detailed SOW with specific deliverables, milestones,
+        timelines, and objective acceptance criteria. Change
+        order process for scope changes.
+      exemplars:
+        - "Consultant shall provide the Services described in Exhibit A, with deliverables due on the dates specified"
+        - "Acceptance criteria for each Deliverable are set forth in the Statement of Work. Client shall accept or reject within [NUMBER] days"
+    acceptable:
+      description: >
+        General description of services with key deliverables
+        listed. Reasonable description of scope boundaries.
+      exemplars:
+        - "Consultant agrees to provide [DESCRIPTION OF SERVICES] in accordance with the timeline agreed by the parties"
+    walkaway:
+      description: >
+        Vague scope with no deliverables, no timeline, or scope
+        subject to unilateral client change. "All services
+        reasonably requested by Client."
+      exemplars:
+        - "Consultant shall perform such services as Client may reasonably request from time to time"
+        - "The scope of this engagement includes all work necessary to complete the Project to Client's satisfaction"
+    default_position: "acceptable"
+
+  - id: "fees-and-billing"
+    name: "Fees, Billing & Expense Reimbursement"
+    description: >
+      Fee structure (hourly, fixed, retainer), billing schedule,
+      payment terms, late payment charges, and expense reimbursement.
+    preferred:
+      description: >
+        Clear fee structure with defined rates or fixed price.
+        Monthly billing, net-30 terms. Expense reimbursement
+        policy with pre-approval for expenses over threshold.
+      exemplars:
+        - "Consultant shall charge $[RATE] per hour for Services. Invoices shall be submitted monthly and are due within [NUMBER] days"
+        - "Expenses exceeding $[AMOUNT] require Client's prior written approval"
+    acceptable:
+      description: >
+        Standard fee arrangement with reasonable billing terms.
+        Expenses reimbursed at cost with documentation.
+      exemplars:
+        - "Client shall pay Consultant a fixed fee of $[AMOUNT], payable [NUMBER]% upon signing and [NUMBER]% upon delivery"
+    walkaway:
+      description: >
+        No stated fees, open-ended expense authority, auto-pay
+        provisions, or penalty-laden late payment terms.
+      exemplars:
+        - "Consultant shall invoice Client for Services rendered. Fees shall be mutually agreed"
+        - "Client shall pay a late charge of [NUMBER]% per month on all overdue amounts"
+    default_position: "acceptable"
+
+  - id: "ip-ownership"
+    name: "IP Ownership & Work Product"
+    description: >
+      Ownership of deliverables, work product, pre-existing
+      materials, and intellectual property developed during
+      the engagement.
+    preferred:
+      description: >
+        Consultant owns pre-existing materials and grants Client
+        a license. Deliverables ownership assigned upon full
+        payment. Residuals clause for Consultant.
+      exemplars:
+        - "Consultant retains ownership of all pre-existing materials. Deliverables become Client property upon full payment"
+        - "Consultant grants Client a perpetual, non-exclusive license to pre-existing Materials incorporated into Deliverables"
+    acceptable:
+      description: >
+        Work-made-for-hire for deliverables. Consultant retains
+        pre-existing IP with license grant to Client.
+      exemplars:
+        - "All Deliverables shall be considered work made for hire. Consultant assigns all rights in the Deliverables to Client"
+    walkaway:
+      description: >
+        All IP assigned upon creation regardless of payment.
+        No pre-existing IP carve-out. No license back to
+        Consultant. Unlimited royalty-free license to Consultant's pre-existing IP.
+      exemplars:
+        - "All works created by Consultant in connection with this Engagement shall be the sole property of Client"
+        - "Consultant hereby assigns all right, title, and interest in and to any and all intellectual property"
+    default_position: "acceptable"
+
+  - id: "confidentiality"
+    name: "Confidentiality & Data Protection"
+    description: >
+      Confidentiality obligations, data protection requirements,
+      and handling of client information.
+    preferred:
+      description: >
+        Mutual confidentiality with standard exceptions (public
+        info, independently developed, required by law). Data
+        protection provisions reference applicable law.
+      exemplars:
+        - "Each party agrees to hold the other's Confidential Information in confidence and not to disclose it to third parties"
+        - "Consultant shall maintain reasonable administrative, physical, and technical safeguards for Client Data"
+    acceptable:
+      description: >
+        One-way confidentiality protecting Client information.
+        Standard exceptions. Basic data protection.
+      exemplars:
+        - "Consultant agrees to maintain the confidentiality of Client's proprietary information"
+    walkaway:
+      description: >
+        Indefinite confidentiality, no exceptions, or automatic
+        injunctive relief for breach. No data protection obligations.
+      exemplars:
+        - "Confidential Information shall be kept confidential indefinitely and may not be disclosed for any reason"
+        - "Consultant acknowledges that breach of this Section will cause irreparable harm entitling Client to injunctive relief"
+    default_position: "acceptable"
+
+  - id: "termination"
+    name: "Termination & Non-Solicitation"
+    description: >
+      Termination for convenience, termination for cause,
+      post-termination obligations, and non-solicitation clauses.
+    preferred:
+      description: >
+        Mutual termination on 30 days notice. Termination for
+        cause on material breach with cure period. Payment for
+        services rendered through termination.
+      exemplars:
+        - "Either party may terminate this Agreement upon [NUMBER] days' written notice to the other party"
+        - "Client shall pay Consultant for all Services performed through the effective date of termination"
+    acceptable:
+      description: >
+        Client termination for convenience with notice. Consultant
+        can terminate for non-payment. Standard wind-down.
+      exemplars:
+        - "Client may terminate this Agreement at any time upon [NUMBER] days' notice. Consultant shall be paid for work completed"
+    walkaway:
+      description: >
+        Unilateral termination by Client only. No payment for
+        work-in-progress. Non-solicit extends beyond 12 months.
+        No cure period for breach.
+      exemplars:
+        - "Client may terminate this Agreement at any time for any reason. Consultant shall not be entitled to further compensation"
+        - "Consultant agrees not to solicit Client's employees or contractors for a period of [NUMBER] months after termination"
+    default_position: "acceptable"

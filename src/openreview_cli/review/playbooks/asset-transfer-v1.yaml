@@ -1,0 +1,153 @@
+# Bundled Asset Transfer Playbook — AssetCheck Mode v1
+id: "asset-transfer-v1"
+mode: "assetcheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Bundled asset transfer playbook for AssetCheck mode. Covers asset
+    description, exclusions, representations, price/title, and as-is
+    condition clauses in asset transfer/assignment agreements.
+  author: "openreview"
+
+categories:
+  - id: "asset-description"
+    name: "Asset Description & Identification"
+    description: >
+      Defines the assets being transferred, including identification
+      details, serial numbers, and scope of included items.
+    preferred:
+      description: >
+        Clear, specific asset description with identifiers (serial
+        numbers, model numbers). Exhibits or schedules enumerate
+        each asset individually.
+      exemplars:
+        - "The assets being transferred are described in Exhibit A attached hereto"
+        - "Seller shall transfer all assets listed on Schedule 1, including all parts, accessories, and documentation"
+    acceptable:
+      description: >
+        Reasonably specific description with category-level detail.
+        Assets described by type or function rather than individual item.
+      exemplars:
+        - "Seller agrees to transfer all equipment located at 123 Main Street"
+        - "The transferred assets shall include all furniture, fixtures, and equipment (FF&E)"
+    walkaway:
+      description: >
+        Vague or circular asset description. No schedules or exhibits.
+        "All assets of Seller" without limitation or detail.
+      exemplars:
+        - "Seller transfers all of its right, title, and interest in and to the Assets"
+        - "all assets of every kind and description, whether tangible or intangible"
+    default_position: "acceptable"
+
+  - id: "exclusions"
+    name: "Exclusions & Excluded Assets"
+    description: >
+      Specifies assets explicitly excluded from the transfer, such
+      as cash, accounts receivable, intellectual property, or real estate.
+    preferred:
+      description: >
+        Comprehensive list of excluded assets with clear categories.
+        Seller retains specified IP, cash, and pre-closing receivables.
+      exemplars:
+        - "Excluded Assets are set forth in Schedule 2 and include all cash, cash equivalents, and accounts receivable"
+        - "Notwithstanding the foregoing, the following assets are expressly excluded from this transfer"
+    acceptable:
+      description: >
+        Standard exclusions with general categories. IP and cash
+        excluded, but no detailed schedule.
+      exemplars:
+        - "The following assets are excluded: (i) cash, (ii) accounts receivable, and (iii) intellectual property owned by Seller"
+    walkaway:
+      description: >
+        No exclusion clause, or exclusions buried in definitions.
+        Broad "all assets" language with no carve-outs.
+      exemplars:
+        - "No exclusions: all assets of Seller are included in this transfer"
+        - "Excluded Assets means those assets not included in the transfer, to be determined by Buyer"
+    default_position: "acceptable"
+
+  - id: "representations"
+    name: "Representations & Warranties"
+    description: >
+      Seller representations about the assets: ownership, condition,
+      title, absence of liens, and authority to transfer.
+    preferred:
+      description: >
+        Mutual representations covering title, authority, no
+        encumbrances, and absence of litigation. Survival period
+        of 12-24 months.
+      exemplars:
+        - "Seller represents that it has good and marketable title to the Assets, free and clear of all liens and encumbrances"
+        - "Each party represents that it has full power and authority to enter into this Agreement"
+    acceptable:
+      description: >
+        Standard seller-only reps covering title and authority.
+        Limited survival period (6-12 months).
+      exemplars:
+        - "Seller represents that it owns the Assets and has the right to transfer them"
+        - "Seller represents that there are no pending claims relating to the Assets"
+    walkaway:
+      description: >
+        No reps, or reps heavily qualified by "to Seller's knowledge,"
+        or disclaimed entirely. No survival period.
+      exemplars:
+        - "Seller makes no representations or warranties regarding the Assets, including merchantability or fitness"
+        - "THE ASSETS ARE TRANSFERRED 'AS IS' AND WITH ALL FAULTS"
+    default_position: "acceptable"
+
+  - id: "price-and-title"
+    name: "Purchase Price & Transfer of Title"
+    description: >
+      Purchase price, payment terms, allocation, and the point
+      at which title and risk of loss pass to the buyer.
+    preferred:
+      description: >
+        Fixed price or clear formula. Title passes at delivery or
+        payment. Risk of loss passes at delivery. Price allocated
+        in a schedule.
+      exemplars:
+        - "The Purchase Price shall be $[AMOUNT], payable by wire transfer on the Closing Date"
+        - "Title and risk of loss shall pass to Buyer upon delivery of the Assets to Buyer's designated location"
+    acceptable:
+      description: >
+        Determinable price with standard payment terms. Title
+        passes at closing. Risk of loss language included.
+      exemplars:
+        - "Buyer shall pay the Purchase Price in three equal installments over [NUMBER] months"
+        - "Title to the Assets shall pass to Buyer on the Closing Date"
+    walkaway:
+      description: >
+        No stated price, no allocation, or price subject to future
+        determination. Title transfer mechanism unclear or absent.
+      exemplars:
+        - "The purchase price shall be mutually agreed upon by the parties prior to closing"
+        - "Title shall pass at a time to be determined by Seller in its sole discretion"
+    default_position: "acceptable"
+
+  - id: "as-is-regulatory"
+    name: "As-Is Condition & Regulatory Compliance"
+    description: >
+      Whether the assets are sold "as-is" or with condition
+      warranties, and compliance with applicable regulations.
+    preferred:
+      description: >
+        As-is only for tangible assets with specific defect
+        disclosures. Regulatory compliance represented for
+        regulated assets. Environmental disclosures attached.
+      exemplars:
+        - "Tangible Assets are transferred 'as-is' subject to the defects disclosed in Schedule 3"
+        - "Seller represents that the Assets comply with all applicable federal, state, and local regulations"
+    acceptable:
+      description: >
+        As-is with limited survival for known defects. Standard
+        regulatory compliance rep with knowledge qualifier.
+      exemplars:
+        - "The Assets are transferred 'as is, where is' but Seller shall disclose all known material defects"
+    walkaway:
+      description: >
+        Broad as-is with no defect disclosure. No regulatory
+        compliance representation. "With all faults" without exception.
+      exemplars:
+        - "THE ASSETS ARE PROVIDED 'AS IS' AND 'WITH ALL FAULTS.' SELLER DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED"
+        - "Buyer acknowledges that it has inspected the Assets and accepts them in their current condition"
+    default_position: "acceptable"

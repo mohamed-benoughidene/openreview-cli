@@ -3320,3 +3320,133 @@ acknowledges this is a deliberate but fragile pattern:
 Ponytail marker at `src/openreview_cli/pii/engine.py` line 17.
 
 ---
+
+## D-75: Benchmark Whitelist Updates for All 17 Product Modes
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 029, Product modes Batch 2 — items 4+6 (user-split) |
+| **Deferred at** | 2026-07-09 |
+| **Trigger** | Explicitly out of scope — user split items 4+6 from the original spec scope into a follow-up spec |
+| **Status** | Unblocked — requires the benchmark harness infrastructure (spec 010) and a labelled corpus per mode |
+
+### Description
+
+The 17 product modes (PreCheck, DealCheck, HireCheck, LicenseCheck, LeaseCheck, PrivacyCheck, IndemnityCheck, ConsultCheck, WorkCheck, LOICheck, SubCheck, SettlementCheck, AssetCheck, BuyCheck, EngageCheck, GuaranteeCheck, LoanCheck) have no benchmark whitelist entries. The benchmark harness (spec 010) can only run accuracy evaluation against modes that have whitelist entries specifying which labelled datasets apply. Without these entries, users cannot validate whether a mode's playbook and prompts produce accurate assessments.
+
+The whitelist would map each mode to the relevant labelled datasets (CUAD for general contract clauses, MAUD for merger agreements, ContractNLI for NLI-style evaluation) and define per-mode accuracy thresholds.
+
+Items 4 and 6 (benchmark whitelist + accuracy run) were explicitly split from the spec 029 scope by user decision to keep the batch focused on CLI wiring and playbook creation.
+
+### What would need to change to unblock
+
+1. For each of the 17 modes, determine which labelled datasets apply (some modes like LoanCheck or GuaranteeCheck may not map well to existing datasets)
+2. Add a `whitelist` section to the benchmark configuration mapping mode names to dataset IDs
+3. Update the benchmark runner to accept a `--mode` filter and only run against whitelisted datasets
+4. Document the mapping in the benchmark configuration so users understand coverage gaps
+5. If a mode has no applicable dataset, document that the mode is coverage-blind and cannot be benchmarked against published corpora
+
+### Spec references
+
+Spec 029 spec.md §Scope Boundaries (line 288): "Benchmark whitelist updates (deferred to a follow-up spec)."
+Spec 029 plan.md — items 4+6 split by user decision.
+
+---
+
+## D-76: Accuracy Validation Run (CUAD/MAUD/ContractNLI) for All 17 Modes
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 029, Product modes Batch 2 — items 4+6 (user-split) |
+| **Deferred at** | 2026-07-09 |
+| **Trigger** | Explicitly out of scope — deferred to follow-up spec alongside the benchmark whitelist |
+| **Status** | Unblocked — requires the benchmark whitelist (D-75) to exist first, then the actual accuracy runs |
+
+### Description
+
+Once the benchmark whitelist (D-75) is populated for all 17 modes, the accuracy benchmark must actually be run against CUAD, MAUD, and ContractNLI datasets. Each mode would produce precision, recall, and F1 scores against the applicable labelled data.
+
+This is the measurement that validates whether the 17 playbooks and extraction prompts produce accurate clause assessments. Without it, there is no empirical basis for claiming any mode is accurate — only that it produces structured output.
+
+The accuracy run includes:
+- Per-mode precision, recall, F1 against each applicable dataset
+- Aggregate accuracy across all modes (overall pipeline accuracy)
+- Per-category accuracy within each mode (which playbook categories perform well vs poorly)
+- A published accuracy baseline that future changes can be measured against
+- Comparison against the pre-existing modes (PreCheck, DealCheck, HireCheck) to detect regressions
+
+### What would need to change to unblock
+
+1. Populate the benchmark whitelist (D-75)
+2. Ensure all 17 modes have fixture documents or dataset mappings in the benchmark corpus
+3. Run the benchmark harness against each mode's whitelisted datasets
+4. Record baseline accuracy numbers in project documentation
+5. If any mode underperforms (F1 below acceptable threshold), flag the playbook or prompt for revision
+6. Add a CI benchmark step that compares new runs against the baseline and alerts on regressions
+
+### Spec references
+
+Spec 029 spec.md §Scope Boundaries (line 289): "CUAD/MAUD accuracy benchmark runs (deferred to follow-up)."
+Spec 029 spec.md (line 13): "the 22 product modes capability" tracking includes benchmark validation.
+D-75 (benchmark whitelist) is a prerequisite.
+D-72 (per-mode accuracy benchmark scripts) provides skeleton scripts for each mode.
+
+---
+
+## D-77: End-to-End Pipeline Tests for 9 Orphan Modes
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 029, Product modes Batch 2 — per-mode smoke test scope decision |
+| **Deferred at** | 2026-07-09 |
+| **Trigger** | Spec clarification (Session 2026-07-08) limiting orphan-mode tests to CLI routing only |
+| **Status** | Unblocked — requires fixture documents per orphan mode and `run_review()` integration tests |
+
+### Description
+
+The nine orphan modes (LicenseCheck, LeaseCheck, PrivacyCheck, IndemnityCheck, ConsultCheck, WorkCheck, LOICheck, SubCheck, SettlementCheck) were unblocked with only CLI routing tests: subcommand registers, `--help` works, invokes correct playbook, exits cleanly. These tests verify the CLI wiring is correct but do **not** exercise the actual review pipeline (`run_review()`), memo export, or PII stripping for these modes.
+
+End-to-end pipeline tests would validate that each orphan mode:
+1. Parses a fixture document of its contract type
+2. Runs the full three-agent pipeline via `run_review()`
+3. Produces a non-empty `ReviewReport` with clause assessments
+4. Exports a memo (Markdown, JSON, or DOCX) with the mode's name in the prefix
+5. Outputs correct `mode` field in JSON output
+6. Handles `--no-pii`, `--format`, `--playbook` flags correctly
+
+The per-mode smoke test scope decision explicitly limited orphan modes to CLI routing only. This was a pragmatic choice (the spec already requires 5 full smoke tests for new modes + fixture documents) but defers the most meaningful validation — does the mode actually produce useful output for its target contract type?
+
+### What would need to change to unblock
+
+1. Create a fixture PDF document for each orphan mode's contract type (9 new fixture PDFs)
+2. Write `run_review()` integration tests for each orphan mode (following the pattern used by the 5 new modes in spec 029)
+3. Verify memo export produces valid output for each orphan mode
+4. Verify JSON output `mode` field matches the subcommand name
+5. Verify `--no-pii`, `--format`, `--playbook` flags function correctly per mode
+6. Add the 9 fixture PDFs to the test fixtures directory
+7. Verify all 9 tests pass in CI without exceeding the 110 MB memory budget
+
+### Spec references
+
+Spec 029 spec.md §Per-mode smoke test requirements (lines 253-261): "9 orphan modes (CLI routing test only) ... No new fixture documents or run_review() assertions required for orphan modes."
+Spec 029 spec.md §Clarifications Session 2026-07-08: "CLI routing test only — subcommand registers, --help works, invokes correct playbook, exits cleanly."
+
+### Future features (not deferred — natural next steps)
+
+Visible from spec 029 but not built:
+
+- **Benchmark whitelist + accuracy runs for all 17 modes**: CUAD, MAUD, and ContractNLI accuracy validation to establish empirical baselines (D-75 + D-76). The playbooks and prompts exist but their accuracy is unmeasured beyond the 5 new modes' smoke tests.
+
+- **End-to-end pipeline tests for orphan modes**: D-77 above. 9 orphan modes have CLI routing but no fixture-document integration tests. Their playbooks (created in specs 027/028) have never been exercised against a real document through the full pipeline.
+
+- **Per-mode confidence threshold tuning**: All 17 modes share the same Green/Amber/Red thresholds. Finance-heavy modes (LoanCheck, GuaranteeCheck) may benefit from stricter thresholds given the higher cost of false positives in lending documents.
+
+- **Multi-party bilateral comparison for Batch 2 modes**: The 14 modes from Batch 1 (specs 027/028) and Batch 2 (spec 029) all support single-party review only. Bilateral comparison (spec 014) exists as a separate pipeline and has not been integrated with any of these modes.
+
+- **Domain-specific PII recognizers for transaction/finance modes**: Loan agreements and asset purchase agreements contain financial PII (account numbers, tax IDs, asset values) that the generic Presidio recognizers may miss. Extraction prompt vocabulary injection was the v1 approach; dedicated recognizers would improve recall.
+
+- **Complex transaction/finance playbook expansion**: The 5 new playbooks target common small-business scenarios. Structured finance, multi-tier lending, and cross-border asset transfers use more complex clause structures that the 5-category playbook may not capture.
+
+- **Orphan-mode accuracy re-validation**: Nine orphan playbooks were validated in specs 027/028 but no benchmark accuracy data exists for any of them against published datasets.
+
+---

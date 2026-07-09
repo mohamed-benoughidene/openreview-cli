@@ -2370,6 +2370,36 @@ _register_product_mode(
     help_text="Review a settlement/release agreement with SettlementCheck.",
     path_help="Path to a settlement or release agreement (PDF or DOCX).",
 )
+_register_product_mode(
+    app,
+    name="assetcheck",
+    help_text="Review an asset transfer/assignment agreement with AssetCheck.",
+    path_help="Path to an asset transfer or assignment agreement (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="buycheck",
+    help_text="Review an asset purchase/business acquisition agreement with BuyCheck.",
+    path_help="Path to an asset purchase or acquisition agreement (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="engagecheck",
+    help_text="Review a professional services engagement letter with EngageCheck.",
+    path_help="Path to an engagement letter (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="guaranteecheck",
+    help_text="Review a personal guarantee/suretyship agreement with GuaranteeCheck.",
+    path_help="Path to a personal guarantee or suretyship agreement (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="loancheck",
+    help_text="Review a loan agreement/promissory note with LoanCheck.",
+    path_help="Path to a loan agreement or promissory note (PDF or DOCX).",
+)
 
 
 # ── Shared product review logic ─────────────────────────────────────────────

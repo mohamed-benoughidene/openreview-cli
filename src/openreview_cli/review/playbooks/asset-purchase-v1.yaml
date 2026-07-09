@@ -1,0 +1,147 @@
+# Bundled Asset Purchase Playbook — BuyCheck Mode v1
+id: "asset-purchase-v1"
+mode: "buycheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Bundled asset purchase playbook for BuyCheck mode. Covers price,
+    asset list, liabilities, reps, and closing conditions in asset
+    purchase/business acquisition agreements.
+  author: "openreview"
+
+categories:
+  - id: "purchase-price"
+    name: "Purchase Price & Payment Structure"
+    description: >
+      Total consideration, payment form (cash, stock, earn-out),
+      installment schedule, and purchase price allocation.
+    preferred:
+      description: >
+        Cash consideration with clear payment schedule. Purchase
+        price allocation by asset category in a schedule.
+        Earn-out formula is objective and measurable.
+      exemplars:
+        - "The Purchase Price shall be $[AMOUNT] in cash, payable at Closing by wire transfer"
+        - "Earn-out payments shall equal 5% of net revenue from the Acquired Assets for 24 months post-closing"
+    acceptable:
+      description: >
+        Mix of cash and deferred payments. Reasonable earn-out
+        terms. Price allocation in general categories.
+      exemplars:
+        - "Buyer shall pay $[AMOUNT] at Closing and $[AMOUNT] in equal monthly installments over [NUMBER] months"
+    walkaway:
+      description: >
+        No stated price, entirely seller financing without terms,
+        or earn-out based on unverifiable metrics.
+      exemplars:
+        - "The Purchase Price shall be determined by mutual agreement prior to Closing"
+        - "Buyer shall pay the Purchase Price from the future profits of the Acquired Business"
+    default_position: "acceptable"
+
+  - id: "asset-list"
+    name: "Included & Excluded Assets"
+    description: >
+      Detailed list of assets being purchased and assets
+      explicitly excluded from the transaction.
+    preferred:
+      description: >
+        Detailed schedules listing each asset category. Excluded
+        assets enumerated with specific carve-outs for IP, cash,
+        contracts, and real property.
+      exemplars:
+        - "Purchased Assets include all assets listed in Schedule A, including all related contracts, permits, and IP"
+        - "Excluded Assets are set forth in Schedule B and include cash, accounts receivable, and specified IP"
+    acceptable:
+      description: >
+        Category-level asset description with reasonable
+        exclusions. Key assets identified by type.
+      exemplars:
+        - "Purchased Assets shall include all tangible assets, customer contracts, and goodwill of the Business"
+    walkaway:
+      description: >
+        No asset schedule, circular definition, or exclusions
+        determined post-closing. Vague "all assets" language.
+      exemplars:
+        - "Buyer shall purchase all assets of Seller's business as a going concern"
+    default_position: "acceptable"
+
+  - id: "liabilities"
+    name: "Assumed & Excluded Liabilities"
+    description: >
+      Which liabilities the buyer assumes and which remain with
+      the seller. Critical for risk allocation.
+    preferred:
+      description: >
+        Specific list of assumed liabilities (trade payables,
+        performance obligations). Seller retains all other
+        liabilities including pre-closing taxes, litigation, and debt.
+      exemplars:
+        - "Buyer assumes only those liabilities set forth in Schedule C. Seller retains all other liabilities"
+        - "Assumed Liabilities are limited to trade payables arising in the Ordinary Course of Business"
+    acceptable:
+      description: >
+        Standard liability split with general categories.
+        Seller retains pre-closing liabilities.
+      exemplars:
+        - "Buyer assumes all liabilities relating to the Purchased Assets arising after Closing"
+    walkaway:
+      description: >
+        Broad assumption of all liabilities including unknown
+        or contingent. No liability exclusion schedule.
+      exemplars:
+        - "Buyer shall assume all liabilities of the Business, whether known or unknown, contingent or fixed"
+    default_position: "acceptable"
+
+  - id: "reps-and-warranties"
+    name: "Representations & Warranties"
+    description: >
+      Mutual representations covering financial statements,
+      title, authority, litigation, tax, and employee matters.
+    preferred:
+      description: >
+        Full mutual reps with survival of 18-24 months. Seller
+        reps cover financial statements, title, no undisclosed
+        liabilities, tax compliance, and employee matters.
+      exemplars:
+        - "Seller represents that the financial statements are true and correct in all material respects"
+        - "Seller represents that it has good title to all Purchased Assets, free of all encumbrances"
+    acceptable:
+      description: >
+        Standard seller-only reps with 12-month survival.
+        Financial statement and title reps included.
+      exemplars:
+        - "Seller represents that the Purchased Assets are owned by Seller and free of material encumbrances"
+    walkaway:
+      description: >
+        No reps, heavily qualified ("to Seller's knowledge"),
+        or no survival period. Reps disclaimed entirely.
+      exemplars:
+        - "Seller makes no representations or warranties except as expressly set forth in this Agreement"
+    default_position: "acceptable"
+
+  - id: "closing-conditions"
+    name: "Closing Conditions & Indemnification"
+    description: >
+      Conditions precedent to closing, indemnification obligations,
+      escrow/holdback for post-closing adjustments.
+    preferred:
+      description: >
+        Standard conditions (no injunction, reps accurate,
+        third-party consents). Mutual indemnification with
+        deductible and cap. Escrow for post-closing adjustments.
+      exemplars:
+        - "Closing is conditioned upon the accuracy of representations and no material adverse change"
+        - "Seller shall indemnify Buyer for breaches of representations, subject to a [NUMBER]% deductible and a cap of [AMOUNT]"
+    acceptable:
+      description: >
+        Limited conditions precedent. Seller indemnification with
+        reasonable survival (12 months).
+      exemplars:
+        - "Obligations of Buyer are subject to the accuracy of Seller's representations as of Closing"
+    walkaway:
+      description: >
+        No indemnification, or indemnification is one-sided with
+        no cap. No escrow. Conditions favor only one party.
+      exemplars:
+        - "Seller shall indemnify Buyer for any and all losses, without any cap or deductible"
+    default_position: "acceptable"

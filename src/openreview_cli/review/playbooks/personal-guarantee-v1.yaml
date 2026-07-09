@@ -1,0 +1,155 @@
+# Bundled Personal Guarantee Playbook — GuaranteeCheck Mode v1
+id: "personal-guarantee-v1"
+mode: "guaranteecheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Bundled personal guarantee playbook for GuaranteeCheck mode. Covers
+    guarantee type, liability scope, waivers, confession, and release
+    in personal guarantee/suretyship agreements.
+  author: "openreview"
+
+categories:
+  - id: "guarantee-type"
+    name: "Guarantee Type & Scope"
+    description: >
+      Type of guarantee (limited/unlimited, continuing/specific,
+      absolute/conditional) and scope of guaranteed obligations.
+    preferred:
+      description: >
+        Limited guarantee with defined maximum liability amount
+        and specific expiration date. Guarantee applies only to
+        specified obligations.
+      exemplars:
+        - "Guarantor's liability under this Guarantee is limited to $[AMOUNT] and expires on [DATE]"
+        - "This is a limited guarantee covering only the Specific Obligations identified in Schedule A"
+    acceptable:
+      description: >
+        Continuing guarantee with reasonable monetary cap.
+        Applies to defined obligations with clear scope.
+      exemplars:
+        - "This is a continuing guarantee but Guarantor's maximum liability shall not exceed $[AMOUNT]"
+    walkaway:
+      description: >
+        Unlimited continuing guarantee with no monetary cap.
+        Covers all existing and future obligations of the
+        principal. No expiration.
+      exemplars:
+        - "Guarantor unconditionally guarantees payment of all amounts owed by Principal to Lender, now or hereafter existing"
+        - "This is an unlimited continuing guarantee, covering all obligations of every kind and description"
+    default_position: "acceptable"
+
+  - id: "liability-scope"
+    name: "Liability Scope & Duration"
+    description: >
+      What triggers personal liability (demand, default,
+      acceleration) and how long the guarantee remains in effect.
+    preferred:
+      description: >
+        Liability triggered only after default and demand on
+        principal. Reasonable opportunity for principal to cure.
+        Guarantee terminates on a fixed date or upon full
+        performance.
+      exemplars:
+        - "Guarantor's liability arises only after Lender has made demand upon Principal and Principal has failed to pay within [NUMBER] days"
+        - "This Guarantee shall terminate upon the full and final payment of all Guaranteed Obligations"
+    acceptable:
+      description: >
+        Liability on default with notice. Guarantee terminates
+        on satisfaction of obligations.
+      exemplars:
+        - "Guarantor's liability arises upon default by Principal. Lender shall provide Guarantor with notice of default"
+    walkaway:
+      description: >
+        Liability triggered immediately on any default. No cure
+        period. Guarantee survives indefinitely or until all
+        possible obligations are paid.
+      exemplars:
+        - "Guarantor's liability shall arise immediately upon any default by Principal, without notice or demand"
+        - "This Guarantee shall continue in full force and effect until all Guaranteed Obligations are irrevocably paid in full"
+    default_position: "acceptable"
+
+  - id: "waiver-of-defenses"
+    name: "Waiver of Defenses & Subrogation"
+    description: >
+      Guarantor waives defenses including rights of subrogation,
+      contribution, reimbursement, and set-off.
+    preferred:
+      description: >
+        No waiver of defenses, or waiver is limited to specific
+        enumerated defenses. Guarantor retains subrogation rights
+        after full payment.
+      exemplars:
+        - "Guarantor retains all rights of subrogation, contribution, and reimbursement upon full payment of Guaranteed Obligations"
+        - "Guarantor waives only the defenses of statute of limitations and failure of consideration"
+    acceptable:
+      description: >
+        Standard waiver of defenses with subrogation rights
+        deferred until full payment.
+      exemplars:
+        - "Guarantor waives all rights of subrogation and contribution until the Guaranteed Obligations are paid in full"
+    walkaway:
+      description: >
+        Broad waiver of all defenses including impairment of
+        collateral, extension of time, release of principal,
+        and modification of terms.
+      exemplars:
+        - "Guarantor waives all defenses, including but not limited to impairment of collateral, extension, release, modification"
+        - "Guarantor waives any right to assert any defense available to Principal or any other Guarantor"
+    default_position: "acceptable"
+
+  - id: "confession-of-judgment"
+    name: "Confession of Judgment & Acceleration"
+    description: >
+        Provisions allowing the creditor to obtain a judgment
+        without notice or hearing, and acceleration clauses.
+    preferred:
+      description: >
+        No confession of judgment. Acceleration only after
+        notice and cure period. Guarantor has right to contest.
+      exemplars:
+        - "No confession of judgment is authorized. Lender must provide [NUMBER] days notice and opportunity to cure before acceleration"
+        - "Guarantor reserves the right to contest any acceleration or judgment in a court of competent jurisdiction"
+    acceptable:
+      description: >
+        No confession. Standard acceleration on material default
+        with notice.
+      exemplars:
+        - "Upon default, Lender may accelerate the Guaranteed Obligations upon [NUMBER] days written notice to Guarantor"
+    walkaway:
+      description: >
+        Confession of judgment clause allowing entry of judgment
+        without notice. Automatic acceleration on any default.
+      exemplars:
+        - "Guarantor hereby authorizes any attorney to appear and confess judgment against Guarantor for the unpaid amount"
+        - "The Guaranteed Obligations shall automatically accelerate upon any default without notice or demand"
+    default_position: "acceptable"
+
+  - id: "release-conditions"
+    name: "Release Conditions & Revocation"
+    description: >
+      Conditions under which the guarantor may be released from
+      the guarantee, and whether the guarantee is revocable.
+    preferred:
+      description: >
+        Guarantor may be released upon substitution of equivalent
+        collateral or payment in full. Revocable on written
+        notice for future obligations.
+      exemplars:
+        - "Guarantor shall be released upon payment in full of all Guaranteed Obligations"
+        - "Guarantor may revoke this Guarantee by written notice, effective for obligations incurred after [NUMBER] days"
+    acceptable:
+      description: >
+        Release upon payment in full or full performance of
+        guaranteed obligations.
+      exemplars:
+        - "This Guarantee shall terminate upon the full and final payment and performance of all Guaranteed Obligations"
+    walkaway:
+      description: >
+        No release provisions. Guarantee irrevocable and
+        continues despite death or dissolution of guarantor.
+        Binds guarantor's estate.
+      exemplars:
+        - "This Guarantee is irrevocable and shall continue in full force and effect notwithstanding the death or dissolution of Guarantor"
+        - "This Guarantee shall bind Guarantor and Guarantor's heirs, executors, administrators, successors, and assigns"
+    default_position: "acceptable"

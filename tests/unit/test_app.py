@@ -45,24 +45,62 @@ def test_warm_startup_latency(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -
 # ── Product mode CLI registration tests ───────────────────────────────────
 
 
+def _assert_subcommand_registers(command: str, keyword: str) -> None:
+    """Assert a subcommand registers and --help contains keyword."""
+    result = runner.invoke(app, [command, "--help"])
+    assert result.exit_code == 0
+    assert keyword in result.stdout.lower() or command in result.stdout
+
+
+def _assert_confidence_threshold_shown(command: str) -> None:
+    """Assert a subcommand's --help shows confidence threshold."""
+    result = runner.invoke(app, [command, "--help"])
+    assert "--confidence-threshold" in result.stdout or "-ct" in result.stdout
+
+
 @pytest.mark.parametrize(
     ("command", "keyword"),
     [
         ("licensecheck", "license"),
         ("leasecheck", "lease"),
         ("privacycheck", "data processing"),
+        # 5 new L-4b modes
+        ("assetcheck", "asset"),
+        ("buycheck", "purchase"),
+        ("engagecheck", "engagement"),
+        ("guaranteecheck", "guarantee"),
+        ("loancheck", "loan"),
+        # 9 orphan modes (remaining)
+        ("indemnitycheck", "indemnification"),
+        ("consultcheck", "consulting"),
+        ("workcheck", "work"),
+        ("loicheck", "intent"),
+        ("subcheck", "subcontractor"),
+        ("settlementcheck", "settlement"),
     ],
 )
 def test_product_mode_help_contains_mode(command: str, keyword: str) -> None:
-    result = runner.invoke(app, [command, "--help"])
-    assert result.exit_code == 0
-    assert keyword in result.stdout.lower() or command in result.stdout
+    _assert_subcommand_registers(command, keyword)
 
 
 @pytest.mark.parametrize(
     "command",
-    ["licensecheck", "leasecheck", "privacycheck"],
+    [
+        "licensecheck",
+        "leasecheck",
+        "privacycheck",
+        "assetcheck",
+        "buycheck",
+        "engagecheck",
+        "guaranteecheck",
+        "loancheck",
+        "indemnitycheck",
+        "consultcheck",
+        "workcheck",
+        "loicheck",
+        "subcheck",
+        "settlementcheck",
+    ],
 )
 def test_product_mode_shows_confidence_threshold(command: str) -> None:
-    result = runner.invoke(app, [command, "--help"])
-    assert "--confidence-threshold" in result.stdout or "-ct" in result.stdout
+    _assert_confidence_threshold_shown(command)
