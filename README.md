@@ -34,9 +34,11 @@ will change.
 
 **Spec 029 — Product modes Batch 2:** 5 new modes (AssetCheck, BuyCheck, EngageCheck, GuaranteeCheck, LoanCheck) shipped alongside 9 previously-orphaned modes from specs 027/028, bringing the total to 17 product-mode subcommands. Each mode has a bundled 3-position playbook, mode-specific prompt vocabulary, and full CLI wiring.
 
+**Spec 030 — Benchmark mode validation:** `openreview benchmark run --modes` now validates against a whitelist of the 17 product modes, rejecting unknown modes with exit code 78. New `openreview benchmark baseline` subcommand produces accuracy baselines across modes and datasets with mock/live provider support. 9 orphan E2E tests added for mode validation coverage.
+
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
-| Unit + integration tests    | 1,959                    |
+| Unit + integration tests    | 2,007                    |
 | CLI commands                | 77                        |
 | SQLite tables               | 13                        |
 | Migrations                  | 7                         |
@@ -467,6 +469,12 @@ openreview benchmark                              # Smoke test (CUAD, default sl
 openreview benchmark --datasets cuad,maud --slots default,fast  # Multi-dataset
 openreview benchmark --all --ci --compare HEAD~1  # CI regression gate
 openreview benchmark --pii-only                   # PII recall/precision only
+openreview benchmark run --modes precheck,dealcheck              # Validate modes against 17-mode whitelist
+openreview benchmark run --modes invalid_mode                    # Error: exit 78, lists valid modes
+openreview benchmark baseline --modes precheck,licensecheck      # Accuracy baseline (mock provider, CI-safe)
+openreview benchmark baseline --modes precheck --provider live   # Real provider baseline (requires configured AI gateway)
+openreview benchmark baseline --modes precheck --format json --output baseline.json  # Save report to file
+openreview benchmark baseline --modes all --format json --output baseline.json --save-baseline  # Official regression baseline
 openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 ```
 
@@ -587,10 +595,14 @@ openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 | `openreview graph view <graph>`           | Render the clause hierarchy as an indented ASCII tree |
 | `openreview benchmark`                    | Run automated evaluation (CUAD/MAUD/ContractNLI) |
 | `openreview benchmark --datasets cuad,maud` | Evaluate specific datasets                   |
+| `openreview benchmark run --modes precheck,dealcheck` | Run benchmark for specific modes (validated against 17-mode whitelist) |
 | `openreview benchmark --slots default,fast` | Compare model slots                          |
 | `openreview benchmark --all --ci`          | Full CI regression gate (strict exit codes)   |
 | `openreview benchmark --compare HEAD~1`    | Compare against a baseline ref               |
 | `openreview benchmark --pii-only`          | PII recall/precision benchmark only           |
+| `openreview benchmark baseline`            | Accuracy baseline across modes/datasets (mock provider) |
+| `openreview benchmark baseline --provider live` | Real provider accuracy baseline           |
+| `openreview benchmark baseline --format json --output baseline.json --save-baseline` | Save official baseline |
 | `openreview benchmark --prompt-variant v1 --prompt-variant v2` | Prompt A/B test |
 | `openreview benchmark --format json --output report.json` | JSON report to file |
 
@@ -745,7 +757,7 @@ Deterministic oracle run (monkeypatched gateway — tests pipeline correctness, 
 | guaranteecheck | 5 | 10 | 10 | 1.0 | 0.89 | 96 KB |
 | loancheck | 5 | 10 | 10 | 1.0 | 0.94 | 98 KB |
 
-Note: IndemnityCheck 30.65s includes PyMuPDF module warmup; real per-doc time ~0.6s. All 14 modes use a mocked AI gateway — measures pipeline correctness, not live model accuracy. AssetCheck, BuyCheck, EngageCheck, GuaranteeCheck, and LoanCheck added in spec 029.
+Note: IndemnityCheck 30.65s includes PyMuPDF module warmup; real per-doc time ~0.6s. All 14 modes use a mocked AI gateway — measures pipeline correctness, not live model accuracy. AssetCheck, BuyCheck, EngageCheck, GuaranteeCheck, and LoanCheck added in spec 029. Spec 030 added mode whitelist validation to the benchmark CLI (unknown mode → exit 78) and the `benchmark baseline` subcommand.
 
 See [specs/010-benchmark-harness/](specs/010-benchmark-harness/) for the full specification, or run `openreview benchmark --help` for all options.
 
