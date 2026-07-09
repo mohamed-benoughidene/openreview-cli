@@ -280,16 +280,17 @@ grounding. Spec 012 spec.md §"Single-party review only (v1)".
 
 ---
 
-## D-7: CG-DPO Full Pipeline — dedicated CG-DPO model (citation grounding capability) ✅ RESOLVED
+## D-7: CG-DPO Full Pipeline — dedicated CG-DPO model (citation grounding capability) ⚠️ PARTIALLY RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | N-5 / spec 012 |
 | **Deferred at** | 2026-07-04 |
 | **Resolved at** | 2026-07-05 |
-| **Resolved by** | Memo export feature (spec 021) |
+| **Updated at** | 2026-07-09 |
+| **Updated by** | Fact-check audit — hallu_detect.py classes confirmed, CLI flag unwired |
 | **Trigger** | dedicated CG-DPO model (citation grounding capability) at research-proven concept, not yet production-ready — needs parallel spec |
-| **Status** | ✅ **Resolved** |
+| **Status** | ⚠️ **Partially Resolved** |
 
 ### Description
 
@@ -349,6 +350,14 @@ in Markdown, JSON, and DOCX memos shows a confidence bar and a grounding
 reason field explaining why the verdict was reached. Three-color rendering
 (Green/Amber/Red) is applied per clause across all three export formats
 for PreCheck, DealCheck, and HireCheck modes.
+
+### Remaining gap
+
+`CGDPODetector` class and `HallucinationDetector` ABC exist in
+`benchmark/hallu_detect.py`. `--hallucination-method=lexical|cg-dpo` CLI flag
+described in transition plan step 4 was **never wired** — `benchmark/cli.py`
+does not expose it. The detector class is importable programmatically but has
+no CLI entry point. Flag wiring is the last remaining sub-task of D-7.
 
 ---
 
@@ -2082,7 +2091,7 @@ D-1 (--share-data), D-2 (Typer CLI routing, resolved).
 | **Resolved at** | 2026-07-06 (T033) |
 | **Resolved by** | Spec 022 (cleanup-polish) — T033 integration test populated |
 | **Trigger** | Status stale in AGENTS.md; 3 tasks complete, 5 still blocked |
-| **Status** | Mixed — T049/T050/T051/T033 complete; T035 partially unblocked; T034/T037/T039 still blocked |
+| **Status** | Mixed — T049/T050/T051/T033 complete; T035 partially unblocked; T037 partially unblocked (hash infra exists); T034 blocked on T037 wiring; T039 still blocked |
 
 ### Description
 
@@ -2093,12 +2102,16 @@ integration test). Four remain:
 **Partially unblocked:**
 - T035: Add `--no-pii` CLI flag to review commands. Flag exists on `precheck`,
   but full coverage across all review commands is missing.
-
-**Still blocked:**
 - T034: Integration test for threshold-change re-strip. Blocked on config
   change detection mechanism (T037). Trigger: config-driven re-processing.
-- T037: Config change detection (threshold hash compare). Blocked on downstream
-  cache — needs chunking/embedding phases to provide a cache to compare against.
+- T037: Config change detection (threshold hash compare). **Updated 2026-07-09:**
+  `pii/config_hash.py` exists with `compute_config_hash`, and `pii_cache` SQLite
+  table with `config_hash` column already exists in `storage/migrations/002_pii_tables.sql`.
+  The hash infra is partially in place — what remains is wiring the hash comparison
+  into the cache validation path end-to-end. No longer blocked on downstream cache;
+  blocked on the wiring task.
+
+**Still blocked:**
 - T039: Missing-model integration test. Blocked on monkeypatching `spacy.load`
   at the Presidio level — requires Presidio mocking infrastructure.
 
@@ -3334,37 +3347,39 @@ Ponytail marker at `src/openreview_cli/pii/engine.py` line 17.
 
 ---
 
-## D-75: Benchmark Whitelist Updates for All 17 Product Modes ✅ RESOLVED
+## D-75: Benchmark Whitelist Updates for All 22 Product Modes ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | spec 029, Product modes Batch 2 — items 4+6 (user-split) |
 | **Deferred at** | 2026-07-09 |
 | **Resolved at** | 2026-07-09 |
-| **Resolved by** | Spec 030 (benchmark mode validation) — `VALID_MODES` frozenset (17 modes), parse-time validation against it, dead `mode` param removal |
+| **Updated at** | 2026-07-09 |
+| **Updated by** | Fact-check audit — code has 22 modes (spec 031 added 5); DEFERRED.md was stale at "17" |
+| **Resolved by** | Spec 030 (benchmark mode validation) — `VALID_MODES` frozenset (22 modes), parse-time validation against it, dead `mode` param removal |
 | **Trigger** | Explicitly out of scope — user split items 4+6 from the original spec scope into a follow-up spec |
 | **Status** | ✅ **Resolved** |
 
 ### Resolution
 
-Spec 030 implemented `VALID_MODES` frozenset in `benchmark/cli.py` (FR-1), parse-time mode validation rejecting unknown modes with exit code 78 (FR-2), and removed the dead `mode` parameter from `BenchmarkRunner.run_dataset()` (FR-3). Each of the 17 product modes is now a named member of `VALID_MODES` — the whitelist is the single source of truth for benchmark mode validation.
+Spec 030 implemented `VALID_MODES` frozenset in `benchmark/cli.py` (FR-1), parse-time mode validation rejecting unknown modes with exit code 78 (FR-2), and removed the dead `mode` parameter from `BenchmarkRunner.run_dataset()` (FR-3). Each of the 22 product modes is now a named member of `VALID_MODES` — the whitelist is the single source of truth for benchmark mode validation.
 
 The frozenset is hard-coded (`ponytail`: YAGNI over registry pattern). Mode changes require a constitutional amendment to update `VALID_MODES` alongside the new mode. The resolve happened at spec time and was implemented via the FR-1/FR-2/FR-3 changes.
 
 ### What was needed to resolve
 
-1. `VALID_MODES: frozenset[str]` constant in `benchmark/cli.py` with all 17 modes
+1. `VALID_MODES: frozenset[str]` constant in `benchmark/cli.py` with all 22 modes
 2. Parse-time loop checking each entry in `--modes` against `VALID_MODES`, producing error message + exit 78 on mismatch
 3. Removal of dead `mode: str = "precheck"` parameter from `runner.py:71`
 4. Updated callers: `cli.py:218`, `runner.py:193` — both already omitted `mode=`
 
 ### Blueprint references
 
-Spec 030 spec.md §4 FR-1, FR-2, FR-3. Spec 029 spec.md §Scope Boundaries (line 288).
+Spec 030 spec.md §4 FR-1, FR-2, FR-3. Spec 029 spec.md §Scope Boundaries (line 288). Spec 031 added 5 modes (franchisecheck, opcheck, partnercheck, sponsorcheck, distrocheck).
 
 ### Description
 
-The 17 product modes (PreCheck, DealCheck, HireCheck, LicenseCheck, LeaseCheck, PrivacyCheck, IndemnityCheck, ConsultCheck, WorkCheck, LOICheck, SubCheck, SettlementCheck, AssetCheck, BuyCheck, EngageCheck, GuaranteeCheck, LoanCheck) have no benchmark whitelist entries. The benchmark harness (spec 010) can only run accuracy evaluation against modes that have whitelist entries specifying which labelled datasets apply. Without these entries, users cannot validate whether a mode's playbook and prompts produce accurate assessments.
+The 22 product modes (PreCheck, DealCheck, HireCheck, LicenseCheck, LeaseCheck, PrivacyCheck, IndemnityCheck, ConsultCheck, WorkCheck, LOICheck, SubCheck, SettlementCheck, AssetCheck, BuyCheck, EngageCheck, GuaranteeCheck, LoanCheck, FranchiseCheck, OpCheck, PartnerCheck, SponsorCheck, DistroCheck) have no benchmark whitelist entries. The benchmark harness (spec 010) can only run accuracy evaluation against modes that have whitelist entries specifying which labelled datasets apply. Without these entries, users cannot validate whether a mode's playbook and prompts produce accurate assessments.
 
 The whitelist would map each mode to the relevant labelled datasets (CUAD for general contract clauses, MAUD for merger agreements, ContractNLI for NLI-style evaluation) and define per-mode accuracy thresholds.
 
@@ -3385,14 +3400,16 @@ Spec 029 plan.md — items 4+6 split by user decision.
 
 ---
 
-## D-76: Accuracy Validation Run (CUAD/MAUD/ContractNLI) for All 17 Modes ✅ RESOLVED
+## D-76: Accuracy Validation Run (CUAD/MAUD/ContractNLI) for All 22 Modes ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | spec 029, Product modes Batch 2 — items 4+6 (user-split) |
 | **Deferred at** | 2026-07-09 |
 | **Resolved at** | 2026-07-09 |
-| **Resolved by** | Spec 030 (benchmark mode validation) — FR-4 (mock provider baseline × 17 modes × 3 datasets = 51 results), FR-5 (real provider baseline workflow), FR-7 (per-mode report breakdown) |
+| **Updated at** | 2026-07-09 |
+| **Updated by** | Fact-check audit — mode count corrected from 17 to 22 (spec 031) |
+| **Resolved by** | Spec 030 (benchmark mode validation) — FR-4 (mock provider baseline × 22 modes × 3 datasets = 66 results), FR-5 (real provider baseline workflow), FR-7 (per-mode report breakdown) |
 | **Trigger** | Explicitly out of scope — deferred to follow-up spec alongside the benchmark whitelist |
 | **Status** | ✅ **Resolved** |
 
@@ -3400,7 +3417,7 @@ Spec 029 plan.md — items 4+6 split by user decision.
 
 Spec 030 implemented the accuracy validation in two tracks:
 
-- **Mock provider baseline (CI)**: The benchmark runner iterates over all 17 modes for each of 3 datasets (CUAD, MAUD, ContractNLI), producing 51 `DatasetResult` entries. CI regression detection uses the deterministic mock pipeline — any code change affecting metric computation is caught.
+- **Mock provider baseline (CI)**: The benchmark runner iterates over all 22 modes for each of 3 datasets (CUAD, MAUD, ContractNLI), producing 66 `DatasetResult` entries. CI regression detection uses the deterministic mock pipeline — any code change affecting metric computation is caught.
 
 - **Real provider baseline (manual one-shot)**: A `_build_gateway_pipeline()` function exists and routes through the AI Gateway. The manual workflow (`openreview benchmark run --all --save-baseline`) is documented and operational. Running it is deferred to D-78 (below) — the infrastructure exists, the execution is a manual developer step.
 
