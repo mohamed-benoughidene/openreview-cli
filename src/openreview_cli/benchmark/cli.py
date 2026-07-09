@@ -4,25 +4,20 @@ Wires dataset selection, model slots, output format, regression
 comparison, and experimental flags to the BenchmarkRunner.
 """
 
-import importlib.resources
-import subprocess
+import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import typer
 from rich.console import Console
 
+from openreview_cli.benchmark._utils import _FIXTURES_DIR, _detect_git_branch, _detect_git_commit
+from openreview_cli.benchmark.baseline import _mock_pipeline
 from openreview_cli.benchmark.models import BenchmarkConfig, DatasetResult
 from openreview_cli.benchmark.report import print_terminal_report
 from openreview_cli.benchmark.runner import BenchmarkRunner
 from openreview_cli.config.paths import get_data_dir
-
-# Resolve tests/fixtures relative to the package root
-_FIXTURES_DIR = (
-    Path(str(importlib.resources.files("openreview_cli"))).resolve().parent.parent
-    / "tests"
-    / "fixtures"
-)
 
 benchmark_app = typer.Typer(
     name="benchmark",
@@ -32,34 +27,40 @@ benchmark_app = typer.Typer(
 
 VALID_DATASETS = frozenset({"cuad", "maud", "contract_nli", "pii"})
 VALID_FORMATS = frozenset({"terminal", "json"})
+# ponytail: hard-coded mode list — source of truth for benchmark mode validation.
+VALID_MODES: frozenset[str] = frozenset(
+    {
+        "precheck",
+        "hirecheck",
+        "dealcheck",
+        "assetcheck",
+        "buycheck",
+        "engagecheck",
+        "guaranteecheck",
+        "loancheck",
+        "licensecheck",
+        "leasecheck",
+        "privacycheck",
+        "indemnitycheck",
+        "consultcheck",
+        "workcheck",
+        "loicheck",
+        "subcheck",
+        "settlementcheck",
+    }
+)
 
 console = Console()
 
 
-def _detect_git_commit() -> str:
-    try:
-        return (
-            subprocess.check_output(
-                ["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.STDOUT
+def _validate_modes(mode_list: list[str]) -> None:
+    for m in mode_list:
+        if m not in VALID_MODES:
+            typer.echo(
+                f"Error: Unknown mode '{m}'. Valid: {', '.join(sorted(VALID_MODES))}",
+                err=True,
             )
-            .decode()
-            .strip()
-        )
-    except (subprocess.SubprocessError, FileNotFoundError):
-        return "unknown"
-
-
-def _detect_git_branch() -> str | None:
-    try:
-        return (
-            subprocess.check_output(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"], stderr=subprocess.STDOUT
-            )
-            .decode()
-            .strip()
-        )
-    except (subprocess.SubprocessError, FileNotFoundError):
-        return None
+            raise typer.Exit(code=78)
 
 
 @benchmark_app.command("run")
@@ -161,6 +162,7 @@ def benchmark_run(
 
     slot_list = [s.strip() for s in slots.split(",") if s.strip()]
     mode_list = [m.strip() for m in modes.split(",") if m.strip()]
+    _validate_modes(mode_list)
 
     # Check experimental multi-party flag
     if multi_party:
@@ -212,15 +214,18 @@ def benchmark_run(
     for dataset in dataset_list:
         if dataset == "pii":
             continue
-        if verbose:
-            typer.echo(f"Running dataset: {dataset}")
-        try:
-            result = runner.run_dataset(dataset, _mock_pipeline)
-            run.results.append(result)
-        except Exception as e:
-            typer.echo(f"Error running dataset {dataset}: {e}", err=True)
-            if ci:
-                raise typer.Exit(code=78) from None
+        for mode in mode_list:
+            tagged_name = f"{dataset}::{mode}"
+            if verbose:
+                typer.echo(f"Running dataset: {tagged_name}")
+            try:
+                result = runner.run_dataset(dataset, _mock_pipeline)
+                result.dataset_name = tagged_name
+                run.results.append(result)
+            except Exception as e:
+                typer.echo(f"Error running dataset {tagged_name}: {e}", err=True)
+                if ci:
+                    raise typer.Exit(code=78) from None
 
     # ponytail: prompt A/B test removed — no real templates exist yet. Returns when real A/B lands.
 
@@ -299,11 +304,120 @@ def _run_pii_evaluation(runner: BenchmarkRunner, verbose: bool = False) -> "Data
     return result
 
 
-def _mock_pipeline(text: str, category: str) -> dict[str, object]:
-    """Mock model pipeline for testing.
+@benchmark_app.command("baseline")
+def benchmark_baseline(
+    modes: str = typer.Option(
+        ",".join(sorted(VALID_MODES)),
+        "--modes",
+        help="Comma-separated product modes",
+    ),
+    datasets: str = typer.Option(
+        "cuad,maud,contract_nli",
+        "--datasets",
+        help="Comma-separated datasets",
+    ),
+    provider: str = typer.Option(
+        "mock",
+        "--provider",
+        help="Provider: mock (CI) or live (real model)",
+    ),
+    format: str = typer.Option(
+        "terminal",
+        "--format",
+        help=f"Output format: {', '.join(sorted(VALID_FORMATS))}",
+    ),
+    output: str | None = typer.Option(
+        None,
+        "--output",
+        help="Write output to file path",
+    ),
+    save_baseline: bool = typer.Option(
+        False,
+        "--save-baseline",
+        help="Save as official baseline (requires --format json and --output)",
+    ),
+) -> None:
+    """Run accuracy baseline — mock (CI) or real provider.
 
-    Returns a placeholder prediction. In production, this would
-    route through the gateway to the configured model slot.
+    Produces precision/recall/F1 numbers across modes and datasets.
+    Mock mode returns constant predictions for deterministic CI results.
+    Real mode calls the configured AI provider.
     """
-    # ponytail: mock — returns empty spans. Replace with real gateway call.
-    return {"start": 0, "end": 0, "category": category, "label": "entailment", "match": True}
+    from openreview_cli.benchmark.baseline import (
+        BaselineReport,
+        run_mock_baseline,
+        run_real_baseline,
+    )
+
+    mode_list = [m.strip() for m in modes.split(",") if m.strip()]
+    dataset_list = [d.strip() for d in datasets.split(",") if d.strip()]
+
+    for d in dataset_list:
+        if d not in VALID_DATASETS:
+            typer.echo(
+                f"Error: Unknown dataset '{d}'. Valid: {', '.join(sorted(VALID_DATASETS))}",
+                err=True,
+            )
+            raise typer.Exit(code=78)
+
+    _validate_modes(mode_list)
+
+    if save_baseline and format != "json":
+        typer.echo(
+            "Error: --save-baseline requires --format json. "
+            "Use --format json to enable JSON output.",
+            err=True,
+        )
+        raise typer.Exit(code=78)
+
+    if output and format != "json":
+        typer.echo(
+            "Error: --output requires --format json. Use --format json to enable file output.",
+            err=True,
+        )
+        raise typer.Exit(code=78)
+
+    git_commit = _detect_git_commit()
+    git_branch = _detect_git_branch()
+
+    if provider == "mock":
+        raw_results = run_mock_baseline(mode_list, dataset_list)
+        report = BaselineReport(
+            mode_results=raw_results,
+            git_commit=git_commit,
+            git_branch=git_branch,
+            provider="mock",
+            model="mock",
+            timestamp=datetime.now(UTC).isoformat(),
+        )
+    elif provider == "live":
+        report = run_real_baseline(mode_list, dataset_list)
+    else:
+        typer.echo(
+            f"Error: Unknown provider '{provider}'. Use 'mock' or 'live'.",
+            err=True,
+        )
+        raise typer.Exit(code=78)
+
+    if format == "json":
+        from dataclasses import asdict
+
+        report_dict = asdict(report)
+        json_str = json.dumps(report_dict, indent=2, default=str)
+        if output:
+            Path(output).write_text(json_str)
+            typer.echo(f"Baseline written to {output}")
+        else:
+            typer.echo(json_str)
+    else:
+        typer.echo(
+            f"Baseline report: {len(report.mode_results)} results across {len(mode_list)} modes"
+        )
+        for mr in report.mode_results:
+            typer.echo(
+                f"  {mr.dataset}: "
+                f"extract_f1={mr.extraction_f1 or 'N/A'}, "
+                f"compare_f1={mr.comparison_f1 or 'N/A'}, "
+                f"class_f1={mr.classification_f1 or 'N/A'}, "
+                f"latency={mr.latency_ms or 'N/A'}ms"
+            )

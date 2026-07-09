@@ -68,7 +68,6 @@ class BenchmarkRunner:
         dataset_name: str,
         pipeline_fn: PipelineFn,
         slot_name: str = "default",
-        mode: str = "precheck",
     ) -> DatasetResult:
         """Run a single dataset through a model pipeline."""
         if dataset_name == "pii":
