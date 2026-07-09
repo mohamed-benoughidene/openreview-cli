@@ -112,9 +112,16 @@ class ReviewCommand:
     def _build_privacy_report(self) -> PrivacyTierReport:
         """Build a PrivacyTierReport from config for tier visibility."""
         from openreview_cli.gateway.tier_config import TierConfig
+        from openreview_cli.gateway.tier_tracker import TierTracker
 
         config = self._load_config()
         tier_cfg = TierConfig.from_config(config)
+
+        tracker = TierTracker()
+        msg = tracker.check_and_record(tier_cfg.tier)
+        if msg:
+            logger.info(msg)
+
         return PrivacyTierReport(tier=tier_cfg.tier)
 
     def _compute_hash(self) -> str:

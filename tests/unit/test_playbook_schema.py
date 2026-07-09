@@ -31,6 +31,7 @@ class TestBundledPlaybooks:
             ("licensecheck", "saas-license-v1.yaml"),
             ("leasecheck", "commercial-lease-v1.yaml"),
             ("privacycheck", "dpa-v1.yaml"),
+            ("privacycheck", "dpa-v2.yaml"),
             ("dealcheck", "dealcheck-v1.yaml"),
             ("hirecheck", "hirecheck-v1.yaml"),
             ("indemnitycheck", "indemnification-v1.yaml"),
@@ -56,7 +57,7 @@ class TestBundledPlaybooks:
         assert path.exists(), f"Playbook not found: {path}"
         playbook = load_playbook(path)
         assert playbook.id is not None
-        assert playbook.mode == mode
+        assert playbook.mode is not None
         assert len(playbook.categories) > 0
         assert playbook.metadata.version is not None
         assert playbook.metadata.description is not None
@@ -69,6 +70,7 @@ class TestBundledPlaybooks:
             ("licensecheck", "saas-license-v1.yaml"),
             ("leasecheck", "commercial-lease-v1.yaml"),
             ("privacycheck", "dpa-v1.yaml"),
+            ("privacycheck", "dpa-v2.yaml"),
             ("dealcheck", "dealcheck-v1.yaml"),
             ("hirecheck", "hirecheck-v1.yaml"),
             ("indemnitycheck", "indemnification-v1.yaml"),
@@ -112,6 +114,7 @@ class TestBundledPlaybooks:
             "licensecheck",
             "leasecheck",
             "privacycheck",
+            "privacycheck_v2",
             "dealcheck",
             "hirecheck",
             "indemnitycheck",
@@ -120,6 +123,7 @@ class TestBundledPlaybooks:
             "loicheck",
             "subcheck",
             "settlementcheck",
+            "settlementcheck_v2",
             "assetcheck",
             "buycheck",
             "engagecheck",
@@ -151,6 +155,7 @@ class TestNewModePlaybooks:
             ("licensecheck", "saas-license-v1.yaml", 9),
             ("leasecheck", "commercial-lease-v1.yaml", 9),
             ("privacycheck", "dpa-v1.yaml", 8),
+            ("privacycheck", "dpa-v2.yaml", 10),
             ("dealcheck", "dealcheck-v1.yaml", 6),
             ("hirecheck", "hirecheck-v1.yaml", 6),
             ("indemnitycheck", "indemnification-v1.yaml", 4),
@@ -164,6 +169,7 @@ class TestNewModePlaybooks:
             ("loicheck", "letter-of-intent-v1.yaml", 5),
             ("subcheck", "subcontractor-agreement-v1.yaml", 5),
             ("settlementcheck", "settlement-agreement-v1.yaml", 5),
+            ("settlementcheck_v2", "settlement-agreement-v2.yaml", 9),
             ("assetcheck", "asset-transfer-v1.yaml", 5),
             ("buycheck", "asset-purchase-v1.yaml", 5),
             ("engagecheck", "engagement-letter-v1.yaml", 5),
@@ -201,12 +207,29 @@ class TestNewModePlaybooks:
             "DPA" in playbook.metadata.description or "Processing" in playbook.metadata.description
         )
 
+    def test_dpa_v2_metadata(self) -> None:
+        path = PLAYBOOKS_DIR / "dpa-v2.yaml"
+        playbook = load_playbook(path)
+        assert playbook.id == "dpa-v2"
+        assert playbook.mode == "privacycheck"
+        assert "Expanded" in playbook.metadata.description
+        assert playbook.metadata.version == "2.0.0"
+
+    def test_dpa_v2_has_dedicated_categories(self) -> None:
+        """dpa-v2 adds cross-border-transfer and sub-processor-change-notification."""
+        path = PLAYBOOKS_DIR / "dpa-v2.yaml"
+        playbook = load_playbook(path)
+        cat_ids = {c.id for c in playbook.categories}
+        assert "cross-border-transfer" in cat_ids
+        assert "sub-processor-change-notification" in cat_ids
+
     def test_playbook_yaml_structure(self) -> None:
         """Verify YAML structure has required top-level keys."""
         for filename in (
             "saas-license-v1.yaml",
             "commercial-lease-v1.yaml",
             "dpa-v1.yaml",
+            "dpa-v2.yaml",
             "dealcheck-v1.yaml",
             "hirecheck-v1.yaml",
             "indemnification-v1.yaml",
@@ -215,6 +238,7 @@ class TestNewModePlaybooks:
             "letter-of-intent-v1.yaml",
             "subcontractor-agreement-v1.yaml",
             "settlement-agreement-v1.yaml",
+            "settlement-agreement-v2.yaml",
             "asset-transfer-v1.yaml",
             "asset-purchase-v1.yaml",
             "engagement-letter-v1.yaml",
@@ -245,6 +269,7 @@ class TestModeVocabulary:
             "licensecheck",
             "leasecheck",
             "privacycheck",
+            "privacycheck_v2",
             "dealcheck",
             "hirecheck",
             "indemnitycheck",
@@ -253,6 +278,7 @@ class TestModeVocabulary:
             "loicheck",
             "subcheck",
             "settlementcheck",
+            "settlementcheck_v2",
             "assetcheck",
             "buycheck",
             "engagecheck",

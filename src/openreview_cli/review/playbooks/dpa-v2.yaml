@@ -1,0 +1,379 @@
+# Bundled DPA Playbook — PrivacyCheck Mode v2
+# Expanded coverage: adds dedicated cross-border transfer and
+# sub-processor change notification categories.
+# Schema version 2.
+
+id: "dpa-v2"
+mode: "privacycheck"
+metadata:
+  version: "2.0.0"
+  description: >
+    Expanded Data Processing Agreement review playbook for
+    PrivacyCheck mode (v2). Includes dedicated categories for
+    cross-border data transfers and sub-processor change
+    notification. Covers data processing scope, sub-processor
+    management, breach notification, data retention and deletion,
+    audit rights, international transfers, processing instructions,
+    and DPA termination.
+  author: "openreview"
+schema_version: 2
+
+categories:
+  # ── Data Processing Scope ───────────────────────────────────
+  - id: "processing-scope"
+    name: "Data Processing Scope"
+    description: >
+      Defines the scope, nature, and purpose of data processing
+      activities. Must be specific and limited to what is
+      necessary for the service.
+    preferred:
+      description: >
+        Processing scope clearly limited to stated purposes.
+        Detailed description of processing activities, data
+        categories, and data subjects.
+      exemplars:
+        - "Processor shall process Personal Data only for the purposes specified in Schedule [X]"
+        - "The processing is limited to the following data categories: [LIST]"
+        - "Processing purposes are specifically defined and limited to providing the Service"
+    acceptable:
+      description: >
+        Processing scope defined but may include broad
+        categories. Processing for 'business purposes' with
+        some specificity.
+      exemplars:
+        - "Processor shall process Personal Data to provide the Services under the Agreement"
+        - "Processing may include [LIST] data categories for [LIST] purposes"
+        - "Data subjects include customers, employees, and contractors of Controller"
+    walkaway:
+      description: >
+        Processing scope is overly broad ('any business purpose'),
+        undefined, or allows processor to determine purposes
+        unilaterally.
+      exemplars:
+        - "Processor may process Personal Data for any business purpose"
+        - "Processing purposes are not defined in this Agreement"
+        - "Processor may determine the purposes and means of processing at its discretion"
+    default_position: "preferred"
+
+  # ── Sub-Processor Management ────────────────────────────────
+  - id: "sub-processor-management"
+    name: "Sub-Processor Management"
+    description: >
+      Requirements for the processor's use of sub-processors,
+      including notification, consent, and contracting
+      obligations.
+    preferred:
+      description: >
+        Prior written consent required for all sub-processors.
+        Controller may object within a reasonable period (30
+        days). Sub-processor list provided on request.
+      exemplars:
+        - "Processor shall obtain Controller's prior written consent before engaging any sub-processor"
+        - "Controller may object to a sub-processor within [NUMBER] days of notification"
+        - "Processor shall maintain an up-to-date list of sub-processors"
+    acceptable:
+      description: >
+        Notification of sub-processor changes with right to
+        object. General authorization for named sub-processors.
+        New sub-processors require notice.
+      exemplars:
+        - "Processor shall notify Controller of any intended sub-processor changes"
+        - "Controller authorizes the sub-processors listed in Schedule [X]"
+        - "Processor shall impose the same data protection obligations on sub-processors"
+    walkaway:
+      description: >
+        No right to object to sub-processors, no notification
+        requirement, or sub-processors may be engaged at
+        processor's sole discretion.
+      exemplars:
+        - "Processor may engage sub-processors without Controller's consent"
+        - "Controller has no right to object to sub-processor changes"
+        - "Processor is not required to maintain a list of sub-processors"
+    default_position: "acceptable"
+
+  # ── Breach Notification ─────────────────────────────────────
+  - id: "breach-notification"
+    name: "Breach Notification"
+    description: >
+      Obligations to notify the controller of a personal data
+      breach, including timeline and content requirements.
+    preferred:
+      description: >
+        Breach notification within 48 hours or less. Detailed
+        notification content (nature, categories, affected
+        individuals, mitigation measures).
+      exemplars:
+        - "Processor shall notify Controller within [NUMBER] hours of becoming aware of a breach"
+        - "Notification includes nature of breach, categories of data affected, and mitigation measures"
+        - "Processor shall cooperate with Controller's breach notification obligations"
+    acceptable:
+      description: >
+        Breach notification within 72 hours (GDPR standard).
+        Standard notification content. Reasonable assistance.
+      exemplars:
+        - "Processor shall notify Controller without undue delay, and no later than [NUMBER] hours"
+        - "Notification includes reasonably available information about the breach"
+        - "Processor shall provide reasonable assistance with breach investigation"
+    walkaway:
+      description: >
+        Breach notification timeline exceeds 72 hours, no
+        specific timeline, or notification is at processor's
+        discretion.
+      exemplars:
+        - "Processor shall notify Controller of a breach within [NUMBER] days"
+        - "Processor shall notify Controller if it determines a breach has occurred"
+        - "Notification requirements are not specified in this Agreement"
+    default_position: "acceptable"
+
+  # ── Data Retention & Deletion ───────────────────────────────
+  - id: "retention-deletion"
+    name: "Data Retention & Deletion"
+    description: >
+      Requirements for retention periods and deletion of personal
+      data after processing ends.
+    preferred:
+      description: >
+        Clear retention and deletion timelines. Processor must
+        delete or return all personal data within 30 days of
+        instruction or termination. Certification of deletion.
+      exemplars:
+        - "Processor shall delete all Personal Data within [NUMBER] days of Controller's instruction"
+        - "Processor shall provide a certification of deletion upon request"
+        - "Controller may request a copy of Personal Data before deletion"
+    acceptable:
+      description: >
+        Standard retention/deletion obligations. Processor must
+        delete upon termination after a transition period (60-90
+        days).
+      exemplars:
+        - "Processor shall delete or return Personal Data within [NUMBER] days of termination"
+        - "Processor may retain Personal Data for the period required by applicable law"
+        - "Upon termination, Processor shall make Personal Data available for export"
+    walkaway:
+      description: >
+        No clear deletion obligation, processor may retain data
+        indefinitely, or deletion is at processor's sole
+        discretion.
+      exemplars:
+        - "Processor has no obligation to delete Personal Data after termination"
+        - "Processor may retain Personal Data for its legitimate business purposes"
+        - "Deletion timelines are not specified in this Agreement"
+    default_position: "acceptable"
+
+  # ── Audit & Inspection Rights ───────────────────────────────
+  - id: "audit-rights"
+    name: "Audit & Inspection Rights"
+    description: >
+      Controller's right to audit the processor's compliance
+      with data protection obligations.
+    preferred:
+      description: >
+        Controller may audit annually or upon reasonable cause.
+        Processor must provide access to systems, records, and
+        premises. Audit costs borne by processor if material
+        non-compliance found.
+      exemplars:
+        - "Controller may conduct an audit upon [NUMBER] days' notice, no more than annually"
+        - "Processor shall provide access to all systems, records, and premises relevant to processing"
+        - "Cost of audit shall be borne by Processor if material non-compliance is found"
+    acceptable:
+      description: >
+        Standard audit right with reasonable notice (30-60 days).
+        Audit scope limited to compliance with DPA. Controller
+        bears audit costs.
+      exemplars:
+        - "Controller may audit Processor's compliance with this DPA upon [NUMBER] days' notice"
+        - "Audits shall be conducted during business hours and shall not unreasonably interfere"
+        - "Controller shall bear its own audit costs unless material non-compliance is found"
+    walkaway:
+      description: >
+        No audit right, or audit requires processor's consent,
+        or audit is limited to a SOC report with no on-site
+        access.
+      exemplars:
+        - "Controller has no right to audit Processor's facilities"
+        - "Audits require Processor's prior written consent"
+        - "Processor's SOC [NUMBER] report serves as the sole audit mechanism"
+    default_position: "acceptable"
+
+  # ── International Data Transfers ────────────────────────────
+  - id: "international-transfers"
+    name: "International Data Transfers"
+    description: >
+      Mechanisms for transferring personal data across borders,
+      including Standard Contractual Clauses (SCCs) or Binding
+      Corporate Rules (BCRs).
+    preferred:
+      description: >
+        Data may only be transferred to countries with adequacy
+        decisions or under SCCs/BCRs. Controller may request
+        transfer impact assessment.
+      exemplars:
+        - "Transfers shall be governed by the EU Standard Contractual Clauses (Module [X])"
+        - "Processor shall only transfer Personal Data to countries with an adequacy decision"
+        - "Processor shall provide Controller with a transfer impact assessment upon request"
+    acceptable:
+      description: >
+        Standard SCCs in place for all transfers. Processor
+        maintains list of transfer destinations.
+      exemplars:
+        - "Transfers are governed by the Standard Contractual Clauses attached as Schedule [X]"
+        - "Processor shall ensure that all sub-processors are bound by SCCs"
+        - "Processor shall notify Controller of any changes to transfer mechanisms"
+    walkaway:
+      description: >
+        No transfer safeguards specified, data may be
+        transferred to any jurisdiction without adequate
+        protections, or no SCCs/BCRs in place.
+      exemplars:
+        - "Processor may transfer Personal Data to any jurisdiction"
+        - "Transfer mechanisms are not specified in this Agreement"
+        - "Controller's consent to data transfers cannot be reasonably withdrawn"
+    default_position: "acceptable"
+
+  # ── Cross-Border Transfer (Dedicated) ───────────────────────
+  - id: "cross-border-transfer"
+    name: "Cross-Border Data Transfer"
+    description: >
+      Specific requirements governing cross-border data flows,
+      including transfer impact assessments, supplementary
+      measures, and jurisdiction-specific safeguards beyond
+      standard SCCs.
+    preferred:
+      description: >
+        Comprehensive transfer impact assessment completed.
+        Supplementary measures documented where adequacy
+        decisions do not apply. Specific jurisdiction
+        safeguards in place for restricted countries.
+      exemplars:
+        - "Transfer Impact Assessment has been conducted and is available on request"
+        - "Supplementary measures are in place for transfers to countries without adequacy decisions"
+        - "Specific safeguards documented for transfers to [RESTRICTED_COUNTRY]"
+    acceptable:
+      description: >
+        Standard transfer mechanisms in place. Processor
+        commits to conducting TIA upon request. Registry of
+        transfer destinations maintained.
+      exemplars:
+        - "Processor shall conduct a Transfer Impact Assessment upon Controller's request"
+        - "Processor maintains a register of all cross-border data transfers"
+        - "Transfers are limited to countries listed in Schedule [X]"
+    walkaway:
+      description: >
+        No transfer safeguards, no TIA conducted, data may be
+        transferred to any jurisdiction without restriction,
+        or processor refuses to disclose transfer locations.
+      exemplars:
+        - "Processor may transfer Personal Data to any jurisdiction without restriction"
+        - "Transfer Impact Assessment is not available and will not be provided"
+        - "Processor does not maintain a register of cross-border data transfers"
+    default_position: "acceptable"
+
+  # ── Sub-Processor Change Notification (Dedicated) ──────────
+  - id: "sub-processor-change-notification"
+    name: "Sub-Processor Change Notification"
+    description: >
+      Requirements for notifying the controller of changes to
+      the sub-processor roster, including timing, objection
+      rights, and remediation obligations.
+    preferred:
+      description: >
+        Advance notice of any sub-processor change (30+ days).
+        Controller has explicit right to object. Processor
+        must provide equivalent service using alternative
+        sub-processor if objection is reasonable.
+      exemplars:
+        - "Processor shall provide [NUMBER] days' advance notice of any intended sub-processor change"
+        - "Controller may object to a new sub-processor within [NUMBER] days of notice"
+        - "If Controller reasonably objects, Processor shall use an alternative sub-processor at no additional cost"
+    acceptable:
+      description: >
+        Notice of sub-processor changes provided within
+        reasonable timeframe. Controller may object but
+        processor may proceed if objection is unreasonable.
+      exemplars:
+        - "Processor shall notify Controller of any sub-processor changes within [NUMBER] days"
+        - "Controller may object to changes; Processor shall consider objections in good faith"
+        - "Processor shall update its sub-processor list within [NUMBER] days of any change"
+    walkaway:
+      description: >
+        No notice of sub-processor changes, no objection right,
+        or processor may change sub-processors at its sole
+        discretion without informing controller.
+      exemplars:
+        - "Processor may change sub-processors without prior notice to Controller"
+        - "Controller has no right to object to sub-processor changes"
+        - "Processor is not required to maintain or update a sub-processor list"
+    default_position: "acceptable"
+
+  # ── Data Processing Instructions ────────────────────────────
+  - id: "processing-instructions"
+    name: "Data Processing Instructions"
+    description: >
+      Requirements for documenting and following controller's
+      processing instructions.
+    preferred:
+      description: >
+        Processor must process data only on documented
+        instructions. Controller provides instructions in
+        writing. Processor must inform controller of any
+        instruction that violates data protection law.
+      exemplars:
+        - "Processor shall process Personal Data only on Controller's documented instructions"
+        - "If Processor believes an instruction violates data protection law, it shall immediately inform Controller"
+        - "Processing instructions are documented in the Agreement or in separate written form"
+    acceptable:
+      description: >
+        Standard documented instructions clause. Processor
+        follows instructions as set out in the Agreement or
+        as otherwise agreed in writing.
+      exemplars:
+        - "Processor shall process Personal Data in accordance with the Agreement"
+        - "Any additional processing instructions must be agreed in writing"
+        - "Processor may process data for the purposes described in the Agreement"
+    walkaway:
+      description: >
+        Processor may process data for its own purposes, or
+        instructions are not documented, or processor may
+        deviate from instructions at its discretion.
+      exemplars:
+        - "Processor may use Personal Data for its own legitimate business purposes"
+        - "Processing instructions are not documented in writing"
+        - "Processor may deviate from Controller's instructions if it deems it necessary"
+    default_position: "acceptable"
+
+  # ── DPA Termination & Return ────────────────────────────────
+  - id: "dpa-termination"
+    name: "DPA Termination & Return"
+    description: >
+      The DPA's linkage to the master agreement and obligations
+      on termination of the master agreement.
+    preferred:
+      description: >
+        DPA automatically terminates with master agreement.
+        Clear survival of data protection obligations.
+        Independent termination right for material data
+        protection breach.
+      exemplars:
+        - "This DPA shall terminate automatically upon termination of the Master Agreement"
+        - "Data protection obligations survive termination of this DPA"
+        - "Controller may terminate this DPA if Processor materially breaches data protection obligations"
+    acceptable:
+      description: >
+        DPA tied to master agreement. Survival of key
+        obligations (confidentiality, data deletion) for a
+        defined period after termination.
+      exemplars:
+        - "This DPA forms part of the Master Agreement and terminates with it"
+        - "Obligations regarding data return and deletion survive for [NUMBER] days after termination"
+        - "Either party may terminate the DPA on material breach"
+    walkaway:
+      description: >
+        DPA survives master agreement termination indefinitely,
+        or has no clear termination link, or controller has no
+        right to terminate for data protection breach.
+      exemplars:
+        - "This DPA survives termination of the Master Agreement indefinitely"
+        - "Termination of the Master Agreement does not affect the DPA"
+        - "Controller may not terminate the DPA for data protection breach"
+    default_position: "acceptable"

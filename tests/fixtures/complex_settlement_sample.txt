@@ -1,0 +1,80 @@
+COMPLEX SETTLEMENT AGREEMENT
+
+This Complex Settlement Agreement (the "Agreement") is entered into as of [DATE] by and
+among Plaintiff Alpha Corp., Defendant Beta Industries, and Third-Party Gamma LLC
+(collectively, the "Parties").
+
+RECITALS
+
+WHEREAS, a class action has been filed in the United States District Court for the
+Southern District of New York, Case No. 24-CV-1234;
+
+WHEREAS, the Court has certified a settlement class consisting of all persons who
+purchased Beta Industries common stock between January 1, 2022 and December 31, 2023;
+
+WHEREAS, the Parties wish to resolve this action on a class-wide basis;
+
+WHEREAS, the SEC has conducted a parallel investigation into the matters alleged herein;
+
+NOW, THEREFORE, the Parties agree as follows:
+
+1. SETTLEMENT CLASS AND NOTICE
+
+1.1 The Claims Administrator shall disseminate notice of this settlement to all
+settlement class members within 30 days of the Effective Date.
+
+1.2 The Bar Date for submitting claims is [DATE], which is 90 days after the date
+notice is first mailed.
+
+1.3 Settlement class members may opt out of this settlement by submitting a written
+opt-out request to the Claims Administrator no later than the Bar Date.
+
+1.4 The settlement class is certified under Federal Rule of Civil Procedure 23(b)(3).
+
+2. STRUCTURED PAYMENT OBLIGATIONS
+
+2.1 Defendant shall make quarterly payments of [AMOUNT] to the settlement fund for a
+period of five (5) years commencing on [DATE].
+
+2.2 Each quarterly payment shall be due on the first day of each calendar quarter.
+
+2.3 Upon any material default, all remaining quarterly payments shall immediately
+accelerate and become due and payable in full.
+
+2.4 Defendant shall provide a true-up calculation within 45 days after the end of
+each fiscal year to adjust payments based on actual revenue.
+
+3. MULTI-PARTY RELEASES AND CROSS-INDEMNITIES
+
+3.1 Alpha Corp., Beta Industries, and Gamma LLC each mutually release one another
+from all claims arising out of the class action proceedings.
+
+3.2 Each Party shall indemnify and hold harmless the other Parties against any
+third-party claims arising from that Party's conduct during the class period.
+
+3.3 The cross-indemnity obligations set forth in Section 3.2 shall survive the
+termination of this Agreement.
+
+3.4 This release is mutual and reciprocal among all three Parties.
+
+4. REGULATORY COOPERATION
+
+4.1 The Parties agree to cooperate fully with the Securities and Exchange Commission
+in its ongoing investigation, including providing documents and testimony.
+
+4.2 Nothing in this Agreement constitutes an admission of liability or wrongdoing by
+any Party, and the Parties expressly deny any violation of federal securities laws.
+
+4.3 This Agreement does not waive any applicable privileges, including attorney-client
+privilege and work product doctrine.
+
+4.4 Each Party shall preserve all documents and records relating to the subject
+matter of this action until the SEC investigation is formally concluded.
+
+5. GENERAL PROVISIONS
+
+5.1 This Agreement constitutes the entire understanding among the Parties.
+
+5.2 This Agreement may be executed in counterparts.
+
+5.3 This Agreement shall be governed by the laws of the State of New York.

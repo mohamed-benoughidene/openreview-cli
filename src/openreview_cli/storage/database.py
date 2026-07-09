@@ -445,3 +445,281 @@ def get_session_cost(db_path: Path, session_id: str) -> dict[str, Any]:
             "cost_cents": total_cost,
             "slots": slots,
         }
+
+
+# ── D-11: Comparison History ──
+
+
+def _ensure_comparison_history_table(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS comparison_history ("
+        "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  contract_a_path TEXT NOT NULL,"
+        "  contract_a_hash TEXT NOT NULL,"
+        "  contract_a_version_label TEXT,"
+        "  contract_b_path TEXT NOT NULL,"
+        "  contract_b_hash TEXT NOT NULL,"
+        "  contract_b_version_label TEXT,"
+        "  run_at TEXT NOT NULL DEFAULT (datetime('now')),"
+        "  result_json TEXT NOT NULL"
+        ")"
+    )
+
+
+def record_comparison(db_path: Path, entry: dict[str, Any]) -> int:
+    """Insert a row into comparison_history.
+
+    Returns the new row ID.
+    """
+    with transaction(db_path) as conn:
+        _ensure_comparison_history_table(conn)
+        cur = conn.execute(
+            "INSERT INTO comparison_history "
+            "(contract_a_path, contract_a_hash, contract_a_version_label, "
+            " contract_b_path, contract_b_hash, contract_b_version_label, "
+            " result_json) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                entry["contract_a_path"],
+                entry["contract_a_hash"],
+                entry.get("contract_a_version_label"),
+                entry["contract_b_path"],
+                entry["contract_b_hash"],
+                entry.get("contract_b_version_label"),
+                entry["result_json"],
+            ),
+        )
+        return int(cur.lastrowid or 0)
+
+
+# ── D-59: Graph Storage ──
+
+
+def _ensure_graph_tables(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS graph_meta ("
+        "  contract_id TEXT PRIMARY KEY,"
+        "  metadata_json TEXT DEFAULT '{}'"
+        ")"
+    )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS graph_nodes ("
+        "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  contract_id TEXT NOT NULL,"
+        "  node_id TEXT NOT NULL,"
+        "  label TEXT NOT NULL,"
+        "  position TEXT,"
+        "  metadata_json TEXT DEFAULT '{}',"
+        "  UNIQUE(contract_id, node_id)"
+        ")"
+    )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS graph_edges ("
+        "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  contract_id TEXT NOT NULL,"
+        "  source_node_id TEXT NOT NULL,"
+        "  target_node_id TEXT NOT NULL,"
+        "  edge_type TEXT NOT NULL,"
+        "  UNIQUE(contract_id, source_node_id, target_node_id)"
+        ")"
+    )
+
+
+def save_graph(db_path: Path, contract_id: str, graph: Any) -> None:
+    """Persist a ContractGraph to SQLite.
+
+    Replaces any existing graph with the same contract_id.
+    """
+    with transaction(db_path) as conn:
+        _ensure_graph_tables(conn)
+        # Clear existing data for this contract
+        conn.execute("DELETE FROM graph_nodes WHERE contract_id = ?", (contract_id,))
+        conn.execute("DELETE FROM graph_edges WHERE contract_id = ?", (contract_id,))
+        conn.execute("DELETE FROM graph_meta WHERE contract_id = ?", (contract_id,))
+
+        # Insert nodes
+        for node in graph.nodes.values():
+            conn.execute(
+                "INSERT INTO graph_nodes (contract_id, node_id, label, position, metadata_json) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (
+                    contract_id,
+                    node.id,
+                    node.label,
+                    str(node.level),
+                    json.dumps(node.metadata, default=str),
+                ),
+            )
+
+        # Insert metadata
+        conn.execute(
+            "INSERT INTO graph_meta (contract_id, metadata_json) VALUES (?, ?)",
+            (contract_id, json.dumps(graph.metadata, default=str)),
+        )
+
+        # Insert edges
+        for edge in graph.edges:
+            conn.execute(
+                "INSERT OR IGNORE INTO graph_edges (contract_id, source_node_id, target_node_id, edge_type) "
+                "VALUES (?, ?, ?, ?)",
+                (contract_id, edge.source_id, edge.target_id, edge.edge_type.value),
+            )
+
+
+def load_graph(db_path: Path, contract_id: str) -> Any | None:
+    """Load a ContractGraph from SQLite.
+
+    Returns None if contract_id not found.
+    """
+    from openreview_cli.graph.models import ContractGraph, GraphEdge, GraphNode
+
+    with transaction(db_path) as conn:
+        _ensure_graph_tables(conn)
+        meta_row = conn.execute(
+            "SELECT metadata_json FROM graph_meta WHERE contract_id = ?",
+            (contract_id,),
+        ).fetchone()
+        node_rows = conn.execute(
+            "SELECT node_id, label, position, metadata_json FROM graph_nodes "
+            "WHERE contract_id = ? ORDER BY node_id",
+            (contract_id,),
+        ).fetchall()
+        if not node_rows:
+            return None
+
+        nodes: dict[str, GraphNode] = {}
+        for r in node_rows:
+            metadata: dict[str, Any] = {}
+            if r["metadata_json"]:
+                try:
+                    metadata = json.loads(r["metadata_json"])
+                except (json.JSONDecodeError, TypeError):
+                    metadata = {}
+            nodes[str(r["node_id"])] = GraphNode(
+                id=str(r["node_id"]),
+                label=str(r["label"]),
+                text="",
+                level=int(r["position"]) if r["position"] else 0,
+                metadata=metadata,
+            )
+
+        edge_rows = conn.execute(
+            "SELECT source_node_id, target_node_id, edge_type FROM graph_edges "
+            "WHERE contract_id = ?",
+            (contract_id,),
+        ).fetchall()
+
+    from openreview_cli.graph.models import EdgeType
+
+    edges = [
+        GraphEdge(
+            source_id=str(r["source_node_id"]),
+            target_id=str(r["target_node_id"]),
+            edge_type=EdgeType(str(r["edge_type"])),
+        )
+        for r in edge_rows
+    ]
+
+    graph_metadata: dict[str, Any] = {}
+    if meta_row and meta_row["metadata_json"]:
+        try:
+            graph_metadata = json.loads(meta_row["metadata_json"])
+        except (json.JSONDecodeError, TypeError):
+            graph_metadata = {}
+
+    return ContractGraph(nodes=nodes, edges=edges, metadata=graph_metadata)
+
+
+# ── D-31: Persistent Recovery State ──
+
+
+def save_recovery_state(db_path: Path, pipeline_id: str, stage_name: str, context: Any) -> None:
+    """Persist a RecoveryContext to the recovery_state table.
+
+    Uses INSERT OR REPLACE so repeated saves for the same pipeline_id
+    update the existing row.
+    """
+    import json
+
+    from openreview_cli.recovery.models import RecoveryContext
+
+    assert isinstance(context, RecoveryContext), "context must be a RecoveryContext"
+    init_database(db_path)
+    with transaction(db_path) as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO recovery_state "
+            "(id, pipeline_id, stage_name, context_json, status) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (
+                pipeline_id,
+                pipeline_id,
+                stage_name,
+                json.dumps(context.to_dict()),
+                "active",
+            ),
+        )
+
+
+def load_recovery_state(db_path: Path, pipeline_id: str) -> Any | None:
+    """Load a RecoveryContext from the recovery_state table.
+
+    Returns None if pipeline_id not found.
+    """
+    import json
+
+    from openreview_cli.recovery.models import RecoveryContext
+
+    init_database(db_path)
+    with transaction(db_path) as conn:
+        row = conn.execute(
+            "SELECT context_json FROM recovery_state WHERE id = ?",
+            (pipeline_id,),
+        ).fetchone()
+    if row is None:
+        return None
+    return RecoveryContext.from_dict(json.loads(row["context_json"]))
+
+
+def delete_recovery_state(db_path: Path, pipeline_id: str) -> bool:
+    """Remove a recovery state row for the given pipeline_id.
+
+    Returns True if a row was deleted, False if pipeline_id was not found.
+    """
+    init_database(db_path)
+    with transaction(db_path) as conn:
+        cursor = conn.execute(
+            "DELETE FROM recovery_state WHERE id = ?",
+            (pipeline_id,),
+        )
+        return cursor.rowcount > 0
+
+
+def list_comparison_history(db_path: Path, limit: int = 50) -> list[dict[str, Any]]:
+    """Return recent comparison history entries, newest first.
+
+    Parameters
+    ----------
+    db_path : Path
+        Path to the SQLite database.
+    limit : int
+        Maximum number of rows to return (default 50).
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        Each dict has keys: id, contract_a_path, contract_a_hash,
+        contract_a_version_label, contract_b_path, contract_b_hash,
+        contract_b_version_label, run_at.
+    """
+    with transaction(db_path) as conn:
+        _ensure_comparison_history_table(conn)
+        rows = conn.execute(
+            "SELECT id, contract_a_path, contract_a_hash, "
+            "  contract_a_version_label, contract_b_path, contract_b_hash, "
+            "  contract_b_version_label, run_at "
+            "FROM comparison_history "
+            "ORDER BY run_at DESC "
+            "LIMIT ?",
+            (limit,),
+        ).fetchall()
+    return [dict(r) for r in rows]

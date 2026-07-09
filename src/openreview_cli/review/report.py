@@ -5,6 +5,8 @@ from __future__ import annotations
 import dataclasses
 import io
 import json
+import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -12,6 +14,8 @@ if TYPE_CHECKING:
 
 from openreview_cli.review.colors import AssessmentColor
 from openreview_cli.review.models import Position, ReviewReport
+
+logger = logging.getLogger(__name__)
 
 
 def format_terminal(  # noqa: PLR0912, PLR0915  # ponytail: function extraction would add more complexity
@@ -151,6 +155,9 @@ def format_terminal(  # noqa: PLR0912, PLR0915  # ponytail: function extraction 
     )
     console.print(f"  Avg effective confidence: {summary.avg_effective_confidence:.2f}")
     console.print(f"  Confidence threshold: {report.confidence_threshold}")
+    if report.mode_threshold_overrides:
+        overrides_str = ", ".join(f"{k}={v}" for k, v in report.mode_threshold_overrides.items())
+        console.print(f"  Mode threshold overrides: {overrides_str}")
     if has_grounding:
         _print_grounding_summary(report, console)
     console.print()
@@ -265,3 +272,110 @@ def _report_to_dict(report: ReviewReport) -> dict[str, Any]:
         a_dict.pop("_is_amber", None)
         a_dict["is_amber"] = assessment.is_amber
     return data
+
+
+def batch_export_reports(
+    report_paths: list[Path],
+    export_format: str,
+    output_dir: Path,
+    mode: str = "precheck",
+    template_path: Path | None = None,
+) -> list[Path]:
+    """Load ``ReviewReport`` instances from their JSON exports and re-export them.
+
+    Reads serialised report data (JSON files produced by the existing memo
+    pipeline), reconstructs each ``ReviewReport`` via ``from_dict``, and
+    re-exports it in the requested format using ``MemoExporter``.
+
+    Parameters
+    ----------
+    report_paths : list[Path]
+        Paths to JSON files containing serialised ``ReviewReport`` data.
+    export_format : str
+        Export format: ``"md"``, ``"json"``, or ``"docx"``.
+    output_dir : Path
+        Directory where the exported files are written.  Created
+        automatically if it does not exist.
+    mode : str
+        Mode name used as the filename prefix (e.g. ``"precheck"``).
+    template_path : Path | None
+        Path to a custom Jinja2 template for Markdown export.  When set
+        and *export_format* is ``"md"``, the template is used instead of
+        the built-in ``render_markdown``.
+
+    Returns
+    -------
+    list[Path]
+        Paths to all successfully written files.
+    """
+    from openreview_cli.review.memo.exporter import MemoExporter
+    from openreview_cli.review.memo.filename import (
+        deduplicate,
+        generate_filename,
+        resolve_output_dir,
+    )
+    from openreview_cli.review.memo.models import MemoFormat
+    from openreview_cli.review.models import ReviewReport
+    from openreview_cli.review.templates import MemoTemplate
+
+    fmt = MemoFormat(export_format)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Pre-load template if provided
+    template: MemoTemplate | None = None
+    if template_path is not None and export_format == "md":
+        template = MemoTemplate(template_path)
+
+    written: list[Path] = []
+
+    for path in report_paths:
+        data: dict[str, Any] | None = None
+        try:
+            raw = path.read_text(encoding="utf-8")
+            parsed = json.loads(raw)
+            if isinstance(parsed, dict):
+                data = parsed
+        except (FileNotFoundError, json.JSONDecodeError, ValueError) as exc:
+            logger.warning("Skipping %s: %s", path, exc)
+            continue
+
+        if data is None:
+            logger.warning("Skipping %s: expected a JSON object at top level", path)
+            continue
+
+        try:
+            report = ReviewReport.from_dict(data)
+        except Exception as exc:
+            logger.warning("Skipping %s: failed to parse report data: %s", path, exc)
+            continue
+
+        # When a template is provided, render markdown directly instead of
+        # using MemoExporter
+        if template is not None:
+            out_dir = resolve_output_dir(output_dir)
+            content = template.render(report)
+            filename = generate_filename(mode, _document_stem(report), fmt)
+            fpath = deduplicate(out_dir / filename)
+            fpath.write_text(content, encoding="utf-8")
+            written.append(fpath)
+            continue
+
+        exporter = MemoExporter(
+            report=report,
+            mode=mode,
+            output_dir=output_dir,
+            formats={fmt},
+        )
+        result = exporter.export()
+        written.extend(result.values())
+
+    return written
+
+
+def _document_stem(report: Any) -> str:
+    """Get the sanitised document stem from a ReviewReport."""
+    try:
+        return Path(report.document.filename).stem
+    except Exception:
+        return "document"

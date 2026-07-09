@@ -60,9 +60,16 @@ def _privacy_footer() -> str:
     from openreview_cli.config.paths import get_config_dir
     from openreview_cli.gateway.models import PrivacyTierReport
     from openreview_cli.gateway.tier_config import TierConfig
+    from openreview_cli.gateway.tier_tracker import TierTracker
 
     _cfg = load_config(get_config_dir() / "config.yml")
     _tier_cfg = TierConfig.from_config(_cfg)
+
+    _tracker = TierTracker()
+    _msg = _tracker.check_and_record(_tier_cfg.tier)
+    if _msg:
+        logger.info(_msg)
+
     return PrivacyTierReport(tier=_tier_cfg.tier).report_footer()
 
 
@@ -692,12 +699,15 @@ def playbook_show(
 
 @playbook_app.command("export")
 def playbook_export(
-    playbook_id: str = typer.Argument(..., help="Saved playbook identifier"),
+    playbook_id: str = typer.Argument(None, help="Saved playbook identifier (omit with --all)"),
     version: int | None = typer.Option(
         None, "--version", help="Version to export (default: current/latest)"
     ),
-    output: str = typer.Option(..., "--output", help="Destination file path"),
+    output: str | None = typer.Option(
+        None, "--output", help="Destination file path (or directory with --all)"
+    ),
     force: bool = typer.Option(False, "--force", help="Suppress overwrite warning"),
+    all_flag: bool = typer.Option(False, "--all", help="Export all playbooks"),
 ) -> None:
     """Export a playbook version from the database to a YAML file."""
     import json
@@ -705,9 +715,48 @@ def playbook_export(
     import yaml
 
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import export_playbook_version
+    from openreview_cli.storage.database import export_playbook_version, list_playbooks
 
     db_path = get_data_dir() / "openreview.db"
+
+    # Bulk export all playbooks
+    if all_flag:
+        out_dir = Path(output) if output else Path.cwd()
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        playbooks = list_playbooks(db_path)
+        if not playbooks:
+            typer.echo("No playbooks to export.")
+            return
+
+        count = 0
+        for pb_id, _ver, _created in playbooks:
+            content = export_playbook_version(db_path, pb_id)
+            if content is None:
+                continue
+            try:
+                data = json.loads(content)
+            except json.JSONDecodeError:
+                continue
+            yaml_str = yaml.safe_dump(
+                data, sort_keys=False, allow_unicode=True, default_flow_style=False
+            )
+            out_path = out_dir / f"{pb_id}.yaml"
+            out_path.write_text(yaml_str, encoding="utf-8")
+            count += 1
+
+        typer.echo(f"Exported {count} playbook(s) to '{out_dir}'.")
+        return
+
+    # Single-playbook export
+    if not playbook_id:
+        typer.echo("Error: Either PLAYBOOK_ID or --all is required.", err=True)
+        raise typer.Exit(code=2)
+
+    if not output:
+        typer.echo("Error: --output is required for single export.", err=True)
+        raise typer.Exit(code=2)
+
     out_path = Path(output)
 
     # Validate output parent directory exists
@@ -762,8 +811,12 @@ def playbook_diff(
     playbook_id: str = typer.Argument(..., help="Saved playbook identifier"),
     v1: int = typer.Argument(..., help="First version to compare"),
     v2: int = typer.Argument(..., help="Second version to compare"),
+    json_output: bool = typer.Option(False, "--json", help="Output diff as JSON"),
 ) -> None:
     """Compare two versions of a saved playbook structurally."""
+    import dataclasses
+    import json as stdlib_json
+
     from openreview_cli.config.paths import get_data_dir
     from openreview_cli.review.playbook import compute_playbook_diff
     from openreview_cli.storage.database import diff_playbook_versions
@@ -785,6 +838,12 @@ def playbook_diff(
     diff = compute_playbook_diff(data1, data2)
     diff.v1 = norm_v1
     diff.v2 = norm_v2
+
+    # JSON output
+    if json_output:
+        d = dataclasses.asdict(diff)
+        typer.echo(stdlib_json.dumps(d, indent=2))
+        return
 
     # Format and display (inline format_playbook_diff)
     lines: list[str] = []
@@ -858,16 +917,49 @@ def playbook_set_current(
 
 @playbook_app.command("delete")
 def playbook_delete(
-    playbook_id: str = typer.Argument(..., help="Saved playbook identifier"),
+    playbook_id: str = typer.Argument(None, help="Saved playbook identifier (omit with --all)"),
+    all_flag: bool = typer.Option(False, "--all", help="Delete ALL playbooks"),
+    force: bool = typer.Option(False, "--force", help="Skip confirmation prompt"),
 ) -> None:
     """Soft-delete a playbook (tombstone, never hard-delete).
 
-    Removes from default list view. Restorable via set-current.
+    Removes from default list view. Restorable via set-current or undelete.
     """
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import delete_playbook
+    from openreview_cli.storage.database import delete_playbook, list_playbooks
 
     db_path = get_data_dir() / "openreview.db"
+
+    # Bulk delete all playbooks
+    if all_flag:
+        playbooks = list_playbooks(db_path)
+
+        if not force:
+            from rich.prompt import Confirm
+
+            confirmed = Confirm.ask(
+                f"Delete all {len(playbooks)} playbook(s)? This cannot be undone."
+            )
+            if not confirmed:
+                typer.echo("Cancelled.")
+                raise typer.Exit(code=0)
+
+        count = 0
+        for pb_id, _ver, _created in playbooks:
+            try:
+                delete_playbook(db_path, pb_id)
+                count += 1
+            except ValueError:
+                continue
+
+        typer.echo(f"Deleted {count} playbook(s).")
+        return
+
+    # Single-playbook delete
+    if not playbook_id:
+        typer.echo("Error: Either PLAYBOOK_ID or --all is required.", err=True)
+        raise typer.Exit(code=2)
+
     try:
         _, msg = delete_playbook(db_path, playbook_id)
     except ValueError as e:
@@ -875,6 +967,45 @@ def playbook_delete(
         raise typer.Exit(code=1) from None
 
     typer.echo(msg)
+
+
+@playbook_app.command("undelete")
+def playbook_undelete(
+    playbook_id: str = typer.Argument(..., help="Saved playbook identifier to restore"),
+) -> None:
+    """Restore a soft-deleted playbook.
+
+    Clears the deleted_at tombstone so the playbook reappears in listings.
+    """
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.storage.database import (
+        get_current_version,
+        list_playbooks_with_meta,
+        set_current_version,
+    )
+
+    db_path = get_data_dir() / "openreview.db"
+
+    # Find the soft-deleted playbook
+    playbooks = list_playbooks_with_meta(db_path, include_deleted=True)
+    matching = [
+        (pid, ver) for pid, ver, _ca, deleted in playbooks if pid == playbook_id and deleted
+    ]
+    if not matching:
+        typer.echo(
+            f"Error: Playbook '{playbook_id}' not found or is not deleted.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    current_ver = get_current_version(db_path, playbook_id)
+    try:
+        set_current_version(db_path, playbook_id, current_ver)
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+    typer.echo(f"Undeleted playbook '{playbook_id}' (version {current_ver}).")
 
 
 @playbook_app.command("history")
@@ -953,6 +1084,11 @@ def precheck(
     format: str = typer.Option("text", "--format", help="Output format: text, json."),
     force_reprocess: bool = typer.Option(
         False, "--force-reprocess", help="Force re-processing even if cached."
+    ),
+    dual_path: bool = typer.Option(
+        False,
+        "--dual-path",
+        help="Enable dual-path: call providers in parallel, pick first success.",
     ),
 ) -> None:
     """Run a PreCheck review (NDA analysis) on a document.
@@ -1062,6 +1198,11 @@ def review(
         "uncertain comparisons to Amber rather than risking false Green or Red.",
         callback=_validate_threshold,
     ),
+    dual_path: bool = typer.Option(
+        False,
+        "--dual-path",
+        help="Enable dual-path: call providers in parallel, pick first success.",
+    ),
 ) -> None:
     """Review one or more contract documents against a 3-position playbook.
 
@@ -1091,6 +1232,7 @@ def review(
             grounding_mode=None if no_grounding else grounding_mode,
             confidence_threshold=confidence_threshold,
             mode="precheck",
+            dual_path=dual_path,
         )
     except FileNotFoundError as e:
         typer.echo(f"Error: {e}", err=True)
@@ -1367,8 +1509,8 @@ def chunk(
 
 @precheck_app.command("compare")
 def compare(
-    doc_a: str = typer.Argument(..., help="Path to Party A's document (PDF or DOCX)."),
-    doc_b: str = typer.Argument(..., help="Path to Party B's document (PDF or DOCX)."),
+    doc_a: str | None = typer.Argument(None, help="Path to Party A's document (PDF or DOCX)."),
+    doc_b: str | None = typer.Argument(None, help="Path to Party B's document (PDF or DOCX)."),
     playbook: str | None = typer.Option(
         None, "--playbook", help="Path to custom YAML playbook override."
     ),
@@ -1378,6 +1520,9 @@ def compare(
     qa_model: str | None = typer.Option(
         None, "--qa-model", help="Model slot for the QA verification agent."
     ),
+    comparison_model: str | None = typer.Option(
+        None, "--comparison-model", help="Override model slot for the comparison agent (D-13)."
+    ),
     confidence_threshold: float | None = typer.Option(
         None,
         "--confidence-threshold",
@@ -1386,6 +1531,18 @@ def compare(
         "Independent of single-party threshold. "
         "Note: accuracy ceiling ~64% F1 — set generously.",
         callback=_validate_threshold,
+    ),
+    show_redlines: bool = typer.Option(
+        False, "--show-redlines", help="Show per-clause redline (tracked changes) summary (D-10)."
+    ),
+    version_label_a: str | None = typer.Option(
+        None, "--version-label-a", help="Version label for Party A's document (D-11)."
+    ),
+    version_label_b: str | None = typer.Option(
+        None, "--version-label-b", help="Version label for Party B's document (D-11)."
+    ),
+    history: bool = typer.Option(
+        False, "--history", help="Show comparison history and exit (D-11)."
     ),
     format: str = typer.Option("text", "--format", help="Output format: text (terminal) or json."),
     output: str | None = typer.Option(
@@ -1420,6 +1577,11 @@ def compare(
 
     This is an EXPERIMENTAL feature with known accuracy limitations (≤64% F1).
     """
+    # ── Handle --history (mutually exclusive with doc paths) ──
+    if history:
+        _show_comparison_history()
+        return
+
     # Validate mutually exclusive flags
     if conservative and confidence_threshold is not None:
         typer.echo(
@@ -1452,6 +1614,11 @@ def compare(
     else:
         resolved_threshold = confidence_threshold if confidence_threshold is not None else 0.7
 
+    # Check required args when not in history mode
+    if doc_a is None or doc_b is None:
+        typer.echo("Error: Both doc_a and doc_b are required (use --history to skip).", err=True)
+        raise typer.Exit(code=2)
+
     # Check both files exist
     for path, _label in [(doc_a, "Party A"), (doc_b, "Party B")]:
         if not Path(path).exists():
@@ -1472,6 +1639,9 @@ def compare(
             confidence_threshold=resolved_threshold,
             align_only=align_only,
             grounding_mode=None if no_grounding else grounding_mode,
+            comparison_model=comparison_model,
+            version_label_a=version_label_a,
+            version_label_b=version_label_b,
         )
     except FileNotFoundError as e:
         typer.echo(f"Error: {e}", err=True)
@@ -1495,12 +1665,97 @@ def compare(
         output_str = format_comparison_terminal(report, verbose=verbose)
         typer.echo(output_str)
 
+    # ── D-10: Show redlines per clause ──
+    if show_redlines:
+        _show_clause_redlines(doc_a, doc_b, report)
+
     # Print Amber warning to stderr
     if report.summary.amber_count > 0:
         typer.echo(
             f"⚠  {report.summary.amber_count} clause(s) flagged Amber — review recommended.",
             err=True,
         )
+
+
+# ── D-10 / D-11 Helpers ──
+
+
+def _show_comparison_history() -> None:
+    """Print comparison history table and exit."""
+    from rich.console import Console
+    from rich.table import Table
+
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.storage.database import list_comparison_history
+
+    db_path = get_data_dir() / "openreview.db"
+    entries = list_comparison_history(db_path)
+
+    console = Console()
+    if not entries:
+        console.print("No comparison history found.")
+        return
+
+    table = Table(title="Comparison History")
+    table.add_column("ID", style="cyan", justify="right")
+    table.add_column("Doc A", style="green")
+    table.add_column("Label A", style="white")
+    table.add_column("Doc B", style="green")
+    table.add_column("Label B", style="white")
+    table.add_column("Run At", style="yellow")
+
+    for e in entries:
+        table.add_row(
+            str(e["id"]),
+            e["contract_a_path"],
+            e["contract_a_version_label"] or "",
+            e["contract_b_path"],
+            e["contract_b_version_label"] or "",
+            e["run_at"],
+        )
+    console.print(table)
+
+
+def _show_clause_redlines(
+    doc_a: str,
+    doc_b: str,
+    report: Any,
+) -> None:
+    """Extract tracked changes from DOCX documents and show per-clause summary."""
+    from rich.console import Console
+
+    from openreview_cli.parsing.docx_parser import DocxParser
+
+    _c = Console()
+
+    for doc_path, label in [(doc_a, "A"), (doc_b, "B")]:
+        if not doc_path.lower().endswith(".docx"):
+            continue
+        try:
+            parser = DocxParser(Path(doc_path))
+            clauses = list(parser.parse())
+            redlines = parser.tracked_changes
+            if not redlines:
+                _c.print(f"  Party {label}: No tracked changes found.")
+                continue
+
+            from openreview_cli.bilateral.comparison import map_redlines_to_clauses
+
+            mapping = map_redlines_to_clauses(redlines, clauses)
+
+            _c.print(f"\n  Party {label} — Tracked Changes per Clause:")
+            for clause in clauses:
+                changes = mapping.get(clause.id, [])
+                if not changes:
+                    continue
+                for c in changes:
+                    marker = "[green]+[/green]" if c.change_type == "ins" else "[red]-[/red]"
+                    _c.print(f'    {marker} [{clause.id}] {c.author}: "{c.text[:80]}"')
+        except Exception as exc:
+            _c.print(
+                f"  Party {label}: Could not extract redlines: {exc}",
+                style="red",
+            )
 
 
 # ── retrieval subcommands ──
@@ -1905,6 +2160,15 @@ def graph_build(
         "-o",
         help="Path for the output graph JSON file (default: {input_stem}.graph.json).",
     ),
+    store: bool = typer.Option(False, "--store", help="Save graph to SQLite database."),
+    contract_id: str | None = typer.Option(
+        None, "--contract-id", help="Contract ID for SQLite storage (default: input file stem)."
+    ),
+    db_path: str | None = typer.Option(
+        None,
+        "--db-path",
+        help="Path to SQLite database (default: .openreview/openreview.db in config dir).",
+    ),
 ) -> None:
     """Build a directed clause graph from a parsed contract JSON file."""
     from pathlib import Path
@@ -1927,28 +2191,64 @@ def graph_build(
     graph.to_file(output)
     typer.echo(f"Graph built: {len(graph.nodes)} nodes, {len(graph.edges)} edges \u2192 {output}")
 
+    if store:
+        from openreview_cli.config.paths import get_config_dir
+        from openreview_cli.storage.database import init_database, save_graph
+
+        cid = contract_id if contract_id else path.stem
+        db = Path(db_path) if db_path else get_config_dir() / "openreview.db"
+        db.parent.mkdir(parents=True, exist_ok=True)
+        init_database(db)
+        save_graph(db, cid, graph)
+        typer.echo(f"Graph stored in database: contract_id={cid}")
+
 
 @graph_app.command("metrics")
 def graph_metrics(
     graph_path: str = typer.Argument(
-        ..., help="Path to a graph JSON file (output of 'graph build')."
+        None, help="Path to a graph JSON file (output of 'graph build')."
+    ),
+    from_db: bool = typer.Option(False, "--from-db", help="Load graph from SQLite."),
+    contract_id: str | None = typer.Option(
+        None, "--contract-id", help="Contract ID in SQLite (required with --from-db)."
+    ),
+    db_path: str | None = typer.Option(
+        None,
+        "--db-path",
+        help="Path to SQLite database (default: .openreview/openreview.db in config dir).",
     ),
 ) -> None:
     """Compute heuristic structural metrics from a graph JSON file."""
     from pathlib import Path
 
-    path = Path(graph_path)
-    if not path.exists():
-        typer.echo(f"Error: File not found: {graph_path}", err=True)
-        raise typer.Exit(code=1)
-
-    try:
+    if from_db:
+        from openreview_cli.config.paths import get_config_dir
         from openreview_cli.graph.models import ContractGraph
 
-        graph = ContractGraph.from_file(str(path))
-    except Exception as e:
-        typer.echo(f"Error: Invalid graph file: {e}", err=True)
-        raise typer.Exit(code=2) from None
+        if not contract_id:
+            typer.echo("Error: --contract-id required with --from-db", err=True)
+            raise typer.Exit(code=2)
+        db = Path(db_path) if db_path else get_config_dir() / "openreview.db"
+        graph = ContractGraph.load_from_db(db, contract_id)
+        if graph is None:
+            typer.echo(f"Error: Contract '{contract_id}' not found in database.", err=True)
+            raise typer.Exit(code=2)
+    else:
+        if not graph_path:
+            typer.echo("Error: GRAPH_PATH argument or --from-db required.", err=True)
+            raise typer.Exit(code=2)
+        path = Path(graph_path)
+        if not path.exists():
+            typer.echo(f"Error: File not found: {graph_path}", err=True)
+            raise typer.Exit(code=1)
+
+        try:
+            from openreview_cli.graph.models import ContractGraph
+
+            graph = ContractGraph.from_file(str(path))
+        except Exception as e:
+            typer.echo(f"Error: Invalid graph file: {e}", err=True)
+            raise typer.Exit(code=2) from None
 
     from openreview_cli.graph.metrics import compute_metrics
 
@@ -1963,10 +2263,93 @@ def graph_metrics(
     typer.echo(f"Definition Coverage:  {metrics.definition_coverage:.3f}")
 
 
+@graph_app.command("diff")
+def graph_diff(
+    file_a: str = typer.Argument(..., help="Path to first graph JSON file."),
+    file_b: str = typer.Argument(..., help="Path to second graph JSON file."),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON."),
+) -> None:
+    """Compare two contract graphs and show differences."""
+    from pathlib import Path
+
+    path_a = Path(file_a)
+    path_b = Path(file_b)
+    if not path_a.exists():
+        typer.echo(f"Error: File not found: {file_a}", err=True)
+        raise typer.Exit(code=1)
+    if not path_b.exists():
+        typer.echo(f"Error: File not found: {file_b}", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        from openreview_cli.graph.diff import compute_graph_diff
+        from openreview_cli.graph.models import ContractGraph
+
+        g1 = ContractGraph.from_file(str(path_a))
+        g2 = ContractGraph.from_file(str(path_b))
+        diff = compute_graph_diff(g1, g2)
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=2) from None
+
+    if json_output:
+        import json as _json
+
+        data = {
+            "added_nodes": [n.id for n in diff.added_nodes],
+            "removed_nodes": [n.id for n in diff.removed_nodes],
+            "relabeled_nodes": [
+                {"old": old.label, "new": new.label, "id": old.id}
+                for old, new in diff.relabeled_nodes
+            ],
+            "added_edges": [
+                {"source": edge.source_id, "target": edge.target_id, "type": edge.edge_type.value}
+                for edge in diff.added_edges
+            ],
+            "removed_edges": [
+                {"source": edge.source_id, "target": edge.target_id, "type": edge.edge_type.value}
+                for edge in diff.removed_edges
+            ],
+        }
+        typer.echo(_json.dumps(data, indent=2))
+        return
+
+    if (
+        not diff.added_nodes
+        and not diff.removed_nodes
+        and not diff.added_edges
+        and not diff.removed_edges
+        and not diff.relabeled_nodes
+    ):
+        typer.echo("No differences found between graphs.")
+        return
+
+    if diff.added_nodes:
+        typer.echo("Added nodes:")
+        for n in diff.added_nodes:
+            typer.echo(f"  + {n.id}: {n.label}")
+    if diff.removed_nodes:
+        typer.echo("Removed nodes:")
+        for n in diff.removed_nodes:
+            typer.echo(f"  - {n.id}: {n.label}")
+    if diff.relabeled_nodes:
+        typer.echo("Relabeled nodes:")
+        for old, new in diff.relabeled_nodes:
+            typer.echo(f"  ~ {old.id}: '{old.label}' -> '{new.label}'")
+    if diff.added_edges:
+        typer.echo("Added edges:")
+        for edge in diff.added_edges:
+            typer.echo(f"  + {edge.source_id} -> {edge.target_id} ({edge.edge_type.value})")
+    if diff.removed_edges:
+        typer.echo("Removed edges:")
+        for edge in diff.removed_edges:
+            typer.echo(f"  - {edge.source_id} -> {edge.target_id} ({edge.edge_type.value})")
+
+
 @graph_app.command("health")
 def graph_health(
     graph_path: str = typer.Argument(
-        ..., help="Path to a graph JSON file (output of 'graph build')."
+        None, help="Path to a graph JSON file (output of 'graph build')."
     ),
     weights: str | None = typer.Option(
         None,
@@ -1976,22 +2359,47 @@ def graph_health(
         "Space-separated, e.g. --weights '0.15 0.20 0.20 0.25 0.20'. "
         "Auto-normalised to sum 1.0.",
     ),
+    from_db: bool = typer.Option(False, "--from-db", help="Load graph from SQLite."),
+    contract_id: str | None = typer.Option(
+        None, "--contract-id", help="Contract ID in SQLite (required with --from-db)."
+    ),
+    db_path: str | None = typer.Option(
+        None,
+        "--db-path",
+        help="Path to SQLite database (default: .openreview/openreview.db in config dir).",
+    ),
 ) -> None:
     """Compute a 0-100 health score from a graph JSON file."""
     from pathlib import Path
 
-    path = Path(graph_path)
-    if not path.exists():
-        typer.echo(f"Error: File not found: {graph_path}", err=True)
-        raise typer.Exit(code=1)
-
-    try:
+    if from_db:
+        from openreview_cli.config.paths import get_config_dir
         from openreview_cli.graph.models import ContractGraph
 
-        graph = ContractGraph.from_file(str(path))
-    except Exception as e:
-        typer.echo(f"Error: Invalid graph file: {e}", err=True)
-        raise typer.Exit(code=2) from None
+        if not contract_id:
+            typer.echo("Error: --contract-id required with --from-db", err=True)
+            raise typer.Exit(code=2)
+        db = Path(db_path) if db_path else get_config_dir() / "openreview.db"
+        graph = ContractGraph.load_from_db(db, contract_id)
+        if graph is None:
+            typer.echo(f"Error: Contract '{contract_id}' not found in database.", err=True)
+            raise typer.Exit(code=2)
+    else:
+        if not graph_path:
+            typer.echo("Error: GRAPH_PATH argument or --from-db required.", err=True)
+            raise typer.Exit(code=2)
+        path = Path(graph_path)
+        if not path.exists():
+            typer.echo(f"Error: File not found: {graph_path}", err=True)
+            raise typer.Exit(code=1)
+
+        try:
+            from openreview_cli.graph.models import ContractGraph
+
+            graph = ContractGraph.from_file(str(path))
+        except Exception as e:
+            typer.echo(f"Error: Invalid graph file: {e}", err=True)
+            raise typer.Exit(code=2) from None
 
     from openreview_cli.graph.health import compute_health
     from openreview_cli.graph.metrics import compute_metrics
@@ -2025,24 +2433,49 @@ def graph_health(
 @graph_app.command("view")
 def graph_view(
     graph_path: str = typer.Argument(
-        ..., help="Path to a graph JSON file (output of 'graph build')."
+        None, help="Path to a graph JSON file (output of 'graph build')."
+    ),
+    from_db: bool = typer.Option(False, "--from-db", help="Load graph from SQLite."),
+    contract_id: str | None = typer.Option(
+        None, "--contract-id", help="Contract ID in SQLite (required with --from-db)."
+    ),
+    db_path: str | None = typer.Option(
+        None,
+        "--db-path",
+        help="Path to SQLite database (default: .openreview/openreview.db in config dir).",
     ),
 ) -> None:
     """Render the clause hierarchy as an indented ASCII text tree."""
     from pathlib import Path
 
-    path = Path(graph_path)
-    if not path.exists():
-        typer.echo(f"Error: File not found: {graph_path}", err=True)
-        raise typer.Exit(code=1)
-
-    try:
+    if from_db:
+        from openreview_cli.config.paths import get_config_dir
         from openreview_cli.graph.models import ContractGraph
 
-        graph = ContractGraph.from_file(str(path))
-    except Exception as e:
-        typer.echo(f"Error: Invalid graph file: {e}", err=True)
-        raise typer.Exit(code=2) from None
+        if not contract_id:
+            typer.echo("Error: --contract-id required with --from-db", err=True)
+            raise typer.Exit(code=2)
+        db = Path(db_path) if db_path else get_config_dir() / "openreview.db"
+        graph = ContractGraph.load_from_db(db, contract_id)
+        if graph is None:
+            typer.echo(f"Error: Contract '{contract_id}' not found in database.", err=True)
+            raise typer.Exit(code=2)
+    else:
+        if not graph_path:
+            typer.echo("Error: GRAPH_PATH argument or --from-db required.", err=True)
+            raise typer.Exit(code=2)
+        path = Path(graph_path)
+        if not path.exists():
+            typer.echo(f"Error: File not found: {graph_path}", err=True)
+            raise typer.Exit(code=1)
+
+        try:
+            from openreview_cli.graph.models import ContractGraph
+
+            graph = ContractGraph.from_file(str(path))
+        except Exception as e:
+            typer.echo(f"Error: Invalid graph file: {e}", err=True)
+            raise typer.Exit(code=2) from None
 
     from openreview_cli.graph.view import render_tree
 
@@ -2241,6 +2674,75 @@ def negotiate(
         )
 
 
+# ── batch export subcommand ──
+
+
+@app.command()
+def export(
+    batch_dir: str = typer.Option(
+        ...,
+        "--batch-dir",
+        help="Directory containing ReviewReport JSON files to re-export.",
+    ),
+    format: str = typer.Option("md", "--format", help="Export format: md, json, docx."),
+    output_dir: str = typer.Option(
+        "review_results", "--output-dir", help="Directory for exported files."
+    ),
+    mode: str = typer.Option("precheck", "--mode", help="Mode name used as the filename prefix."),
+    template: str | None = typer.Option(
+        None,
+        "--template",
+        help="Path to a custom Jinja2 template for Markdown export (D-42). "
+        "When set, overrides the built-in Markdown renderer. "
+        "Has no effect on JSON or DOCX formats.",
+    ),
+) -> None:
+    """Batch-export one or more saved review reports (D-41).
+
+    Loads all JSON report files from BATCH_DIR, re-exports each in the
+    requested format, and writes the results to OUTPUT_DIR.
+    """
+    _validate_enum(format, ("md", "json", "docx"), "format")
+
+    src = Path(batch_dir)
+    if not src.is_dir():
+        typer.echo(
+            f"Error: --batch-dir '{batch_dir}' is not a directory or does not exist.",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    report_paths = sorted(src.glob("*.json"))
+    if not report_paths:
+        typer.echo(f"No JSON report files found in '{batch_dir}'.", err=True)
+        raise typer.Exit(code=1)
+
+    # Validate --template path if provided
+    template_path: Path | None = None
+    if template is not None:
+        template_path = Path(template)
+        if not template_path.exists():
+            typer.echo(
+                f"Error: Template file not found: {template_path}",
+                err=True,
+            )
+            raise typer.Exit(code=2)
+
+    from openreview_cli.review.report import batch_export_reports
+
+    out = Path(output_dir)
+    written = batch_export_reports(
+        report_paths, format, out, mode=mode, template_path=template_path
+    )
+
+    if written:
+        typer.echo(f"Exported {len(written)} memo(s) to '{output_dir}'.")
+        for p in written:
+            typer.echo(f"  - {p}")
+    else:
+        typer.echo("No memos were exported.")
+
+
 from openreview_cli.benchmark.cli import benchmark_app  # noqa: E402
 
 app.add_typer(benchmark_app)
@@ -2289,6 +2791,12 @@ def _register_product_mode(
             help="Confidence threshold for Green/Amber/Red (0.0-1.0).",
             callback=_validate_threshold,
         ),
+        mode_threshold: list[str] = typer.Option(
+            [],
+            "--mode-threshold",
+            help="Per-mode confidence threshold override, e.g. "
+            "--mode-threshold leasecheck=0.85. Repeatable.",
+        ),
     ) -> None:
         _run_product_review(
             mode=name,
@@ -2301,6 +2809,7 @@ def _register_product_mode(
             output_dir=output_dir,
             verbose=verbose,
             confidence_threshold=confidence_threshold,
+            mode_threshold=mode_threshold,
         )
 
 
@@ -2369,6 +2878,12 @@ _register_product_mode(
     name="settlementcheck",
     help_text="Review a settlement/release agreement with SettlementCheck.",
     path_help="Path to a settlement or release agreement (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="settlementcheck_v2",
+    help_text="Review a complex settlement/release agreement (v2) with SettlementCheck.",
+    path_help="Path to a complex settlement or release agreement (PDF or DOCX).",
 )
 _register_product_mode(
     app,
@@ -2446,6 +2961,7 @@ def _run_product_review(
     output_dir: str | None,
     verbose: bool,
     confidence_threshold: float,
+    mode_threshold: list[str] | None = None,
 ) -> None:
     """Run a review using a mode-specific bundled playbook.
 
@@ -2458,6 +2974,36 @@ def _run_product_review(
 
     from openreview_cli.review import run_review
 
+    # Parse --mode-threshold MODE=VALUE pairs into dict
+    mode_threshold_overrides: dict[str, float] | None = None
+    if mode_threshold:
+        mode_threshold_overrides = {}
+        for item in mode_threshold:
+            if "=" not in item:
+                typer.echo(f"Error: --mode-threshold must be MODE=VALUE, got '{item}'", err=True)
+                raise typer.Exit(code=2)
+            m, v = item.split("=", 1)
+            try:
+                mode_threshold_overrides[m] = float(v)
+            except ValueError:
+                typer.echo(f"Error: --mode-threshold VALUE must be a float, got '{v}'", err=True)
+                raise typer.Exit(code=2) from None
+
+    # Merge with config-level mode thresholds (CLI takes precedence)
+    try:
+        from openreview_cli.config.loader import load_config
+        from openreview_cli.config.paths import get_config_dir
+
+        _cfg = load_config(get_config_dir() / "config.yml")
+        config_thresholds = _cfg.get("modes", {}).get("thresholds")
+        if isinstance(config_thresholds, dict):
+            mode_threshold_overrides = mode_threshold_overrides or {}
+            for ck, cv in config_thresholds.items():
+                if ck not in mode_threshold_overrides:
+                    mode_threshold_overrides[ck] = float(cv)
+    except Exception:
+        pass  # config not available, use CLI values only
+
     try:
         reports = run_review(
             paths=[path],
@@ -2467,6 +3013,7 @@ def _run_product_review(
             no_pii=no_pii,
             verbose=verbose,
             confidence_threshold=confidence_threshold,
+            mode_threshold_overrides=mode_threshold_overrides,
             mode=mode,
         )
     except FileNotFoundError as e:

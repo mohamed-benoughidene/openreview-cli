@@ -51,6 +51,7 @@ class ReviewStage(Stage):
         extraction_model: str = "extraction",
         qa_model: str | None = None,
         confidence_threshold: float = 0.7,
+        mode_threshold_overrides: dict[str, float] | None = None,
         playbook_version: int | None = None,
         verbose: bool = False,
         mode: str = "precheck",
@@ -68,6 +69,10 @@ class ReviewStage(Stage):
             *extraction_model* when ``None``.
         confidence_threshold:
             Threshold for Green/Amber/Red colour assignment.
+        mode_threshold_overrides:
+            Per-mode confidence threshold overrides, e.g. ``{"leasecheck": 0.85}``.
+            When the current mode has an override, it takes precedence over
+            *confidence_threshold*.
         playbook_version:
             Database version of the playbook, if loaded from DB.
         verbose:
@@ -77,6 +82,7 @@ class ReviewStage(Stage):
         self._extraction_model = extraction_model
         self._qa_model = qa_model or extraction_model
         self._confidence_threshold = confidence_threshold
+        self._mode_threshold_overrides = mode_threshold_overrides or {}
         self._playbook_version = playbook_version
         self._verbose = verbose
         self._mode = mode
@@ -147,12 +153,20 @@ class ReviewStage(Stage):
             summary=ReviewSummary(),
             playbook_id=self._playbook.id,
             generated_at=datetime.now(UTC),
-            confidence_threshold=self._confidence_threshold,
+            confidence_threshold=self._effective_threshold,
+            mode_threshold_overrides=self._mode_threshold_overrides,
             playbook_version=self._playbook_version,
             mode=self._mode,
         )
         self.report = report
         return {"review_report": report, "review_assessments": []}
+
+    @property
+    def _effective_threshold(self) -> float:
+        """Resolve confidence threshold for current mode, respecting overrides."""
+        if self._mode in self._mode_threshold_overrides:
+            return self._mode_threshold_overrides[self._mode]
+        return self._confidence_threshold
 
     def _build_report(self, assessments: list[Any]) -> ReviewReport:
         """Build a ReviewReport from clause assessments."""
@@ -163,7 +177,7 @@ class ReviewStage(Stage):
             ReviewSummary,
         )
 
-        assign_colors(assessments, self._confidence_threshold)
+        assign_colors(assessments, self._effective_threshold)
 
         total_conf = sum(a.confidence for a in assessments if a.playbook_category != "no-match")
         n_conf = sum(1 for a in assessments if a.playbook_category != "no-match") or 1
@@ -205,7 +219,8 @@ class ReviewStage(Stage):
             summary=summary,
             playbook_id=self._playbook.id,
             generated_at=datetime.now(UTC),
-            confidence_threshold=self._confidence_threshold,
+            confidence_threshold=self._effective_threshold,
+            mode_threshold_overrides=self._mode_threshold_overrides,
             playbook_version=self._playbook_version,
             mode=self._mode,
         )

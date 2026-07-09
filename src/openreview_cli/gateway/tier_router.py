@@ -11,6 +11,7 @@ from openreview_cli.gateway.errors import NoMatchingProviderError, PIIUnavailabl
 if TYPE_CHECKING:
     from openreview_cli.gateway.router import Gateway
     from openreview_cli.gateway.tier_config import TierConfig
+    from openreview_cli.gateway.tier_tracker import TierTracker
     from openreview_cli.pii.engine import PiiEngine
 
 _LOCAL_HOSTNAMES = frozenset({"localhost", "127.0.0.1", "::1", "0.0.0.0"})
@@ -28,13 +29,18 @@ class TierRouter:
     """
 
     def __init__(
-        self, gateway: Gateway, config: TierConfig, pii_engine: PiiEngine | None = None
+        self,
+        gateway: Gateway,
+        config: TierConfig,
+        pii_engine: PiiEngine | None = None,
+        tracker: TierTracker | None = None,
     ) -> None:
         self._gateway = gateway
         self._config = config
         self._pii_engine = pii_engine
         self._pii_available = pii_engine.is_available() if pii_engine else False
         self._cloud_calls_made: int = 0
+        self._tracker = tracker
 
     @property
     def config(self) -> TierConfig:
@@ -43,6 +49,16 @@ class TierRouter:
     @property
     def cloud_calls_made(self) -> int:
         return self._cloud_calls_made
+
+    def check_tier_change(self) -> str | None:
+        """Check if privacy tier changed since last operation.
+
+        Delegates to the optional TierTracker. Returns a diff message
+        ("Tier changed from X to Y") or None if no tracker or no change.
+        """
+        if not self._tracker:
+            return None
+        return self._tracker.check_and_record(self._config.tier)
 
     @staticmethod
     def classify_provider(provider_config: dict[str, Any]) -> str:

@@ -280,7 +280,7 @@ grounding. Spec 012 spec.md §"Single-party review only (v1)".
 
 ---
 
-## D-7: CG-DPO Full Pipeline — dedicated CG-DPO model (citation grounding capability) ⚠️ PARTIALLY RESOLVED
+## D-7: CG-DPO Full Pipeline — dedicated CG-DPO model (citation grounding capability) ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
@@ -288,9 +288,9 @@ grounding. Spec 012 spec.md §"Single-party review only (v1)".
 | **Deferred at** | 2026-07-04 |
 | **Resolved at** | 2026-07-05 |
 | **Updated at** | 2026-07-09 |
-| **Updated by** | Fact-check audit — hallu_detect.py classes confirmed, CLI flag unwired |
+| **Updated by** | Fact-check audit + CLI wiring — `--hallucination-method` flag now wired |
 | **Trigger** | dedicated CG-DPO model (citation grounding capability) at research-proven concept, not yet production-ready — needs parallel spec |
-| **Status** | ⚠️ **Partially Resolved** |
+| **Status** | ✅ **Resolved** |
 
 ### Description
 
@@ -355,9 +355,9 @@ for PreCheck, DealCheck, and HireCheck modes.
 
 `CGDPODetector` class and `HallucinationDetector` ABC exist in
 `benchmark/hallu_detect.py`. `--hallucination-method=lexical|cg-dpo` CLI flag
-described in transition plan step 4 was **never wired** — `benchmark/cli.py`
-does not expose it. The detector class is importable programmatically but has
-no CLI entry point. Flag wiring is the last remaining sub-task of D-7.
+was **wired 2026-07-09** in `benchmark/cli.py` — `VALID_HALLUCINATION_METHODS`
+constant, validation (exit 78 on invalid), detector instantiation, passed to
+`BenchmarkRunner`. Flag is functional. D-7 fully resolved.
 
 ---
 
@@ -464,14 +464,14 @@ research gap documented in research.md §R1.
 
 ---
 
-## D-10: Redlining / Tracked Changes Comparison
+## D-10: Redlining / Tracked Changes Comparison ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | Spec 014 (bilateral comparison) §9 |
 | **Deferred at** | 2026-07-04 |
 | **Trigger** | Explicitly out of scope — NX-1 compares final texts |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -506,14 +506,14 @@ internal method.
 
 ---
 
-## D-11: Amendment-aware Versioning
+## D-11: Amendment-aware Versioning ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | Spec 014 (bilateral comparison) §9 |
 | **Deferred at** | 2026-07-04 |
 | **Trigger** | Explicitly out of scope — each comparison is a fresh alignment |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -599,14 +599,14 @@ improvement from a full PAKTON adaptation.
 
 ---
 
-## D-13: Comparison Model Routing (`--comparison-model` flag)
+## D-13: Comparison Model Routing (`--comparison-model` flag) ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | Spec 014 (bilateral comparison) plan.md — Q3/NC-1 |
 | **Deferred at** | 2026-07-04 |
 | **Trigger** | Ponytail — reuse extraction model slot; revisit if users report misclassifications |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -648,7 +648,7 @@ Spec 014 FR-3 (comparison agent reuses extraction slot).
 | **Deferred from** | Benchmark harness / spec 010 — ponytail comment in `benchmark/cli.py` |
 | **Deferred at** | 2026-07-04 |
 | **Trigger** | Ponytail — no real prompt templates exist yet for comparison |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -687,7 +687,7 @@ Prompt A/B testing would:
 | **Deferred from** | Single-document retrieval feature / spec 018 |
 | **Deferred at** | 2026-07-04 |
 | **Trigger** | Explicitly out of scope in the spec |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -782,7 +782,7 @@ document rather than raw clause lists.
 | **Deferred from** | Retrieval feature / spec 018 |
 | **Deferred at** | 2026-07-04 |
 | **Trigger** | Documented assumption — user must manually re-run `ingest` |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -824,7 +824,7 @@ hashing in `src/openreview_cli/pii/config_hash.py`.
 | **Deferred from** | Retrieval feature / spec 018 |
 | **Deferred at** | 2026-07-04 |
 | **Trigger** | Ponytail — known ceiling; slow at 5,000+ chunks |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -871,7 +871,7 @@ the retrieval module.
 | **Deferred from** | Retrieval benchmark / spec 018 |
 | **Deferred at** | 2026-07-04 |
 | **Trigger** | Ponytail comment in `benchmark/cli.py` — mock returns empty spans |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -1007,7 +1007,7 @@ creates a new version rather than restoring the old one). There are no
 | **Deferred from** | spec 018 — 5-stage async pipeline framework |
 | **Deferred at** | 2026-07-04 |
 | **Trigger** | Explicitly out of scope in the spec — linear CLI workflow only |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -1042,14 +1042,14 @@ intentionally avoids all of these to keep the framework simple.
 
 ---
 
-## D-23: Bilateral and Benchmark Pipeline Adoption
+## D-23: Bilateral and Benchmark Pipeline Adoption ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | spec 018 — 5-stage async pipeline framework |
 | **Deferred at** | 2026-07-04 |
 | **Trigger** | Explicitly out of scope — only the review pipeline was adopted |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -1093,7 +1093,7 @@ bilateral and benchmark follow when they need the pipeline guarantees.
 | **Deferred from** | spec 018 — 5-stage async pipeline framework |
 | **Deferred at** | 2026-07-04 |
 | **Trigger** | Ponytail comment in `pipeline/adapters/strip.py:45` |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -1132,7 +1132,7 @@ so the async refactor would mainly affect how callers interact with it.
 | **Deferred from** | spec 018 — 5-stage async pipeline framework |
 | **Deferred at** | 2026-07-04 |
 | **Trigger** | Ponytail comment in `pipeline/adapters/chunk.py:39` |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -1180,7 +1180,7 @@ property.
 | **Deferred from** | spec 018 — 5-stage async pipeline framework |
 | **Deferred at** | 2026-07-04 |
 | **Trigger** | Ponytail comment in `pipeline/adapters/retrieve.py:65` |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -1243,7 +1243,7 @@ query structure).
 | **Deferred from** | spec 019, §7 Assumptions |
 | **Deferred at** | 2026-07-05 |
 | **Trigger** | Explicitly deferred as future enhancement |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -1297,7 +1297,7 @@ intra-stage spikes."
 | **Deferred from** | spec 019 — `recovery/models.py` |
 | **Deferred at** | 2026-07-05 |
 | **Trigger** | Ponytail — heuristic v1; explicit dispatch deferred |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -1343,7 +1343,7 @@ Ponytail marker at `src/openreview_cli/recovery/models.py` line 185:
 | **Deferred from** | spec 019 — `pipeline/base.py` |
 | **Deferred at** | 2026-07-05 |
 | **Trigger** | Ponytail — spec-required hooks defined, no stage implements them |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -1458,14 +1458,14 @@ data-preservation tracking chain is now visible in the formatted output.
 
 ---
 
-## D-31: Persistent Recovery State Across CLI Invocations
+## D-31: Persistent Recovery State Across CLI Invocations ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | spec 019, §5 Non-Goals |
 | **Deferred at** | 2026-07-05 |
 | **Trigger** | Explicitly out of scope — recovery state is per-command |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -1502,14 +1502,14 @@ boundary that persistent state would cross.
 
 ---
 
-## D-32: Full-dual-path / Multi-provider Parallel Execution
+## D-32: Full-dual-path / Multi-provider Parallel Execution ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | spec 019, §5 Non-Goals |
 | **Deferred at** | 2026-07-05 |
 | **Trigger** | Explicitly out of scope — fallback is sequential |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -1665,7 +1665,7 @@ across all three export formats (Markdown, JSON, DOCX).
 | **Deferred from** | Privacy Tier Routing / spec 020, CL-04, §5 Non-Goals |
 | **Deferred at** | 2026-07-05 |
 | **Trigger** | Deferred to user research — trust threshold not quantified |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | Unblocked — awaiting user research for accuracy thresholds |
 
 ### Description
 
@@ -1710,14 +1710,14 @@ Benchmark harness at spec 010.
 
 ---
 
-## D-36: Per-Operation Tier Change Detection
+## D-36: Per-Operation Tier Change Detection ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | Privacy Tier Routing / spec 020, CL-05, §5 Non-Goals |
 | **Deferred at** | 2026-07-05 |
 | **Trigger** | Deferred from MVP (P3 priority) — change-diff adds I/O complexity |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -1768,7 +1768,7 @@ display current tier." User scenario P3 (nice-to-have) in spec.md §3.
 | **Deferred from** | Privacy Tier Routing / spec 020, AD-08 (research.md) |
 | **Deferred at** | 2026-07-05 |
 | **Trigger** | URL inspection sufficient for MVP; registry schema revision deferred |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -1841,7 +1841,7 @@ Prompt optimization roadmap item from the product blueprint. The technique build
 | **Deferred from** | Memo export feature (spec 021) |
 | **Deferred at** | 2026-07-05 |
 | **Trigger** | Explicitly deferred — python-docx was already a dependency, WeasyPrint would add substantial new weight |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -1875,7 +1875,7 @@ budget for the pipeline itself.
 | **Deferred from** | Memo export feature (spec 021) |
 | **Deferred at** | 2026-07-05 |
 | **Trigger** | Explicitly scoped to first 3 modes: PreCheck, DealCheck, HireCheck |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -1894,14 +1894,14 @@ would differ in header text, default playbook, and possibly section structure.
 
 ---
 
-## D-41: Batch Memo Export
+## D-41: Batch Memo Export ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | Memo export feature (spec 021) |
 | **Deferred at** | 2026-07-05 |
 | **Trigger** | Explicitly out of scope — single-review export only |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -1929,14 +1929,14 @@ Batch export would:
 
 ---
 
-## D-42: Custom Memo Templates
+## D-42: Custom Memo Templates ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | Memo export feature (spec 021) |
 | **Deferred at** | 2026-07-05 |
 | **Trigger** | Explicitly out of scope — fixed templates for v1 |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -2144,14 +2144,14 @@ Principle I (Privacy First).
 
 ---
 
-## D-46: Playbook Undelete Command
+## D-46: Playbook Undelete Command ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | spec 024 — playbook management, R4 |
 | **Deferred at** | 2026-07-06 |
 | **Trigger** | Explicitly excluded from spec scope — restore achieved via `set-current` |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -2177,14 +2177,14 @@ via `set-current`; explicit command deferred)". Spec 024 R4 (soft-delete).
 
 ---
 
-## D-47: `--json` Output Flag for Playbook Diff
+## D-47: `--json` Output Flag for Playbook Diff ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | spec 024 — playbook management, R2 |
 | **Deferred at** | 2026-07-06 |
 | **Trigger** | Explicitly excluded from spec scope — described as "optional, deferred for later polish" |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -2211,14 +2211,14 @@ output flag for diff (optional, deferred for later polish)".
 
 ---
 
-## D-48: Bulk Playbook Operations (Export All, Delete All)
+## D-48: Bulk Playbook Operations (Export All, Delete All) ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | spec 024 — playbook management |
 | **Deferred at** | 2026-07-06 |
 | **Trigger** | Explicitly excluded from spec scope |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -2291,14 +2291,14 @@ Spec 024 §"Explicitly excluded": "Playbook sharing or network export".
 
 ---
 
-## D-50: Tier Change Detection Notification
+## D-50: Tier Change Detection Notification ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | spec 020 — privacy tier routing, US5 extension hook |
 | **Deferred at** | 2026-07-06 |
 | **Trigger** | Dropped from MVP per CL-05 resolution — tier change diff notification is non-essential |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -2359,7 +2359,7 @@ Spec 020 tasks.md §Extension Hooks — "Model Registry Local Flag Enhancement (
 | **Deferred from** | Spec 025 (contract graph modeling) — assumptions, risk register |
 | **Deferred at** | 2026-07-06 |
 | **Trigger** | Explicitly out of scope for v1 — cross-references must follow English legal conventions |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -2435,7 +2435,7 @@ Spec 025 spec.md §Scope Boundaries (line 317): "Heuristic-only metric computati
 | **Deferred from** | Spec 025 (contract graph modeling) — research.md trade-off |
 | **Deferred at** | 2026-07-06 |
 | **Trigger** | Ponytail — view command sufficient for v1 inspection needs |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -2507,14 +2507,14 @@ Spec 025 plan.md risk register (line 233): "Health score weights not validated e
 
 ---
 
-## D-56: Multi-Contract Graph Comparison
+## D-56: Multi-Contract Graph Comparison ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | Spec 025 (contract graph modeling) — explicitly excluded |
 | **Deferred at** | 2026-07-06 |
 | **Trigger** | Spec boundary — single-contract analysis only for v1 |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -2618,14 +2618,14 @@ Spec 025 spec.md §Explicitly excluded (line 330): "Interactive graph exploratio
 
 ---
 
-## D-59: Persistent Graph Storage in SQLite
+## D-59: Persistent Graph Storage in SQLite ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | Spec 025 (contract graph modeling) — explicitly excluded |
 | **Deferred at** | 2026-07-06 |
 | **Trigger** | Spec boundary — "`Persistence beyond JSON files (no SQLite schema changes)`" |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -2886,7 +2886,7 @@ Spec 026 spec.md (line 135): "The original L-3 feature description... has been r
 | **Deferred from** | Spec 026 (game-theoretic negotiation) — plan.md §Technical Context |
 | **Deferred at** | 2026-07-07 |
 | **Trigger** | Ponytail / plan.md explicitly marked as "deferred to future" |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -2927,7 +2927,7 @@ Spec 026 plan.md (line 19): "Storage: None for core computation. Optional cachin
 | **Deferred from** | Spec 027 (product modes LicenseCheck, LeaseCheck, PrivacyCheck) — FR4 |
 | **Deferred at** | 2026-07-07 |
 | **Trigger** | Explicitly out of scope — task-level routing is the established pattern; per-mode overrides add complexity without demonstrated need |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -2977,14 +2977,14 @@ overrides): Deferred as out of scope."
 
 ---
 
-## D-68: PrivacyCheck Question Expansion (Cross-Border Transfer, Sub-Processor)
+## D-68: PrivacyCheck Question Expansion (Cross-Border Transfer, Sub-Processor) ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | Spec 027 (PrivacyCheck) — Assumptions #5 |
 | **Deferred at** | 2026-07-07 |
 | **Trigger** | Deliberately scoped to 3 questions for consistency; cross-border transfer and sub-processor questions deferred to PrivacyCheck v2 |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -3035,14 +3035,14 @@ deferred to a future PrivacyCheck v2."
 
 ---
 
-## D-69: Mode-Specific Confidence Thresholds
+## D-69: Mode-Specific Confidence Thresholds ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | Spec 027 (product modes) — Scope Boundaries |
 | **Deferred at** | 2026-07-07 |
 | **Trigger** | Deferred until shared-threshold pattern is validated across all modes |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -3093,14 +3093,14 @@ are deferred until the pattern is validated."
 
 ---
 
-## D-70: Complex Settlement Scenarios (SettlementCheck v2)
+## D-70: Complex Settlement Scenarios (SettlementCheck v2) ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | Spec 028 (product modes batch 1) — spec.md §Risks, plan.md §Risks |
 | **Deferred at** | 2026-07-08 |
 | **Trigger** | Explicitly out of scope — SettlementCheck targets common small-business settlement scenarios only |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -3154,7 +3154,7 @@ Spec 028 plan.md (line 262): "Complex settlements out of scope for v1."
 | **Deferred from** | Spec 028 (product modes batch 1) — spec.md §Scope Boundaries |
 | **Deferred at** | 2026-07-08 |
 | **Trigger** | Explicitly out of scope — bilateral comparison is its own spec (014) |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 
@@ -3314,7 +3314,7 @@ to SQLite meta-DB if cross-document queries ever land."
 | **Deferred from** | PII engine — `src/openreview_cli/pii/engine.py` line 17 |
 | **Deferred at** | 2026-07-08 |
 | **Trigger** | Ponytail — module-level constant overwritten by `assign_placeholders` during pipeline execution |
-| **Status** | Unblocked — no constitutional conflict, just not built yet |
+| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
 
 ### Description
 

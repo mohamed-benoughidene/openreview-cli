@@ -14,6 +14,11 @@ from rich.console import Console
 
 from openreview_cli.benchmark._utils import _FIXTURES_DIR, _detect_git_branch, _detect_git_commit
 from openreview_cli.benchmark.baseline import _mock_pipeline
+from openreview_cli.benchmark.hallu_detect import (
+    CGDPODetector,
+    HallucinationDetector,
+    LexicalOverlapDetector,
+)
 from openreview_cli.benchmark.models import BenchmarkConfig, DatasetResult
 from openreview_cli.benchmark.report import print_terminal_report
 from openreview_cli.benchmark.runner import BenchmarkRunner
@@ -27,6 +32,7 @@ benchmark_app = typer.Typer(
 
 VALID_DATASETS = frozenset({"cuad", "maud", "contract_nli", "pii"})
 VALID_FORMATS = frozenset({"terminal", "json"})
+VALID_HALLUCINATION_METHODS = frozenset({"lexical", "cg-dpo"})
 # ponytail: hard-coded mode list — source of truth for benchmark mode validation.
 VALID_MODES: frozenset[str] = frozenset(
     {
@@ -140,6 +146,16 @@ def benchmark_run(
         "--verbose",
         help="Detailed per-item progress",
     ),
+    hallucination_method: str = typer.Option(
+        "lexical",
+        "--hallucination-method",
+        help=f"Hallucination detector: {', '.join(sorted(VALID_HALLUCINATION_METHODS))}",
+    ),
+    use_pipeline: bool = typer.Option(
+        False,
+        "--use-pipeline",
+        help="Delegate per-item processing to the Pipeline framework",
+    ),
 ) -> None:
     """Run benchmarks against research baselines.
 
@@ -149,6 +165,14 @@ def benchmark_run(
     if format not in VALID_FORMATS:
         typer.echo(
             f"Error: Invalid format '{format}'. Valid: {', '.join(sorted(VALID_FORMATS))}", err=True
+        )
+        raise typer.Exit(code=78)
+
+    if hallucination_method not in VALID_HALLUCINATION_METHODS:
+        typer.echo(
+            f"Error: Invalid hallucination method '{hallucination_method}'. "
+            f"Valid: {', '.join(sorted(VALID_HALLUCINATION_METHODS))}",
+            err=True,
         )
         raise typer.Exit(code=78)
 
@@ -192,10 +216,24 @@ def benchmark_run(
     if download_datasets:
         cache_dir.mkdir(parents=True, exist_ok=True)
 
+    detector: HallucinationDetector = (
+        LexicalOverlapDetector() if hallucination_method == "lexical" else CGDPODetector()
+    )
+
+    if use_pipeline:
+        from openreview_cli.pipeline.adapters.benchmark import BenchmarkStage
+        from openreview_cli.pipeline.runner import Pipeline
+
+        pipeline = Pipeline([BenchmarkStage()])
+    else:
+        pipeline = None
+
     runner = BenchmarkRunner(
         config=config,
         fixtures_root=fixtures_root,
         cache_dir=cache_dir if download_datasets else None,
+        detector=detector,
+        pipeline=pipeline,
     )
 
     git_commit = _detect_git_commit()

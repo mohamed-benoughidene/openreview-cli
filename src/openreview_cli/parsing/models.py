@@ -2,10 +2,32 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+@dataclass(slots=True)
+class TrackedChange:
+    """A single tracked change (insertion or deletion) in a DOCX document.
+
+    Attributes
+    ----------
+    author : str
+        Name of the author who made the change.
+    change_type : Literal["ins", "del"]
+        Whether this is an insertion (``"ins"``) or deletion (``"del"``).
+    text : str
+        The text content of the change.
+    position : int
+        Approximate character offset in the document body.
+    """
+
+    author: str
+    change_type: Literal["ins", "del"]
+    text: str
+    position: int
 
 
 class ParseErrorCategory(StrEnum):
@@ -91,4 +113,4 @@ class ParseError(Exception):
         return f"ParseError({self.category}: {self.message})"
 
 
-__all__ = ["Clause", "Document", "ParseError", "ParseErrorCategory"]
+__all__ = ["Clause", "Document", "ParseError", "ParseErrorCategory", "TrackedChange"]

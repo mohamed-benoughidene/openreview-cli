@@ -186,6 +186,15 @@ MODE_VOCABULARY: dict[str, dict[str, str]] = {
             "sub-processor, breach notification, data retention, DPA. "
         ),
     },
+    "privacycheck_v2": {
+        "specialization": " specializing in data protection and privacy law",
+        "domain": "Data Processing Agreement (DPA) v2",
+        "vocabulary": (
+            "Domain vocabulary: data controller, data processor, processing purpose, "
+            "sub-processor, breach notification, data retention, cross-border transfer, "
+            "transfer impact assessment, sub-processor change notification, DPA. "
+        ),
+    },
     "dealcheck": {
         "specialization": " specializing in commercial vendor and service agreements",
         "domain": "vendor/service agreement",
@@ -261,6 +270,22 @@ MODE_VOCABULARY: dict[str, dict[str, str]] = {
             "non-disparagement, waiver of unknown claims, Section 1542, "
             "liquidated damages, acceleration, clawback, reinstatement, "
             "lump sum, instalments, accrual, consideration. "
+        ),
+    },
+    "settlementcheck_v2": {
+        "specialization": " specializing in complex settlement and release agreements",
+        "domain": "complex settlement and release agreement",
+        "vocabulary": (
+            "Domain vocabulary: release, settlement, mutual release, "
+            "non-disparagement, waiver of unknown claims, Section 1542, "
+            "liquidated damages, acceleration, clawback, reinstatement, "
+            "lump sum, instalments, accrual, consideration, "
+            "claims administrator, settlement class, Bar date, "
+            "opt-out, structured payments, periodic payouts, "
+            "true-up, balloon payment, acceleration clause, "
+            "cross-indemnity, multi-party release, contribution, "
+            "regulatory cooperation, no-admit, no-deny, privilege, "
+            "class action, CAFA, Fairness Hearing, settlement fund. "
         ),
     },
     "assetcheck": {

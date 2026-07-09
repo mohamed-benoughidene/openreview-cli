@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import enum
 import logging
+import uuid
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -60,9 +62,12 @@ class RecoveryCoordinator:
         self,
         config: RecoveryConfig | None = None,
         memory_budget_bytes: int = 104_857_600,
+        db_path: str | None = None,
     ) -> None:
         self._config = config or RecoveryConfig()
         self._memory_budget_bytes = memory_budget_bytes
+        self._db_path = db_path
+        self._pipeline_id = uuid.uuid4().hex
 
     # -- Public API called by pipeline runner --
 
@@ -98,10 +103,13 @@ class RecoveryCoordinator:
                     {"current_memory_bytes": memory_bytes},
                 )
                 if event.outcome == RecoveryOutcome.EXHAUSTED:
+                    self._persist_context(stage_name, local_ctx)
                     return RecoverySignal.HALT
             except RecoveryError:
+                self._persist_context(stage_name, local_ctx)
                 return RecoverySignal.HALT
 
+        self._persist_context(stage_name, local_ctx)
         return RecoverySignal.PROCEED
 
     async def handle_stage_failure(
@@ -134,6 +142,7 @@ class RecoveryCoordinator:
                     base_interval_s=self._config.base_interval_s,
                 )
                 if event.outcome == RecoveryOutcome.RESOLVED:
+                    self._persist_context(stage_name, ctx)
                     return
             except RecoveryError:
                 # Exhausted — fall through to stage isolation
@@ -151,6 +160,7 @@ class RecoveryCoordinator:
                     },
                 )
                 if event.outcome == RecoveryOutcome.RESOLVED:
+                    self._persist_context(stage_name, ctx)
                     return  # Stage isolation recovered — continue without user-guided
             except RecoveryError:
                 # Critical failure — fall through to user-guided recovery
@@ -165,6 +175,7 @@ class RecoveryCoordinator:
                 "last_error": error_message,
             },
         )
+        self._persist_context(stage_name, ctx)
 
     async def handle_gateway_failure(
         self,
@@ -198,7 +209,7 @@ class RecoveryCoordinator:
         if category in (ErrorCategory.transient, ErrorCategory.permanent):
             # Provider fallback
             try:
-                return await provider_fallback(
+                result = await provider_fallback(
                     ctx,
                     stage_name,
                     {
@@ -212,6 +223,9 @@ class RecoveryCoordinator:
                 if last_event:
                     ctx.events.append(last_event)
                 # Fall through to user-guided
+            else:
+                self._persist_context(stage_name, ctx)
+                return result
 
         # --- unknown / exhausted → user-guided recovery ---
         await self._run_user_guided_recovery(
@@ -223,7 +237,7 @@ class RecoveryCoordinator:
                 "provider_name": provider_name,
             },
         )
-
+        self._persist_context(stage_name, ctx)
         return None
 
     def build_report(self, ctx: RecoveryContext) -> RecoveryReport:
@@ -271,6 +285,9 @@ class RecoveryCoordinator:
             event_summary = f" [{resolved_count}/{total_events} events resolved]"
             summary_parts.append(event_summary)
 
+        # D-31: persist final state; delete on success/degraded, keep on unrecoverable
+        self._finalize_context(ctx, final_status)
+
         return RecoveryReport(
             events=list(ctx.events),
             final_status=final_status,
@@ -279,6 +296,37 @@ class RecoveryCoordinator:
             partial_results=partial_results,
             actionable_error=actionable_error,
         )
+
+    # -- Persistence (D-31) --
+
+    def _persist_context(self, stage_name: str, ctx: RecoveryContext) -> None:
+        """Persist current context to DB when db_path is configured."""
+        if self._db_path is None:
+            return
+        from openreview_cli.storage.database import save_recovery_state
+
+        save_recovery_state(Path(self._db_path), self._pipeline_id, stage_name, ctx)
+
+    def _finalize_context(self, ctx: RecoveryContext, final_status: str) -> None:
+        """Persist final state then delete on success/degraded, keep on unrecoverable."""
+        if self._db_path is None:
+            return
+        self._persist_context("final", ctx)
+        if final_status != "unrecoverable":
+            from openreview_cli.storage.database import delete_recovery_state
+
+            delete_recovery_state(Path(self._db_path), self._pipeline_id)
+
+    def resume_context(self, pipeline_id: str) -> RecoveryContext | None:
+        """Load a previously saved context from DB.
+
+        Returns None when db_path is not configured or pipeline_id not found.
+        """
+        if self._db_path is None:
+            return None
+        from openreview_cli.storage.database import load_recovery_state
+
+        return load_recovery_state(Path(self._db_path), pipeline_id)
 
     # -- Internal helpers --
 

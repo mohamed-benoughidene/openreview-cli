@@ -5,7 +5,8 @@ and the original clause texts, builds a structured prompt using the RCBSF
 5-dimension taxonomy, calls the AI Gateway, and parses the response into
 a ``PairedAssessment``.
 
-Reuses the extraction model slot per FR-3/Q3 — there is no ``--comparison-model``.
+Reuses the extraction model slot per FR-3/Q3 unless ``--comparison-model``
+is provided (D-13).
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from openreview_cli.review._gateway import call_gateway_chat
 
 if TYPE_CHECKING:
     from openreview_cli.bilateral.models import AlignmentPair
+    from openreview_cli.parsing.models import Clause, TrackedChange
     from openreview_cli.review.models import Category, ClauseAssessment
 
 logger = logging.getLogger(__name__)
@@ -44,6 +46,7 @@ def compare_pair(
     party_b_assessment: ClauseAssessment,
     playbook_category: Category | None,
     model: str,
+    comparison_model: str | None = None,
 ) -> PairedAssessment:
     """Compare a single aligned clause pair and classify divergence.
 
@@ -73,8 +76,9 @@ def compare_pair(
         category=playbook_category,
     )
 
+    effective_model = model if comparison_model is None else comparison_model
     try:
-        raw_response = call_gateway_chat(model, messages)
+        raw_response = call_gateway_chat(effective_model, messages)
     except Exception as exc:
         logger.warning("Gateway call failed for %s: %s", alignment.pair_id, exc)
         return PairedAssessment(
@@ -172,3 +176,54 @@ def _parse_comparison_response(raw: str) -> dict[str, Any]:
         "rationale": rationale,
         "error": None,
     }
+
+
+def map_redlines_to_clauses(
+    changes: list[TrackedChange],
+    clauses: list[Clause],
+) -> dict[str, list[TrackedChange]]:
+    """Map each tracked change to the nearest clause by character position.
+
+    Parameters
+    ----------
+    changes : list[TrackedChange]
+        Tracked changes from a DOCX document.
+    clauses : list[Clause]
+        Parsed clauses from the same document.
+
+    Returns
+    -------
+    dict[str, list[TrackedChange]]
+        Mapping of ``clause_id -> [TrackedChange, ...]``. Every clause in the
+        input is present in the output; clauses with no nearby changes get an
+        empty list.
+    """
+    if not clauses:
+        return {}
+
+    result: dict[str, list[TrackedChange]] = {c.id: [] for c in clauses}
+
+    if not changes:
+        return result
+
+    for change in changes:
+        best_clause = _find_clause_by_position(change.position, clauses)
+        result[best_clause.id].append(change)
+
+    return result
+
+
+def _find_clause_by_position(
+    position: int,
+    clauses: list[Clause],
+) -> Clause:
+    """Find the clause whose source_span contains *position*, or the last clause."""
+    for clause in clauses:
+        span = clause.source_span
+        if span is not None and span[0] <= position < span[1]:
+            return clause
+    # Fallback: use paragraph index or last clause
+    for clause in clauses:
+        if clause.source_paragraph is not None and clause.source_paragraph >= position:
+            return clause
+    return clauses[-1] if clauses else clauses[0]

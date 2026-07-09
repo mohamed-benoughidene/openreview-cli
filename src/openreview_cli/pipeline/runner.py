@@ -111,7 +111,7 @@ class Pipeline:
                 carries a ``pipeline_report`` attribute with the partial
                 results collected up to the failing stage.
         """
-        context: PipelineContext = {} if ctx is None else dict(ctx)
+        context: PipelineContext = {} if ctx is None else ctx
         context.setdefault("errors", [])
         context.setdefault("cancelled", False)
 

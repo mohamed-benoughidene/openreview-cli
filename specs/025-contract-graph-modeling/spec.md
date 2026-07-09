@@ -304,7 +304,7 @@ openreview graph view <graph.json> [--color]
 - Web server or API endpoint
 - Real-time or streaming graph processing
 - Visual graph rendering (SVG, PNG)
-- Persistence beyond JSON files (no SQLite schema changes)
+- Persistence beyond JSON files (no SQLite schema changes) — *Implemented by D-59: see §Scope Boundaries below.*
 
 ---
 
@@ -318,6 +318,7 @@ openreview graph view <graph.json> [--color]
 - 0-100 health score with configurable weights
 - ASCII text tree view
 - JSON serialisation of graph and metrics
+- Persistent graph storage in SQLite via `storage/database.py` (`save_graph()`, `load_graph()`) and `graph_nodes`/`graph_edges`/`graph_meta` tables (migration 008). JSON file output remains the default; `--store` flag on `graph build` enables SQLite persistence. See research.md §6 (replaces §4).
 - Unit tests (`tests/unit/test_graph_*.py`)
 - Integration test (`tests/integration/test_graph_command.py`)
 - Memory profiling via existing `memory_tracker` fixture
@@ -329,7 +330,7 @@ openreview graph view <graph.json> [--color]
 - Visual graph rendering (DOT, SVG, PNG)
 - Interactive graph exploration
 - Real-time graph building during parse streaming
-- Persistent graph storage in SQLite (JSON files only)
+- Persistent graph storage in SQLite (JSON files only) — *Implemented by D-59: SQLite storage is now available as opt-in via `--store` flag on `graph build`. JSON files remain the default.*
 - Multi-contract graph comparison
 - Graph diff between contract versions
 - Contract clause similarity / clustering

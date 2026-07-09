@@ -49,15 +49,17 @@ class TestDetectTrackedChanges:
         from openreview_cli.parsing.docx_parser import detect_tracked_changes
 
         result = detect_tracked_changes(Document(str(FIXTURES / "tracked_changes.docx")))
-        assert result is True
+        assert isinstance(result, list)
+        assert len(result) > 0
 
-    def test_no_tracked_changes_returns_false(self) -> None:
+    def test_no_tracked_changes_returns_empty_list(self) -> None:
         from docx import Document
 
         from openreview_cli.parsing.docx_parser import detect_tracked_changes
 
         result = detect_tracked_changes(Document(str(FIXTURES / "simple_contract.docx")))
-        assert result is False
+        assert isinstance(result, list)
+        assert len(result) == 0
 
 
 class TestSkipEmbeddedImages:

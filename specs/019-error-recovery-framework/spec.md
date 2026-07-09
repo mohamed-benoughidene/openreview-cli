@@ -239,8 +239,21 @@ The following are explicitly out of scope for this specification:
 - **Automatic cloud-provisioning of compute resources** — The framework does not spin up cloud instances, start services, or install software to resolve failures. It works with what the user has configured.
 - **Retry of user-initiated document-parsing failures** — If the input document is corrupt, password-protected, or otherwise invalid, the framework reports the parsing error but does not retry; the user must provide a valid document.
 - **Full-dual-path or multi-provider parallel execution** — The framework does not call multiple providers simultaneously and compare results. Fallback is sequential: one provider at a time, in user-specified order.
-- **Persistent recovery state across CLI invocations** — Recovery state lives only for the duration of a single CLI command. If the user restarts the tool, recovery starts fresh. No recovery state is persisted to disk.
+- **Persistent recovery state across CLI invocations (implemented by D-31)** — Recovery state is serialised to SQLite at stage boundaries, enabling crash recovery and resume-on-restart. When the pipeline finishes successfully (or ungracefully with status != "unrecoverable"), the persisted state is cleaned up. See §5.1 for the persistence contract.
 - **Recovery from logic errors or hallucinated outputs** — The framework handles operational failures (network, memory, provider errors), not semantic correctness failures (wrong answers). The QA agent in the review pipeline handles verification of output quality.
+
+### 5.1 Persistent Recovery State (D-31)
+
+Recovery state is serialised to SQLite at every stage boundary, enabling resume-after-crash:
+
+- **Storage**: New table `recovery_state` (id TEXT PK, pipeline_id TEXT, stage_name TEXT, context_json TEXT, status TEXT, created_at TEXT).
+- **Write points**: After `evaluate_pre_stage()`, `handle_stage_failure()`, and `handle_gateway_failure()` — each emits a `recovery_state` row capturing the current `RecoveryContext`.
+- **Cleanup**: `build_report()` deletes the row when `final_status != "unrecoverable"`. Successful runs leave no trace.
+- **Resume API**: `RecoveryCoordinator.resume_context(pipeline_id)` loads the persisted state and returns a hydrated `RecoveryContext` for resumption.
+- **Opt-in**: Persistence is enabled by passing `db_path` to `RecoveryCoordinator.__init__`. When `db_path=None` (the default), the original in-memory-only behavior is preserved.
+
+This addition supersedes the non-goal statement in §5. The framework's "single-invocation lifetime" default is unchanged when no `db_path` is configured.
+
 - **Automatic recovery reconfiguration** — The framework does not modify the user's provider list or config to fix an outage. It reports the issue and recommends configuration changes. The user makes the change manually or via the setup wizard.
 
 ---

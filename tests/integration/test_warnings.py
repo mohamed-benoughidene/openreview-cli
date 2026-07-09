@@ -15,7 +15,9 @@ class TestWarnings:
         from openreview_cli.parsing.docx_parser import detect_tracked_changes
 
         doc = Document(str(DOCX / "tracked_changes.docx"))
-        assert detect_tracked_changes(doc) is True
+        result = detect_tracked_changes(doc)
+        assert isinstance(result, list)
+        assert len(result) > 0
 
     @pytest.mark.integration
     def test_flat_document_no_headings(self) -> None:

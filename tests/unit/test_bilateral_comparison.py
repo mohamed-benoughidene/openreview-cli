@@ -223,6 +223,11 @@ class TestFileExistence:
                 conservative=False,
                 grounding_mode="strict",
                 no_grounding=False,
+                history=False,
+                comparison_model=None,
+                show_redlines=False,
+                version_label_a=None,
+                version_label_b=None,
             )
         assert exc.value.exit_code == 1
 
@@ -245,6 +250,11 @@ class TestFileExistence:
                 conservative=False,
                 grounding_mode="strict",
                 no_grounding=False,
+                history=False,
+                comparison_model=None,
+                show_redlines=False,
+                version_label_a=None,
+                version_label_b=None,
             )
         assert exc.value.exit_code == 1
 
@@ -280,6 +290,11 @@ class TestFileExistence:
             conservative=False,
             grounding_mode="strict",
             no_grounding=False,
+            history=False,
+            comparison_model=None,
+            show_redlines=False,
+            version_label_a=None,
+            version_label_b=None,
         )
 
 
@@ -311,6 +326,11 @@ class TestMutualExclusion:
                 conservative=True,
                 grounding_mode="strict",
                 no_grounding=False,
+                history=False,
+                comparison_model=None,
+                show_redlines=False,
+                version_label_a=None,
+                version_label_b=None,
             )
         assert exc.value.exit_code == 3
 
@@ -346,6 +366,11 @@ class TestMutualExclusion:
             conservative=True,
             grounding_mode="strict",
             no_grounding=False,
+            history=False,
+            comparison_model=None,
+            show_redlines=False,
+            version_label_a=None,
+            version_label_b=None,
         )
 
     def test_ct_alone_allowed(
@@ -380,6 +405,11 @@ class TestMutualExclusion:
             conservative=False,
             grounding_mode="strict",
             no_grounding=False,
+            history=False,
+            comparison_model=None,
+            show_redlines=False,
+            version_label_a=None,
+            version_label_b=None,
         )
 
 
@@ -411,6 +441,11 @@ class TestFormatValidation:
                 conservative=False,
                 grounding_mode="strict",
                 no_grounding=False,
+                history=False,
+                comparison_model=None,
+                show_redlines=False,
+                version_label_a=None,
+                version_label_b=None,
             )
         assert exc.value.exit_code == 1
 
@@ -446,6 +481,11 @@ class TestFormatValidation:
             conservative=False,
             grounding_mode="strict",
             no_grounding=False,
+            history=False,
+            comparison_model=None,
+            show_redlines=False,
+            version_label_a=None,
+            version_label_b=None,
         )
 
     def test_json_format_allowed(
@@ -480,6 +520,11 @@ class TestFormatValidation:
             conservative=False,
             grounding_mode="strict",
             no_grounding=False,
+            history=False,
+            comparison_model=None,
+            show_redlines=False,
+            version_label_a=None,
+            version_label_b=None,
         )
 
 
@@ -511,6 +556,11 @@ class TestGroundingModeValidation:
                 conservative=False,
                 grounding_mode="invalid",
                 no_grounding=False,
+                history=False,
+                comparison_model=None,
+                show_redlines=False,
+                version_label_a=None,
+                version_label_b=None,
             )
         assert exc.value.exit_code == 1
 
@@ -546,6 +596,11 @@ class TestGroundingModeValidation:
             conservative=False,
             grounding_mode="strict",
             no_grounding=False,
+            history=False,
+            comparison_model=None,
+            show_redlines=False,
+            version_label_a=None,
+            version_label_b=None,
         )
 
     def test_lenient_mode_allowed(
@@ -580,6 +635,11 @@ class TestGroundingModeValidation:
             conservative=False,
             grounding_mode="lenient",
             no_grounding=False,
+            history=False,
+            comparison_model=None,
+            show_redlines=False,
+            version_label_a=None,
+            version_label_b=None,
         )
 
 
@@ -628,6 +688,11 @@ class TestAlignOnly:
             conservative=False,
             grounding_mode="strict",
             no_grounding=False,
+            history=False,
+            comparison_model=None,
+            show_redlines=False,
+            version_label_a=None,
+            version_label_b=None,
         )
         assert captured.get("align_only") is True
 
@@ -677,6 +742,11 @@ class TestVerbose:
             conservative=False,
             grounding_mode="strict",
             no_grounding=False,
+            history=False,
+            comparison_model=None,
+            show_redlines=False,
+            version_label_a=None,
+            version_label_b=None,
         )
         assert captured.get("verbose") is True
 
@@ -727,6 +797,11 @@ class TestConservative:
             conservative=True,
             grounding_mode="strict",
             no_grounding=False,
+            history=False,
+            comparison_model=None,
+            show_redlines=False,
+            version_label_a=None,
+            version_label_b=None,
         )
         assert captured.get("confidence_threshold") == 0.8
         assert captured.get("verbose") is True
@@ -777,6 +852,11 @@ class TestJsonFormat:
             conservative=False,
             grounding_mode="strict",
             no_grounding=False,
+            history=False,
+            comparison_model=None,
+            show_redlines=False,
+            version_label_a=None,
+            version_label_b=None,
         )
         assert called, "format_comparison_json was not called"
 
@@ -814,6 +894,11 @@ class TestJsonFormat:
             conservative=False,
             grounding_mode="strict",
             no_grounding=False,
+            history=False,
+            comparison_model=None,
+            show_redlines=False,
+            version_label_a=None,
+            version_label_b=None,
         )
         assert output_file.exists()
         assert output_file.read_text(encoding="utf-8") == '{"key": "value"}'
@@ -849,6 +934,11 @@ class TestErrorOutput:
                 conservative=False,
                 grounding_mode="strict",
                 no_grounding=False,
+                history=False,
+                comparison_model=None,
+                show_redlines=False,
+                version_label_a=None,
+                version_label_b=None,
             )
         stderr = capsys.readouterr().err
         assert "File not found" in stderr
@@ -877,6 +967,11 @@ class TestErrorOutput:
                 conservative=True,
                 grounding_mode="strict",
                 no_grounding=False,
+                history=False,
+                comparison_model=None,
+                show_redlines=False,
+                version_label_a=None,
+                version_label_b=None,
             )
         stderr = capsys.readouterr().err
         assert "mutually exclusive" in stderr
@@ -905,6 +1000,11 @@ class TestErrorOutput:
                 conservative=False,
                 grounding_mode="strict",
                 no_grounding=False,
+                history=False,
+                comparison_model=None,
+                show_redlines=False,
+                version_label_a=None,
+                version_label_b=None,
             )
         stderr = capsys.readouterr().err
         assert "format" in stderr.lower()
@@ -933,6 +1033,11 @@ class TestErrorOutput:
                 conservative=False,
                 grounding_mode="bad",
                 no_grounding=False,
+                history=False,
+                comparison_model=None,
+                show_redlines=False,
+                version_label_a=None,
+                version_label_b=None,
             )
         stderr = capsys.readouterr().err
         assert "grounding" in stderr.lower()
@@ -982,6 +1087,11 @@ class TestRunComparisonErrors:
                 conservative=False,
                 grounding_mode="strict",
                 no_grounding=False,
+                history=False,
+                comparison_model=None,
+                show_redlines=False,
+                version_label_a=None,
+                version_label_b=None,
             )
         assert exc.value.exit_code == 1
 
@@ -1021,6 +1131,11 @@ class TestRunComparisonErrors:
                 conservative=False,
                 grounding_mode="strict",
                 no_grounding=False,
+                history=False,
+                comparison_model=None,
+                show_redlines=False,
+                version_label_a=None,
+                version_label_b=None,
             )
         assert exc.value.exit_code == 2
 
@@ -1052,6 +1167,11 @@ class TestMultipleErrorPaths:
                 conservative=False,
                 grounding_mode="strict",
                 no_grounding=False,
+                history=False,
+                comparison_model=None,
+                show_redlines=False,
+                version_label_a=None,
+                version_label_b=None,
             )
         # Format check runs before file check
         assert exc.value.exit_code == 1
@@ -1075,6 +1195,11 @@ class TestMultipleErrorPaths:
                 conservative=False,
                 grounding_mode="bad",
                 no_grounding=False,
+                history=False,
+                comparison_model=None,
+                show_redlines=False,
+                version_label_a=None,
+                version_label_b=None,
             )
         # Grounding check runs before file check
         assert exc.value.exit_code == 1
@@ -1125,6 +1250,11 @@ class TestDispatchCombinations:
             conservative=False,
             grounding_mode="strict",
             no_grounding=False,
+            history=False,
+            comparison_model=None,
+            show_redlines=False,
+            version_label_a=None,
+            version_label_b=None,
         )
         assert captured.get("no_pii") is False
         assert captured.get("verbose") is False
@@ -1169,6 +1299,11 @@ class TestDispatchCombinations:
             conservative=False,
             grounding_mode="lenient",
             no_grounding=False,
+            history=False,
+            comparison_model=None,
+            show_redlines=False,
+            version_label_a=None,
+            version_label_b=None,
         )
         assert captured.get("extraction_model") == "gpt4"
         assert captured.get("qa_model") == "claude3"

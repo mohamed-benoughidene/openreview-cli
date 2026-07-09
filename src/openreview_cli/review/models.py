@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -179,7 +179,120 @@ class ReviewReport:
     playbook_id: str
     generated_at: datetime
     confidence_threshold: float = 0.7
+    mode_threshold_overrides: dict[str, float] | None = None
     schema_version: str = "1.1.0"
     playbook_version: int | None = None
     cg_metrics: CGMetrics | None = None
     mode: str = "precheck"
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ReviewReport:
+        """Reconstruct a ReviewReport from a dict produced by ``dataclasses.asdict()``.
+
+        Handles StrEnum reconstruction, nested dataclass fields, and ISO
+        datetime parsing.  Designed to round-trip JSON produced by
+        ``format_json`` / ``_report_to_dict``.
+
+        Parameters
+        ----------
+        data : dict[str, object]
+            Serialised report data (from JSON).
+
+        Returns
+        -------
+        ReviewReport
+            Fully reconstructed report object.
+        """
+        from datetime import datetime as _dt
+
+        from openreview_cli.grounding.models import (
+            CGMetrics as _CGMetrics,
+        )
+        from openreview_cli.grounding.models import (
+            CitationProvenance as _CitationProvenance,
+        )
+        from openreview_cli.grounding.models import (
+            GroundingVerdict as _GroundingVerdict,
+        )
+        from openreview_cli.review.colors import (
+            AmberReason as _AmberReason,
+        )
+        from openreview_cli.review.colors import (
+            AssessmentColor as _AssessmentColor,
+        )
+
+        # ── Document metadata ──
+        doc_raw = dict(data["document"])
+        parsed_at_raw = doc_raw.get("parsed_at")
+        if isinstance(parsed_at_raw, str):
+            doc_raw["parsed_at"] = _dt.fromisoformat(parsed_at_raw)
+        document = DocMeta(**doc_raw)
+
+        # ── Assessments ──
+        assessments_raw = list(data["assessments"])
+        assessments: list[ClauseAssessment] = []
+        for a_raw in assessments_raw:
+            a: dict[str, Any] = dict(a_raw)
+
+            # Map 'is_amber' property → dataclass field '_is_amber'
+            is_amber_val = a.pop("is_amber", None)
+            if is_amber_val is not None:
+                a["_is_amber"] = is_amber_val
+
+            # Position enumeration
+            if isinstance(a.get("position"), str):
+                a["position"] = Position(str(a["position"]))
+            if isinstance(a.get("qa_revised_position"), str):
+                a["qa_revised_position"] = Position(str(a["qa_revised_position"]))
+
+            # QA verdict
+            if isinstance(a.get("qa_verdict"), str):
+                a["qa_verdict"] = QAVerdict(str(a["qa_verdict"]))
+
+            # Color
+            if isinstance(a.get("color"), str):
+                a["color"] = _AssessmentColor(str(a["color"]))
+
+            # Amber reasons
+            amber_raw = a.get("amber_reasons")
+            if isinstance(amber_raw, list):
+                a["amber_reasons"] = [
+                    _AmberReason(str(r)) if isinstance(r, str) else r for r in amber_raw
+                ]
+
+            # Grounding fields
+            if isinstance(a.get("grounding_verdict"), str):
+                a["grounding_verdict"] = _GroundingVerdict(str(a["grounding_verdict"]))
+            prov_raw = a.get("grounding_provenances")
+            if isinstance(prov_raw, list):
+                a["grounding_provenances"] = [
+                    _CitationProvenance(**cp) if isinstance(cp, dict) else cp for cp in prov_raw
+                ]
+
+            assessments.append(ClauseAssessment(**a))
+
+        # ── Summary ──
+        summary = ReviewSummary(**data["summary"])
+
+        # ── Datetime ──
+        generated_at = _dt.fromisoformat(str(data["generated_at"]))
+
+        # ── Optional CGMetrics ──
+        cg_raw = data.get("cg_metrics")
+        cg_metrics = _CGMetrics(**cg_raw) if cg_raw is not None else None
+
+        return cls(
+            document=document,
+            assessments=assessments,
+            summary=summary,
+            generated_at=generated_at,
+            cg_metrics=cg_metrics,
+            playbook_id=str(data["playbook_id"]),
+            confidence_threshold=float(data.get("confidence_threshold", 0.7)),
+            mode_threshold_overrides=data.get("mode_threshold_overrides"),
+            schema_version=str(data.get("schema_version", "1.1.0")),
+            playbook_version=int(data["playbook_version"])
+            if data.get("playbook_version") is not None
+            else None,
+            mode=str(data.get("mode", "precheck")),
+        )

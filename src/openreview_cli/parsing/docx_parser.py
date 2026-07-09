@@ -2,7 +2,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-from openreview_cli.parsing.models import Clause
+from openreview_cli.parsing.models import Clause, TrackedChange
 
 _WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 
@@ -16,11 +16,57 @@ def get_heading_level(paragraph: Any) -> int | None:
     return None
 
 
-def detect_tracked_changes(doc: Any) -> bool:
+def detect_tracked_changes(doc: Any) -> list[TrackedChange]:
+    """Extract all tracked changes (insertions and deletions) from a DOCX document.
+
+    Returns a list of ``TrackedChange`` objects. Empty list means no changes.
+    """
     body = doc.element.body
-    ins = list(body.iter(f"{{{_WORD_NS}}}ins"))
-    dels = list(body.iter(f"{{{_WORD_NS}}}del"))
-    return bool(ins) or bool(dels)
+    changes: list[TrackedChange] = []
+
+    for el in body.iter(f"{{{_WORD_NS}}}ins"):
+        author = el.get(f"{{{_WORD_NS}}}author", "")
+        texts: list[str] = []
+        for r in el.iter(f"{{{_WORD_NS}}}t"):
+            if r.text:
+                texts.append(r.text)
+        pos = _xml_element_position(body, el)
+        changes.append(
+            TrackedChange(
+                author=author,
+                change_type="ins",
+                text="".join(texts),
+                position=pos,
+            )
+        )
+
+    for el in body.iter(f"{{{_WORD_NS}}}del"):
+        author = el.get(f"{{{_WORD_NS}}}author", "")
+        texts = []
+        for r in el.iter(f"{{{_WORD_NS}}}delText"):
+            if r.text:
+                texts.append(r.text)
+        pos = _xml_element_position(body, el)
+        changes.append(
+            TrackedChange(
+                author=author,
+                change_type="del",
+                text="".join(texts),
+                position=pos,
+            )
+        )
+
+    return changes
+
+
+def _xml_element_position(parent: Any, child: Any) -> int:
+    """Return the character-position estimate for *child* within *parent*."""
+    children = list(parent)
+    try:
+        idx = children.index(child)
+    except ValueError:
+        return 0
+    return idx
 
 
 def skip_embedded_images(paragraphs: Any) -> Iterator[Any]:
@@ -33,6 +79,7 @@ def skip_embedded_images(paragraphs: Any) -> Iterator[Any]:
 class DocxParser:
     def __init__(self, path: Path):
         self.path = path
+        self.tracked_changes: list[TrackedChange] = []
 
     def parse(self) -> Iterator[Clause]:
         from docx import Document
@@ -55,7 +102,7 @@ class DocxParser:
             nupunkt_detect_boundaries,
         )
 
-        detect_tracked_changes(doc)
+        self.tracked_changes = detect_tracked_changes(doc)
         paras = list(skip_embedded_images(doc.paragraphs))
 
         all_text = ""

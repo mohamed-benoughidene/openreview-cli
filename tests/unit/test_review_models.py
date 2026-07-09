@@ -285,3 +285,49 @@ class TestReviewReport:
         assert report.schema_version == "1.1.0"
         assert len(report.assessments) == 2
         assert report.playbook_id == "precheck-nda-v1"
+
+    def test_mode_threshold_overrides_default_none(self) -> None:
+        dm = DocMeta(filename="doc.pdf", page_count=1, clause_count=0, pii_stripped=False)
+        now = datetime.now(UTC)
+        report = ReviewReport(
+            document=dm,
+            assessments=[],
+            summary=ReviewSummary(),
+            playbook_id="test",
+            generated_at=now,
+        )
+        assert report.mode_threshold_overrides is None
+
+    def test_mode_threshold_overrides_stored(self) -> None:
+        dm = DocMeta(filename="doc.pdf", page_count=1, clause_count=0, pii_stripped=False)
+        now = datetime.now(UTC)
+        overrides = {"leasecheck": 0.85, "privacycheck": 0.7}
+        report = ReviewReport(
+            document=dm,
+            assessments=[],
+            summary=ReviewSummary(),
+            playbook_id="test",
+            generated_at=now,
+            mode_threshold_overrides=overrides,
+        )
+        assert report.mode_threshold_overrides == overrides
+        assert report.mode_threshold_overrides["leasecheck"] == 0.85
+
+    def test_mode_threshold_overrides_roundtrip(self) -> None:
+        """Verify mode_threshold_overrides survives JSON round-trip via from_dict."""
+        import dataclasses
+
+        dm = DocMeta(filename="doc.pdf", page_count=1, clause_count=0, pii_stripped=False)
+        now = datetime.now(UTC)
+        overrides = {"licensecheck": 0.9}
+        report = ReviewReport(
+            document=dm,
+            assessments=[],
+            summary=ReviewSummary(),
+            playbook_id="test",
+            generated_at=now,
+            mode_threshold_overrides=overrides,
+        )
+        data = dataclasses.asdict(report)
+        restored = ReviewReport.from_dict(data)
+        assert restored.mode_threshold_overrides == overrides

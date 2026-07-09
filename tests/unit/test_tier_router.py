@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -287,3 +288,78 @@ class TestTierRouterMemory:
         assert peak_mb < 5, (
             f"TierRouter.Maximum.chat() memory delta {peak_mb:.2f} MB exceeds 5 MB budget"
         )
+
+
+# ── TierRouter + TierTracker (D-36 / D-50) ──────────────────────────────────
+
+
+class TestTierRouterWithTracker:
+    """TierRouter with TierTracker — per-operation tier change detection."""
+
+    def test_no_tracker_returns_none(self) -> None:
+        """check_tier_change returns None when no tracker configured."""
+        router, _ = _make_router(tier="maximum")
+        assert router.check_tier_change() is None
+
+    def test_first_run_no_change(self, tmp_path: Path) -> None:
+        """No previous .last_tier — no change message."""
+        from openreview_cli.gateway.tier_tracker import TierTracker
+
+        tracker = TierTracker(state_path=tmp_path / ".last_tier")
+        gw = _MockGateway()
+        config = TierConfig(tier="maximum", tier_source="config")
+        pii_engine = _MockPiiEngineAvailable()
+        router = TierRouter(gw, config, pii_engine=pii_engine, tracker=tracker)  # type: ignore[arg-type]
+        assert router.check_tier_change() is None
+
+    def test_tier_change_detected(self, tmp_path: Path) -> None:
+        """Change from previous tier returns diff message."""
+        import json
+
+        from openreview_cli.gateway.tier_tracker import TierTracker
+
+        state = tmp_path / ".last_tier"
+        state.write_text(json.dumps({"tier": "maximum"}))
+
+        tracker = TierTracker(state_path=state)
+        gw = _MockGateway()
+        config = TierConfig(tier="balanced", tier_source="config")
+        pii_engine = _MockPiiEngineAvailable()
+        router = TierRouter(gw, config, pii_engine=pii_engine, tracker=tracker)  # type: ignore[arg-type]
+        msg = router.check_tier_change()
+        assert msg == "Tier changed from maximum to balanced"
+
+    def test_same_tier_no_message(self, tmp_path: Path) -> None:
+        """Same tier as previous — no change message."""
+        import json
+
+        from openreview_cli.gateway.tier_tracker import TierTracker
+
+        state = tmp_path / ".last_tier"
+        state.write_text(json.dumps({"tier": "balanced"}))
+
+        tracker = TierTracker(state_path=state)
+        gw = _MockGateway()
+        config = TierConfig(tier="balanced", tier_source="config")
+        pii_engine = _MockPiiEngineAvailable()
+        router = TierRouter(gw, config, pii_engine=pii_engine, tracker=tracker)  # type: ignore[arg-type]
+        assert router.check_tier_change() is None
+
+    def test_recorded_tier_updated(self, tmp_path: Path) -> None:
+        """After check_tier_change, stored tier is updated."""
+        import json
+
+        from openreview_cli.gateway.tier_tracker import TierTracker
+
+        state = tmp_path / ".last_tier"
+        state.write_text(json.dumps({"tier": "maximum"}))
+
+        tracker = TierTracker(state_path=state)
+        gw = _MockGateway()
+        config = TierConfig(tier="performance", tier_source="config")
+        pii_engine = _MockPiiEngineAvailable()
+        router = TierRouter(gw, config, pii_engine=pii_engine, tracker=tracker)  # type: ignore[arg-type]
+        router.check_tier_change()
+
+        data = json.loads(state.read_text())
+        assert data["tier"] == "performance"

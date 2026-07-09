@@ -1,0 +1,415 @@
+# Bundled Settlement Agreement Playbook — SettlementCheck Mode v2
+# Covers standard settlement and release agreement clauses PLUS
+# complex settlement scenarios: structured payments, class action
+# procedures, multi-party releases, and regulatory cooperation.
+# Sources: Common settlement agreement clause categories from
+# Practical Law, Cornell LII, FRCP Rule 23, SEC practice, and
+# general small-business dispute resolution best practices.
+# Users may override with --playbook <path>.
+
+id: "settlement-agreement-v2"
+mode: "settlementcheck"
+metadata:
+  version: "2.0.0"
+  description: >
+    Complex settlement and release agreement review playbook
+    for SettlementCheck mode v2. Extends v1 with structured
+    payment obligations, class action procedures, multi-party
+    releases, and regulatory cooperation clauses. Covers all
+    standard v1 categories plus complex settlement scenarios.
+  author: "openreview"
+
+categories:
+  # ── Release Scope ──────────────────────────────────────────────
+  - id: "release-scope"
+    name: "Release Scope"
+    description: >
+        Breadth of the release — claims released, parties
+        released, exclusions, and whether release is mutual
+        or one-sided.
+    preferred:
+      description: >
+        Mutual general release of all claims arising from the
+        dispute. Clear exclusions for ongoing obligations,
+        enforcement of settlement terms, and claims that
+        cannot be waived by law. Parties specifically
+        identified including related entities.
+      exemplars:
+        - "Each party releases the other from all claims arising out of the dispute described in the Recitals"
+        - "This release does not apply to any obligations set forth in this Settlement Agreement"
+        - "Excluded from this release are claims that cannot be waived by applicable law"
+    acceptable:
+      description: >
+        Mutual release with reasonable scope but some ambiguity
+        on exclusions. Release covers known claims but may not
+        explicitly address unknown claims. Releasors clearly
+        identified.
+      exemplars:
+        - "Claimant releases Respondent from any and all claims arising from or relating to the dispute"
+        - "Release excludes claims arising from future breach of this Agreement"
+        - "The release extends to the parties' respective predecessors, successors, and assigns"
+    walkaway:
+      description: >
+        One-sided release (only one party releases claims).
+        Release of all possible claims with no exclusions
+        for statutory rights. Release of non-parties without
+        consideration. Release of future claims unrelated to
+        dispute.
+      exemplars:
+        - "Claimant releases Respondent from all claims, known or unknown, that ever existed"
+        - "Claimant waives all rights under Section 1542 of the California Civil Code"
+        - "This release applies to any and all claims regardless of when they arose"
+    default_position: "acceptable"
+
+  # ── Payment Terms / Timing ─────────────────────────────────────
+  - id: "payment-terms-timing"
+    name: "Payment Terms / Timing"
+    description: >
+      Settlement amount, payment schedule (lump sum vs.
+      instalments), delivery method, and consequences of
+      late or non-payment.
+    preferred:
+      description: >
+        Lump-sum payment within 30 days of execution. Clear
+        payment instructions (wire, certified cheque). No
+        conditions precedent to payment. Default interest on
+        late payments. Payment explicitly characterised (tax
+        treatment noted but not tax advice).
+      exemplars:
+        - "Respondent shall pay Claimant [AMOUNT] within [NUMBER] days of the Effective Date"
+        - "Payment shall be made by wire transfer to the account specified in writing"
+        - "Late payment shall accrue interest at the rate of [PERCENTAGE]% per annum"
+    acceptable:
+      description: >
+        Instalment payments over defined schedule. Reasonable
+        conditions precedent to payment (e.g., signed release).
+        Late payment triggers acceleration of remaining
+        instalments. Payment by certified cheque or electronic
+        transfer.
+      exemplars:
+        - "Respondent shall make [NUMBER] monthly payments of [AMOUNT] commencing on [DATE]"
+        - "Late payment of any instalment shall accelerate all remaining amounts due"
+        - "Payment obligations are subject to Claimant's execution and delivery of this Agreement"
+    walkaway:
+      description: >
+        No fixed payment schedule. Payment tied to future
+        uncertain events. Instalments with no acceleration
+        on default. Payment by personal cheque with no
+        dishonour protection. No interest on late payments.
+        Promissory note with no security.
+      exemplars:
+        - "Respondent shall pay Claimant within a reasonable time of resolution of the insurance claim"
+        - "Payment shall be made in [NUMBER] monthly payments without acceleration on default"
+        - "Respondent may pay by personal cheque without any security for payment"
+    default_position: "acceptable"
+
+  # ── Confidentiality / Non-Disparagement ────────────────────────
+  - id: "confidentiality-non-disparagement"
+    name: "Confidentiality / Non-Disparagement"
+    description: >
+      Confidentiality of settlement terms and existence of
+      agreement. Non-disparagement obligations on each party.
+      Permitted disclosures (legal, tax, family).
+    preferred:
+      description: >
+        Mutual confidentiality of terms and existence of
+        settlement. Mutual non-disparagement. Permitted
+        disclosures for legal, accounting, tax, and immediate
+        family members. Standard exceptions (legal process,
+        regulatory). Agreement to direct inquiries to counsel.
+      exemplars:
+        - "The terms and existence of this Agreement shall remain confidential"
+        - "Each party agrees not to disparage the other party in any manner"
+        - "Confidentiality does not apply to disclosures required by law or to professional advisors"
+    acceptable:
+      description: >
+        Mutual confidentiality of terms. Mutual non-disparagement
+        but may have limited scope. Permitted disclosures but
+        not comprehensively listed. Standard legal process
+        exception.
+      exemplars:
+        - "The parties agree to keep the terms of this Agreement strictly confidential"
+        - "Neither party shall make any negative statements about the other"
+        - "Disclosure may be made to attorneys, accountants, and immediate family members"
+    walkaway:
+      description: >
+        One-sided confidentiality (only claimant bound).
+        One-sided non-disparagement. No exceptions for legal
+        or tax disclosures. Confidentiality extends to all
+        facts underlying the dispute. Violation triggers
+        repayment of settlement with penalty.
+      exemplars:
+        - "Claimant shall not disclose the terms of this Agreement to any person"
+        - "Claimant shall not make any statement, positive or negative, about Respondent"
+        - "Breach of confidentiality shall require repayment of the full settlement amount plus a penalty"
+    default_position: "acceptable"
+
+  # ── Waiver of Unknown Claims ───────────────────────────────────
+  - id: "waiver-unknown-claims"
+    name: "Waiver of Unknown Claims"
+    description: >
+      Waiver of claims the releasing party does not yet know
+      about. Specific mention of statutory provisions (e.g.
+      California Civil Code Section 1542), advisability of
+      consulting counsel, knowing and voluntary waiver.
+    preferred:
+      description: >
+        Mutual waiver of unknown claims with explicit reference
+        to applicable statute (e.g. Cal. Civ. Code Section
+        1542). Statement that party has been advised to
+        consult counsel and does so knowingly and voluntarily.
+        Waiver limited to claims arising from the specific
+        dispute.
+      exemplars:
+        - "Each party expressly waives all rights under Section 1542 of the California Civil Code"
+        - "The parties acknowledge they have been advised to consult legal counsel before signing"
+        - "This waiver of unknown claims is limited to those arising from the facts alleged in the dispute"
+    acceptable:
+      description: >
+        Waiver of unknown claims included but without explicit
+        statutory reference. Party acknowledges they may later
+        discover additional claims. General release deemed to
+        cover unknown claims. Reasonable scope.
+      exemplars:
+        - "This release extends to claims that are unknown, unanticipated, or unsuspected"
+        - "The parties acknowledge the possibility of unknown claims and nevertheless agree to the release"
+        - "This release covers all claims of every kind that exist or may exist as of the Effective Date"
+    walkaway:
+      description: >
+        Waiver of all unknown claims with no limitation to
+        the dispute at hand. No acknowledgment of right to
+        consult counsel. Release covers future claims not yet
+        arising. No explicit statutory waiver but broad
+        "unknown" waiver that may be unenforceable.
+      exemplars:
+        - "Claimant waives any and all claims that may arise in the future"
+        - "This release applies to all claims, known or unknown, of every kind whatsoever"
+        - "Claimant represents they have not relied on any advice from Respondent regarding this waiver"
+    default_position: "acceptable"
+
+  # ── Breach Consequences ────────────────────────────────────────
+  - id: "breach-consequences"
+    name: "Breach Consequences"
+    description: >
+      Remedies for breach of the settlement agreement,
+      including acceleration, liquidated damages, repayment,
+      reinstatement of original claims, and dispute resolution
+      for breach claims.
+    preferred:
+      description: >
+        Cure period for any breach. Only material breaches
+        trigger remedies. Remedy limited to specific performance
+        or damages. No clawback of settlement amounts for
+        non-material breach. Standard dispute resolution for
+        breach claims. No liquidated damages penalty.
+      exemplars:
+        - "Claimant shall provide [NUMBER] days' written notice and opportunity to cure before claiming breach"
+        - "Remedies for breach are limited to the enforcement of the terms of this Agreement"
+        - "Breach of confidentiality shall entitle the non-breaching party to seek injunctive relief"
+    acceptable:
+      description: >
+        Accelerated payment of remaining instalments on breach.
+        Repayment of settlement amounts on material breach.
+        Reasonable liquidated damages clause. Dispute resolved
+        through designated court or arbitration. Cure period
+        for curable breaches.
+      exemplars:
+        - "Breach of any material term shall accelerate all remaining payments"
+        - "In the event of a material breach, Claimant may seek reinstatement of original claims"
+        - "Any dispute arising from this Agreement shall be resolved in [COURT/ARBITRATION]"
+    walkaway:
+      description: >
+        Full clawback of all settlement amounts on any breach,
+        even non-material. Liquidated damages that are
+        disproportionate to actual harm. No cure period. Breach
+        determined unilaterally by one party. Original claims
+        revived with accrued interest and penalties.
+      exemplars:
+        - "Any breach of this Agreement shall entitle Respondent to a full refund of all amounts paid"
+        - "Respondent may determine breach in its sole discretion and demand immediate repayment"
+        - "Upon breach, Claimant shall repay [HIGH MULTIPLE] times the settlement amount received"
+    default_position: "acceptable"
+
+  # ── Structured Payment Obligations ──────────────────────────
+  - id: "structured-payment-obligations"
+    name: "Structured Payment Obligations"
+    description: >
+      Ongoing payment obligations with defined schedules
+      (quarterly, annual), acceleration clauses, true-up
+      mechanisms, and balloon-payment protections. Distinct
+      from simple lump-sum or fixed instalment payment terms.
+    preferred:
+      description: >
+        Fixed payment schedule with regular periodic payouts
+        (quarterly or semi-annual). Clear acceleration clause
+        on material default. Annual true-up or reconciliation
+        mechanism. Payment secured by letter of credit or
+        escrow. No balloon or bullet payment at end of term.
+      exemplars:
+        - "Defendant shall make quarterly payments of [AMOUNT] for a period of [NUMBER] years commencing on [DATE]"
+        - "Upon material default, all remaining payments shall immediately accelerate and become due and payable"
+        - "Defendant shall provide a true-up calculation within 45 days after each fiscal year end"
+        - "Payment obligations shall be secured by an irrevocable letter of credit"
+    acceptable:
+      description: >
+        Defined payment schedule with quarterly or annual
+        payments. Acceleration clause present but limited
+        to specified default events. True-up or reconciliation
+        available but annually only. Payment secured by
+        parent guaranty. Reasonable balloon or final payment
+        that does not exceed twice the periodic payment.
+      exemplars:
+        - "Defendant shall make annual payments of [AMOUNT] for [NUMBER] years"
+        - "Failure to make two consecutive payments shall accelerate the remaining balance"
+        - "A final reconciliation payment shall be made within 60 days of the end of the term"
+    walkaway:
+      description: >
+        Open-ended or indefinite payment obligation with no
+        fixed schedule. Balloon payment that is disproportionate
+        to periodic amounts. No acceleration clause on default.
+        No security for payment obligations. No true-up or
+        reconciliation mechanism. Payments tied to unverifiable
+        metrics.
+      exemplars:
+        - "Defendant shall make payments from time to time as determined in Defendant's sole discretion"
+        - "A final balloon payment of [LARGE AMOUNT] shall be due at the end of the term"
+        - "Payments are based on future revenues without any verification or audit right"
+    default_position: "acceptable"
+
+  # ── Class Action Procedures ────────────────────────────────
+  - id: "class-action-procedures"
+    name: "Class Action Procedures"
+    description: >
+      Class action settlement provisions including claims
+      administrator, settlement class definition, Bar date
+      for claims, opt-out rights, and court approval process.
+    preferred:
+      description: >
+        Clearly defined settlement class with objective
+        criteria. Independent claims administrator appointed.
+        Reasonable Bar date (90+ days from notice). Bilateral
+        opt-out right with clear procedure and deadline. CAFA
+        notice provisions addressed. Court approval process
+        with fairness hearing scheduled.
+      exemplars:
+        - "The Claims Administrator shall disseminate notice to all settlement class members within 30 days"
+        - "The Bar Date for submitting claims is [DATE], which is 90 days after notice is first mailed"
+        - "Settlement class members may opt out by submitting written request to the Claims Administrator"
+        - "The settlement class is certified under Federal Rule of Civil Procedure 23(b)(3)"
+    acceptable:
+      description: >
+        Settlement class defined with reasonable clarity.
+        Claims administrator appointed. Bar date at least
+        60 days from notice. Opt-out right provided. Standard
+        CAFA-compliant notice. Court approval contemplated.
+        Reasonable allocation of notice costs.
+      exemplars:
+        - "The Class shall mean all persons who purchased [SECURITY] between [DATE] and [DATE]"
+        - "Claims must be submitted no later than [DATE]"
+        - "Class members may exclude themselves from the settlement class by [DATE]"
+    walkaway:
+      description: >
+        No claims administrator or self-administered by
+        defendant. No opt-out right or opt-out only at
+        defendant's discretion. Unreasonably short Bar date
+        (less than 30 days). Vague or overbroad class
+        definition. No court approval provision. Notice
+        costs borne entirely by class. No CAFA compliance.
+      exemplars:
+        - "Defendant shall administer all claims in its sole discretion"
+        - "No class member may opt out of this settlement"
+        - "All claims must be submitted within 14 days of the Effective Date"
+    default_position: "acceptable"
+
+  # ── Multi-Party Releases ───────────────────────────────────
+  - id: "multi-party-releases"
+    name: "Multi-Party Releases"
+    description: >
+      Release and indemnity provisions involving three or
+      more parties. Cross-indemnities, contribution rights,
+      and mutual releases among multiple signatories.
+    preferred:
+      description: >
+        Mutual releases among all parties (bilateral or
+        multilateral). Cross-indemnity obligations that are
+        reciprocal and proportionate. Clear allocation of
+        responsibility among parties. Contribution rights
+        preserved. Releases explicitly extend to related
+        entities of each party. No unknown or unnamed parties
+        benefit from release.
+      exemplars:
+        - "Each Party mutually releases the other Parties from all claims arising out of the class action"
+        - "Each Party shall indemnify the other Parties against third-party claims arising from its conduct"
+        - "Cross-indemnity obligations shall survive termination of this Agreement"
+        - "This release is mutual and reciprocal among all Parties"
+    acceptable:
+      description: >
+        Mutual releases among parties but with some
+        asymmetry. Cross-indemnities present but limited
+        to certain claims. Parallel unilateral releases
+        rather than true multilateral release. Related
+        entities included. Contribution addressed.
+      exemplars:
+        - "Plaintiff releases Defendant and Defendant releases Plaintiff from all claims"
+        - "Each Party shall indemnify the other for claims arising from its own negligence"
+        - "The release extends to each party's affiliates, subsidiaries, and officers"
+    walkaway:
+      description: >
+        One-sided release benefiting one party without
+        reciprocal obligation. Cross-indemnity is one-way.
+        Unknown or unnamed parties included as releasees.
+        Contribution rights waived. Release of future claims
+        by non-parties. No allocation of responsibility.
+      exemplars:
+        - "Plaintiff releases all Named Defendants, their affiliates, and any other person or entity"
+        - "Defendants' release of Plaintiff is limited to claims expressly listed in Exhibit A"
+        - "Plaintiff waives all rights of contribution against any released party"
+    default_position: "acceptable"
+
+  # ── Regulatory Cooperation ─────────────────────────────────
+  - id: "regulatory-cooperation"
+    name: "Regulatory Cooperation"
+    description: >
+      Cooperation obligations with regulatory authorities
+      (SEC, FTC, state AG). No-admit/no-deny language,
+      privilege preservation, document retention, and
+      scope of cooperation commitment.
+    preferred:
+      description: >
+        Narrow cooperation clause limited to document
+        production and testimony. No waiver of attorney-client
+        privilege or work product doctrine. Standard no-admit-
+        no-deny language. Cooperation limited to existing
+        investigations. No obligation to waive privilege.
+        Document retention requirement with reasonable scope.
+        Cooperation costs shared or borne by requesting party.
+      exemplars:
+        - "The Parties agree to cooperate with the Securities and Exchange Commission in its investigation"
+        - "Nothing in this Agreement constitutes an admission of liability or wrongdoing by any Party"
+        - "This Agreement does not waive any applicable privileges including attorney-client privilege"
+        - "Each Party shall preserve documents until the regulatory investigation is formally concluded"
+    acceptable:
+      description: >
+        Cooperation clause with reasonable scope. No-admit-
+        no-deny language included. Privileges preserved but
+        not explicitly listed. Document retention required.
+        Cooperation costs each party bears its own. Standard
+        regulatory boilerplate.
+      exemplars:
+        - "The Parties shall cooperate with any governmental investigation regarding the subject matter"
+        - "This settlement shall not be construed as an admission of any violation of law"
+        - "Each Party shall preserve relevant documents in accordance with its document retention policy"
+    walkaway:
+      description: >
+        Full waiver of privilege and work product protection.
+        Unconditional cooperation obligation without regard
+        to burden. No no-admit language (implied admission).
+        Open-ended cooperation extending to future unrelated
+        investigations. Cooperation costs entirely borne by
+        one party. Document preservation without limitation.
+        No right to refuse cooperation on privilege grounds.
+      exemplars:
+        - "The Parties waive any applicable privilege and agree to produce all documents requested"
+        - "The Parties shall cooperate fully with any investigation now or in the future"
+        - "This Agreement includes the Parties' acknowledgment of violations of securities laws"
+    default_position: "acceptable"

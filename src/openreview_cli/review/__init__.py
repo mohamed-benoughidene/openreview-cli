@@ -67,7 +67,9 @@ def run_review(  # noqa: PLR0912
     verbose: bool = False,
     grounding_mode: str | None = None,
     confidence_threshold: float = 0.7,
+    mode_threshold_overrides: dict[str, float] | None = None,
     mode: str = "precheck",
+    dual_path: bool = False,
 ) -> list[ReviewReport]:
     """Run the PAKTON 3-agent review pipeline on one or more documents.
 
@@ -97,6 +99,13 @@ def run_review(  # noqa: PLR0912
         Grounding mode: ``"strict"``, ``"lenient"``, or ``None`` to skip.
     confidence_threshold : float
         Threshold for Green/Amber/Red assignment (0.0-1.0). Default 0.7.
+    mode_threshold_overrides : dict[str, float] | None
+        Per-mode confidence threshold overrides, e.g. ``{"leasecheck": 0.85}``.
+        When the current mode has an override, it takes precedence over
+        *confidence_threshold*.
+    dual_path : bool
+        When ``True``, use dual-path execution: call providers in parallel
+        and return first success.  Default ``False`` (sequential).
 
     Returns
     -------
@@ -145,6 +154,7 @@ def run_review(  # noqa: PLR0912
                 no_pii=no_pii,
                 verbose=verbose,
                 confidence_threshold=confidence_threshold,
+                mode_threshold_overrides=mode_threshold_overrides,
                 mode=mode,
             )
         except Exception as exc:
@@ -200,6 +210,7 @@ def _run_review_doc_pipeline(
     no_pii: bool,
     verbose: bool,
     confidence_threshold: float,
+    mode_threshold_overrides: dict[str, float] | None = None,
     mode: str = "precheck",
 ) -> tuple[ReviewReport, list[Any]] | None:
     """Run a pipeline for a single document using the pipeline framework.
@@ -218,6 +229,7 @@ def _run_review_doc_pipeline(
         extraction_model=extraction_model,
         qa_model=qa_model,
         confidence_threshold=confidence_threshold,
+        mode_threshold_overrides=mode_threshold_overrides,
         playbook_version=playbook_version,
         verbose=verbose,
         mode=mode,

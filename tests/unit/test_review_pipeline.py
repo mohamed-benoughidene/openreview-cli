@@ -73,6 +73,7 @@ class TestRunReviewPublicAPI:
             verbose: bool,
             confidence_threshold: float,
             mode: str = "precheck",
+            mode_threshold_overrides: dict[str, float] | None = None,
         ) -> tuple[ReviewReport, list[Any]] | None:
             return (
                 ReviewReport(

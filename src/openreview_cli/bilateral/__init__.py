@@ -101,6 +101,9 @@ def run_comparison(
     confidence_threshold: float = 0.7,
     align_only: bool = False,
     grounding_mode: str | None = None,
+    comparison_model: str | None = None,
+    version_label_a: str | None = None,
+    version_label_b: str | None = None,
 ) -> ComparisonReport:
     """Run the bilateral comparison pipeline on two documents.
 
@@ -130,6 +133,12 @@ def run_comparison(
         When ``True``, only align clauses — skip extraction, QA, and comparison.
     grounding_mode : str | None
         Citation grounding mode (``"strict"``, ``"lenient"``, or ``None``).
+    comparison_model : str | None
+        Optional override for the comparison model slot. ``None`` reuses extraction model.
+    version_label_a : str | None
+        Optional version label for Party A's document (D-11).
+    version_label_b : str | None
+        Optional version label for Party B's document (D-11).
 
     Returns
     -------
@@ -205,6 +214,7 @@ def run_comparison(
                 party_b_assessment=ass_b,
                 playbook_category=category,
                 model=extraction_model,
+                comparison_model=comparison_model,
             )
             paired_assessments.append(paired)
 
@@ -227,7 +237,51 @@ def run_comparison(
         disclaimer=EXPERIMENTAL_DISCLAIMER,
     )
 
+    # ---- Phase 7: Record comparison history (D-11) ----
+    if not align_only:
+        _record_comparison_history(
+            doc_a_path,
+            doc_b_path,
+            version_label_a,
+            version_label_b,
+            report,
+        )
+
     return report
+
+
+def _record_comparison_history(
+    doc_a_path: str,
+    doc_b_path: str,
+    version_label_a: str | None,
+    version_label_b: str | None,
+    report: ComparisonReport,
+) -> None:
+    """Compute SHA-256 hashes and persist a comparison_history row."""
+    import hashlib
+    import json
+    from dataclasses import asdict
+
+    from openreview_cli.storage.database import record_comparison as _db_record
+
+    db_path = get_data_dir() / "openreview.db"
+    try:
+        hash_a = hashlib.sha256(Path(doc_a_path).read_bytes()).hexdigest()
+        hash_b = hashlib.sha256(Path(doc_b_path).read_bytes()).hexdigest()
+        _db_record(
+            db_path,
+            {
+                "contract_a_path": doc_a_path,
+                "contract_a_hash": hash_a,
+                "contract_a_version_label": version_label_a,
+                "contract_b_path": doc_b_path,
+                "contract_b_hash": hash_b,
+                "contract_b_version_label": version_label_b,
+                "result_json": json.dumps(asdict(report), default=str),
+            },
+        )
+    except Exception:
+        logger.warning("Failed to record comparison history", exc_info=True)
 
 
 def _process_document(

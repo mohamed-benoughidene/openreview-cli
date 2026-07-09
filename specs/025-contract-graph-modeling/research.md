@@ -79,18 +79,17 @@
 
 ---
 
-### 4. Why JSON Files over SQLite for Graph Persistence
+### 4. Graph Storage: JSON Default, SQLite Optional (D-59)
 
-**Decision**: Serialise graphs to JSON files. No SQLite schema changes.
+**Decision**: JSON files remain the default for graph persistence (portable, human-readable, zero migration cost). SQLite storage is available as an opt-in via `--store` flag on `graph build`, for users who need cross-contract queries, versioning, or integration with the existing SQLite layer (PII mapping, playbook versioning, gateway cost tracking).
 
 **Rationale**:
-- Graphs are computed on-demand from parsed clause lists and are cheap to regenerate (<1s for 500 nodes).
-- Persistent storage is not needed — the user can re-build the graph from the parsed contract at any time.
-- SQLite is already used for the PII mapping, playbook versioning, and gateway cost tracking. Adding graph storage would require schema migrations and complicate the database.
-- JSON files are portable, human-readable, and can be inspected or used by external tools.
-- The spec explicitly excludes persistent graph storage: "Persistence beyond JSON files (no SQLite schema changes)."
+- **JSON default unchanged**: Graphs are still serialised to JSON by default — portable, human-readable, no schema migrations, cheap to regenerate (<1s for 500 nodes).
+- **SQLite as opt-in**: New tables `graph_meta` (contract-level metadata), `graph_nodes` (per-row + position + metadata_json), `graph_edges` (per-row + type) added in migration 008. Enables cross-contract queries and versioned storage.
+- **Use cases**: SQLite storage is for users who build many graphs and want to query across them, or want versioned graph history. JSON files remain for one-off graph inspection and external tool consumption.
+- **Trade-off**: Two storage backends. The default JSON path is unchanged; SQLite adds complexity (schema migration, query interface) only for users who opt in.
 
-**Trade-off**: No query capability (e.g., "find all clauses that reference Section 4"). The spec provides the `view` command for inspection. Advanced querying is deferred.
+**Migration**: Migration `008_graph_tables.sql` uses `CREATE TABLE IF NOT EXISTS` — fully additive, no existing schema changes.
 
 ---
 

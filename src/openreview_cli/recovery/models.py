@@ -7,6 +7,7 @@ and suggestion_for().
 
 from __future__ import annotations
 
+import dataclasses
 import enum
 import time
 from dataclasses import dataclass, field
@@ -93,6 +94,59 @@ class RecoveryContext:
     # ponytail: spec-required v1 — no consumer yet; populated by pipeline runner
     # post-stage completion so recovery layer can independently track preserved data.
     saved_results: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to a JSON-compatible dict.
+
+        Round-trip lossless via ``from_dict()``.
+        """
+        return {
+            "provider_list": self.provider_list,
+            "attempted_strategies": self.attempted_strategies,
+            "current_provider_index": self.current_provider_index,
+            "retry_counts": self.retry_counts,
+            "failed_stages": self.failed_stages,
+            "completed_stages": self.completed_stages,
+            "partial_data": self.partial_data,
+            "events": [dataclasses.asdict(e) for e in self.events],
+            "degradation_action_index": self.degradation_action_index,
+            "user_privacy_tier": self.user_privacy_tier,
+            "memory_threshold_bytes": self.memory_threshold_bytes,
+            "memory_budget_bytes": self.memory_budget_bytes,
+            "saved_results": self.saved_results,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> RecoveryContext:
+        """Deserialize from a dict produced by ``to_dict()``.
+
+        Missing keys fall back to dataclass defaults.
+        """
+        events: list[RecoveryEvent] = []
+        for e in d.get("events", []):
+            e_copy = dict(e)
+            outcome_str = e_copy.pop("outcome", "resolved")
+            events.append(
+                RecoveryEvent(
+                    outcome=RecoveryOutcome(outcome_str),
+                    **e_copy,
+                )
+            )
+        return cls(
+            provider_list=d.get("provider_list", []),
+            attempted_strategies=d.get("attempted_strategies", []),
+            current_provider_index=d.get("current_provider_index", 0),
+            retry_counts=d.get("retry_counts", {}),
+            failed_stages=d.get("failed_stages", []),
+            completed_stages=d.get("completed_stages", []),
+            partial_data=d.get("partial_data", {}),
+            events=events,
+            degradation_action_index=d.get("degradation_action_index", 0),
+            user_privacy_tier=d.get("user_privacy_tier", PRIVACY_TIER_STRICT),
+            memory_threshold_bytes=d.get("memory_threshold_bytes", 83_886_080),
+            memory_budget_bytes=d.get("memory_budget_bytes", 104_857_600),
+            saved_results=d.get("saved_results", {}),
+        )
 
 
 @dataclass

@@ -1,10 +1,13 @@
 """BenchmarkRunner — orchestrates dataset loading → pipeline → metric computation."""
 
+import asyncio
+import contextlib
 import time
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
+from openreview_cli.benchmark.hallu_detect import HallucinationDetector
 from openreview_cli.benchmark.memory import MemoryProfiler
 from openreview_cli.benchmark.metrics import (
     avg_latency,
@@ -32,10 +35,15 @@ class BenchmarkRunner:
         config: BenchmarkConfig,
         fixtures_root: str | Path | None = None,
         cache_dir: str | Path | None = None,
+        detector: HallucinationDetector
+        | None = None,  # ponytail: wired for D-7, not yet consumed by runner methods
+        pipeline: Any | None = None,  # ponytail: D-23 pipeline delegation
     ) -> None:
         self.config = config
         self.fixtures_root = Path(fixtures_root) if fixtures_root else Path.cwd()
         self.cache_dir = Path(cache_dir) if cache_dir else None
+        self.detector = detector
+        self._pipeline = pipeline
         self.memory_profiler = MemoryProfiler()
 
     def run_pii(self, detect_fn: Callable[[str], list[dict[str, str]]]) -> DatasetResult:
@@ -63,7 +71,7 @@ class BenchmarkRunner:
             metrics=metrics,
         )
 
-    def run_dataset(
+    def run_dataset(  # noqa: PLR0912
         self,
         dataset_name: str,
         pipeline_fn: PipelineFn,
@@ -82,7 +90,10 @@ class BenchmarkRunner:
             category = item.get("category", "unknown")
 
             start = time.monotonic()
-            prediction = pipeline_fn(text, category)
+            if self._pipeline is not None:
+                prediction = self._run_pipeline_for_item(text, category)
+            else:
+                prediction = pipeline_fn(text, category)
             elapsed = int((time.monotonic() - start) * 1000)
             latencies.append(elapsed)
 
@@ -158,6 +169,18 @@ class BenchmarkRunner:
             n_examples=len(data_items),
             metrics=metrics,
         )
+
+    def _run_pipeline_for_item(self, text: str, category: str) -> dict[str, Any]:
+        """Delegate per-item processing to the configured pipeline."""
+        from openreview_cli.pipeline.runner import (
+            Pipeline,  # noqa: TC001 — local import avoids circular dep
+        )
+
+        pipeline: Pipeline = self._pipeline  # type: ignore[assignment]
+        ctx: dict[str, Any] = {"text": text, "category": category}
+        with contextlib.suppress(Exception):
+            asyncio.run(pipeline.run(ctx))
+        return cast("dict[str, Any]", ctx.get("prediction", {}))
 
     def _load_dataset(self, name: str) -> list[dict[str, Any]]:
         """Load dataset items by name."""
