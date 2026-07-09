@@ -73,7 +73,10 @@ class TestL4CCLI:
     def test_subcommand_has_no_pii_flag(self, mode: str) -> None:
         result = runner.invoke(app, [mode, "--help"])
         assert result.exit_code == 0
-        assert "--no-pii" in result.stdout
+        # Rich wraps option names in ANSI sequences under GITHUB_ACTIONS=true,
+        # splitting " —no-pii" across segments. The help text column is plain
+        # text, so "Skip PII stripping" always works as a fallback.
+        assert "--no-pii" in result.stdout or "Skip PII stripping" in result.stdout
 
     @pytest.mark.parametrize(("mode", "keyword"), [(m, MODE_META[m][2]) for m in L4C_MODES])
     def test_subcommand_help_text(self, mode: str, keyword: str) -> None:
