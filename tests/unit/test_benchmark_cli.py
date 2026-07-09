@@ -6,6 +6,7 @@ through the benchmark run CLI command.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -16,6 +17,11 @@ from openreview_cli.benchmark.cli import benchmark_app
 from openreview_cli.benchmark.models import DatasetResult
 
 FIXTURES = Path(__file__).resolve().parent.parent.parent / "fixtures"
+
+
+def _strip_ansi(text: str) -> str:
+    """Remove ANSI escape sequences from text, e.g. Rich/Typer coloring in CI."""
+    return re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", text)
 
 
 @pytest.fixture
@@ -87,7 +93,7 @@ class TestHallucinationMethodCli:
         """--hallucination-method should appear in --help output."""
         result = cli_runner.invoke(benchmark_app, ["run", "--help"])
         assert result.exit_code == 0
-        assert "--hallucination-method" in result.stdout
+        assert "--hallucination-method" in _strip_ansi(result.output)
 
     def test_invalid_value_rejected(self, cli_runner: CliRunner) -> None:
         """Invalid value 'foo' should exit with code 78."""
