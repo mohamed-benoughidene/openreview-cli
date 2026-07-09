@@ -1,0 +1,208 @@
+# Bundled Distribution Playbook — DistroCheck Mode v1
+# Covers standard distribution/reseller agreement categories for
+# single-party review from the distributor's perspective.
+# Users may override with --playbook <path>.
+
+id: "distribution-v1"
+mode: "distrocheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Bundled distribution playbook for DistroCheck mode. Covers
+    common distribution and reseller agreement clause categories:
+    territory definition and exclusivity, minimum purchase
+    requirements and cure periods, pricing/payment/inventory terms,
+    IP license (manufacturer's trademarks), and termination
+    rights/non-compete/channel restrictions.
+  author: "openreview"
+
+categories:
+  # ── Territory Definition and Exclusivity ──────────────────────
+  - id: "territory-exclusivity"
+    name: "Territory Definition and Exclusivity"
+    description: >
+      Geographic territory granted to distributor, exclusivity of
+      rights, and restrictions on manufacturer's ability to sell
+      in the territory.
+    preferred:
+      description: >
+        Exclusive territory with clear geographic boundaries. No
+        manufacturer direct sales or other distributors in the
+        territory. Right of first refusal on expanded territory.
+      exemplars:
+        - "Distributor is granted the exclusive right to distribute Products in [TERRITORY]"
+        - "Manufacturer shall not appoint another distributor or sell directly in the territory"
+        - "Distributor has the right of first refusal if Manufacturer expands the product line"
+    acceptable:
+      description: >
+        Defined territory with standard exclusivity. Manufacturer
+        may retain rights for certain channels (key accounts,
+        online). Non-exclusive with territory protection.
+      exemplars:
+        - "Distributor shall have the exclusive right to distribute Products in [GEOGRAPHIC AREA]"
+        - "Manufacturer reserves the right to sell to national accounts located in the territory"
+        - "The territory is exclusive subject to Manufacturer's retained channel rights"
+    walkaway:
+      description: >
+        No defined territory or exclusivity. Manufacturer may
+        appoint unlimited distributors in same area. No
+        protection against direct sales. Territory can be
+        modified unilaterally.
+      exemplars:
+        - "The territory is non-exclusive and Manufacturer may appoint other distributors"
+        - "Manufacturer may modify the territory at any time without Distributor's consent"
+        - "Distributor has no territorial exclusivity of any kind"
+    default_position: "acceptable"
+
+  # ── Minimum Purchase Requirements and Cure Periods ────────────
+  - id: "minimum-purchase"
+    name: "Minimum Purchase Requirements and Cure Periods"
+    description: >
+      Minimum purchase obligations, cure periods for shortfall,
+      consequences of failing to meet minimums, and market
+      adjustment mechanisms.
+    preferred:
+      description: >
+        Reasonable minimum purchase requirements with market-based
+        adjustment. 60+ day cure period. Failure results in
+        conversion to non-exclusive, not termination. Minimums
+        that decrease or remain flat in slow markets.
+      exemplars:
+        - "Minimum purchase of [AMOUNT] per calendar year with [NUMBER]% annual growth cap"
+        - "If Distributor fails to meet the minimum, Manufacturer shall provide [NUMBER] days' written notice and a cure period"
+        - "Minimum purchase amounts may be adjusted based on market conditions by mutual agreement"
+    acceptable:
+      description: >
+        Standard minimum purchase with reasonable cure period.
+        Failure triggers renegotiation or conversion to
+        non-exclusive. Minimums adjust with market.
+      exemplars:
+        - "Distributor shall purchase a minimum of [AMOUNT] of Products per year"
+        - "If the minimum is not met, the parties shall discuss in good faith adjustments to the territory or minimums"
+        - "Failure to meet the minimum for two consecutive quarters may result in loss of exclusivity"
+    walkaway:
+      description: >
+        Unreasonably high minimums that increase without market
+        adjustment. No cure period. Immediate termination for
+        shortfall. Minimums that increase automatically by a
+        fixed percentage regardless of market conditions.
+      exemplars:
+        - "Minimum purchase increases [PERCENTAGE]% annually regardless of market conditions"
+        - "Failure to meet the minimum purchase for any quarter results in immediate termination"
+        - "Distributor guarantees minimum purchases regardless of economic conditions or product availability"
+    default_position: "acceptable"
+
+  # ── Pricing, Payment, and Inventory Terms ─────────────────────
+  - id: "pricing-inventory"
+    name: "Pricing, Payment, and Inventory Terms"
+    description: >
+      Wholesale pricing, payment terms, inventory management,
+      returns policy, and price change provisions.
+    preferred:
+      description: >
+        Competitive wholesale pricing with most-favored-distributor
+        protection. Net-60 payment terms. Right to return
+        unsold inventory within 90 days. Price increases capped
+        at 10% annually with 60 days notice.
+      exemplars:
+        - "Products shall be sold at Manufacturer's wholesale price list, with most-favored-distributor pricing"
+        - "Payment terms are net [NUMBER] days from invoice date"
+        - "Distributor may return up to [PERCENTAGE]% of inventory within [NUMBER] days of receipt"
+    acceptable:
+      description: >
+        Standard wholesale pricing. Net-30 payment terms. Limited
+        return rights. Price changes with 30 days notice.
+      exemplars:
+        - "Products shall be sold at Manufacturer's then-current wholesale price"
+        - "All invoices are due within [NUMBER] days of receipt"
+        - "Manufacturer may change prices upon [NUMBER] days' written notice"
+    walkaway:
+      description: >
+        No price protection or most-favored pricing. Immediate
+        price increases with no notice. No return rights.
+        Distributor bears all inventory risk. Unilateral price
+        changes at any time.
+      exemplars:
+        - "Manufacturer may change prices at any time without notice"
+        - "All inventory purchases are final and non-returnable"
+        - "Distributor bears all risk of loss for inventory from the time of shipment"
+    default_position: "acceptable"
+
+  # ── IP License (Manufacturer's Trademarks) ────────────────────
+  - id: "ip-license"
+    name: "IP License (Manufacturer's Trademarks)"
+    description: >
+      License to use manufacturer's trademarks in connection with
+      distribution, quality control standards, and termination
+      of license rights.
+    preferred:
+      description: >
+        Non-exclusive, royalty-free license to use manufacturer's
+        marks for marketing and sale. Reasonable quality control.
+        License continues post-termination for sell-off period.
+        No restrictions on distributor's own branding.
+      exemplars:
+        - "Manufacturer grants Distributor a non-exclusive, royalty-free license to use its trademarks for distribution"
+        - "Distributor may use Manufacturer's marks in marketing materials subject to reasonable quality standards"
+        - "The license shall survive termination for [NUMBER] days to allow sell-off of existing inventory"
+    acceptable:
+      description: >
+        Standard trademark license for distribution purposes.
+        Quality control standards. License terminates with
+        agreement.
+      exemplars:
+        - "Distributor is granted a limited license to use Manufacturer's trademarks solely in connection with the Products"
+        - "Distributor shall submit marketing materials incorporating Manufacturer's marks for approval"
+        - "The license shall terminate upon termination or expiration of this Agreement"
+    walkaway:
+      description: >
+        No trademark license or very restrictive terms.
+        Manufacturer can revoke license at any time. Distributor
+        cannot use manufacturer's name in any marketing.
+        Unilateral quality standards that can change at any time.
+      exemplars:
+        - "No license of any intellectual property is granted under this Agreement"
+        - "Distributor shall not use Manufacturer's name or marks in any advertising without prior written approval"
+        - "Manufacturer may revoke the trademark license at any time for any reason"
+    default_position: "acceptable"
+
+  # ── Termination Rights, Non-Compete, and Channel Restrictions ─
+  - id: "termination-noncompete"
+    name: "Termination Rights, Non-Compete, and Channel Restrictions"
+    description: >
+      Grounds for termination, notice periods, post-termination
+      obligations, non-compete restrictions, and channel
+      limitations.
+    preferred:
+      description: >
+        Mutual termination for cause with cure period. Termination
+        for convenience by either party with 60 days notice.
+        Limited non-compete restricted to territory and product
+        line during term only. No post-term restrictions.
+        Sell-off period for inventory.
+      exemplars:
+        - "Either party may terminate this Agreement for material breach with [NUMBER] days' cure period"
+        - "Either party may terminate for convenience upon [NUMBER] days' written notice"
+        - "Distributor may sell remaining inventory for [NUMBER] days following termination"
+    acceptable:
+      description: >
+        Termination for cause with standard cure period.
+        Manufacturer may terminate without cause with notice.
+        Non-compete limited to territory during term and
+        reasonable post-term period. Sell-off rights.
+      exemplars:
+        - "Manufacturer may terminate without cause upon [NUMBER] days' written notice"
+        - "Non-compete applies during the term and for [NUMBER] months after termination"
+        - "Upon termination, Distributor shall return all inventory at Manufacturer's expense"
+    walkaway:
+      description: >
+        Manufacturer-only termination rights. No cure period.
+        Broad non-compete covering unlimited geography or product
+        lines. Post-term non-compete exceeding 1 year. No sell-off
+        period for existing inventory. Distributor bears cost of
+        returned inventory.
+      exemplars:
+        - "Manufacturer may terminate this Agreement at any time without cause"
+        - "Distributor shall not handle any competing products anywhere in the world during the term and for [NUMBER] years after"
+        - "Upon termination, Distributor shall destroy all inventory at its own expense"
+    default_position: "acceptable"

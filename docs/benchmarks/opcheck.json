@@ -1,0 +1,12 @@
+{
+  "mode_key": "opcheck",
+  "display_name": "OpCheck",
+  "fixture": "tests/fixtures/pdf/opcheck-operating-agreement-v1.pdf",
+  "expected_assessment": {
+    "overall": "AMBER"
+  },
+  "time_budget_s": 30,
+  "pii_time_budget_s": 3,
+  "page_count": 5,
+  "mode_specific": {}
+}

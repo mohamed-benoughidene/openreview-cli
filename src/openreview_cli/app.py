@@ -2400,6 +2400,36 @@ _register_product_mode(
     help_text="Review a loan agreement/promissory note with LoanCheck.",
     path_help="Path to a loan agreement or promissory note (PDF or DOCX).",
 )
+_register_product_mode(
+    app,
+    name="franchisecheck",
+    help_text="Review a franchise agreement or franchise disclosure document.",
+    path_help="Path to a franchise agreement or FDD (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="opcheck",
+    help_text="Review an Operating Agreement (LLC governance document).",
+    path_help="Path to an operating agreement (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="partnercheck",
+    help_text="Review a general or limited partnership agreement.",
+    path_help="Path to a partnership agreement (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="sponsorcheck",
+    help_text="Review a sponsorship agreement.",
+    path_help="Path to a sponsorship agreement (PDF or DOCX).",
+)
+_register_product_mode(
+    app,
+    name="distrocheck",
+    help_text="Review a distribution or reseller agreement.",
+    path_help="Path to a distribution agreement (PDF or DOCX).",
+)
 
 
 # ── Shared product review logic ─────────────────────────────────────────────

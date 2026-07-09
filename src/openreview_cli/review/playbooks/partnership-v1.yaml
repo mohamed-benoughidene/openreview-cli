@@ -1,0 +1,205 @@
+# Bundled Partnership Playbook — PartnerCheck Mode v1
+# Covers standard partnership agreement categories for single-party
+# review from a partner's perspective.
+# Users may override with --playbook <path>.
+
+id: "partnership-v1"
+mode: "partnercheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Bundled partnership playbook for PartnerCheck mode. Covers
+    common partnership agreement clause categories: capital
+    contributions and profit/loss allocation, management authority
+    and decision-making, withdrawal/expulsion/dissolution, liability
+    allocation and indemnification, and dispute resolution.
+  author: "openreview"
+
+categories:
+  # ── Capital Contributions and Profit/Loss Allocation ──────────
+  - id: "capital-profit-loss"
+    name: "Capital Contributions and Profit/Loss Allocation"
+    description: >
+      Initial and additional capital contributions, how profits
+      and losses are allocated among partners, and distribution
+      policies.
+    preferred:
+      description: >
+        Proportional capital contributions with clear payment
+        schedule. Profits and losses allocated in proportion to
+        capital contribution or percentage interest. Annual
+        distributions. Additional contributions require unanimous
+        consent.
+      exemplars:
+        - "Each Partner shall contribute [AMOUNT] as initial capital"
+        - "Net profits and losses shall be allocated in proportion to each Partner's percentage interest"
+        - "Distributions shall be made at least annually"
+    acceptable:
+      description: >
+        Defined contributions with reasonable allocation ratios.
+        Standard profit/loss allocation. Additional contributions
+        permitted with partner approval.
+      exemplars:
+        - "Initial capital contributions are as set forth on Schedule [X]"
+        - "Profits and losses shall be allocated according to each Partner's ownership percentage"
+        - "Additional capital may be called upon a majority vote of the Partners"
+    walkaway:
+      description: >
+        Disproportionate allocation of losses to some partners.
+        Unlimited additional capital calls at managing partner's
+        discretion. No distribution obligation. Allocation that
+        violates partnership tax rules.
+      exemplars:
+        - "The Managing Partner may determine profit and loss allocations in its sole discretion"
+        - "Losses shall be allocated to certain Partners disproportionately to their capital contribution"
+        - "No distributions shall be made unless the Managing Partner determines"
+    default_position: "acceptable"
+
+  # ── Management Authority and Decision-Making ──────────────────
+  - id: "management-authority"
+    name: "Management Authority and Decision-Making"
+    description: >
+      Management structure, decision-making authority, ordinary
+      vs. extraordinary decisions, and partner voting rights.
+    preferred:
+      description: >
+        Equal management authority for all general partners.
+        Ordinary decisions by majority vote. Extraordinary
+        decisions (new partners, dissolution, amendment) require
+        unanimous consent. Clear delegation of authority.
+      exemplars:
+        - "Each General Partner has equal management authority"
+        - "Decisions in the ordinary course of business require a majority vote of the Partners"
+        - "Extraordinary decisions, including admission of new Partners, require unanimous consent"
+    acceptable:
+      description: >
+        Defined management structure with partner input on major
+        decisions. Supermajority vote for extraordinary decisions.
+        Managing partner has bounded authority.
+      exemplars:
+        - "The Managing Partner shall have authority over day-to-day operations"
+        - "Major decisions require the consent of Partners holding at least [PERCENTAGE]% of interests"
+        - "Any Partner may bind the Partnership in the ordinary course of business"
+    walkaway:
+      description: >
+        One partner has all decision-making authority with no
+        partner input. Partners can be bound without consent.
+        No list of extraordinary decisions requiring partner
+        approval. Unilateral amendment power.
+      exemplars:
+        - "The Managing Partner has sole and absolute authority over all Partnership decisions"
+        - "This Agreement may be amended by the Managing Partner without Partner consent"
+        - "Partners have no right to participate in management decisions"
+    default_position: "acceptable"
+
+  # ── Withdrawal, Expulsion, and Dissolution ────────────────────
+  - id: "withdrawal-expulsion-dissolution"
+    name: "Withdrawal, Expulsion, and Dissolution"
+    description: >
+      Conditions for partner withdrawal, expulsion procedures,
+      dissolution triggers, and distribution of assets upon
+      dissolution.
+    preferred:
+      description: >
+        Partner may withdraw upon reasonable notice (30-60 days).
+        Expulsion only for cause with unanimous vote. Dissolution
+        by unanimous consent. Returning partner receives capital
+        account balance within a reasonable time.
+      exemplars:
+        - "A Partner may withdraw upon [NUMBER] days' written notice"
+        - "A Partner may be expelled for cause by unanimous vote of the remaining Partners"
+        - "The Partnership may be dissolved by unanimous consent of all Partners"
+    acceptable:
+      description: >
+        Standard withdrawal terms with notice period. Expulsion
+        for cause with defined process. Dissolution upon events
+        specified. Reasonable buyout terms.
+      exemplars:
+        - "A withdrawing Partner shall receive their capital account balance within [NUMBER] days"
+        - "Expulsion requires a vote of Partners holding [PERCENTAGE]% of the interests"
+        - "The Partnership shall dissolve upon the occurrence of any event specified in this Agreement"
+    walkaway:
+      description: >
+        No right to withdraw or unreasonable penalties. Expulsion
+        without cause or process. Dissolution at one partner's
+        sole discretion. Forfeiture of capital on withdrawal.
+      exemplars:
+        - "A Partner may not withdraw from the Partnership for any reason"
+        - "A Partner may be expelled at any time by a majority vote without cause"
+        - "Upon withdrawal, a Partner forfeits all rights to capital and profits"
+    default_position: "acceptable"
+
+  # ── Liability Allocation and Indemnification ──────────────────
+  - id: "liability-indemnification"
+    name: "Liability Allocation and Indemnification"
+    description: >
+      Partner liability for partnership debts, indemnification
+      obligations, and whether liability is joint and several
+      or several only.
+    preferred:
+      description: >
+        Several liability only (each partner liable for their
+        share). Mutual indemnification for actions in good faith.
+        Partnership maintains adequate insurance. Clear limits
+        on personal liability exposure.
+      exemplars:
+        - "Each Partner shall be liable only for their proportionate share of Partnership debts"
+        - "The Partnership shall indemnify each Partner for actions taken in good faith on behalf of the Partnership"
+        - "The Partnership shall maintain general liability insurance of at least [AMOUNT]"
+    acceptable:
+      description: >
+        Standard joint and several liability for general partners.
+        Indemnification for good faith actions. Partnership carries
+        insurance.
+      exemplars:
+        - "Each General Partner shall be jointly and severally liable for Partnership obligations"
+        - "Partners shall be indemnified for acts within the scope of Partnership business"
+        - "The Partnership shall obtain and maintain reasonable insurance coverage"
+    walkaway:
+      description: >
+        Unlimited joint and several personal liability with no
+        indemnification. No insurance requirement. Partners
+        personally liable for other partners' misconduct.
+        One-sided indemnification against certain partners.
+      exemplars:
+        - "Each Partner is personally and unconditionally liable for all Partnership debts"
+        - "No Partner shall be entitled to indemnification from the Partnership"
+        - "Certain Partners agree to indemnify the Partnership against all losses, regardless of fault"
+    default_position: "acceptable"
+
+  # ── Dispute Resolution ────────────────────────────────────────
+  - id: "dispute-resolution"
+    name: "Dispute Resolution"
+    description: >
+      Mechanisms for resolving partner disputes including
+      mediation, arbitration, litigation, governing law,
+      and jurisdiction.
+    preferred:
+      description: >
+        Multi-step dispute resolution: negotiation, then mediation,
+        then binding arbitration. Neutral venue and governing law.
+        Prevailing party entitled to legal costs.
+      exemplars:
+        - "Any dispute shall first be resolved through negotiation, then mediation, then binding arbitration"
+        - "Mediation shall be conducted under the rules of [ORGANIZATION]"
+        - "The prevailing party shall be entitled to recover its reasonable legal fees"
+    acceptable:
+      description: >
+        Standard dispute resolution clause with mediation and
+        arbitration or litigation. Neutral jurisdiction. Each
+        party bears own costs.
+      exemplars:
+        - "Disputes arising under this Agreement shall be resolved by binding arbitration in [CITY]"
+        - "Either party may seek injunctive relief in any court of competent jurisdiction"
+        - "Each party shall bear its own legal costs"
+    walkaway:
+      description: >
+        No dispute resolution mechanism. One-side venue or
+        governing law. Waiver of jury trial or class action
+        without mutual agreement. Arbitration required but
+        costs prohibitively allocated.
+      exemplars:
+        - "All disputes shall be resolved in [PARTNER'S HOME JURISDICTION]"
+        - "Partners waive any right to a jury trial"
+        - "The party initiating arbitration shall bear all costs regardless of outcome"
+    default_position: "acceptable"

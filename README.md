@@ -28,13 +28,15 @@ adapters for parse/strip/chunk/retrieve/generate), and single-party contract
 review (PAKTON 3-agent pipeline: extraction, QA
 verification, report formatting), citation grounding discriminator
 (post-hoc claim verification with strict/lenient modes, CG metrics, JSONL audit trail),
-and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), playbook versioning (database storage with version tracking, position rename to preferred/acceptable/walkaway with backward compatibility, version-stamped reviews), experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status, error recovery framework (5 strategies: auto-retry, provider fallback, graceful degradation, stage isolation, user-guided recovery; coordinator orchestrates strategy chains, pipeline integration with pre-stage memory check and post-stage failure handling), **privacy tier routing with three tiers (Maximum all-local, Balanced local embeddings + cloud reasoning, Performance cloud with PII stripped), TierRouter enforcement layer with PII fail-closed, and memo export for review results (Markdown, JSON, DOCX formats with color-coded clauses, confidence scores, citation provenance, citation relevance/locality metrics, and playbook metadata), contract graph modeling (directed clause graph, 0–100 heuristic health score, tree view), and game-theoretic negotiation assistant (Nash/QRE/Level-k solvers for modeling counterparty behavior, advisory Amber-confidence output), and **17 product-mode subcommands** — PreCheck (NDA), LicenseCheck, LeaseCheck, PrivacyCheck, DealCheck, HireCheck, IndemnityCheck, ConsultCheck, WorkCheck, LOICheck, SubCheck, SettlementCheck, AssetCheck, BuyCheck, EngageCheck, GuaranteeCheck, and LoanCheck — each with a bundled 3-position playbook, mode-specific prompt vocabulary, full CLI wiring, and memo export support.**
+and three-color output with confidence scores (Green/Amber/Red with `--confidence-threshold` flag), playbook versioning (database storage with version tracking, position rename to preferred/acceptable/walkaway with backward compatibility, version-stamped reviews), experimental bilateral comparison (`openreview precheck compare`) with RCBSF 5-dimension divergence detection and paired three-color status, error recovery framework (5 strategies: auto-retry, provider fallback, graceful degradation, stage isolation, user-guided recovery; coordinator orchestrates strategy chains, pipeline integration with pre-stage memory check and post-stage failure handling), **privacy tier routing with three tiers (Maximum all-local, Balanced local embeddings + cloud reasoning, Performance cloud with PII stripped), TierRouter enforcement layer with PII fail-closed, and memo export for review results (Markdown, JSON, DOCX formats with color-coded clauses, confidence scores, citation provenance, citation relevance/locality metrics, and playbook metadata), contract graph modeling (directed clause graph, 0–100 heuristic health score, tree view), and game-theoretic negotiation assistant (Nash/QRE/Level-k solvers for modeling counterparty behavior, advisory Amber-confidence output), and **22 product-mode subcommands** — PreCheck (NDA), LicenseCheck, LeaseCheck, PrivacyCheck, DealCheck, HireCheck, IndemnityCheck, ConsultCheck, WorkCheck, LOICheck, SubCheck, SettlementCheck, AssetCheck, BuyCheck, EngageCheck, GuaranteeCheck, LoanCheck, FranchiseCheck, OpCheck, PartnerCheck, SponsorCheck, and DistroCheck — each with a bundled 3-position playbook, mode-specific prompt vocabulary, full CLI wiring, and memo export support.**
 The package is not yet on PyPI. APIs and the underlying spec are preliminary and
 will change.
 
-**Spec 029 — Product modes Batch 2:** 5 new modes (AssetCheck, BuyCheck, EngageCheck, GuaranteeCheck, LoanCheck) shipped alongside 9 previously-orphaned modes from specs 027/028, bringing the total to 17 product-mode subcommands. Each mode has a bundled 3-position playbook, mode-specific prompt vocabulary, and full CLI wiring.
+**Spec 029 — Product modes Batch 2:** 5 new modes (AssetCheck, BuyCheck, EngageCheck, GuaranteeCheck, LoanCheck) shipped alongside 9 previously-orphaned modes from specs 027/028. Each mode has a bundled 3-position playbook, mode-specific prompt vocabulary, and full CLI wiring.
 
-**Spec 030 — Benchmark mode validation:** `openreview benchmark run --modes` now validates against a whitelist of the 17 product modes, rejecting unknown modes with exit code 78. New `openreview benchmark baseline` subcommand produces accuracy baselines across modes and datasets with mock/live provider support. 9 orphan E2E tests added for mode validation coverage.
+**Spec 030 — Benchmark mode validation:** `openreview benchmark run --modes` now validates against a whitelist of the 22 product modes, rejecting unknown modes with exit code 78. New `openreview benchmark baseline` subcommand produces accuracy baselines across modes and datasets with mock/live provider support. 9 orphan E2E tests added for mode validation coverage.
+
+**Spec 031 — Product modes Batch 3 (L-4c):** 5 new modes (FranchiseCheck, OpCheck, PartnerCheck, SponsorCheck, DistroCheck) shipped as the final product-mode batch, bringing the total to 22 product-mode subcommands. All 22 modes have bundled 3-position playbooks, mode-specific prompt vocabulary, and full CLI wiring.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
@@ -226,7 +228,7 @@ uv run openreview --version
 |-----------------------------------------------------|--------------------------------------------|
 | `src/openreview_cli/__init__.py`                    | Exposes `__version__`                      |
 | `src/openreview_cli/__main__.py`                    | Entry point: `python -m openreview_cli`    |
-| `src/openreview_cli/app.py`                         | Typer app — 32 top-level commands: `parse`, `chunk`, `ingest`, `retrieve`, `index-status`, `index-clear`, `negotiate`, `precheck`, `licensecheck`, `leasecheck`, `privacycheck`, `dealcheck`, `hirecheck`, `indemnitycheck`, `consultcheck`, `workcheck`, `loicheck`, `subcheck`, `settlementcheck`, `assetcheck`, `buycheck`, `engagecheck`, `guaranteecheck`, `loancheck`, `client`, `config`, `pii`, `playbook`, `gateway`, `graph`, `benchmark`, `prompt` |
+| `src/openreview_cli/app.py`                         | Typer app — 37 top-level commands: `parse`, `chunk`, `ingest`, `retrieve`, `index-status`, `index-clear`, `negotiate`, `precheck`, `licensecheck`, `leasecheck`, `privacycheck`, `dealcheck`, `hirecheck`, `indemnitycheck`, `consultcheck`, `workcheck`, `loicheck`, `subcheck`, `settlementcheck`, `assetcheck`, `buycheck`, `engagecheck`, `guaranteecheck`, `loancheck`, `franchisecheck`, `opcheck`, `partnercheck`, `sponsorcheck`, `distrocheck`, `client`, `config`, `pii`, `playbook`, `gateway`, `graph`, `benchmark`, `prompt` |
 | `src/openreview_cli/config/paths.py`                | platformdirs paths (config, data, log)     |
 | `src/openreview_cli/config/loader.py`               | Pydantic model, YAML r/w, env merge        |
 | `src/openreview_cli/config/auth.py`                 | `auth.json` handler, chmod 600             |
@@ -369,6 +371,11 @@ openreview buycheck contract.pdf           # Asset purchase agreement review
 openreview engagecheck contract.pdf        # Engagement letter review
 openreview guaranteecheck contract.pdf     # Personal guarantee review
 openreview loancheck contract.pdf          # Loan agreement review
+openreview franchisecheck contract.pdf     # Franchise agreement review
+openreview opcheck contract.pdf            # Operating agreement review
+openreview partnercheck contract.pdf       # Partnership agreement review
+openreview sponsorcheck contract.pdf       # Sponsorship agreement review
+openreview distrocheck contract.pdf        # Distribution agreement review
 openreview licensecheck review contract.pdf          # Full PAKTON pipeline for SaaS license review
 openreview privacycheck review --memo-format md contract.pdf  # PrivacyCheck with memo export
 openreview precheck --no-pii contract.pdf  # Skip PII stripping
@@ -469,7 +476,7 @@ openreview benchmark                              # Smoke test (CUAD, default sl
 openreview benchmark --datasets cuad,maud --slots default,fast  # Multi-dataset
 openreview benchmark --all --ci --compare HEAD~1  # CI regression gate
 openreview benchmark --pii-only                   # PII recall/precision only
-openreview benchmark run --modes precheck,dealcheck              # Validate modes against 17-mode whitelist
+openreview benchmark run --modes precheck,dealcheck              # Validate modes against 22-mode whitelist
 openreview benchmark run --modes invalid_mode                    # Error: exit 78, lists valid modes
 openreview benchmark baseline --modes precheck,licensecheck      # Accuracy baseline (mock provider, CI-safe)
 openreview benchmark baseline --modes precheck --provider live   # Real provider baseline (requires configured AI gateway)
@@ -519,6 +526,11 @@ openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 | `openreview engagecheck <path>`        | Engagement letter review (EngageCheck) |
 | `openreview guaranteecheck <path>`     | Personal guarantee review (GuaranteeCheck) |
 | `openreview loancheck <path>`          | Loan agreement review (LoanCheck) |
+| `openreview franchisecheck <path>`     | Franchise agreement review (FranchiseCheck) |
+| `openreview opcheck <path>`            | Operating agreement review (OpCheck) |
+| `openreview partnercheck <path>`       | Partnership agreement review (PartnerCheck) |
+| `openreview sponsorcheck <path>`       | Sponsorship agreement review (SponsorCheck) |
+| `openreview distrocheck <path>`        | Distribution agreement review (DistroCheck) |
 | `openreview precheck --no-pii <path>`  | NDA review, skip PII (raw text in output)  |
 | `openreview precheck review <paths...>`| PAKTON 3-agent review (extraction + QA + report) against a playbook |
 | `openreview precheck review --playbook <id> <paths>` | Review with the latest version of a database-stored playbook (version-stamped report) |
@@ -595,7 +607,7 @@ openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 | `openreview graph view <graph>`           | Render the clause hierarchy as an indented ASCII tree |
 | `openreview benchmark`                    | Run automated evaluation (CUAD/MAUD/ContractNLI) |
 | `openreview benchmark --datasets cuad,maud` | Evaluate specific datasets                   |
-| `openreview benchmark run --modes precheck,dealcheck` | Run benchmark for specific modes (validated against 17-mode whitelist) |
+| `openreview benchmark run --modes precheck,dealcheck` | Run benchmark for specific modes (validated against 22-mode whitelist) |
 | `openreview benchmark --slots default,fast` | Compare model slots                          |
 | `openreview benchmark --all --ci`          | Full CI regression gate (strict exit codes)   |
 | `openreview benchmark --compare HEAD~1`    | Compare against a baseline ref               |
@@ -726,7 +738,7 @@ openreview benchmark --all --ci --compare HEAD~1
 
 ### Product mode benchmark script
 
-A standalone benchmark for all 17 product-mode pipelines:
+A standalone benchmark for all 22 product-mode pipelines:
 
 ```bash
 uv run python scripts/benchmark_product_modes.py
@@ -757,7 +769,7 @@ Deterministic oracle run (monkeypatched gateway — tests pipeline correctness, 
 | guaranteecheck | 5 | 10 | 10 | 1.0 | 0.89 | 96 KB |
 | loancheck | 5 | 10 | 10 | 1.0 | 0.94 | 98 KB |
 
-Note: IndemnityCheck 30.65s includes PyMuPDF module warmup; real per-doc time ~0.6s. All 14 modes use a mocked AI gateway — measures pipeline correctness, not live model accuracy. AssetCheck, BuyCheck, EngageCheck, GuaranteeCheck, and LoanCheck added in spec 029. Spec 030 added mode whitelist validation to the benchmark CLI (unknown mode → exit 78) and the `benchmark baseline` subcommand.
+Note: IndemnityCheck 30.65s includes PyMuPDF module warmup; real per-doc time ~0.6s. All 14 modes use a mocked AI gateway — measures pipeline correctness, not live model accuracy. AssetCheck, BuyCheck, EngageCheck, GuaranteeCheck, and LoanCheck added in spec 029. Spec 030 added mode whitelist validation to the benchmark CLI (unknown mode → exit 78) and the `benchmark baseline` subcommand. FranchiseCheck, OpCheck, PartnerCheck, SponsorCheck, and DistroCheck added in spec 031. All 22 modes now have mock baselines in `docs/benchmarks/`; real-provider baselines tracked separately.
 
 See [specs/010-benchmark-harness/](specs/010-benchmark-harness/) for the full specification, or run `openreview benchmark --help` for all options.
 

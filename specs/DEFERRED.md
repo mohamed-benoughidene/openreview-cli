@@ -3637,3 +3637,55 @@ in the spec:
   provider exists that is reliable enough for CI regression detection.
 
 ---
+
+## D-79: Multi-party bilateral comparison for entity/partnership modes
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 031 (L-4c, Product Modes Batch 3) |
+| **Deferred at** | 2026-07-09 |
+| **Trigger** | Research gap — multi-party semantics never validated for partnership, franchise, or distribution agreements. Single-party-first scope + Amber default for uncertain multi-party clauses is the conservative mitigation. |
+| **Status** | Unblocked when research validates bilateral contract comparison for partnership/operating agreement types and new infrastructure exists |
+
+### Description
+
+All 5 new L-4c modes (FranchiseCheck, OpCheck, PartnerCheck, SponsorCheck, DistroCheck) are scoped to single-party review only. Multi-party bilateral comparison (party A vs party B on the same contract) is not implemented because no research has validated it for these contract types.
+
+### What would need to change to unblock
+
+1. A research-grade paper on bilateral contract comparison for partnership/operating agreement types
+2. New infrastructure: document graph model, party-role mapping, bilateral negotiation logic
+3. Accuracy validation on a custom corpus
+
+### Spec references
+
+spec 031 (L-4c, Product Modes Batch 3). The 5 modes are entity/partnership modes that assume bilateral logic, but no research has validated multi-party contract comparison.
+
+---
+
+## D-80: Real provider baseline for L-4c entity/partnership modes
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | spec 031 (L-4c, Product Modes Batch 3) |
+| **Deferred at** | 2026-07-09 |
+| **Trigger** | Out of scope for spec 031 — mock baselines are sufficient for unit tests and regression detection. Real provider baselines require a developer with API access to a live LLM to run, capture, and commit the JSON output. |
+| **Status** | Unblocked when a developer runs the baseline command against a real LLM provider and commits the output |
+
+### Description
+
+Spec 031 created mock baselines for the 5 L-4c modes in `docs/benchmarks/`. Real provider baselines (running `openreview benchmark baseline --provider live` against a real LLM) are not executed as part of the automated spec. D-78 covers real baselines for the 17 spec 030 modes; L-4c's 5 entity/partnership modes need their own real baseline run.
+
+### What would need to change to unblock
+
+A developer must run `uv run openreview benchmark baseline --modes franchisecheck opcheck partnercheck sponsorcheck distrocheck --provider live --save-baseline` against a real LLM provider. The 5 JSON files in `docs/benchmarks/` will be overwritten with real-data entries.
+
+### Spec references
+
+spec 031 (L-4c, Product Modes Batch 3). D-78 covers the same task for the 17 spec 030 modes.
+
+### Affected files
+
+`docs/benchmarks/{franchisecheck,opcheck,partnercheck,sponsorcheck,distrocheck}.json`
+
+---

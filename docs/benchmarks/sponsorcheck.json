@@ -1,0 +1,12 @@
+{
+  "mode_key": "sponsorcheck",
+  "display_name": "SponsorCheck",
+  "fixture": "tests/fixtures/pdf/sponsorcheck-sponsorship-v1.pdf",
+  "expected_assessment": {
+    "overall": "AMBER"
+  },
+  "time_budget_s": 30,
+  "pii_time_budget_s": 3,
+  "page_count": 3,
+  "mode_specific": {}
+}

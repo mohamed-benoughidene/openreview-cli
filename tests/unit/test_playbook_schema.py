@@ -44,6 +44,11 @@ class TestBundledPlaybooks:
             ("engagecheck", "engagement-letter-v1.yaml"),
             ("guaranteecheck", "personal-guarantee-v1.yaml"),
             ("loancheck", "loan-agreement-v1.yaml"),
+            ("franchisecheck", "franchise-v1.yaml"),
+            ("opcheck", "operating-agreement-v1.yaml"),
+            ("partnercheck", "partnership-v1.yaml"),
+            ("sponsorcheck", "sponsorship-v1.yaml"),
+            ("distrocheck", "distribution-v1.yaml"),
         ],
     )
     def test_playbook_loads_successfully(self, mode: str, filename: str) -> None:
@@ -77,6 +82,11 @@ class TestBundledPlaybooks:
             ("engagecheck", "engagement-letter-v1.yaml"),
             ("guaranteecheck", "personal-guarantee-v1.yaml"),
             ("loancheck", "loan-agreement-v1.yaml"),
+            ("franchisecheck", "franchise-v1.yaml"),
+            ("opcheck", "operating-agreement-v1.yaml"),
+            ("partnercheck", "partnership-v1.yaml"),
+            ("sponsorcheck", "sponsorship-v1.yaml"),
+            ("distrocheck", "distribution-v1.yaml"),
         ],
     )
     def test_playbook_has_valid_categories(self, mode: str, filename: str) -> None:
@@ -115,6 +125,11 @@ class TestBundledPlaybooks:
             "engagecheck",
             "guaranteecheck",
             "loancheck",
+            "franchisecheck",
+            "opcheck",
+            "partnercheck",
+            "sponsorcheck",
+            "distrocheck",
         }
         assert set(BUNDLED_PLAYBOOKS) == expected_modes
 
@@ -139,6 +154,11 @@ class TestNewModePlaybooks:
             ("dealcheck", "dealcheck-v1.yaml", 6),
             ("hirecheck", "hirecheck-v1.yaml", 6),
             ("indemnitycheck", "indemnification-v1.yaml", 4),
+            ("franchisecheck", "franchise-v1.yaml", 5),
+            ("opcheck", "operating-agreement-v1.yaml", 5),
+            ("partnercheck", "partnership-v1.yaml", 5),
+            ("sponsorcheck", "sponsorship-v1.yaml", 5),
+            ("distrocheck", "distribution-v1.yaml", 5),
             ("consultcheck", "consulting-agreement-v1.yaml", 5),
             ("workcheck", "work-for-hire-v1.yaml", 5),
             ("loicheck", "letter-of-intent-v1.yaml", 5),
@@ -200,6 +220,11 @@ class TestNewModePlaybooks:
             "engagement-letter-v1.yaml",
             "personal-guarantee-v1.yaml",
             "loan-agreement-v1.yaml",
+            "franchise-v1.yaml",
+            "operating-agreement-v1.yaml",
+            "partnership-v1.yaml",
+            "sponsorship-v1.yaml",
+            "distribution-v1.yaml",
         ):
             path = PLAYBOOKS_DIR / filename
             raw = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -233,6 +258,11 @@ class TestModeVocabulary:
             "engagecheck",
             "guaranteecheck",
             "loancheck",
+            "franchisecheck",
+            "opcheck",
+            "partnercheck",
+            "sponsorcheck",
+            "distrocheck",
         ],
     )
     def test_mode_vocabulary_entry_exists(self, mode: str) -> None:

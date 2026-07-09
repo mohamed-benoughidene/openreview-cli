@@ -1,0 +1,206 @@
+# Bundled Operating Agreement Playbook — OpCheck Mode v1
+# Covers standard LLC operating agreement categories for single-party
+# review from a member's perspective.
+# Users may override with --playbook <path>.
+
+id: "operating-agreement-v1"
+mode: "opcheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Bundled operating agreement playbook for OpCheck mode. Covers
+    common LLC operating agreement clause categories: membership
+    structure, capital contributions and additional calls, profit/loss
+    allocation, voting rights and decision-making, and transfer
+    restrictions and dissolution.
+  author: "openreview"
+
+categories:
+  # ── Membership Structure ──────────────────────────────────────
+  - id: "membership-structure"
+    name: "Membership Structure"
+    description: >
+      Whether the LLC is member-managed or manager-managed,
+      classes of membership interests, and the rights attached
+      to each class.
+    preferred:
+      description: >
+        Member-managed LLC with equal voting rights per member.
+        Single class of membership with proportional voting and
+        economic rights. No disproportionate voting structures.
+      exemplars:
+        - "The Company shall be member-managed"
+        - "Each Member shall have one vote per percentage ownership interest"
+        - "All Members have equal management rights"
+    acceptable:
+      description: >
+        Member-managed or manager-managed with clearly defined
+        roles. Multiple membership classes with disclosed rights.
+        Manager authority is defined and bounded.
+      exemplars:
+        - "The Company is managed by a Board of Managers elected by the Members"
+        - "Decisions requiring unanimous consent include admission of new Members and dissolution"
+        - "Managers shall have authority to make ordinary business decisions"
+    walkaway:
+      description: >
+        Manager-managed with no member oversight. Disproportionate
+        voting rights that dilute a member's vote below economic
+        interest without consent. Manager has unlimited authority.
+      exemplars:
+        - "The Managing Member has sole and absolute discretion over all Company decisions"
+        - "Certain Members have voting rights disproportionate to their economic interest"
+        - "Members have no right to vote on any matter"
+    default_position: "acceptable"
+
+  # ── Capital Contributions and Additional Calls ────────────────
+  - id: "capital-contributions"
+    name: "Capital Contributions and Additional Calls"
+    description: >
+      Initial capital contributions, conditions for additional
+      capital calls, consequences of failing to meet a call,
+      and return of capital.
+    preferred:
+      description: >
+        Defined initial capital contribution with clear payment
+        schedule. Additional capital calls require majority or
+        unanimous member consent. Failure to contribute results
+        in dilution, not forfeiture. Return of capital upon
+        withdrawal or dissolution.
+      exemplars:
+        - "Initial capital contributions shall be [AMOUNT] per Member, payable upon execution"
+        - "Additional capital calls require approval of Members holding at least [PERCENTAGE]% of interests"
+        - "A Member failing to meet a capital call shall have their interest diluted proportionally"
+    acceptable:
+      description: >
+        Defined initial contributions. Additional calls permitted
+        with member approval or as specified in the agreement.
+        Reasonable consequences for failure to contribute.
+      exemplars:
+        - "Each Member shall contribute [AMOUNT] as initial capital"
+        - "Additional capital may be called with the consent of a majority of the Members"
+        - "If a Member fails to make a required contribution, the other Members may elect to loan the amount"
+    walkaway:
+      description: >
+        Unlimited capital calls at manager's sole discretion.
+        Forfeiture of membership interest for failing to meet
+        a capital call. Personal liability for company debts
+        beyond capital contribution.
+      exemplars:
+        - "The Manager may require additional capital contributions from Members at any time"
+        - "A Member who fails to contribute additional capital shall forfeit their entire membership interest"
+        - "Members shall be personally liable for the debts of the Company"
+    default_position: "acceptable"
+
+  # ── Profit/Loss Allocation (IRC §704(b)) ──────────────────────
+  - id: "profit-loss-allocation"
+    name: "Profit/Loss Allocation (IRC §704(b))"
+    description: >
+      How profits and losses are allocated among members, tax
+      pass-through provisions, distribution policies, and
+      compliance with IRC Section 704(b).
+    preferred:
+      description: >
+        Profits and losses allocated in proportion to percentage
+        interest. Annual distributions of available cash. Tax
+        information provided in a timely manner. Allocation
+        complies with IRC Section 704(b).
+      exemplars:
+        - "Profits and losses shall be allocated in proportion to each Member's percentage interest"
+        - "Distributions of available cash shall be made at least annually"
+        - "Allocations shall comply with the requirements of IRC Section 704(b)"
+    acceptable:
+      description: >
+        Allocations follow percentage interests with standard
+        special allocations for tax compliance. Reasonable
+        distribution schedule. Tax reporting provided.
+      exemplars:
+        - "Net profits and losses shall be allocated according to each Member's ownership percentage"
+        - "Distributions shall be made at the discretion of the Manager, but no less frequently than annually"
+        - "The Company shall provide each Member with a Schedule K-1 within [NUMBER] days of year-end"
+    walkaway:
+      description: >
+        Disproportionate allocation that favors certain members.
+        No guaranteed distributions. Manager has sole discretion
+        over all distributions with no standard. No tax reporting
+        obligation.
+      exemplars:
+        - "Profits and losses shall be allocated at the sole discretion of the Managing Member"
+        - "Distributions may be made at any time or not at all, in the Manager's discretion"
+        - "The Company shall not be obligated to provide tax information to Members"
+    default_position: "acceptable"
+
+  # ── Voting Rights and Decision-Making ─────────────────────────
+  - id: "voting-rights"
+    name: "Voting Rights and Decision-Making"
+    description: >
+      Voting rights of members, decision-making authority,
+      ordinary vs. extraordinary decisions, quorum requirements,
+      and consent thresholds.
+    preferred:
+      description: >
+        One vote per member or per percentage interest. Ordinary
+        decisions by majority vote. Extraordinary decisions
+        (merger, dissolution, amendment) by unanimous or supermajority
+        consent. Clear list of member-approved actions.
+      exemplars:
+        - "Each Member shall have one vote per [PERCENTAGE]% interest in the Company"
+        - "Ordinary course decisions require a majority vote of the Members"
+        - "Extraordinary decisions, including merger and dissolution, require unanimous consent of all Members"
+    acceptable:
+      description: >
+        Standard voting structure with majority for ordinary
+        matters and supermajority (66-75%) for extraordinary
+        matters. Manager authority clearly bounded.
+      exemplars:
+        - "Decisions in the ordinary course require a majority vote"
+        - "Admission of new Members requires consent of Members holding [PERCENTAGE]% of interests"
+        - "The Manager has authority to make decisions up to [AMOUNT] without Member approval"
+    walkaway:
+      description: >
+        No voting rights for members. Manager has sole authority
+        over all decisions including extraordinary actions. One
+        member controls all decisions regardless of ownership
+        percentage. No quorum requirement.
+      exemplars:
+        - "The Manager has sole and exclusive authority over all Company decisions"
+        - "Certain Members have no voting rights"
+        - "The Managing Member may make all decisions without notice to or consent of other Members"
+    default_position: "acceptable"
+
+  # ── Transfer Restrictions and Dissolution ─────────────────────
+  - id: "transfer-dissolution"
+    name: "Transfer Restrictions and Dissolution"
+    description: >
+      Restrictions on transfer of membership interests, rights
+      of first refusal, buy-sell provisions, and dissolution
+      and winding-up procedures.
+    preferred:
+      description: >
+        Transfer permitted with reasonable consent. Right of first
+        refusal at fair market value. Buy-sell provisions with
+        defined valuation method. Dissolution by unanimous consent
+        or upon defined events. Return of capital on dissolution.
+      exemplars:
+        - "A Member may transfer their interest with consent of a majority of Members"
+        - "The Company has a right of first refusal on any proposed transfer at fair market value"
+        - "Upon dissolution, assets shall be distributed to Members according to positive capital account balances"
+    acceptable:
+      description: >
+        Transfer restrictions with consent requirements and ROFR.
+        Standard buy-sell with appraisal. Dissolution upon events
+        specified in agreement. Winding-up process defined.
+      exemplars:
+        - "No Member may transfer their interest without the consent of Members holding [PERCENTAGE]% of interests"
+        - "Buy-sell valuation shall be determined by an independent appraiser"
+        - "The Company shall dissolve upon the unanimous consent of all Members or as provided by law"
+    walkaway:
+      description: >
+        Absolute prohibition on transfer. No ROFR or buy-sell
+        mechanism. Dissolution at one member's discretion or
+        for any reason. Forfeiture of interest on withdrawal.
+        Unfair distribution on dissolution.
+      exemplars:
+        - "No Member may transfer their membership interest for any reason"
+        - "The Managing Member may dissolve the Company at any time without Member consent"
+        - "Upon withdrawal, a Member forfeits all rights to their capital account"
+    default_position: "acceptable"
