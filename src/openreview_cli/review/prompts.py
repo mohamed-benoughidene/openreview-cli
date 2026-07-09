@@ -311,6 +311,59 @@ MODE_VOCABULARY: dict[str, dict[str, str]] = {
             "cross-default, events of default. "
         ),
     },
+    "franchisecheck": {
+        "specialization": " specializing in franchise law and franchisor-franchisee agreements",
+        "domain": "franchise agreement",
+        "vocabulary": (
+            "Domain vocabulary: franchise, franchisor, franchisee, FDD, territory, "
+            "royalty, advertising fund, renewal, termination, non-compete, transfer, "
+            "right of first refusal, franchise fee. "
+            "Detect and flag any clauses that suggest this is a franchise relationship "
+            "(trademark license + required payment + significant control over operations). "
+            "Output: [FRANCHISE_BOUNDARY: yes|no|borderline]"
+        ),
+    },
+    "opcheck": {
+        "specialization": " specializing in LLC operating agreements",
+        "domain": "Operating Agreement",
+        "vocabulary": (
+            "Domain vocabulary: operating agreement, LLC, member, manager, "
+            "capital contribution, capital call, profit share, distribution, "
+            "voting, transfer, buy-sell, dissolution, indemnification, IRC 704(b). "
+        ),
+    },
+    "partnercheck": {
+        "specialization": " specializing in partnership agreements",
+        "domain": "partnership agreement",
+        "vocabulary": (
+            "Domain vocabulary: partnership, general partner, limited partner, "
+            "capital contribution, profit share, loss allocation, management, "
+            "withdrawal, expulsion, dissolution, joint and several liability, "
+            "UPA, RUPA, non-compete, non-solicit, mediation, arbitration. "
+        ),
+    },
+    "sponsorcheck": {
+        "specialization": " specializing in sponsorship agreements",
+        "domain": "sponsorship agreement",
+        "vocabulary": (
+            "Domain vocabulary: sponsorship, sponsor, organizer, fee, payment, "
+            "exclusivity, logo placement, event recognition, trademark license, "
+            "termination, force majeure, indemnification, non-disparagement. "
+        ),
+    },
+    "distrocheck": {
+        "specialization": " specializing in distribution and reseller agreements",
+        "domain": "distribution agreement",
+        "vocabulary": (
+            "Domain vocabulary: distribution, distributor, manufacturer, territory, "
+            "exclusivity, minimum purchase, cure period, pricing, payment, inventory, "
+            "returns, trademark license, termination, non-compete, channel restriction, "
+            "jurisdiction, venue. "
+            "Detect and flag any clauses that suggest this is a franchise relationship "
+            "(trademark license + required payment + significant control over operations). "
+            "Output: [FRANCHISE_BOUNDARY: yes|no|borderline]"
+        ),
+    },
 }
 
 

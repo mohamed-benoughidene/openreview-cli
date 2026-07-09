@@ -1,0 +1,14 @@
+{
+  "mode_key": "franchisecheck",
+  "display_name": "FranchiseCheck",
+  "fixture": "tests/fixtures/pdf/franchisecheck-franchise-v1.pdf",
+  "expected_assessment": {
+    "overall": "AMBER"
+  },
+  "time_budget_s": 30,
+  "pii_time_budget_s": 3,
+  "page_count": 5,
+  "mode_specific": {
+    "franchise_boundary": true
+  }
+}

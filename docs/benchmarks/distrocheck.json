@@ -1,0 +1,14 @@
+{
+  "mode_key": "distrocheck",
+  "display_name": "DistroCheck",
+  "fixture": "tests/fixtures/pdf/distrocheck-distribution-v1.pdf",
+  "expected_assessment": {
+    "overall": "AMBER"
+  },
+  "time_budget_s": 30,
+  "pii_time_budget_s": 3,
+  "page_count": 5,
+  "mode_specific": {
+    "franchise_boundary_detected": true
+  }
+}

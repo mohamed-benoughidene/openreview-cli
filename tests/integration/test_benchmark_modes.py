@@ -21,7 +21,7 @@ from openreview_cli.benchmark.cli import VALID_MODES
 from openreview_cli.benchmark.models import BenchmarkConfig, DatasetResult
 from openreview_cli.benchmark.runner import BenchmarkRunner
 
-# 17 known modes from spec FR-1
+# 22 known modes from spec FR-1 (17 prior + 5 new L-4c)
 _KNOWN_MODES: frozenset[str] = frozenset(
     {
         "precheck",
@@ -41,6 +41,11 @@ _KNOWN_MODES: frozenset[str] = frozenset(
         "loicheck",
         "subcheck",
         "settlementcheck",
+        "franchisecheck",
+        "opcheck",
+        "partnercheck",
+        "sponsorcheck",
+        "distrocheck",
     }
 )
 
@@ -52,9 +57,9 @@ def _mock_pipeline(text: str, category: str) -> dict[str, object]:
 class TestValidModes:
     """VALID_MODES frozenset tests (T-A-03)."""
 
-    def test_valid_modes_contains_17_entries(self) -> None:
-        """Assert VALID_MODES has exactly 17 entries, all known."""
-        assert len(VALID_MODES) == 17
+    def test_valid_modes_contains_22_entries(self) -> None:
+        """Assert VALID_MODES has exactly 22 entries, all known."""
+        assert len(VALID_MODES) == 22
         for mode in _KNOWN_MODES:
             assert mode in VALID_MODES, f"Missing mode: {mode}"
 
@@ -75,8 +80,8 @@ class TestModeValidation:
         )
         assert "Unknown mode" in result.stderr, f"stderr: {result.stderr}"
 
-    def test_modes_validation_accepts_all_17(self) -> None:
-        """Assert --modes=<all 17> succeeds (exit 0)."""
+    def test_modes_validation_accepts_all_22(self) -> None:
+        """Assert --modes=<all 22> succeeds (exit 0)."""
         modes_str = ",".join(sorted(_KNOWN_MODES))
         result = subprocess.run(
             [sys.executable, "-m", "openreview_cli", "benchmark", "run", f"--modes={modes_str}"],

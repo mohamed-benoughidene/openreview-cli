@@ -1,0 +1,205 @@
+# Bundled Sponsorship Playbook — SponsorCheck Mode v1
+# Covers standard sponsorship agreement categories for single-party
+# review from the organizer's perspective.
+# Users may override with --playbook <path>.
+
+id: "sponsorship-v1"
+mode: "sponsorcheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Bundled sponsorship playbook for SponsorCheck mode. Covers
+    common sponsorship agreement clause categories: sponsorship
+    fee and payment schedule, sponsorship rights and benefits,
+    IP license (use of sponsor's trademarks), termination for
+    breach or force majeure, and indemnification and
+    non-disparagement.
+  author: "openreview"
+
+categories:
+  # ── Sponsorship Fee and Payment Schedule ──────────────────────
+  - id: "sponsorship-fee"
+    name: "Sponsorship Fee and Payment Schedule"
+    description: >
+      Sponsorship fee amount, payment schedule, refund policy,
+      and any conditions on payment obligations.
+    preferred:
+      description: >
+        Mutually agreed fee with reasonable payment schedule
+        (e.g., 50% upfront, 50% on event date). Pro-rata refund
+        if event is cancelled or materially changed. No hidden
+        fees or expenses.
+      exemplars:
+        - "Sponsor shall pay a sponsorship fee of [AMOUNT], with [PERCENTAGE]% upon execution and [PERCENTAGE]% on the event date"
+        - "In the event of cancellation, Sponsor shall receive a pro-rata refund of the sponsorship fee"
+        - "The sponsorship fee includes all benefits described in this Agreement with no additional charges"
+    acceptable:
+      description: >
+        Standard fee with lump sum or milestone payments. Partial
+        refund for cancellation within terms. Payment due within
+        reasonable period.
+      exemplars:
+        - "The total sponsorship fee of [AMOUNT] is due within [NUMBER] days of execution"
+        - "If the event is cancelled, Sponsor shall receive a [PERCENTAGE]% refund of fees paid"
+        - "Payment shall be made by wire transfer or check"
+    walkaway:
+      description: >
+        Full fee due immediately with no refund regardless of
+        event changes. Unreasonable late penalties. Sponsor
+        required to pay additional expenses beyond the fee.
+      exemplars:
+        - "The entire sponsorship fee is due upon execution and is non-refundable under any circumstances"
+        - "Sponsor shall pay all out-of-pocket expenses incurred by Organizer in connection with the event"
+        - "Late payment penalty of [PERCENTAGE]% per month on overdue amounts"
+    default_position: "acceptable"
+
+  # ── Sponsorship Rights and Benefits ───────────────────────────
+  - id: "sponsorship-benefits"
+    name: "Sponsorship Rights and Benefits"
+    description: >
+      Specific sponsorship benefits including logo placement,
+      event recognition, speaking opportunities, booth space,
+      and exclusivity arrangements.
+    preferred:
+      description: >
+        Clearly defined benefits with specific deliverables and
+        timelines. Logo placement on all event materials and
+        website. Reasonable exclusivity limited to specific
+        product or service category.
+      exemplars:
+        - "Sponsor shall receive logo placement on all event materials and the event website"
+        - "Sponsor shall be recognized as the exclusive sponsor in the [CATEGORY] category"
+        - "Sponsor shall receive [NUMBER] minutes of speaking time during the event program"
+    acceptable:
+      description: >
+        Defined benefits with standard recognition package.
+        Exclusivity limited to defined category. Benefits may
+        be subject to Organizer's reasonable approval.
+      exemplars:
+        - "Sponsor shall receive recognition in event programs and signage"
+        - "Sponsor shall have the right to distribute promotional materials at the event"
+        - "The Organizer shall provide Sponsor with a list of event attendees following the event"
+    walkaway:
+      description: >
+        Vague or undefined benefits. Overly broad exclusivity
+        preventing other sponsors in unrelated categories.
+        No right to approve use of sponsor's name or brand.
+        Benefits entirely at Organizer's discretion.
+      exemplars:
+        - "Sponsor shall receive such benefits as the Organizer may determine in its sole discretion"
+        - "Sponsor shall be the exclusive sponsor in all categories"
+        - "The Organizer may alter or cancel any benefit at any time without notice"
+    default_position: "acceptable"
+
+  # ── IP License (Use of Sponsor's Trademarks) ─────────────────
+  - id: "ip-license"
+    name: "IP License (Use of Sponsor's Trademarks)"
+    description: >
+      License grant for use of sponsor's trademarks, logos, and
+      intellectual property, quality control standards, and
+      termination of license.
+    preferred:
+      description: >
+        Non-exclusive, royalty-free license for the term and
+        purpose of the event. Organizer may use sponsor's marks
+        in connection with event promotion. Goodwill inures to
+        sponsor. Limited quality control rights.
+      exemplars:
+        - "Sponsor grants Organizer a non-exclusive, royalty-free license to use Sponsor's trademarks for event purposes"
+        - "All goodwill from the use of Sponsor's marks shall inure to the benefit of Sponsor"
+        - "Organizer shall submit promotional materials incorporating Sponsor's marks for prior approval"
+    acceptable:
+      description: >
+        Standard trademark license for event use. Organizer may
+        use marks subject to sponsor approval. License terminates
+        with agreement.
+      exemplars:
+        - "Organizer is granted a limited license to use Sponsor's name and logo in connection with the event"
+        - "Sponsor may review and approve any use of its marks in advance"
+        - "The license granted herein shall terminate upon termination of this Agreement"
+    walkaway:
+      description: >
+        No license grant or very restrictive terms. Sponsor has
+        unlimited approval rights over all Organizer content.
+        License may be revoked at any time without cause.
+        Organizer must assign all content IP to sponsor.
+      exemplars:
+        - "Organizer shall not use Sponsor's name or marks without prior written approval for each use"
+        - "Sponsor may revoke the license at any time for any reason"
+        - "All content created by Organizer incorporating Sponsor's marks shall become Sponsor's property"
+    default_position: "acceptable"
+
+  # ── Termination for Breach or Force Majeure ──────────────────
+  - id: "termination"
+    name: "Termination for Breach or Force Majeure"
+    description: >
+      Grounds for termination, cure periods, consequences of
+      termination, and force majeure provisions.
+    preferred:
+      description: >
+        Mutual termination rights with 30-day cure period.
+        Either party may terminate for material breach.
+        Force majeure clause with pro-rata refund if event
+        is cancelled. Termination for convenience with
+        reasonable notice.
+      exemplars:
+        - "Either party may terminate this Agreement for material breach with [NUMBER] days' written notice and a cure period"
+        - "In the event of force majeure, either party may terminate with a pro-rata refund of fees"
+        - "Either party may terminate this Agreement for convenience with [NUMBER] days' notice"
+    acceptable:
+      description: >
+        Termination for breach with cure period. Force majeure
+        provision. Standard termination consequences including
+        return of materials.
+      exemplars:
+        - "Either party may terminate if the other materially breaches and fails to cure within [NUMBER] days"
+        - "If the event is cancelled due to force majeure, the Organizer shall refund [PERCENTAGE]% of fees"
+        - "Upon termination, each party shall return the other's Confidential Information"
+    walkaway:
+      description: >
+        Sponsor-only termination right. No cure period for
+        organizer breach. No refund on cancellation. Force
+        majeure only benefits sponsor. Organizer must pay
+        all fees even on termination.
+      exemplars:
+        - "Only Sponsor may terminate this Agreement"
+        - "Organizer may not terminate this Agreement for any reason"
+        - "All fees are non-refundable, including in the event of cancellation or force majeure"
+    default_position: "acceptable"
+
+  # ── Indemnification and Non-Disparagement ─────────────────────
+  - id: "indemnification"
+    name: "Indemnification and Non-Disparagement"
+    description: >
+      Mutual or unilateral indemnification obligations, scope
+      of indemnification, and non-disparagement clauses.
+    preferred:
+      description: >
+        Mutual indemnification for each party's negligence or
+        wilful misconduct. No unilateral indemnity. Limited
+        non-disparagement with carve-outs for truthful
+        statements.
+      exemplars:
+        - "Each party shall indemnify the other for claims arising from its own negligence or misconduct"
+        - "Neither party shall make disparaging statements about the other, except as required by law"
+        - "Indemnification obligations are mutual and reciprocal"
+    acceptable:
+      description: >
+        Standard mutual indemnification with reasonable scope.
+        Non-disparagement clause. Each party bears its own
+        liability for its acts.
+      exemplars:
+        - "Each party shall indemnify and hold harmless the other from third-party claims arising from the indemnifying party's acts"
+        - "The parties agree not to disparage each other in connection with the event"
+        - "Each party shall be solely responsible for its own activities at the event"
+    walkaway:
+      description: >
+        Unilateral indemnification of sponsor for all claims.
+        Organizer indemnifies sponsor even for sponsor's own
+        acts. Broad non-disparagement without exceptions.
+        Organizer assumes all liability for the event.
+      exemplars:
+        - "Organizer shall indemnify Sponsor against all claims, losses, and expenses arising from the event"
+        - "Organizer agrees not to make any negative statements about Sponsor for any reason"
+        - "Organizer assumes all risk and liability associated with the conduct of the event"
+    default_position: "acceptable"

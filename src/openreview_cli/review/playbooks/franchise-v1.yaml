@@ -1,0 +1,201 @@
+# Bundled Franchise Playbook — FranchiseCheck Mode v1
+# Covers standard franchise agreement categories for single-party
+# review from the franchisee's perspective.
+# Users may override with --playbook <path>.
+
+id: "franchise-v1"
+mode: "franchisecheck"
+metadata:
+  version: "1.0.0"
+  description: >
+    Bundled franchise playbook for FranchiseCheck mode. Covers common
+    franchise agreement clause categories: franchise fee structure,
+    territory rights and exclusivity, renewal and termination,
+    advertising and marketing fund, and transfer/assignment restrictions.
+  author: "openreview"
+
+categories:
+  # ── Franchise Fee Structure ──────────────────────────────────
+  - id: "franchise-fee-structure"
+    name: "Franchise Fee Structure"
+    description: >
+      Initial franchise fee, ongoing royalty payments, and any other
+      recurring fees or charges payable by the franchisee.
+    preferred:
+      description: >
+        One-time initial franchise fee within industry standard range.
+        Royalties at or below 6% of gross sales. No hidden or excessive
+        additional fees. Clear fee schedule with no unilateral increases.
+      exemplars:
+        - "initial franchise fee of [AMOUNT] payable upon execution"
+        - "royalty payments of [PERCENTAGE]% of gross monthly sales"
+        - "All fees are fixed for the initial term and may not be increased without mutual consent"
+    acceptable:
+      description: >
+        Standard initial fee with reasonable royalty rate (6-8%).
+        Standard marketing and technology fees disclosed up front.
+        Fee increases on renewal with reasonable notice.
+      exemplars:
+        - "Franchisee shall pay a royalty of [PERCENTAGE]% of gross sales"
+        - "The initial franchise fee is [AMOUNT], which is non-refundable"
+        - "Fees may be adjusted on renewal with [NUMBER] days' notice"
+    walkaway:
+      description: >
+        Excessive initial fee or royalty rate (8%+). Unilateral fee
+        increases without franchisee consent. Hidden or undisclosed
+        fees. Fees that escalate automatically based on franchisor
+        discretion.
+      exemplars:
+        - "Franchisor may adjust fees at any time in its sole discretion"
+        - "Royalty rate of [PERCENTAGE]% of gross sales"
+        - "Additional fees may be assessed by Franchisor as determined necessary"
+    default_position: "acceptable"
+
+  # ── Territory Rights and Exclusivity ──────────────────────────
+  - id: "territory-rights"
+    name: "Territory Rights and Exclusivity"
+    description: >
+      Geographic territory granted to the franchisee, exclusivity
+      protections, and restrictions on franchisor competition.
+    preferred:
+      description: >
+        Exclusive territory with clear geographic boundaries. No right
+        for franchisor to operate competing locations within the
+        territory. Protection against franchisor-owned or franchisee
+        locations within a defined radius.
+      exemplars:
+        - "Franchisee is granted an exclusive territory within a [NUMBER]-mile radius"
+        - "Franchisor shall not establish another franchise or company-owned location within the territory"
+        - "Exclusive territory with defined geographic boundaries set forth in Exhibit [X]"
+    acceptable:
+      description: >
+        Defined exclusive territory with standard protections.
+        Franchisor retains rights to operate in non-traditional
+        channels (online, military bases) within territory.
+      exemplars:
+        - "Franchisee shall have the exclusive right to operate within [GEOGRAPHIC AREA]"
+        - "Franchisor reserves the right to operate in the territory through alternative channels"
+        - "Territory is exclusive except for existing locations and online sales"
+    walkaway:
+      description: >
+        No defined territory or exclusivity. Franchisor can open
+        competing locations arbitrarily. Non-exclusive territory
+        with no geographic boundaries.
+      exemplars:
+        - "Franchisee is granted a non-exclusive territory"
+        - "Franchisor may establish additional franchise locations at its discretion"
+        - "No defined territory; Franchisee may operate only at the approved location"
+    default_position: "acceptable"
+
+  # ── Renewal and Termination ──────────────────────────────────
+  - id: "renewal-termination"
+    name: "Renewal and Termination"
+    description: >
+      Initial term length, renewal options, termination rights for
+      both parties, cure periods, and post-termination obligations.
+    preferred:
+      description: >
+        Initial term of 10+ years with renewal options. Mutual
+        termination for cause with cure periods. Franchisee may
+        terminate for convenience with reasonable notice. No
+        unreasonable post-termination restrictions.
+      exemplars:
+        - "Initial term of [NUMBER] years with [NUMBER] renewal options of [NUMBER] years each"
+        - "Either party may terminate for material breach with [NUMBER] days' cure period"
+        - "Franchisee may terminate this Agreement upon [NUMBER] days' written notice"
+    acceptable:
+      description: >
+        Standard initial term of 5-10 years. Renewal conditioned on
+        compliance with current standards. Termination for cause with
+        30-day cure period. Reasonable post-term non-compete.
+      exemplars:
+        - "This Agreement has an initial term of [NUMBER] years"
+        - "Franchisee may renew for successive terms if in material compliance"
+        - "Franchisor may terminate if Franchisee fails to cure a material breach within [NUMBER] days"
+    walkaway:
+      description: >
+        Short initial term with no renewal rights. Unilateral
+        termination by franchisor without cause. No cure period or
+        very short cure period. Franchisee cannot terminate even
+        for franchisor breach. Overly broad post-termination
+        restrictions.
+      exemplars:
+        - "Franchisor may terminate this Agreement at any time without cause"
+        - "No cure period for any breach by Franchisee"
+        - "Franchisee may not terminate this Agreement for any reason"
+        - "Post-term non-compete extends beyond [NUMBER] years or covers unlimited geography"
+    default_position: "acceptable"
+
+  # ── Advertising and Marketing Fund ────────────────────────────
+  - id: "advertising-marketing-fund"
+    name: "Advertising and Marketing Fund"
+    description: >
+      Required contributions to advertising fund, how funds are
+      managed and spent, and franchisee's rights to transparency.
+    preferred:
+      description: >
+        Advertising fund contributions capped at 2% of gross sales.
+        Fund managed with franchisee advisory committee oversight.
+        Regular accounting of fund expenditures. Local advertising
+        flexibility.
+      exemplars:
+        - "Franchisee shall contribute [PERCENTAGE]% of gross sales to the national advertising fund"
+        - "Advertising fund expenditures shall be reported quarterly to an advisory committee"
+        - "Franchisee may independently conduct local advertising at its own expense"
+    acceptable:
+      description: >
+        Standard advertising fund contribution of 2-3%. Fund
+        administered by franchisor with annual accounting.
+        Reasonable local advertising requirements.
+      exemplars:
+        - "Franchisee shall contribute [PERCENTAGE]% of gross revenues to the advertising fund"
+        - "Franchisor shall administer the advertising fund and provide annual expenditure reports"
+        - "Franchisee shall spend a minimum of [PERCENTAGE]% of gross sales on local advertising"
+    walkaway:
+      description: >
+        Excessive advertising contributions (4%+). No transparency
+        or reporting on fund use. Mandatory local advertising
+        spending above reasonable levels. Fund used for franchisor's
+        general operating expenses.
+      exemplars:
+        - "Franchisee shall contribute [PERCENTAGE]% of gross sales to the advertising fund with no cap"
+        - "The advertising fund may be used for administrative expenses at Franchisor's discretion"
+        - "Franchisee shall spend no less than [PERCENTAGE]% of gross sales on local advertising"
+    default_position: "acceptable"
+
+  # ── Transfer and Assignment Restrictions ─────────────────────
+  - id: "transfer-assignment"
+    name: "Transfer and Assignment Restrictions"
+    description: >
+      Conditions under which the franchisee may transfer or assign
+      the franchise, rights of first refusal, transfer fees, and
+      franchisor's consent requirements.
+    preferred:
+      description: >
+        Franchisee may transfer with franchisor's reasonable consent.
+        No unreasonable transfer fee. Family members or affiliated
+        entities may be exempt from transfer restrictions. Right to
+        assign to a qualified buyer.
+      exemplars:
+        - "Franchisee may transfer this Agreement with Franchisor's prior written consent, not to be unreasonably withheld"
+        - "Transfer to an immediate family member shall not require Franchisor's consent"
+        - "Transfer fee shall not exceed [AMOUNT]"
+    acceptable:
+      description: >
+        Transfer permitted with franchisor consent, conditioned on
+        buyer qualifications. Standard transfer fee. Right of first
+        refusal for franchisor.
+      exemplars:
+        - "Transfer requires Franchisor's consent, which shall not be unreasonably conditioned"
+        - "Franchisor has the right of first refusal to purchase the franchise on matching terms"
+        - "A transfer fee of [AMOUNT] shall be paid upon any transfer"
+    walkaway:
+      description: >
+        Absolute prohibition on transfer. Franchisor may unreasonably
+        withhold consent. Excessive transfer fees. Franchisor can
+        assign the agreement without franchisee consent.
+      exemplars:
+        - "Franchisee may not transfer this Agreement without Franchisor's sole and absolute discretion"
+        - "Transfer fee of [AMOUNT] or [PERCENTAGE]% of the purchase price"
+        - "Franchisor may assign this Agreement without Franchisee's consent"
+    default_position: "acceptable"
