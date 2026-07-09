@@ -103,15 +103,15 @@ class ReviewStage(Stage):
         for clause in self.clauses:
             if self._verbose:
                 print(
-                    f"  Clause {clause.clause_id}: matching...",
+                    f"  Clause {clause.id}: matching...",
                     file=sys.stderr,
                 )
 
-            category = await asyncio.to_thread(match_category, clause.clause_text, self._playbook)
+            category = await asyncio.to_thread(match_category, clause.text, self._playbook)
             assessment = await asyncio.to_thread(
                 extract_clause,
-                clause_text=clause.clause_text,
-                clause_id=clause.clause_id,
+                clause_text=clause.text,
+                clause_id=clause.id,
                 category=category,
                 extraction_model=self._extraction_model,
                 mode=self._mode,
