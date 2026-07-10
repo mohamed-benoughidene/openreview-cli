@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import tracemalloc
 from collections.abc import Generator
 from pathlib import Path
@@ -7,6 +8,14 @@ from typing import Any
 import pytest
 
 from openreview_cli.pipeline.base import Stage
+
+# Silence transformers advisory/info warnings during pytest runs.
+# Avoids "I/O operation on closed file" from warnings emitted while
+# pytest has already closed the capture output.
+logging.getLogger("transformers").setLevel(logging.ERROR)
+logging.getLogger("transformers.modeling_utils").setLevel(logging.ERROR)
+logging.getLogger("transformers.tokenization_utils_base").setLevel(logging.ERROR)
+logging.getLogger("transformers.configuration_utils").setLevel(logging.ERROR)
 
 PEAK_MEMORY_FLOOR_BYTES = 110 * 1024 * 1024
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"

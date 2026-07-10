@@ -9,7 +9,7 @@ Ponytail: no abstraction, no plugin system, just 2 methods + cleanup.
 from __future__ import annotations
 
 import gc
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -17,12 +17,6 @@ if TYPE_CHECKING:
     from openreview_cli.parsing.models import Clause
 
 
-# ── Lazy module-level cache ──────────────────────────────────────────────
-# ponytail: module-level cache, not a class. Revisit if multi-model support
-# ever lands.
-
-_MODEL = None
-_TOKENIZER = None
 _MODEL_NAME = "nlpaueb/legal-bert-base-uncased"
 _EMBED_DIM = 768
 _BATCH_SIZE = 32
@@ -41,6 +35,10 @@ class ClauseClusterer:
             ClauseClusterer.cleanup()
     """
 
+    # Class-level cache — tests inspect `_model` directly to verify caching.
+    _model: Any = None
+    _tokenizer: Any = None
+
     # ── Lifecycle ────────────────────────────────────────────────────
 
     @classmethod
@@ -49,21 +47,19 @@ class ClauseClusterer:
 
         Raises OSError if model cannot be downloaded.
         """
-        global _MODEL, _TOKENIZER  # noqa: PLW0603
-        if _MODEL is not None and _TOKENIZER is not None:
+        if cls._model is not None and cls._tokenizer is not None:
             return
         from transformers import AutoModel, AutoTokenizer
 
-        _TOKENIZER = AutoTokenizer.from_pretrained(_MODEL_NAME)
-        _MODEL = AutoModel.from_pretrained(_MODEL_NAME)
-        _MODEL.eval()
+        cls._tokenizer = AutoTokenizer.from_pretrained(_MODEL_NAME)
+        cls._model = AutoModel.from_pretrained(_MODEL_NAME)
+        cls._model.eval()
 
     @classmethod
     def cleanup(cls) -> None:
         """Release model + tokenizer, run GC."""
-        global _MODEL, _TOKENIZER  # noqa: PLW0603
-        _MODEL = None
-        _TOKENIZER = None
+        cls._model = None
+        cls._tokenizer = None
         gc.collect()
 
     # ── Embedding ────────────────────────────────────────────────────
@@ -75,7 +71,7 @@ class ClauseClusterer:
         Batches of ``_BATCH_SIZE`` to limit peak memory.
         Model must be loaded via ``load()`` first.
         """
-        if _MODEL is None or _TOKENIZER is None:
+        if cls._model is None or cls._tokenizer is None:
             raise RuntimeError("Model not loaded. Call ClauseClusterer.load() first.")
 
         import torch
@@ -86,7 +82,7 @@ class ClauseClusterer:
             batch = clauses[i : i + _BATCH_SIZE]
             texts = [c.text for c in batch]
 
-            inputs = _TOKENIZER(
+            inputs = cls._tokenizer(
                 texts,
                 return_tensors="pt",
                 truncation=True,
@@ -95,7 +91,7 @@ class ClauseClusterer:
             )
 
             with torch.no_grad():
-                outputs = _MODEL(**inputs)
+                outputs = cls._model(**inputs)
 
             # Mean pooling (ignore padding tokens)
             attention_mask = (

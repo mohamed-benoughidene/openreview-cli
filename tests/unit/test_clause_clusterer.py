@@ -176,9 +176,9 @@ class TestModelIntegration:
         except (OSError, Exception) as e:
             pytest.skip(f"Model not available: {e}")
         try:
-            m1 = ClauseClusterer._model  # type: ignore[attr-defined]
+            m1 = ClauseClusterer._model
             ClauseClusterer.load()  # second load returns cached
-            m2 = ClauseClusterer._model  # type: ignore[attr-defined]
+            m2 = ClauseClusterer._model
             assert m1 is m2, "Model not cached"
         finally:
             ClauseClusterer.cleanup()
