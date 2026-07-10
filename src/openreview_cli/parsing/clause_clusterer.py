@@ -47,7 +47,12 @@ class ClauseClusterer:
 
         Raises OSError if model cannot be downloaded.
         """
-        if cls._model is not None and cls._tokenizer is not None:
+        # Use getattr: cleanup() deletes the attribute, so direct access
+        # would raise AttributeError on the second load.
+        if (
+            getattr(cls, "_model", None) is not None
+            and getattr(cls, "_tokenizer", None) is not None
+        ):
             return
         from transformers import AutoModel, AutoTokenizer
 
@@ -57,9 +62,16 @@ class ClauseClusterer:
 
     @classmethod
     def cleanup(cls) -> None:
-        """Release model + tokenizer, run GC."""
-        cls._model = None
-        cls._tokenizer = None
+        """Release model + tokenizer, run GC.
+
+        Uses ``delattr`` (not just ``= None``) so that
+        ``hasattr(ClauseClusterer, "_model")`` returns False after
+        cleanup — the test ``test_cleanup_releases_model`` depends on this.
+        """
+        if hasattr(cls, "_model"):
+            delattr(cls, "_model")
+        if hasattr(cls, "_tokenizer"):
+            delattr(cls, "_tokenizer")
         gc.collect()
 
     # ── Embedding ────────────────────────────────────────────────────

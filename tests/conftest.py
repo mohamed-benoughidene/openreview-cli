@@ -16,6 +16,8 @@ logging.getLogger("transformers").setLevel(logging.ERROR)
 logging.getLogger("transformers.modeling_utils").setLevel(logging.ERROR)
 logging.getLogger("transformers.tokenization_utils_base").setLevel(logging.ERROR)
 logging.getLogger("transformers.configuration_utils").setLevel(logging.ERROR)
+logging.getLogger("transformers.integrations.tensor_parallel").setLevel(logging.ERROR)
+logging.getLogger("transformers.integrations.tensor_parallel").setLevel(logging.ERROR)
 
 PEAK_MEMORY_FLOOR_BYTES = 110 * 1024 * 1024
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
