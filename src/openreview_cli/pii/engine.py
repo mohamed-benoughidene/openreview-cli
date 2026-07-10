@@ -474,4 +474,66 @@ def strip_pii_clauses(
             engine.close()
 
 
-__all__ = ["PiiEngine", "strip_and_persist", "strip_pii", "strip_pii_clauses"]
+def strip_pii_for_tier(
+    text: str,
+    tier: str,
+    document: Any,
+    *,
+    strip_metadata: bool = True,
+) -> PiiResult:
+    """Strip PII from plain text using per-tier score threshold.
+
+    Convenience wrapper that looks up the tier's PII score threshold
+    and delegates to *strip_pii*.  Does not change the existing
+    *strip_pii* signature.
+
+    Parameters
+    ----------
+    text : str
+        Raw contract text to strip.
+    tier : str
+        Privacy tier name (``"maximum"``, ``"balanced"``,
+        ``"performance"``).
+    document : Any
+        Document object for metadata redaction.
+    strip_metadata : bool, optional
+        Whether to redact metadata fields (default ``True``).
+
+    Returns
+    -------
+    PiiResult
+        Stripped text, mapping, entities, and audit data.
+
+    Raises
+    ------
+    KeyError
+        If *tier* is not a recognised privacy tier.
+    """
+    from openreview_cli.gateway.tier_accuracy import get_target
+
+    target = get_target(tier)
+    clause = Clause(
+        id="1",
+        title="Tier strip",
+        text=text,
+        level=1,
+        parent_id=None,
+        source_page=None,
+        source_paragraph=0,
+        source_span=(0, len(text)),
+    )
+    return strip_pii(
+        [clause],
+        document,
+        threshold=target.pii_score_threshold,
+        strip_metadata=strip_metadata,
+    )
+
+
+__all__ = [
+    "PiiEngine",
+    "strip_and_persist",
+    "strip_pii",
+    "strip_pii_clauses",
+    "strip_pii_for_tier",
+]

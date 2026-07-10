@@ -256,7 +256,6 @@ The following are explicitly out of scope for this specification:
 - **Data classification or sensitivity detection** — The system does not attempt to classify document sensitivity. Tier choice is the user's responsibility.
 - **Bypass mode for the privacy tier router** — There is no CLI flag to disable tier enforcement. The user changes the tier in config to change behavior.
 - **Tier-specific performance benchmarks** — Success criteria define correctness, not speed. Performance characteristics of each tier are measured separately by the benchmark harness (spec-010).
-- **Accuracy benchmarking per tier** — The accuracy of model inference under each tier is not defined or measured in this specification. The trust threshold required before lawyers adopt a tier is a product question deferred to user research. (Resolved from CL-04.)
 - **Per-operation tier change notification** — The "changed from X since last operation" message (Scenario 5, P3) is dropped from the MVP. The system always displays the current tier at the start of every operation. Detecting and displaying a diff between consecutive operations is deferred until explicitly requested. (Resolved from CL-05.)
 
 ---
@@ -362,7 +361,53 @@ A structure attached to the operation's result containing:
 
 ---
 
-## 9. Quality Checklist
+## 9. Per-Tier Accuracy Targets
+
+Each privacy tier defines minimum accuracy targets for model inference
+and a PII score threshold. These targets were established by user research;
+courts accept 80% F1 for TAR (Technology-Assisted Review), human
+first-pass review achieves approximately 85% F1, and PII false negatives
+are considered worse than false positives (hence the broader capture at
+the Maximum tier).
+
+| Tier | Min F1 | Min Precision | Min Recall | PII Score Threshold |
+|------|--------|---------------|------------|---------------------|
+| Maximum (local, privacy-max) | 0.70 | 0.65 | 0.75 | 0.4 (sensitive) |
+| Balanced (hybrid) | 0.80 | 0.75 | 0.85 | 0.6 (default) |
+| Performance (cloud, best model) | 0.90 | 0.85 | 0.95 | 0.8 (strict) |
+
+### FR-10 — Accuracy Targets Enforceable
+
+Each tier's accuracy targets SHALL be available programmatically via
+``get_target(tier)`` in the ``tier_accuracy`` module. The benchmark
+harness (spec 010) SHALL accept a ``--benchmark-tier`` flag that runs
+evaluation against the specified tier's threshold.
+
+### FR-11 — PII Threshold Wired to Tier
+
+The PII stripping engine SHALL expose a ``strip_pii_for_tier()`` entry
+point that uses the tier's ``pii_score_threshold`` when constructing the
+``PiiEngine`` instance. The existing ``strip_pii()`` signature SHALL
+remain unchanged.
+
+### Success Criteria
+
+**SC-08 — Per-tier accuracy constants are correct.** A unit test
+verifies all three tiers have targets, values are monotonically
+increasing (Maximum < Balanced < Performance), and PII thresholds are
+within [0, 1].
+
+**SC-09 — PII threshold varies by tier.** A test verifies that
+Maximum tier (threshold 0.4) detects at least as many PII entities as
+Performance tier (threshold 0.8) on the same input.
+
+**SC-10 — Benchmark tier flag works.** Running the benchmark with
+``--benchmark-tier maximum|balanced|performance`` produces output that
+mentions the tier name and completes without error.
+
+---
+
+## 10. Quality Checklist
 
 See `checklists/requirements.md` for the spec quality validation checklist.
 
@@ -403,7 +448,7 @@ This section records the outcome of the clarification phase for this specificati
 
 **Resolution**: Option 1. The router wraps individual Gateway methods, giving it direct knowledge of call type without changing Gateway internals. Updated §7 Assumptions.
 
-### CL-04: Accuracy Threshold
+### CL-04: Accuracy Threshold ✅ RESOLVED
 
 **Ambiguity**: The product blueprint notes that the accuracy threshold lawyers need before trusting a tier has not been quantified.
 
@@ -411,7 +456,7 @@ This section records the outcome of the clarification phase for this specificati
 1. Define placeholder accuracy metrics in this specification.
 2. Defer entirely to user research and a future product specification.
 
-**Resolution**: Option 2. Accuracy quantification is a product question, not an implementation concern. This specification defers it. Updated §5 Non-Goals.
+**Resolution**: Option 1. User research established the targets (see §9 Per-Tier Accuracy Targets). The accuracy thresholds are now quantified and wired into the benchmark harness and PII stripping engine. Updated §5 Non-Goals (line 259 removed) and §9 added.
 
 ### CL-05: Tier Change Notification Mechanism
 

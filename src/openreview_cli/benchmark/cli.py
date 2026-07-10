@@ -33,6 +33,7 @@ benchmark_app = typer.Typer(
 VALID_DATASETS = frozenset({"cuad", "maud", "contract_nli", "pii"})
 VALID_FORMATS = frozenset({"terminal", "json"})
 VALID_HALLUCINATION_METHODS = frozenset({"lexical", "cg-dpo"})
+VALID_BENCHMARK_TIERS = frozenset({"maximum", "balanced", "performance", "all"})
 # ponytail: hard-coded mode list — source of truth for benchmark mode validation.
 VALID_MODES: frozenset[str] = frozenset(
     {
@@ -156,6 +157,11 @@ def benchmark_run(
         "--use-pipeline",
         help="Delegate per-item processing to the Pipeline framework",
     ),
+    benchmark_tier: str = typer.Option(
+        "all",
+        "--benchmark-tier",
+        help=f"Run benchmark for specific tier: {', '.join(sorted(VALID_BENCHMARK_TIERS))}",
+    ),
 ) -> None:
     """Run benchmarks against research baselines.
 
@@ -172,6 +178,14 @@ def benchmark_run(
         typer.echo(
             f"Error: Invalid hallucination method '{hallucination_method}'. "
             f"Valid: {', '.join(sorted(VALID_HALLUCINATION_METHODS))}",
+            err=True,
+        )
+        raise typer.Exit(code=78)
+
+    if benchmark_tier not in VALID_BENCHMARK_TIERS:
+        typer.echo(
+            f"Error: Invalid benchmark tier '{benchmark_tier}'. "
+            f"Valid: {', '.join(sorted(VALID_BENCHMARK_TIERS))}",
             err=True,
         )
         raise typer.Exit(code=78)
@@ -248,10 +262,16 @@ def benchmark_run(
         git_branch=git_branch,
     )
 
-    # If PII is in the dataset list, run PII evaluation
+    # If PII is in the dataset list, run PII evaluation (per-tier or all)
     if "pii" in dataset_list:
-        pii_result = _run_pii_evaluation(runner, verbose)
-        run.results.append(pii_result)
+        if benchmark_tier == "all":
+            tiers_to_run = ["maximum", "balanced", "performance"]
+        else:
+            tiers_to_run = [benchmark_tier]
+        for t in tiers_to_run:
+            pii_result = _run_pii_evaluation(runner, verbose, tier=t)
+            pii_result.dataset_name = f"pii::tier={t}"
+            run.results.append(pii_result)
 
     # For other datasets, use a mock pipeline (real LLM integration deferred)
     for dataset in dataset_list:
@@ -322,11 +342,15 @@ def benchmark_run(
         print_terminal_report(run, regression=regression_data, verbose=verbose)
 
 
-def _run_pii_evaluation(runner: BenchmarkRunner, verbose: bool = False) -> "DatasetResult":
-    """Run PII evaluation using the PII engine."""
+def _run_pii_evaluation(
+    runner: BenchmarkRunner, verbose: bool = False, tier: str = "balanced"
+) -> "DatasetResult":
+    """Run PII evaluation using per-tier PII threshold."""
+    from openreview_cli.gateway.tier_accuracy import get_target
     from openreview_cli.pii.engine import PiiEngine
 
-    engine = PiiEngine(threshold=0.7)
+    target = get_target(tier)
+    engine = PiiEngine(threshold=target.pii_score_threshold)
 
     def detect_pii(text: str) -> list[dict[str, str]]:
         results = []

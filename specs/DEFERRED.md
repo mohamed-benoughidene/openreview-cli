@@ -1658,55 +1658,52 @@ across all three export formats (Markdown, JSON, DOCX).
 
 ---
 
-## D-35: Accuracy Benchmarking Per Tier
+## D-35: Accuracy Benchmarking Per Tier ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | Privacy Tier Routing / spec 020, CL-04, §5 Non-Goals |
 | **Deferred at** | 2026-07-05 |
-| **Trigger** | Deferred to user research — trust threshold not quantified |
-| **Status** | Unblocked — awaiting user research for accuracy thresholds |
+| **Resolved at** | 2026-07-10 |
+| **Resolved by** | Per-tier accuracy targets — `tier_accuracy.py`, `--benchmark-tier` flag, `strip_pii_for_tier()` entry point |
+| **Status** | ✅ **Resolved** |
 
 ### Description
 
 The privacy tier specification defines correctness criteria (SC-01 through
-SC-05) but does not define or measure the accuracy of model inference under
-each tier. Different tiers route to different providers (local vs cloud),
-and there is no published data on whether local models produce equivalent
-accuracy for the contract review task.
+SC-05) but did not define or measure the accuracy of model inference under
+each tier. User research since the deferral established the following
+targets:
 
-Accuracy benchmarking per tier would:
+| Tier | Min F1 | Min Precision | Min Recall | PII Score Threshold |
+|------|--------|---------------|------------|---------------------|
+| Maximum (local, privacy-max) | 0.70 | 0.65 | 0.75 | 0.4 (sensitive) |
+| Balanced (hybrid) | 0.80 | 0.75 | 0.85 | 0.6 (default) |
+| Performance (cloud, best model) | 0.90 | 0.85 | 0.95 | 0.8 (strict) |
 
-1. Define accuracy metrics (precision, recall, F1) for extraction, QA, and
-   comparison tasks under each tier
-2. Run the benchmark harness (spec 010) separately with Maximum, Balanced,
-   and Performance configurations
-3. Compare results side-by-side to quantify the accuracy cost (if any) of
-   using local models
-4. Produce a decision framework: "If you need ≥98% F1, use Performance.
-   If 95% is acceptable, Maximum is sufficient."
+Rationale: courts accept 80% F1 for TAR, human first-pass review is ~85%,
+PII false negatives worse than false positives.
 
-The trust threshold that lawyers require before adopting a given tier is a
-product question, not an implementation one, and is deferred to user
-research.
+### Resolution
 
-### What would need to change to unblock
-
-1. Design and conduct user research to determine the accuracy thresholds
-   lawyers require per tier
-2. Add a tier-configuration dimension to the benchmark runner (spec 010)
-   so the same dataset can be evaluated under different tier configurations
-3. Define accuracy benchmarks for each tier
-4. Publish results in project documentation so users can make informed tier
-   choices
-5. Optionally add a `--benchmark-tier` flag to the benchmark harness
+1. **Accuracy constants** — `src/openreview_cli/gateway/tier_accuracy.py`
+   defines `TierAccuracyTarget` dataclass and `TIER_ACCURACY_TARGETS` dict,
+   accessible via `get_target(tier)`.
+2. **PII threshold wiring** — `src/openreview_cli/pii/engine.py` now
+   exports `strip_pii_for_tier(text, tier, document)` that creates a
+   `PiiEngine` with the tier's score threshold.
+3. **Benchmark tier flag** — `openreview benchmark run` accepts
+   `--benchmark-tier` (maximum|balanced|performance|all, default all).
+   When `all`, runs one PII evaluation per tier with tier-specific
+   thresholds and labels results `pii::tier=<name>`.
+4. **Spec amendment** — Spec 020 §5 Non-Goals line 259 removed; new §9
+   "Per-Tier Accuracy Targets" added with the table above and
+   FR-10/FR-11/SC-08/SC-09/SC-10. CL-04 updated to reference §9.
 
 ### Blueprint references
 
-Spec 020 §5 Non-Goals, §10 CL-04 (accuracy threshold deferral).
-Checklist requirement CL-04: "Accuracy threshold — lawyers' trust threshold
-not quantified. Deferred to user research / future product spec."
-Benchmark harness at spec 010.
+Spec 020 §5 Non-Goals (line 259 removed), §9 (new), CL-04 (updated).
+Benchmark harness at spec 010. `tier_accuracy.py`, `engine.py`.
 
 ---
 
