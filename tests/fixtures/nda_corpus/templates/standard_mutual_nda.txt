@@ -1,0 +1,45 @@
+Standard Mutual NDA Template
+
+##CLAUSE: confidentiality_definition##
+1. Definition of Confidential Information
+Confidential Information means any non-public information, regardless of form, disclosed by one party (Discloser) to the other (Recipient) in connection with the purposes described in this Agreement. It includes, but is not limited to, business plans, financial data, trade secrets, technical specifications, customer information, pricing, marketing plans, and proprietary software. Confidential Information does not include information Recipient can prove: (a) is or becomes public knowledge without Recipient's breach; (b) was known to Recipient before disclosure; (c) is received from a third party without restriction; or (d) is developed independently.
+
+##CLAUSE: exclusions##
+2. Exclusions from Confidential Information
+The obligations in this Agreement do not apply to information that Recipient proves by competent evidence: (a) was publicly available before disclosure; (b) becomes publicly available without Recipient's fault; (c) was already in Recipient's possession without confidentiality restrictions; (d) is received from a third party without restriction; or (e) is independently developed by Recipient.
+
+##CLAUSE: obligations##
+3. Obligations of Recipient
+Recipient shall: (a) use Confidential Information only for the authorized purpose; (b) protect it using reasonable care; (c) restrict access to personnel with a need to know; (d) not disclose it without authorization; (e) comply with all applicable laws regarding data protection; and (f) notify Discloser of any breach.
+
+##CLAUSE: permitted_disclosures##
+4. Permitted Disclosures
+Recipient may disclose Confidential Information to: (a) its employees, consultants, and professional advisors bound by confidentiality obligations; (b) as required by applicable law or court order, with advance notice to Discloser; and (c) potential investors, acquirers, or merger partners under NDA.
+
+##CLAUSE: term##
+5. Term
+This Agreement starts on the Effective Date and continues for three (3) years. Either party may terminate with thirty (30) days written notice. Confidentiality obligations survive for five (5) years after termination.
+
+##CLAUSE: return_obligations##
+6. Return or Destruction
+On termination or Discloser's request, Recipient shall promptly return or destroy all Confidential Information and certify compliance in writing. Recipient may retain copies required by law or backup policies.
+
+##CLAUSE: no_license##
+7. No License
+Discloser retains all intellectual property rights in its Confidential Information. No license is granted under this Agreement. Recipient may develop competitive products or services.
+
+##CLAUSE: remedies##
+8. Equitable Relief
+Recipient agrees that a breach may cause irreparable harm. Discloser may seek injunctive relief without posting a bond. All remedies are cumulative.
+
+##CLAUSE: assignment##
+9. Assignment
+Neither party may assign this Agreement without written consent, except in connection with a merger, acquisition, or sale of substantially all assets. Unauthorized assignments are void.
+
+##CLAUSE: governing_law##
+10. Governing Law
+This Agreement shall be governed by the laws of the State of Delaware. The CISG shall not apply.
+
+##CLAUSE: survival##
+11. General Provisions
+This Agreement is the entire agreement between the parties. It supersedes all prior agreements. Amendments must be in writing. If a provision is held invalid, the rest remains in effect. Waivers must be in writing. This Agreement may be signed in counterparts.

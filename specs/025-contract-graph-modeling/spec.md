@@ -333,5 +333,41 @@ openreview graph view <graph.json> [--color]
 - Persistent graph storage in SQLite (JSON files only) — *Implemented by D-59: SQLite storage is now available as opt-in via `--store` flag on `graph build`. JSON files remain the default.*
 - Multi-contract graph comparison
 - Graph diff between contract versions
-- Contract clause similarity / clustering
 - Any new dependencies beyond stdlib + existing project deps
+
+---
+
+### Clause Clustering (D-61 — RESOLVED)
+
+Clause similarity/clustering is now implemented via ``--cluster-clauses`` flag on
+``openreview graph build``.
+
+| Component | Choice | Rationale |
+|-----------|--------|-----------|
+| **Embedding model** | ``nlpaueb/legal-bert-base-uncased`` (110M params, 768d, ~440 MB) | Best offline legal embedding for 8 GB RAM hardware. Pre-trained on 12 GB legislation, court cases, and contracts. |
+| **Algorithm** | HDBSCAN with ``metric="cosine"`` | Density-based, no k required, noise label (-1) for outliers. Works well on small clause sets (3+ clauses). |
+| **CLI flag** | ``--cluster-clauses`` on ``graph build`` | Output: per-clause cluster label + cluster summary (top-3 excerpts) attached to graph metadata. |
+| **Memory strategy** | Load → embed → release | Model loaded only during ``embed_clauses()``, then released via ``cleanup()`` + ``gc.collect()``. |
+
+**Example:**
+
+```bash
+openreview graph build parsed.json --cluster-clauses
+# Output includes cluster info in graph JSON metadata:
+# "clustering": {
+#   "method": "legal-bert + HDBSCAN cosine",
+#   "model": "nlpaueb/legal-bert-base-uncased",
+#   "cluster_count": 3,
+#   "noise_count": 0,
+#   "clusters": [
+#     {"label": 0, "count": 2, "clause_ids": ["c1", "c2"], "excerpts": [...]},
+#     ...
+#   ]
+# }
+```
+
+**Key constraints:**
+- ``sentence-transformers`` is forbidden — uses raw ``transformers`` + ``torch``.
+- Model is loaded, used, then released (no persistent memory footprint).
+- Clustering failure (offline) does not block graph build — skipped gracefully.
+- New deps: ``torch>=2.0`` (CPU-only), ``transformers>=4.38``, ``scikit-learn>=1.3`` (for HDBSCAN).

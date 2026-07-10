@@ -1,0 +1,49 @@
+oneNDA Template v2.1 — Alternative Wording (CC BY-ND 4.0)
+
+##CLAUSE: confidentiality_definition##
+1. Definition of Confidential Information
+"Confidential Information" means any data or information, in any form or medium, disclosed by or on behalf of the Disclosing Party to the Receiving Party in connection with the Purpose. This includes technical data, business strategies, financial records, trade secrets, customer information, product specifications, pricing, and proprietary know-how. Confidential Information excludes information that the Receiving Party proves by written evidence: (a) was publicly available when disclosed; (b) was already known to the Receiving Party without a confidentiality duty; (c) was obtained from a third party without restriction; or (d) was developed independently without using the Disclosing Party's information.
+
+##CLAUSE: exclusions##
+2. Exceptions
+The Receiving Party's confidentiality obligations do not cover information that it can show: (a) is or becomes public other than through a breach of this Agreement; (b) was in its possession before the Disclosing Party disclosed it; (c) it lawfully receives from a third party without confidentiality restrictions; or (d) it develops without reference to the Disclosing Party's Confidential Information.
+
+##CLAUSE: obligations##
+3. Protection of Confidential Information
+The Receiving Party must: (a) use the Confidential Information only for the Purpose; (b) keep it confidential using reasonable safeguards; (c) not disclose it except as allowed by this Agreement; (d) restrict access to employees and representatives who need it; and (e) inform the Disclosing Party immediately if a breach is discovered.
+
+##CLAUSE: permitted_disclosures##
+4. Authorized Disclosures
+The Receiving Party may share Confidential Information with: (a) its employees, directors, and professional advisors bound by confidentiality duties; (b) government agencies when required by law, with advance notice to the Disclosing Party; and (c) potential investors or acquirers under a nondisclosure agreement.
+
+##CLAUSE: term##
+5. Term and Duration
+This Agreement takes effect on the Effective Date and continues for three (3) years. The duty to protect Confidential Information lasts for five (5) years from disclosure. Either party may end this Agreement with thirty (30) days' notice.
+
+##CLAUSE: return_obligations##
+6. Return or Deletion
+On request or when this Agreement ends, the Receiving Party must promptly stop using the Confidential Information and return or destroy all copies. The Receiving Party must certify this in writing if asked. Copies may be kept if required by law or backup policies.
+
+##CLAUSE: no_license##
+7. Intellectual Property Rights
+The Disclosing Party keeps all rights to its Confidential Information. No license is given by sharing it. The Receiving Party may develop competing products as long as it does not breach this Agreement.
+
+##CLAUSE: remedies##
+8. Remedies for Breach
+A breach could cause irreparable harm. The Disclosing Party may seek an injunction and any other remedy available. A bond is not required for equitable relief.
+
+##CLAUSE: assignment##
+9. Assignment
+Neither party may transfer this Agreement without the other's written permission. Either party may assign it as part of a merger, acquisition, or sale of all assets. Unauthorized assignments are void.
+
+##CLAUSE: governing_law##
+10. Governing Law
+The laws of the State of Delaware govern this Agreement, without regard to conflict-of-law rules. The CISG does not apply.
+
+##CLAUSE: jurisdiction##
+11. Venue
+All disputes arising from this Agreement must be brought in the state or federal courts in Delaware. Each party consents to the jurisdiction of those courts.
+
+##CLAUSE: survival##
+12. General Terms
+This Agreement is the entire understanding between the parties. It replaces all earlier agreements. Amendments must be in writing. If a provision is invalid, the rest continues. Waivers must be in writing. Notices are effective when delivered or three days after mailing.

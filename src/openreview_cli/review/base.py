@@ -153,3 +153,89 @@ class ReviewCommand:
         from openreview_cli.config.paths import get_config_dir
 
         return ensure_encryption_key(self._load_config(), get_config_dir() / "config.yml")
+
+
+def run_bilateral_comparison(
+    doc_a_path: str,
+    doc_b_path: str,
+    playbook_path: str | None = None,
+    playbook_id: str | None = None,
+    extraction_model: str = "extraction",
+    qa_model: str | None = None,
+    no_pii: bool = False,
+    verbose: bool = False,
+    confidence_threshold: float = 0.7,
+    mode: str = "precheck",
+) -> "Any":
+    """Run bilateral PAKTON comparison on two documents.
+
+    Orchestrates: PAKTON(A) → PAKTON(B) → ComparisonAgent → Report.
+
+    Parameters
+    ----------
+    doc_a_path:
+        Path to Party A's document.
+    doc_b_path:
+        Path to Party B's document.
+    playbook_path:
+        Path to custom YAML playbook.
+    playbook_id:
+        Playbook ID from DB (takes precedence over playbook_path).
+    extraction_model:
+        Model slot for extraction agent.
+    qa_model:
+        Model slot for QA agent (``None`` reuses extraction slot).
+    no_pii:
+        Skip PII stripping.
+    verbose:
+        Print progress to stderr.
+    confidence_threshold:
+        Confidence threshold for Green/Amber/Red (default 0.7).
+    mode:
+        Product mode (default "precheck").
+
+    Returns
+    -------
+    ComparisonReport
+        Structured bilateral comparison report.
+
+    Raises
+    ------
+    FileNotFoundError
+        If either document does not exist.
+    ValueError
+        If either document fails to produce assessments.
+    """
+    from openreview_cli.review import run_review
+    from openreview_cli.review.comparison_agent import ComparisonAgent
+
+    reports_a = run_review(
+        paths=[doc_a_path],
+        playbook_path=playbook_path,
+        playbook_id=playbook_id,
+        extraction_model=extraction_model,
+        qa_model=qa_model,
+        no_pii=no_pii,
+        verbose=verbose,
+        confidence_threshold=confidence_threshold,
+        mode=mode,
+    )
+    reports_b = run_review(
+        paths=[doc_b_path],
+        playbook_path=playbook_path,
+        playbook_id=playbook_id,
+        extraction_model=extraction_model,
+        qa_model=qa_model,
+        no_pii=no_pii,
+        verbose=verbose,
+        confidence_threshold=confidence_threshold,
+        mode=mode,
+    )
+
+    if not reports_a:
+        raise ValueError(f"No assessments produced for Party A document: {doc_a_path}")
+    if not reports_b:
+        raise ValueError(f"No assessments produced for Party B document: {doc_b_path}")
+
+    agent = ComparisonAgent(confidence_threshold=confidence_threshold)
+    return agent.compare(reports_a[0].assessments, reports_b[0].assessments)

@@ -23,8 +23,15 @@ if TYPE_CHECKING:
 from openreview_cli.pipeline.adapters.parse import ParseStage
 from openreview_cli.pipeline.adapters.strip import StripStage
 from openreview_cli.pipeline.runner import Pipeline
-from openreview_cli.review.base import ReviewCommand
+from openreview_cli.review.base import ReviewCommand, run_bilateral_comparison
 from openreview_cli.review.colors import AmberReason, AssessmentColor, assign_colors
+from openreview_cli.review.comparison_agent import (
+    ComparisonAgent,
+    ComparisonReport,
+    ComparisonSummary,
+    DivergenceType,
+    PairedAssessment,
+)
 
 # Memo export public API
 from openreview_cli.review.memo import MemoExporter, MemoFormat
@@ -43,8 +50,13 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "AmberReason",
     "AssessmentColor",
+    "ComparisonAgent",
+    "ComparisonReport",
+    "ComparisonSummary",
+    "DivergenceType",
     "MemoExporter",
     "MemoFormat",
+    "PairedAssessment",
     "ReviewCommand",
     "ReviewReport",
     "VersionDiff",
@@ -53,6 +65,7 @@ __all__ = [
     "format_json",
     "format_terminal",
     "load_playbook_from_db",
+    "run_bilateral_comparison",
     "run_review",
 ]
 

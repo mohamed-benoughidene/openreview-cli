@@ -552,14 +552,15 @@ for contract review history.
 
 ---
 
-## D-12: Bilateral PAKTON Architecture
+## D-12: Bilateral PAKTON Architecture ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | Spec 014 (bilateral comparison) §9 |
 | **Deferred at** | 2026-07-04 |
-| **Trigger** | Deferred research — PAKTON is single-party only |
-| **Status** | Unblocked when the PAKTON 3-agent architecture is adapted for bilateral comparison |
+| **Resolved at** | 2026-07-10 |
+| **Resolved by** | D-12 implementation — `ComparisonAgent` + `run_bilateral_comparison()` |
+| **Status** | ✅ **Resolved** |
 
 ### Description
 
@@ -596,6 +597,26 @@ survey does.
 Spec 014 §9, P-13 (PAKTON), P-4 (≤64% F1 ceiling for binary comparison).
 The current simple pipeline serves as a baseline for measuring any
 improvement from a full PAKTON adaptation.
+
+### Resolution
+
+D-12 is resolved by formalizing the ad-hoc bilateral comparison into a
+named **Bilateral PAKTON architecture** following the L4M adversarial
+dual-agent + verifier pattern:
+
+- **`ComparisonAgent`** (`src/openreview_cli/review/comparison_agent.py`):
+  Rule-based divergence classifier using existing `ClauseAssessment`
+  position fields. Implements heading-based clause alignment (exact → fuzzy
+  → position fallback) and a 3-category taxonomy (equivalent / addition /
+  contradiction). No LLM call, no new dependencies.
+- **`run_bilateral_comparison()`** (`src/openreview_cli/review/base.py`):
+  Orchestrates two independent PAKTON runs then wires the ComparisonAgent.
+- Tests: 4 unit tests (identical contracts, position mismatch, no
+  alignment, empty lists) + 3 integration tests (wiring correctness,
+  contradiction detection, empty assessments). All passing.
+
+The architecture is documented at `specs/014-bilateral-comparison/spec.md`
+§1.2 (Architecture — Bilateral PAKTON).
 
 ---
 
@@ -2698,38 +2719,51 @@ Spec 025 spec.md §Assumptions (line 287): "The existing `parsing` module produc
 
 ---
 
-## D-61: Contract Clause Similarity / Clustering
+## D-61: Contract Clause Similarity / Clustering ✅ RESOLVED
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | Spec 025 (contract graph modeling) — explicitly excluded |
 | **Deferred at** | 2026-07-06 |
+| **Resolved at** | 2026-07-10 |
+| **Resolved by** | D-61 implementation — legal‑bert + HDBSCAN + `--cluster-clauses` flag |
 | **Trigger** | Spec boundary — no new dependencies allowed for v1 |
-| **Status** | Unblocked — requires embedding pipeline or a similarity library |
+| **Status** | ✅ **Resolved** |
 
 ### Description
 
 The graph models clause structure (hierarchy, cross-references, definitions) but does not analyse clause text similarity. Two clauses that use near-identical language but live in different parts of the hierarchy would not be flagged as similar.
 
-Clause similarity/clustering would:
-1. Compute pairwise text similarity between all clauses in a contract
-2. Cluster similar clauses and flag potential duplication
-3. Add a visual indicator in the view or metrics output
-4. Help identify boilerplate clauses, repeated definitions, or potential drafting errors
+### Resolution
 
-### What would need to change to unblock
+Clause similarity/clustering implemented via `--cluster-clauses` flag on `openreview graph build`:
 
-1. Choose a similarity method: TF-IDF cosine similarity (stdlib + sklearn or pure numpy), or embedding comparison (requires the embedding pipeline from the AI Gateway)
-2. Build a clause similarity scanner that outputs similarity pairs above a configurable threshold
-3. Add similarity/clustering data to `GraphMetrics` or a separate `SimilarityReport`
-4. Optionally, add a `openreview graph similar` CLI subcommand
-5. Handle the 100 MB memory constraint when computing pairwise similarity for large contracts (500+ clauses)
+| Component | Choice | Location |
+|-----------|--------|----------|
+| **Embedding model** | `nlpaueb/legal-bert-base-uncased` (110M params, 768d) | `parsing/clause_clusterer.py` — load/embed/release pattern |
+| **Clustering** | sklearn HDBSCAN with `metric="cosine"` | `ClauseClusterer.cluster_clauses()` |
+| **CLI flag** | `--cluster-clauses` on `graph build` | `app.py` — attaches cluster data to graph metadata |
+| **New deps** | `torch>=2.0`, `transformers>=4.38`, `scikit-learn>=1.3` | pyproject.toml |
+| **Spec amendment** | §Clause Clustering added to spec 025 | D-61 removed from explicitly excluded list |
+
+**Key design decisions:**
+- `sentence-transformers` is **not** used per spec — raw `transformers` + `torch` for embedding.
+- Model is loaded, used, then released (del + `gc.collect()`) to stay within 100 MB processing budget.
+- Clustering failure (offline) is graceful — graph build succeeds without clustering.
+- Per-clause cluster labels, cluster size, and top-3 excerpts attached to graph JSON metadata.
+
+**Files changed:**
+- `src/openreview_cli/parsing/clause_clusterer.py` (new)
+- `src/openreview_cli/app.py` (add `--cluster-clauses`)
+- `tests/unit/test_clause_clusterer.py` (new)
+- `tests/integration/test_graph_clustering.py` (new)
+- `pyproject.toml` (deps)
+- `specs/025-contract-graph-modeling/spec.md` (amendment)
+- `specs/DEFERRED.md` (this entry)
 
 ### Spec references
 
-Spec 025 spec.md §Explicitly excluded (line 335): "Contract clause similarity / clustering."
-Spec 025 spec.md §Explicitly excluded (line 336): "Any new dependencies beyond stdlib + existing project deps."
-Spec 025 plan.md §Deferred Tasks (line 262): "Contract clause similarity / clustering (excluded by spec)."
+Spec 025 spec.md now includes §Clause Clustering. D-61 removed from explicitly excluded list.
 
 ### Future features (not deferred — natural next steps)
 

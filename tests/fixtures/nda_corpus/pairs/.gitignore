@@ -1,0 +1,6 @@
+# Ignore all generated pair files except the manifest and sample pairs
+*.json
+!manifest.json
+!onenda_v2.1__governing_law__gl_delaware_to_newyork__0102.json
+!bonterms_v1.0__confidentiality_definition__ci_broader_definition__0019.json
+!standard_mutual_nda__term__term_3yr_to_5yr__0217.json

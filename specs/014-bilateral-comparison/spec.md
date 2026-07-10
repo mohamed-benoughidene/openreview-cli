@@ -28,6 +28,30 @@ Pilot scope: PreCheck (NDA) only — one of the three initial product modes (Pre
 | Counterparty strategy signal | ❌ Not available | ✅ Pattern analysis across all divergences (e.g., Party B systematically shortens confidentiality terms) |
 | Paired confidence | ❌ Not available | ✅ Per-divergence confidence + per-clause paired color |
 
+### 1.2 Architecture — Bilateral PAKTON (L4M Pattern)
+
+The comparison pipeline follows the **Bilateral PAKTON** architecture: an L4M-style adversarial dual-agent + verifier pattern adapted for contracts. Two independent PAKTON agents (extraction + QA per party) produce clause assessments, then a rule-based `ComparisonAgent` (the verifier role) detects and classifies divergences.
+
+**Pipeline:**
+```
+PAKTON(A) ──► ClauseAssessment[] ──┐
+                                    ├──► ComparisonAgent ──► ComparisonReport
+PAKTON(B) ──► ClauseAssessment[] ──┘       (rule-based)
+                                            • heading alignment
+                                            • 3-category taxonomy
+                                            • confidence scoring
+```
+
+The `ComparisonAgent`:
+- Aligns clauses by heading (exact → fuzzy → position fallback)
+- Classifies each aligned pair into one of 3 categories: **equivalent** (same position), **addition** (one side only), **contradiction** (different positions)
+- Computes per-pair confidence and three-color status (green/amber/red)
+- No LLM call — entirely rule-based, using existing `ClauseAssessment` position fields
+
+**References:**
+- **PAKTON** — Raptopoulos et al. (EMNLP 2025). Tri-agent single-party review framework. `arXiv:2506.00608`
+- **L4M** — Adversarial prosecutor/attorney + SMT verifier for criminal sentencing. `arXiv:2511.21033`
+
 ---
 
 ## 2. User Scenarios

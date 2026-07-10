@@ -1,0 +1,45 @@
+Balanced Mutual NDA
+
+##CLAUSE: confidentiality_definition##
+1. Definition of Confidential Information
+Confidential Information means all information, in any form, disclosed by Disclosing Party to Receiving Party in connection with the Purpose. This document defines the Purpose in the Cover Page. Confidential Information includes, without limitation, business strategies, financial data, technical specifications, product roadmaps, customer data, pricing, trade secrets, and proprietary know-how. Information is not confidential if Receiving Party proves by written evidence it: (a) was or becomes publicly available without breach; (b) was known to Receiving Party before disclosure; (c) is received from a third party without restriction; or (d) is independently developed without reference to Confidential Information.
+
+##CLAUSE: exclusions##
+2. Exceptions
+Receiving Party's obligations do not apply to information it documents: (a) was or becomes public without fault; (b) was already known without confidentiality restrictions; (c) is obtained from a third party without confidentiality duties; or (d) is independently developed without using Confidential Information.
+
+##CLAUSE: obligations##
+3. Protection and Use
+Receiving Party must: (a) use Confidential Information only for the Purpose; (b) protect it with reasonable care; (c) limit disclosure to those who need to know; (d) not remove markings or reverse engineer; and (e) notify Disclosing Party of any breach.
+
+##CLAUSE: permitted_disclosures##
+4. Permitted Disclosures
+(a) Representatives. Receiving Party may disclose Confidential Information to its employees, advisors, and contractors bound by confidentiality obligations. (b) Legal Requirement. Receiving Party may disclose if required by law, with advance notice to Disclosing Party.
+
+##CLAUSE: term##
+5. Term and Survival
+This Agreement starts on the Effective Date and continues for three (3) years. Either party may terminate on thirty (30) days written notice. Confidentiality obligations survive for five (5) years.
+
+##CLAUSE: return_obligations##
+6. Return or Destruction
+On termination or request, Receiving Party shall promptly return or destroy all Confidential Information and certify compliance. Copies may be retained as required by law.
+
+##CLAUSE: no_license##
+7. Proprietary Rights
+Disclosing Party retains all rights in its Confidential Information. No license is granted.
+
+##CLAUSE: remedies##
+8. Equitable Relief
+A breach may cause irreparable harm. Disclosing Party may seek injunctive relief without posting a bond.
+
+##CLAUSE: assignment##
+9. Assignment
+Neither party may assign this Agreement without written consent, except in a merger or sale of assets.
+
+##CLAUSE: governing_law##
+10. Governing Law
+This Agreement is governed by the laws of the State of Delaware, excluding conflict-of-law rules.
+
+##CLAUSE: survival##
+11. General Provisions
+This Agreement is the complete understanding. Amendments require written consent. If a provision is invalid, the rest continues. Failure to enforce does not waive rights. Notices must be in writing.

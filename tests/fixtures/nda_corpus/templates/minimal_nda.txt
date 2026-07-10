@@ -1,0 +1,33 @@
+Minimal Mutual NDA
+
+##CLAUSE: confidentiality_definition##
+1. Confidential Information
+All information disclosed by one party to the other in connection with this Agreement is Confidential Information, including business plans, financial data, trade secrets, and technical information. Information is not confidential if it is publicly known, already known to the recipient, received from a third party without restriction, or independently developed.
+
+##CLAUSE: exclusions##
+2. Exclusions
+Confidential Information does not include information that: (a) is or becomes public without breach of this Agreement; (b) was already in recipient's possession; (c) is obtained from a third party without restriction; or (d) is independently developed.
+
+##CLAUSE: obligations##
+3. Obligations
+The recipient must protect Confidential Information using reasonable care, use it only for the agreed purpose, and not disclose it without authorization. Access must be limited to personnel with a need to know.
+
+##CLAUSE: term##
+4. Term
+This Agreement continues for three (3) years. Confidentiality obligations survive for five (5) years.
+
+##CLAUSE: return_obligations##
+5. Return of Materials
+Upon request, recipient must return or destroy all Confidential Information and confirm compliance in writing.
+
+##CLAUSE: governing_law##
+6. Governing Law
+This Agreement is governed by the laws of the State of Delaware.
+
+##CLAUSE: assignment##
+7. Assignment
+Neither party may assign this Agreement without consent, except in a merger or asset sale.
+
+##CLAUSE: survival##
+8. General
+This is the entire agreement. Amendments must be in writing. If any provision is invalid, the rest remains in effect.

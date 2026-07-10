@@ -2141,6 +2141,83 @@ def index_clear(
 
 # ── graph subcommand group ──
 
+
+def _run_clause_clustering(
+    graph: Any,  # ANN401: ContractGraph, lazy import
+    parsed_path: Path,
+) -> None:
+    """Embed clause text, cluster with HDBSCAN, attach to graph metadata.
+
+    Fails gracefully if model can't load (offline/error) — graph build
+    succeeds without clustering.
+    """
+    try:
+        # Load clauses from parsed JSON (same as graph builder did)
+        import json
+
+        from openreview_cli.parsing.clause_clusterer import ClauseClusterer
+
+        clause_dicts: list[dict[str, Any]] = json.loads(parsed_path.read_text(encoding="utf-8"))
+        from openreview_cli.parsing.models import Clause
+
+        clauses: list[Clause] = []
+        for cd in clause_dicts:
+            clauses.append(
+                Clause(
+                    id=cd["id"],
+                    title=cd.get("title"),
+                    text=cd["text"],
+                    level=cd.get("level", 0),
+                    parent_id=cd.get("parent_id"),
+                    source_page=cd.get("source_page"),
+                    source_paragraph=cd.get("source_paragraph"),
+                    source_span=cd.get("source_span"),
+                    paragraph_count=cd.get("paragraph_count"),
+                )
+            )
+
+        ClauseClusterer.load()
+        try:
+            embeddings = ClauseClusterer.embed_clauses(clauses)
+            labels = ClauseClusterer.cluster_clauses(embeddings)
+        finally:
+            ClauseClusterer.cleanup()
+
+        # Build cluster summaries
+        cluster_labels_list = labels.tolist()
+        unique_labels = sorted(set(cluster_labels_list))
+        clusters: list[dict[str, Any]] = []
+        for lab in unique_labels:
+            indices = [i for i, li in enumerate(cluster_labels_list) if li == lab]
+            # ponytail: simple excerpt-based summary
+            excerpts = [clauses[i].text[:120] for i in indices[:3]]
+            clusters.append(
+                {
+                    "label": int(lab),
+                    "count": len(indices),
+                    "clause_ids": [clauses[i].id for i in indices],
+                    "excerpts": excerpts,
+                }
+            )
+
+        graph.metadata["clustering"] = {
+            "method": "legal-bert + HDBSCAN cosine",
+            "model": "nlpaueb/legal-bert-base-uncased",
+            "cluster_count": len(unique_labels) - (1 if -1 in unique_labels else 0),
+            "noise_count": cluster_labels_list.count(-1),
+            "clusters": clusters,
+        }
+        n_clusters = graph.metadata["clustering"]["cluster_count"]
+        typer.echo(
+            f"Clustering: {n_clusters} cluster(s), "
+            f"{graph.metadata['clustering']['noise_count']} noise clause(s)"
+        )
+
+    except Exception as exc:
+        # ponytail: cluster failure doesn't break graph build
+        typer.echo(f"Clustering skipped (model not available?): {exc}", err=True)
+
+
 graph_app = typer.Typer(
     name="graph",
     help="Build and analyse contract clause graphs.",
@@ -2169,6 +2246,11 @@ def graph_build(
         "--db-path",
         help="Path to SQLite database (default: .openreview/openreview.db in config dir).",
     ),
+    cluster_clauses: bool = typer.Option(
+        False,
+        "--cluster-clauses",
+        help="Run legal-bert clause embedding + HDBSCAN clustering on parsed clauses.",
+    ),
 ) -> None:
     """Build a directed clause graph from a parsed contract JSON file."""
     from pathlib import Path
@@ -2190,6 +2272,10 @@ def graph_build(
         output = str(path.with_suffix(".graph.json"))
     graph.to_file(output)
     typer.echo(f"Graph built: {len(graph.nodes)} nodes, {len(graph.edges)} edges \u2192 {output}")
+
+    # --cluster-clauses: embed + cluster and attach to graph metadata
+    if cluster_clauses:
+        _run_clause_clustering(graph, path)
 
     if store:
         from openreview_cli.config.paths import get_config_dir

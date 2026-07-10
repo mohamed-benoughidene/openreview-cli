@@ -1,0 +1,49 @@
+oneNDA Template v2.1 — Alternative Wording 2 (CC BY-ND 4.0)
+
+##CLAUSE: confidentiality_definition##
+1. Confidential Information
+Confidential Information means any and all information, technical data, or know-how disclosed by or on behalf of Discloser to Recipient, whether before or after the Effective Date, in connection with the Purpose, regardless of the form of disclosure. It includes, without limitation, business plans, financial statements, customer lists, pricing data, product specifications, software, algorithms, trade secrets, and proprietary techniques. Confidential Information excludes any information that Recipient can prove by written evidence: (i) was already known to Recipient without restriction; (ii) is or becomes public knowledge other than through Recipient's breach; (iii) is received from a third party without confidentiality duties; or (iv) is developed independently without reference to Discloser's information.
+
+##CLAUSE: exclusions##
+2. Exceptions
+Recipient shall have no obligation with respect to information that it can prove: (a) was rightfully known to Recipient before disclosure by Discloser; (b) is or becomes publicly known without Recipient's fault; (c) is rightfully obtained by Recipient from a third party without restriction; or (d) is independently developed by Recipient without use of Confidential Information.
+
+##CLAUSE: obligations##
+3. Confidentiality Obligations
+Recipient agrees to: (a) hold Confidential Information in strict confidence; (b) use it solely for the Purpose; (c) not disclose it except as permitted; (d) safeguard it with at least reasonable care; and (e) notify Discloser immediately of any unauthorized use or disclosure.
+
+##CLAUSE: permitted_disclosures##
+4. Permitted Disclosures
+Recipient may disclose Confidential Information: (a) to its employees and advisors who need to know for the Purpose and who are bound by confidentiality terms at least as restrictive as this Agreement; (b) as required by law, regulation, or legal process, with prompt notice to Discloser; and (c) to bona fide potential investors or acquirers under NDA.
+
+##CLAUSE: term##
+5. Term of Agreement
+This Agreement begins on the Effective Date and continues for three (3) years. Either party may terminate this Agreement upon thirty (30) days written notice. Confidentiality obligations survive for five (5) years from the date of disclosure.
+
+##CLAUSE: return_obligations##
+6. Return of Confidential Information
+Upon termination of this Agreement or upon Discloser's request, Recipient shall promptly cease using and either return or destroy all Confidential Information. Recipient shall certify compliance in writing within ten (10) business days if requested. Recipient may retain copies as required by law.
+
+##CLAUSE: no_license##
+7. Intellectual Property
+All Confidential Information remains the property of Discloser. No license or right is granted to Recipient except to use the information for the Purpose. Recipient may develop competing products as long as it does not breach this Agreement.
+
+##CLAUSE: remedies##
+8. Remedies
+Recipient acknowledges that a breach may cause irreparable harm. Discloser is entitled to seek injunctive relief and all other remedies available at law or equity. No bond is required.
+
+##CLAUSE: assignment##
+9. Assignment
+Neither party may assign this Agreement without the prior written consent of the other, except in connection with a merger or sale of all or substantially all assets. Any attempted assignment in violation of this section is void.
+
+##CLAUSE: governing_law##
+10. Governing Law
+This Agreement is governed by the laws of the State of Delaware, without reference to choice of law rules. The United Nations Convention on Contracts for the International Sale of Goods shall not apply.
+
+##CLAUSE: jurisdiction##
+11. Jurisdiction and Venue
+Any legal action relating to this Agreement shall be brought in the state or federal courts located in Delaware. Each party submits to the personal jurisdiction and venue of such courts and waives any objection based on improper venue.
+
+##CLAUSE: survival##
+12. Miscellaneous
+This Agreement constitutes the entire agreement between the parties. It may be amended only in writing signed by both parties. If any provision is unenforceable, the remainder shall continue in effect. Failure to enforce any provision does not constitute a waiver. Notices must be in writing.

@@ -1,0 +1,45 @@
+Bonterms Mutual NDA v1.0 — Alternative Wording (CC BY 4.0)
+
+##CLAUSE: confidentiality_definition##
+1. Confidential Information
+Confidential Information means all information, technical data, or know-how disclosed by Discloser to Recipient in connection with the Purpose, whether in written, oral, visual, or electronic form. Information is Confidential if Discloser marks it as confidential or if a reasonable person would understand it to be confidential given the circumstances. The existence of the discussions and the terms of the Cover Page are also Confidential Information.
+
+##CLAUSE: exclusions##
+2. Exceptions to Confidential Treatment
+Recipient need not protect information that it can prove: (a) is or becomes publicly available without Recipient's fault; (b) Recipient already knew without a confidentiality duty; (c) Recipient received from a third party without restriction; or (d) Recipient developed independently without using Discloser's Confidential Information.
+
+##CLAUSE: obligations##
+3. Use and Care of Confidential Information
+Recipient shall: (a) use Confidential Information only for the Purpose; (b) not disclose it except as permitted by Section 5; (c) protect it with at least reasonable care; (d) not alter proprietary markings or reverse engineer; and (e) comply with export control laws.
+
+##CLAUSE: permitted_disclosures##
+4. Permitted Sharing
+(a) Representatives. Recipient may share Confidential Information with its employees, advisors, and contractors who need it for the Purpose and who are bound by equivalent confidentiality terms. (b) Legal Requirement. Recipient may disclose Confidential Information when required by law, subpoena, or court order, provided it gives Discloser advance notice and cooperates in obtaining protective treatment.
+
+##CLAUSE: term##
+5. Term and Survival
+This NDA begins on the Effective Date and continues for three (3) years. Either party may end it at any time by notice. Confidentiality obligations survive for three (3) years after termination.
+
+##CLAUSE: return_obligations##
+6. Return or Destruction
+On termination of this NDA or at Discloser's request, Recipient shall stop using the Confidential Information and promptly destroy or return it. Recipient shall confirm compliance in writing if asked. Recipient may retain copies as required by law or standard backup procedures, subject to continuing confidentiality obligations.
+
+##CLAUSE: no_license##
+7. Ownership
+Discloser retains all rights in its Confidential Information. No license is granted by disclosure. Recipient may develop similar or competing products as long as it complies with this NDA.
+
+##CLAUSE: governing_law##
+8. Governing Law
+This NDA is governed by the laws of the State of New York, without regard to conflict-of-law provisions. The parties submit to the exclusive jurisdiction of the courts in New York County.
+
+##CLAUSE: remedies##
+9. Equitable Relief
+A breach of this NDA may cause irreparable harm. Discloser is entitled to seek injunctive relief and any other equitable remedy, in addition to monetary damages.
+
+##CLAUSE: assignment##
+10. Assignment
+Neither party may assign this NDA without the other's consent, except in connection with a merger, reorganization, or sale of all or substantially all assets. Any non-permitted assignment is void.
+
+##CLAUSE: survival##
+11. General Provisions
+This NDA is the complete agreement between the parties. It supersedes all prior agreements. Amendments must be in writing and signed by both parties. If any provision is unenforceable, the remainder stays in effect. Waivers must be in writing and signed. This NDA may be signed in counterparts.

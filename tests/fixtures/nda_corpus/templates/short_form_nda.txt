@@ -1,0 +1,45 @@
+Short Form Mutual NDA (CC0-style template)
+
+##CLAUSE: confidentiality_definition##
+1. Definition of Confidential Information
+Confidential Information means any non-public information disclosed by one party to the other in connection with this Agreement, whether oral, written, or digital. This includes business plans, financial data, technical specifications, customer lists, pricing, and trade secrets.
+
+##CLAUSE: exclusions##
+2. Exclusions
+Confidential Information does not include information that: (a) is or becomes public knowledge through no fault of the receiving party; (b) was known to the receiving party before disclosure; (c) is received from a third party without confidentiality obligation; or (d) is independently developed by the receiving party.
+
+##CLAUSE: obligations##
+3. Obligations
+The receiving party shall: (a) use the Confidential Information only for the agreed purpose; (b) protect it using reasonable care; (c) limit access to those who need to know; and (d) notify the disclosing party of any breach.
+
+##CLAUSE: term##
+4. Term
+This Agreement begins on the Effective Date and continues for two (2) years. Confidentiality obligations survive for three (3) years after termination.
+
+##CLAUSE: return_obligations##
+5. Return of Materials
+Upon request, the receiving party shall return or destroy all Confidential Information. A certificate of compliance shall be provided if requested.
+
+##CLAUSE: permitted_disclosures##
+6. Permitted Disclosures
+The receiving party may disclose Confidential Information to: (a) its employees and advisors with a need to know; (b) as required by law with prompt notice to the disclosing party; and (c) successors in interest.
+
+##CLAUSE: no_license##
+7. No License
+All rights in Confidential Information remain with the disclosing party. No license is granted by this Agreement.
+
+##CLAUSE: remedies##
+8. Remedies
+The disclosing party may seek injunctive relief for any breach. All remedies are cumulative.
+
+##CLAUSE: governing_law##
+9. Governing Law
+This Agreement is governed by the laws of the State of Delaware.
+
+##CLAUSE: assignment##
+10. Assignment
+Neither party may assign this Agreement without the other's written consent, except in a merger or sale of assets.
+
+##CLAUSE: survival##
+11. General
+This is the entire agreement between the parties. It may only be amended in writing. If any provision is unenforceable, the rest remains in effect. Notices must be in writing.
