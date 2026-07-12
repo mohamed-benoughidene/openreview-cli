@@ -1,0 +1,4 @@
+/* Base TUI styles */
+Screen {
+    background: $surface;
+}

@@ -1,93 +1,160 @@
-# Analysis Context — LicenseCheck, LeaseCheck, PrivacyCheck (027)
+## Grounding Status
+All grounding artifacts present (verified-sources.md, task-context.md)
 
-**Generated**: 2026-07-07 | **Feature**: `027-product-modes-license-lease-privacy` | **Branch**: `feat/027-product-modes-license-lease-privacy`
+## Reality Anchors
 
----
+### Dependency Anchors
+```
+ANCHOR DEP: textual | VERSION: 8.2.8 | CONFIRMED BEHAVIORS: TUI framework, async I/O, ModalScreen, DirectoryTree, Input(password=True), app.run_test() Pilot, CSS-based styling
+ANCHOR DEP: pytest-asyncio | VERSION: 1.4.0 | CONFIRMED BEHAVIORS: asyncio_mode=auto, pytest 9.x compatible
+ANCHOR DEP: pydantic | VERSION: 2.13.4 | CONFIRMED BEHAVIORS: data validation, already in project
+ANCHOR DEP: rich | VERSION: 15.0.0 | CONFIRMED BEHAVIORS: terminal formatting, Textual foundation, already in project
+ANCHOR DEP: typer | VERSION: 0.26.8 | CONFIRMED BEHAVIORS: CLI framework, already in project
+ANCHOR DEP: questionary | VERSION: 2.1.1 | CONFIRMED BEHAVIORS: interactive prompts, retained for non-TUI subcommands
+```
 
-## 1. Grounding Chain Status
+### Path Anchors
+```
+ANCHOR PATH: src/openreview_cli/app.py | STATUS: EXISTS | 3124 lines, Typer CLI entry
+ANCHOR PATH: src/openreview_cli/review/__init__.py | STATUS: EXISTS | exports run_review(), ReviewReport
+ANCHOR PATH: src/openreview_cli/review/base.py | STATUS: EXISTS | ReviewCommand base class
+ANCHOR PATH: src/openreview_cli/review/playbook.py | STATUS: EXISTS | playbook loader
+ANCHOR PATH: src/openreview_cli/gateway/router.py | STATUS: EXISTS | Gateway class
+ANCHOR PATH: src/openreview_cli/storage/database.py | STATUS: EXISTS | SQLite layer, 725 lines
+ANCHOR PATH: src/openreview_cli/gateway/tier_config.py | STATUS: EXISTS | PrivacyTier enum
+ANCHOR PATH: src/openreview_cli/config/loader.py | STATUS: EXISTS | load_config(), get_config_value()
+ANCHOR PATH: src/openreview_cli/config/auth.py | STATUS: EXISTS | auth credential management
+ANCHOR PATH: src/openreview_cli/gateway/wizard.py | STATUS: EXISTS | interactive setup wizard (questionary)
+ANCHOR PATH: src/openreview_cli/tui/ | STATUS: NEW | plan-specified, does not exist
+ANCHOR PATH: src/openreview_cli/tui/__init__.py | STATUS: NEW | plan-specified, does not exist
+ANCHOR PATH: src/openreview_cli/tui/app.py | STATUS: NEW | plan-specified, does not exist
+ANCHOR PATH: src/openreview_cli/tui/launcher.py | STATUS: NEW | plan-specified, does not exist
+ANCHOR PATH: src/openreview_cli/tui/tabs/ | STATUS: NEW | plan-specified, does not exist
+ANCHOR PATH: src/openreview_cli/tui/widgets/ | STATUS: NEW | plan-specified, does not exist
+ANCHOR PATH: src/openreview_cli/tui/screens/ | STATUS: NEW | plan-specified, does not exist
+ANCHOR PATH: src/openreview_cli/tui/domain/ | STATUS: NEW | plan-specified, does not exist
+ANCHOR PATH: src/openreview_cli/tui/tcss/ | STATUS: NEW | plan-specified, does not exist
+ANCHOR PATH: tests/unit/tui/ | STATUS: NEW | plan-specified, does not exist
+ANCHOR PATH: tests/integration/tui/ | STATUS: NEW | plan-specified, does not exist
+```
 
-| Source | Status | Lines | Notes |
-|--------|--------|-------|-------|
-| `verified-sources.md` | ❌ Not generated | — | No verified-sources.md exists for 027. Direct reality check against filesystem below. |
-| `task-context.md` | ❌ Not generated | — | No task-context.md exists for 027. Direct reality check against filesystem below. |
-| `analysis-context.md` | ✅ Creating now | — | Grounding chain: filesystem reality check only |
+## Artifact Reality Claims
 
-**Grounding chain**: `verified-sources.md` → `task-context.md` → `analysis-context.md` is NOT intact. Neither `verified-sources.md` nor `task-context.md` exist for feature 027. Reality check performed directly against filesystem per Constitution §Analysis Grounding Rule, Detection Pass G.
+### plan.md claims
 
----
+| CLAIM | ANCHOR | VERDICT |
+|---|---|---|
+| Textual 8.2.8 (v8.2.8) | textual 8.2.8 | MATCHES |
+| Rich existing, same author | rich 15.0.0 | MATCHES |
+| Questionary retained for non-TUI | questionary 2.1.1 | MATCHES |
+| Pydantic in project | pydantic 2.13.4 | MATCHES |
+| Typer in project | typer 0.26.8 | MATCHES |
+| textual>=8.2.8 single new runtime dep | textual 8.2.8 | MATCHES |
+| SQLite no schema change for v1 | src/openreview_cli/storage/database.py EXISTS | MATCHES |
+| sys.stdin.isatty() for TTY detection | cli-dispatch.md confirms | MATCHES |
+| Cold start <1s (SC-004) | plan performance goal | NO ANCHOR (internal target, not cross-ref issue) |
+| TUI memory overhead <30MB (SC-005) | plan performance goal | NO ANCHOR (internal target, not cross-ref issue) |
+| Peak memory <110MB total | constitution Principle III | MATCHES |
+| src/openreview_cli/tui/ package | task-context.md confirms NEW | MATCHES |
+| tests/unit/tui/ and tests/integration/tui/ | task-context.md confirms NEW | MATCHES |
+| 42 new paths total (32 source + 10 tests) | task-context.md confirms | MATCHES |
 
-## 2. Plan Claims vs Reality
+### tasks.md claims
 
-### Dependencies
+| CLAIM | ANCHOR | VERDICT |
+|---|---|---|
+| textual>=8.2.8 via uv add | textual 8.2.8 | MATCHES |
+| pytest-asyncio via uv add --dev | pytest-asyncio 1.4.0 | MATCHES (version drift: plan says >=0.24.0, actual is 1.4.0) |
+| asyncio_mode = auto in pyproject.toml | pytest-asyncio 1.4.0 confirmed | MATCHES |
+| app.run_test() async Pilot testing | textual 8.2.8 confirmed | MATCHES |
+| Input(password=True) for API key masking | textual 8.2.8 confirmed | MATCHES |
+| ModalScreen for confirmations | textual 8.2.8 confirmed | MATCHES |
+| DirectoryTree for file picker | textual 8.2.8 confirmed | MATCHES |
+| openreview_cli.gateway.router.Gateway.health_check | gateway/router.py EXISTS | MATCHES |
+| openreview_cli.review.run_review | review/__init__.py EXISTS | MATCHES |
+| openreview_cli.storage.database client CRUD | storage/database.py EXISTS | MATCHES |
+| openreview_cli.review.playbook.load_playbook | review/playbook.py EXISTS | MATCHES |
+| openreview_cli.gateway.tier_config.TierConfig.from_config | gateway/tier_config.py EXISTS | MATCHES |
+| openreview_cli.config.auth | config/auth.py EXISTS | MATCHES |
+| openreview_cli.config.loader.set_config_value | config/loader.py EXISTS | MATCHES |
+| openreview_cli.__version__ | __init__.py EXISTS | MATCHES |
+| 22 product modes (PreCheck, etc.) | AGENTS.md confirms | MATCHES |
+| 6 gateway slots | gateway/tier_config.py EXISTS | MATCHES |
+| Python 3.12 | constitution + pyproject.toml | MATCHES |
 
-| Claim | Source | Reality | Verdict |
-|-------|--------|---------|---------|
-| No new runtime dependencies | plan.md §Primary Dependencies | ✅ Confirmed. All deps (httpx, pydantic, rich, typer, PyMuPDF, python-docx, presidio-analyzer, presidio-anonymizer, cryptography, litellm, questionary, platformdirs, pyyaml) exist in pyproject.toml per foundation. | ✅ MATCH |
-| SQLite — no new tables | plan.md §Storage | ✅ Existing database layer covers memo export. No new tables needed. | ✅ MATCH |
-| pytest — existing suite | plan.md §Testing | ✅ pytest configured in pyproject.toml, CI pipeline, and pre-commit. | ✅ MATCH |
-| No forbidden deps | plan.md §Constraints | ✅ None present. No langchain, llama-index, FAISS, spaCy, sentence-transformers. | ✅ MATCH |
-| <110 MB peak memory | plan.md §Performance Goals | ⚠️ Plausible — playbook-only changes (YAML load + prompt template strings) add <1 MB. No new models or data structures. | ✅ MATCH (plausible) |
-| pyyaml for YAML parsing | plan.md §Dependencies | ✅ pyyaml listed in pyproject.toml runtime deps. | ✅ MATCH |
+### data-model.md claims
 
-### File Paths
+| CLAIM | ANCHOR | VERDICT |
+|---|---|---|
+| openreview_cli.review.models.ReviewReport | review/__init__.py exports ReviewReport | MATCHES |
+| openreview_cli.storage.database.clients table | storage/database.py EXISTS | MATCHES |
+| openreview_cli.storage.database.playbooks table | storage/database.py EXISTS | MATCHES |
+| openreview_cli.gateway.router (6 slots) | gateway/router.py EXISTS | MATCHES |
+| ~/.config/openreview/auth.json (chmod 600) | config/auth.py EXISTS | MATCHES |
+| openreview_cli.gateway.tier_config or equivalent | gateway/tier_config.py EXISTS | MATCHES |
+| TuiSession in-memory only (no persistence) | presentation-layer feature | MATCHES |
+| WizardState in-memory only | presentation-layer feature | MATCHES |
+| No schema changes for v1 | data-model.md states explicitly | MATCHES |
 
-| Claim | Source | Reality | Verdict |
-|-------|--------|---------|---------|
-| `src/openreview_cli/review/playbooks/precheck-nda-v1.yaml` | plan.md §Project Structure | ✅ EXISTS on disk | ✅ MATCH |
-| `src/openreview_cli/review/prompts.py` | plan.md §Project Structure | ✅ EXISTS on disk | ✅ MATCH |
-| `src/openreview_cli/app.py` | plan.md §Project Structure | ✅ EXISTS on disk | ✅ MATCH |
-| `src/openreview_cli/review/playbooks/` dir | plan.md §Project Structure | ✅ EXISTS on disk | ✅ MATCH |
-| `tests/fixtures/` dir | plan.md §Project Structure | ✅ EXISTS on disk (7 entries: config files, nda_with_pii.pdf, test.txt, __init__.py, generate_fixtures.py) | ✅ MATCH |
-| `tests/unit/test_playbook_schema.py` | plan.md §Project Structure | ❌ DOES NOT EXIST on disk. Plan says "extend" implying existing file, but file is entirely new. | ⚠️ MISMATCH — file is NEW, not an extension target |
-| `test_{license,lease,privacy}check.py` | plan.md §Project Structure | ❌ NEW — will create | ✅ MATCH (planned) |
-| `fixtures/saas-license-agreement.pdf` | plan.md §Project Structure | ❌ NEW — will create | ✅ MATCH (planned) |
-| `fixtures/commercial-lease.pdf` | plan.md §Project Structure | ❌ NEW — will create | ✅ MATCH (planned) |
-| `fixtures/dpa.pdf` | plan.md §Project Structure | ❌ NEW — will create | ✅ MATCH (planned) |
+### contracts/cli-dispatch.md claims
 
-### Module Interfaces (VERIFIED)
+| CLAIM | ANCHOR | VERDICT |
+|---|---|---|
+| sys.stdin.isatty() check | launcher.py plan + research.md | MATCHES |
+| --no-tui flag | plan.md FR-044 | MATCHES |
+| TTY detection before Textual import | launcher.py design | MATCHES |
+| stdout redirection does not affect detection | cli-dispatch.md rationale | MATCHES |
 
-| Claim | Source | Reality |
-|-------|--------|---------|
-| `review/playbook.load_playbook` — categories schema with preferred/acceptable/walkaway | plan.md §Summary, user context | ✅ EXISTS in `review/playbook.py` |
-| `review.__init__.run_review()` | plan.md §Technical Context | ✅ EXISTS in `review/__init__.py` |
-| `review.__init__.ReviewReport` | plan.md §Technical Context | ✅ EXISTS in `review/__init__.py` |
-| `review.memo.exporter` module | plan.md §Technical Context | ✅ EXISTS in `review/memo/exporter.py` |
-| `review/colors.AssessmentColor` | plan.md (implied by S-013) | ✅ EXISTS in `review/colors.py` |
-| `parsing.stream.parse_document` | plan.md (implied by pipeline) | ✅ EXISTS in `parsing/stream.py` |
-| `gateway` module | plan.md (implied by AI pipeline) | ✅ EXISTS — 10 files in `gateway/` |
-| `app.py` CLI registration | plan.md §Project Structure | ✅ EXISTS — Typer app with existing subcommands |
+### contracts/tui-events.md claims
 
----
+| CLAIM | ANCHOR | VERDICT |
+|---|---|---|
+| Gateway.health_check call | gateway/router.py EXISTS | MATCHES |
+| config.loader.set_config_value call | config/loader.py EXISTS | MATCHES |
+| review.run_review call | review/__init__.py EXISTS | MATCHES |
+| storage.database client CRUD | storage/database.py EXISTS | MATCHES |
+| playbook.load_playbook + storage | review/playbook.py EXISTS | MATCHES |
+| tier_config.TierConfig.from_config | gateway/tier_config.py EXISTS | MATCHES |
+| PII stripping enabled by default | pii/engine.py EXISTS | MATCHES |
+| auth.json chmod 600 | config/auth.py EXISTS | MATCHES |
+| No new network endpoints | constitution Principle II | MATCHES |
 
-## 3. Mismatches
+### quickstart.md claims
 
-| ID | Location | Issue | Severity |
-|----|----------|-------|----------|
-| M1 | plan.md Project Structure — `tests/unit/test_playbook_schema.py` | Plan says "extend with new playbook validation tests" implying file pre-exists, but file does not exist on disk. This is a NEW file, not an extension target. | LOW — rename task from "extend" to "create" in tasks.md |
-| M2 | spec 027 directory — `specs/027-product-modes-license-lease-privacy/` | Spec sub-directory exists partially. The following files exist: plan.md, spec.md, research.md, data-model.md, quickstart.md, tasks.md (6 files). No contracts/ directory present (plan §Project Structure lists one). | LOW — contracts/ sub-directory is optional for plan generation; no impact on implementation |
+| CLAIM | ANCHOR | VERDICT |
+|---|---|---|
+| uv run openreview launches TUI | plan.md entry point | MATCHES |
+| 256-color terminal required | quickstart prerequisite | NO ANCHOR (hardware requirement, not drift) |
+| 8 GB RAM minimum | constitution Principle III | MATCHES |
+| Python 3.12 | constitution + pyproject.toml | MATCHES |
+| openreview --no-tui forces CLI | contracts/cli-dispatch.md | MATCHES |
+| openreview (no TTY) friendly message | contracts/cli-dispatch.md | MATCHES |
+| Screen reader not supported in v1 | FR-032b | MATCHES |
 
----
+## Drift Summary
+COUNT: VERSION DRIFT findings: 1
+COUNT: PATH CONFLICT findings: 0
+COUNT: NO ANCHOR findings: 2
 
-## 4. Assumptions for Analysis
+## Drift Findings
 
-1. **No new dependencies required**: Confirmed. All runtime deps pre-installed. Three modes use existing pipeline logic only — playbook YAML load, prompt template rendering, and CLI subcommand wiring.
-2. **Playbook schema stability**: Existing `categories` schema with `preferred`/`acceptable`/`walkaway` mapping confirmed via `playbook.py`. New playbooks follow same YAML structure as `precheck-nda-v1.yaml`.
-3. **Prompt template pattern**: `prompts.py` already contains `EXTRACTION_PROMPTS` dict (verified by review/extraction.py import). New modes append entries to this dict following existing key convention (e.g., `"licensecheck-v1"`).
-4. **CLI registration pattern**: `app.py` uses Typer with `@app.command()` decorator. New subcommands follow same pattern as existing `precheck`, `dealcheck`, `hirecheck` commands.
-5. **test_playbook_schema.py is a NEW file**: Despite plan saying "extend", file does not exist. Treat as creation task, not extension.
-6. **Spec 027 completeness**: `spec.md`, `research.md`, `data-model.md`, `quickstart.md`, `tasks.md` all exist in the spec directory. No missing documentation artifacts.
+### VERSION DRIFT
 
----
+1. **pytest-asyncio version constraint** — tasks.md says `>=0.24.0`, verified-sources.md confirms current stable is **1.4.0** (major jump 0.x → 1.x). The plan references `asyncio_mode=auto` which IS confirmed working in 1.4.0. **Impact**: When adding the dev dependency via `uv add --dev pytest-asyncio`, uv will resolve to 1.4.0 regardless of constraint. The constraint should be updated to `>=1.0.0` to reflect reality. **Severity**: LOW — the feature works correctly with 1.4.0, this is a documentation/constraint accuracy issue only.
 
-## 5. Reality Check (Constitution §Analysis Grounding Rule)
+### NO ANCHOR (acceptable — new infrastructure)
 
-| Check | Result |
-|-------|--------|
-| VERSION DRIFT — Any version number in plan.md that doesn't match CONFIRMED anchor | ✅ None. Python 3.12 project-wide. All deps are existing — no version pins in plan to drift from. pyyaml confirmed installed via pyproject.toml. |
-| PATH CONFLICT — Any file path in plan.md that is neither EXISTS nor NEW | ✅ M1 identified — `test_playbook_schema.py` doesn't exist but plan calls it an "extend" target. Reclassified as NEW. No actual path conflict — file can be created. |
-| UNVERIFIED API — Any API/function name in plan.md with NO ANCHOR in verified-sources.md | ✅ No verified-sources.md exists, but all referenced APIs (`load_playbook`, `run_review`, `ReviewReport`, `AssessmentColor`) verified directly against filesystem. No unverifiable claims. |
-| `analysis-context.md` exists | ✅ Created by this analysis |
+1. **Cold start <1s (SC-004)** — performance target with no existing baseline to cross-reference. This is a new measurement for new code. **Action**: flag for implementer to establish baseline and validate after implementation.
 
-**Verdict**: Grounding is intact. Two LOW-severity mismatches (M1: test file described as "extend" but is NEW; M2: contracts/ sub-directory missing from spec dir). Neither blocks implementation. All critical paths confirmed. Feature is green for implementation start.
+2. **TUI memory overhead <30MB (SC-005)** — performance target for new TUI layer. No existing TUI memory baseline exists. **Action**: flag for implementer to measure after implementation, validated by T047b.
 
-**Reality**: 5/5 Detection Pass G checks pass with 2 annotations. No version drift, no path conflicts, no unverified APIs. Feature is green for implementation start.
+## Recommendation
+
+### MUST fix before implementation (drift only)
+- **pytest-asyncio constraint**: Update `>=0.24.0` to `>=1.0.0` in pyproject.toml when running `uv add --dev pytest-asyncio` (T002). This is a constraint accuracy fix, not a behavioral change — the feature works correctly with 1.4.0.
+
+### Flag for implementer (acceptable as-is)
+- **SC-004 (cold start <1s)**: New performance target. Establish baseline during Phase 2 foundation work, validate during Phase 8 (T047a).
+- **SC-005 (TUI memory <30MB overhead)**: New performance target. Measure during Phase 8 (T047b) after full TUI is wired.
+
+All other claims match their anchors. No PATH CONFLICTS found. No VERSION DRIFT beyond the single pytest-asyncio finding.

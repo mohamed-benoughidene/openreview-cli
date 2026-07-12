@@ -1,163 +1,200 @@
-# Task Context — Memo Export
+# Task Context: Feature 032-tui-spec
 
-**Feature**: `021-memo-export` | **Branch**: `feat/021-memo-export`
-**Generated**: 2026-07-05 | **Sources**: `verified-sources.md`, `plan.md`, filesystem scan
+**Generated**: 2026-07-11
+**Hook**: `speckit.task-grounding`
+**Feature**: Interactive TUI (Terminal User Interface)
 
 ---
 
 ## Verified Dependencies
 
-Extracted from `.specify/memory/verified-sources.md` (last generated for feature 018, verified current as of 2026-07-04):
+```
+VERIFIED DEP: textual | VERSION: 8.2.8 | SOURCE: https://pypi.org/project/textual/
+VERIFIED DEP: pytest-asyncio | VERSION: 1.4.0 | SOURCE: https://pypi.org/project/pytest-asyncio/
+VERIFIED DEP: pydantic | VERSION: 2.13.4 | SOURCE: https://pypi.org/project/pydantic/
+VERIFIED DEP: rich | VERSION: 15.0.0 | SOURCE: https://pypi.org/project/rich/
+VERIFIED DEP: typer | VERSION: 0.26.8 | SOURCE: https://pypi.org/project/typer/
+VERIFIED DEP: questionary | VERSION: 2.1.1 | SOURCE: https://pypi.org/project/questionary/
+```
 
-| VERIFIED DEP | VERSION | SOURCE |
-|---|---|---|
-| python-docx | >=1.2.0 | pyproject.toml, resolved in uv.lock |
-| json | stdlib (Python 3.12) | stdlib |
-| pathlib | stdlib (Python 3.12) | stdlib |
-| dataclasses | stdlib (Python 3.12) | stdlib |
-| datetime | stdlib (Python 3.12) | stdlib |
-| typing | stdlib (Python 3.12) | stdlib |
-| ReviewReport | openreview_cli.review.models | exists on filesystem |
-| ClauseAssessment | openreview_cli.review.models | exists on filesystem |
-| AssessmentColor | openreview_cli.review.colors | exists on filesystem |
-| CitationProvenance | openreview_cli.grounding.models | exists on filesystem |
-
-Additionally: all 15 runtime deps confirmed in pyproject.toml and uv.lock (see verified-sources.md). No forbidden deps present.
+**Version Drift**:
+- `pytest-asyncio`: pyproject.toml pins `>=0.24.0`, current stable is 1.4.0 (major jump). Constraint should be updated to `>=1.0.0`.
+- `typer`: pyproject.toml pins `>=0.26.7`, current stable is 0.26.8. Minor patch drift, no action needed.
 
 ---
 
 ## Project Structure (actual)
 
-### Source: `src/openreview_cli/` (2 levels deep, relevant paths)
-
-```
+```text
 src/openreview_cli/
 ├── __init__.py
 ├── __main__.py
-├── app.py
+├── app.py                          # Typer CLI entry (3124 lines)
 ├── errors.py
 ├── py.typed
-├── benchmark/
-├── bilateral/
-├── chunking/
-├── cli/
-├── config/
-├── gateway/
-├── grounding/
-│   └── models.py              # CitationProvenance
-├── parsing/
-├── pii/
-├── pipeline/                   # EXISTING (created by 018)
-├── prompts/
-├── retrieval/
-├── review/                     # Target module
-│   ├── __init__.py
-│   ├── _gateway.py
-│   ├── base.py
-│   ├── colors.py               # AssessmentColor
-│   ├── extraction.py
-│   ├── models.py               # ReviewReport, ClauseAssessment
-│   ├── pipeline.py
-│   ├── playbook.py
-│   ├── playbooks/
-│   ├── prompts.py
-│   ├── qa.py
-│   └── report.py
-│   └── memo/                   # NEW — does not exist yet
-├── storage/
-└── ui/
-```
+├── benchmark/                      # Benchmark harness
+│   ├── __init__.py, baseline.py, cli.py, hallu_detect.py, memory.py
+│   ├── metrics.py, metrics_pii.py, models.py, prompt_ab.py
+│   ├── regression.py, report.py, runner.py, _utils.py
+│   └── datasets/ (contract_nli, cuad, maud, pii_contracts)
+├── bilateral/                      # Bilateral comparison
+│   ├── __init__.py, align.py, colors.py, comparison.py
+│   ├── models.py, prompts.py, report.py
+├── chunking/                       # Document chunking
+│   ├── __init__.py, models.py, splitter.py, stream.py, tokenizer.py
+├── config/                         # Configuration
+│   ├── __init__.py, auth.py, loader.py, paths.py
+├── gateway/                        # AI Gateway
+│   ├── __init__.py, cost.py, errors.py, models.py
+│   ├── redaction.py, registry.py, router.py
+│   ├── tier_accuracy.py, tier_config.py, tier_router.py
+│   ├── tier_tracker.py, wizard.py
+├── graph/                          # Contract graph
+│   ├── __init__.py, builder.py, detectors.py, diff.py
+│   ├── health.py, metrics.py, models.py, view.py
+├── grounding/                      # Grounding/citation
+│   ├── __init__.py, audit.py, corruption.py, discriminator.py
+│   ├── metrics.py, models.py, prompts.py
+├── negotiation/                    # Game-theoretic negotiation
+│   ├── __init__.py, models.py, payoffs.py
+│   ├── recommend.py, report.py, solvers.py
+├── parsing/                        # Document parsing
+│   ├── __init__.py, clause_clusterer.py, clause_detector.py
+│   ├── docx_parser.py, models.py, pdf_parser.py, stream.py
+├── pii/                            # PII stripping
+│   ├── __init__.py, audit.py, cache.py, config_hash.py
+│   ├── encryption.py, engine.py, mapping.py, models.py
+│   ├── placeholders.py, recognizers.py, retention.py
+├── pipeline/                       # Async pipeline framework
+│   ├── __init__.py, base.py, errors.py, progress.py, runner.py
+│   └── adapters/ (benchmark, chunk, comparison, generate, parse, retrieve, strip)
+├── prompts/                        # Prompt management
+│   ├── __init__.py, cli.py, defaults.py, models.py
+│   ├── store.py, variables.py
+├── recovery/                       # Error recovery
+│   ├── __init__.py, coordinator.py, models.py
+│   └── strategies/ (auto_retry, graceful_degradation, provider_fallback, stage_isolation, user_guided_recovery)
+├── retrieval/                      # Hierarchical retrieval
+│   ├── __init__.py, bm25.py, dense.py, engine.py, errors.py
+│   ├── ingest.py, models.py, rerank.py, rrf.py, storage.py
+├── review/                         # Review pipeline
+│   ├── __init__.py, base.py, colors.py, comparison_agent.py
+│   ├── extraction.py, _gateway.py, models.py, pipeline.py
+│   ├── playbook.py, prompts.py, qa.py, report.py, templates.py
+│   └── memo/ (exporter, filename, formats, models)
+├── storage/                        # SQLite storage
+│   └── __init__.py, database.py
 
-### Tests: `tests/` (2 levels deep, relevant paths)
-
-```
 tests/
-├── __init__.py
-├── conftest.py
-├── fixtures/
-├── helpers/
-├── unit/
-│   ├── __init__.py
-│   ├── bilateral/
-│   ├── recovery/
-│   └── ... (50+ test files, directly in tests/unit/)
-│   └── review/                 # NOT EXISTS — plan says create tests/unit/review/
-├── integration/
-│   └── ... (40+ test files)
+├── conftest.py, __init__.py
+├── helpers/ (mock_gateway.py)
+├── fixtures/ (benchmark, docx, grounding, nda_corpus, negotiation, pdf, pii, playbooks, prompts, retrieval, review)
+├── unit/                           # 120+ unit test files
+├── integration/                    # 80+ integration test files
 ```
 
 ---
 
 ## Existing Files
 
-### `src/openreview_cli/review/` — all existing files
+### Flagged files (TUI will touch these)
 
-| Path | Exports / Content | Status |
-|---|---|---|
-| `review/__init__.py` | Public API exports | EXISTS |
-| `review/models.py` | ReviewReport, ClauseAssessment, Playbook dataclasses | EXISTS |
-| `review/colors.py` | AssessmentColor enum, assign_colors() | EXISTS |
-| `review/report.py` | Terminal + JSON formatting, _confidence_bar() | EXISTS |
-| `review/pipeline.py` | Review pipeline orchestration | EXISTS |
-| `review/extraction.py` | Extraction agent — prompt building, model routing | EXISTS |
-| `review/qa.py` | QA agent — verification prompt, disagreement logic | EXISTS |
-| `review/base.py` | ReviewCommand base class with PII orchestration | EXISTS |
-| `review/playbook.py` | Playbook loader | EXISTS |
-| `review/prompts.py` | Extraction and QA prompt templates | EXISTS |
-| `review/_gateway.py` | Shared AI Gateway call helper | EXISTS |
-| `review/playbooks/` | Bundled YAML playbooks | EXISTS |
+- **EXISTS**: `src/openreview_cli/app.py` — Typer CLI entry, 3124 lines. Plan says MODIFIED (add TUI dispatch when no subcommand).
+- **EXISTS**: `src/openreview_cli/review/__init__.py` — Review pipeline. Exports `run_review()`, `ReviewReport`.
+- **EXISTS**: `src/openreview_cli/review/base.py` — `ReviewCommand` base class, PII orchestration.
+- **EXISTS**: `src/openreview_cli/review/playbook.py` — Playbook loader (YAML parsing, validation).
+- **EXISTS**: `src/openreview_cli/gateway/router.py` — `Gateway` class, routing, cost tracking.
+- **EXISTS**: `src/openreview_cli/storage/database.py` — SQLite layer (725 lines), clients/reviews CRUD.
+- **EXISTS**: `src/openreview_cli/gateway/tier_config.py` — `PrivacyTier` enum, tier parsing.
+- **EXISTS**: `src/openreview_cli/config/loader.py` — Config loading (YAML), `load_config()`, `get_config_value()`.
+- **EXISTS**: `src/openreview_cli/config/auth.py` — Auth credential management.
+- **EXISTS**: `src/openreview_cli/gateway/wizard.py` — Interactive setup wizard (questionary).
 
-### `src/openreview_cli/grounding/models.py` — CitationProvenance
+### Package files (all exist)
 
-| Path | Exports | Status |
-|---|---|---|
-| `grounding/models.py` | CitationProvenance (referenced by plan for memo display) | EXISTS |
+- `src/openreview_cli/__init__.py` — `__version__`
+- `src/openreview_cli/__main__.py` — `python -m openreview_cli`
+- `src/openreview_cli/errors.py` — Exit codes, error formatting
+- All 15 subpackages (benchmark, bilateral, chunking, config, gateway, graph, grounding, negotiation, parsing, pii, pipeline, prompts, recovery, retrieval, review, storage) exist with their respective modules.
 
 ---
 
 ## Plan vs Filesystem
 
-### Source paths from plan.md
+### Plan-specified NEW paths
 
-| plan.md Path | Exists? | Notes |
-|---|---|---|
-| `src/openreview_cli/review/__init__.py` | ✅ EXISTS | Unchanged |
-| `src/openreview_cli/review/models.py` | ✅ EXISTS | Unchanged, minor additions for memo_version if needed |
-| `src/openreview_cli/review/colors.py` | ✅ EXISTS | Unchanged |
-| `src/openreview_cli/review/report.py` | ✅ EXISTS | Unchanged |
-| `src/openreview_cli/review/pipeline.py` | ✅ EXISTS | Unchanged |
-| `src/openreview_cli/review/extraction.py` | ✅ EXISTS | Unchanged |
-| `src/openreview_cli/review/qa.py` | ✅ EXISTS | Unchanged |
-| `src/openreview_cli/review/base.py` | ✅ EXISTS | Unchanged |
-| `src/openreview_cli/review/playbook.py` | ✅ EXISTS | Unchanged |
-| `src/openreview_cli/review/prompts.py` | ✅ EXISTS | Unchanged |
-| `src/openreview_cli/review/_gateway.py` | ✅ EXISTS | Unchanged |
-| `src/openreview_cli/review/memo/__init__.py` | **❌ NEW** | Will create |
-| `src/openreview_cli/review/memo/exporter.py` | **❌ NEW** | Will create |
-| `src/openreview_cli/review/memo/formats.py` | **❌ NEW** | Will create |
-| `src/openreview_cli/review/memo/filename.py` | **❌ NEW** | Will create |
-| `src/openreview_cli/review/memo/models.py` | **❌ NEW** | Will create |
+```
+NEW: src/openreview_cli/tui/__init__.py              — DOES NOT EXIST
+NEW: src/openreview_cli/tui/app.py                    — DOES NOT EXIST
+NEW: src/openreview_cli/tui/launcher.py               — DOES NOT EXIST
+NEW: src/openreview_cli/tui/tabs/__init__.py          — DOES NOT EXIST
+NEW: src/openreview_cli/tui/tabs/home.py              — DOES NOT EXIST
+NEW: src/openreview_cli/tui/tabs/review.py            — DOES NOT EXIST
+NEW: src/openreview_cli/tui/tabs/clients.py           — DOES NOT EXIST
+NEW: src/openreview_cli/tui/tabs/playbooks.py         — DOES NOT EXIST
+NEW: src/openreview_cli/tui/tabs/settings.py          — DOES NOT EXIST
+NEW: src/openreview_cli/tui/widgets/__init__.py       — DOES NOT EXIST
+NEW: src/openreview_cli/tui/widgets/status_bar.py     — DOES NOT EXIST
+NEW: src/openreview_cli/tui/widgets/description_bar.py — DOES NOT EXIST
+NEW: src/openreview_cli/tui/widgets/filter_list.py    — DOES NOT EXIST
+NEW: src/openreview_cli/tui/widgets/file_picker.py    — DOES NOT EXIST
+NEW: src/openreview_cli/tui/screens/__init__.py       — DOES NOT EXIST
+NEW: src/openreview_cli/tui/screens/confirm.py        — DOES NOT EXIST
+NEW: src/openreview_cli/tui/screens/search.py         — DOES NOT EXIST
+NEW: src/openreview_cli/tui/screens/review_wizard.py  — DOES NOT EXIST
+NEW: src/openreview_cli/tui/screens/gateway_wizard.py — DOES NOT EXIST
+NEW: src/openreview_cli/tui/screens/result.py         — DOES NOT EXIST
+NEW: src/openreview_cli/tui/screens/client_form.py    — DOES NOT EXIST
+NEW: src/openreview_cli/tui/domain/__init__.py        — DOES NOT EXIST
+NEW: src/openreview_cli/tui/domain/gateway.py         — DOES NOT EXIST
+NEW: src/openreview_cli/tui/domain/review.py          — DOES NOT EXIST
+NEW: src/openreview_cli/tui/domain/clients.py         — DOES NOT EXIST
+NEW: src/openreview_cli/tui/domain/playbooks.py       — DOES NOT EXIST
+NEW: src/openreview_cli/tui/domain/privacy.py         — DOES NOT EXIST
+NEW: src/openreview_cli/tui/tcss/app.tcss             — DOES NOT EXIST
+NEW: src/openreview_cli/tui/tcss/tabs.tcss            — DOES NOT EXIST
+NEW: src/openreview_cli/tui/tcss/widgets.tcss         — DOES NOT EXIST
+NEW: tests/unit/tui/test_launcher.py                  — DOES NOT EXIST
+NEW: tests/unit/tui/test_status_bar.py                — DOES NOT EXIST
+NEW: tests/unit/tui/test_filter_list.py               — DOES NOT EXIST
+NEW: tests/unit/tui/test_widgets.py                   — DOES NOT EXIST
+NEW: tests/integration/tui/test_app.py                — DOES NOT EXIST
+NEW: tests/integration/tui/test_review_wizard.py      — DOES NOT EXIST
+NEW: tests/integration/tui/test_gateway_wizard.py     — DOES NOT EXIST
+NEW: tests/integration/tui/test_clients_tab.py        — DOES NOT EXIST
+NEW: tests/integration/tui/test_playbooks_tab.py      — DOES NOT EXIST
+NEW: tests/integration/tui/test_settings_tab.py       — DOES NOT EXIST
+```
 
-### Test paths from plan.md
+### Plan-specified MODIFIED paths
 
-| plan.md Path | Exists? | Notes |
-|---|---|---|
-| `tests/unit/review/test_memo_exporter.py` | **❌ NEW** | tests/unit/review/ dir does not exist |
-| `tests/unit/review/test_memo_formats.py` | **❌ NEW** | tests/unit/review/ dir does not exist |
-| `tests/unit/review/test_memo_filename.py` | **❌ NEW** | tests/unit/review/ dir does not exist |
-| `tests/integration/test_memo_export.py` | **❌ NEW** | Does not exist |
-| `tests/integration/test_memo_edge_cases.py` | **❌ NEW** | Does not exist |
+```
+MODIFIED: src/openreview_cli/app.py — EXISTS, add TUI dispatch when no subcommand
+```
 
 ### Mismatches
 
-| MISMATCH | Details |
-|---|---|
-| `tests/unit/review/` | plan.md defines tests under `tests/unit/review/` subdirectory, but filesystem has no `tests/unit/review/` — all unit tests live directly in `tests/unit/`. The plan assumes a subdirectory pattern used by `bilateral/` and `recovery/` but not currently by review tests. Task generator should decide: create `tests/unit/review/` (matching bilateral/recovery pattern) or place at `tests/unit/` (matching existing review test pattern). |
+```
+NONE — all plan paths are either confirmed NEW (do not exist) or confirmed EXISTING (will be modified)
+```
 
-### Summary
+---
 
-- ✅ All 11 existing review module paths confirmed — unchanged per plan
-- ✅ All 5 new memo source paths confirmed NEW (no stale paths)
-- ✅ All 5 new test paths confirmed NEW
-- ⚠️ 1 MISMATCH: `tests/unit/review/` directory structure (plan specifies subdirectory, filesystem has no such dir — decision needed)
-- ✅ Zero new runtime dependencies needed (python-docx already in pyproject.toml)
+## Summary Counts
+
+| Metric | Count |
+|--------|-------|
+| TOTAL EXISTING SOURCE FILES (src/openreview_cli/) | 143 |
+| TOTAL NEW PATHS IN PLAN (source) | 32 |
+| TOTAL NEW PATHS IN PLAN (tests) | 10 |
+| TOTAL NEW PATHS IN PLAN (total) | 42 |
+| MISMATCHES | 0 |
+| FILES TUI WILL MODIFY | 1 (`app.py`) |
+
+---
+
+## Files TUI Will Modify (Existing)
+
+For serialization dispatch:
+
+1. **`src/openreview_cli/app.py`** — Add TTY check + TUI launcher dispatch when no subcommand provided. Plan says: add `sys.stdin.isatty()` guard before `app()` call; if TTY, import and call `launch_tui()` from `tui.launcher`; else fall through to Typer.
