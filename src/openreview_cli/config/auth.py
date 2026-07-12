@@ -49,6 +49,24 @@ def _set_secure_permissions(path: Path) -> None:
     path.chmod(0o600)
 
 
+def has_key(auth_path: Path, provider: str) -> bool:
+    """Check if a provider has a saved API key."""
+    try:
+        auth = json.loads(auth_path.read_text())
+        return provider in auth and bool(auth[provider])
+    except (FileNotFoundError, json.JSONDecodeError):
+        return False
+
+
+def save_key(auth_path: Path, provider: str, key: str) -> None:
+    """Save an API key for a provider to auth.json."""
+    ensure_auth(auth_path.parent)
+    auth = json.loads(auth_path.read_text())
+    auth[provider] = key
+    auth_path.write_text(json.dumps(auth, indent=2))
+    _set_secure_permissions(auth_path)
+
+
 def _check_permissions(path: Path) -> None:
     if platform.system() == "Windows":
         return

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-from openreview_cli.prompts.store import PromptStore  # noqa: TC001
+from openreview_cli.prompts.store import PromptStore
 
 DEFAULTS_DIR = Path(__file__).parent / "defaults"
 

@@ -173,7 +173,7 @@ class BenchmarkRunner:
     def _run_pipeline_for_item(self, text: str, category: str) -> dict[str, Any]:
         """Delegate per-item processing to the configured pipeline."""
         from openreview_cli.pipeline.runner import (
-            Pipeline,  # noqa: TC001 — local import avoids circular dep
+            Pipeline,
         )
 
         pipeline: Pipeline = self._pipeline  # type: ignore[assignment]

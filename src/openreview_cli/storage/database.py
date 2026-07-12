@@ -694,6 +694,141 @@ def delete_recovery_state(db_path: Path, pipeline_id: str) -> bool:
         return cursor.rowcount > 0
 
 
+# ── D-10: Review Reports (TUI recent-reviews) ──
+
+
+def save_review_report(
+    db_path: Path,
+    report_id: str,
+    filename: str,
+    mode: str,
+    report_json: str,
+    green_count: int = 0,
+    amber_count: int = 0,
+    red_count: int = 0,
+) -> None:
+    """Save a review report to the review_reports table.
+
+    Uses INSERT OR REPLACE so re-saving the same report_id updates the row.
+    """
+    init_database(db_path)
+    with transaction(db_path) as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO review_reports "
+            "(id, filename, mode, report_json, green_count, amber_count, red_count, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, "
+            "  COALESCE((SELECT created_at FROM review_reports WHERE id = ?), datetime('now')))",
+            (
+                report_id,
+                filename,
+                mode,
+                report_json,
+                green_count,
+                amber_count,
+                red_count,
+                report_id,
+            ),
+        )
+
+
+def load_review_report(db_path: Path, report_id: str) -> dict[str, Any] | None:
+    """Load a review report's JSON data from the database.
+
+    Returns the deserialised report dict, or None if not found.
+    """
+    init_database(db_path)
+    with transaction(db_path) as conn:
+        row = conn.execute(
+            "SELECT report_json FROM review_reports WHERE id = ?",
+            (report_id,),
+        ).fetchone()
+    if row is None:
+        return None
+    report_json: dict[str, Any] | None = json.loads(row["report_json"])
+    return report_json
+
+
+def list_recent_reviews(db_path: Path, limit: int = 5) -> list[dict[str, Any]]:
+    """Return the most recent review reports, ordered by created_at DESC.
+
+    Each row contains: id, filename, mode, green_count, amber_count,
+    red_count, created_at.
+    """
+    init_database(db_path)
+    with transaction(db_path) as conn:
+        rows = conn.execute(
+            "SELECT id, filename, mode, green_count, amber_count, red_count, created_at "
+            "FROM review_reports ORDER BY created_at DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def list_clients(db_path: Path) -> list[dict[str, str]]:
+    """List all clients ordered by id.
+
+    Returns list of dicts with keys: id, name.
+    """
+    with transaction(db_path) as conn:
+        rows = conn.execute("SELECT id, name FROM clients ORDER BY id").fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_client(db_path: Path, client_id: str) -> dict[str, str] | None:
+    """Get a single client by id.
+
+    Returns dict with keys id, name, or None if not found.
+    """
+    with transaction(db_path) as conn:
+        row = conn.execute(
+            "SELECT id, name FROM clients WHERE id = ?",
+            (client_id,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def search_all(db_path: Path, query: str) -> dict[str, list[dict[str, Any]]]:
+    """Search across reviews, clients, and playbooks.
+
+    Matches reviews by filename, clients by id/name, playbooks by id.
+    Returns dict with keys ``reviews``, ``clients``, ``playbooks``.
+    """
+    init_database(db_path)
+    lowered = query.lower()
+    results: dict[str, list[dict[str, Any]]] = {
+        "reviews": [],
+        "clients": [],
+        "playbooks": [],
+    }
+
+    with transaction(db_path) as conn:
+        rows = conn.execute(
+            "SELECT id, filename, mode, green_count, amber_count, red_count, created_at "
+            "FROM review_reports WHERE LOWER(filename) LIKE ? "
+            "ORDER BY created_at DESC LIMIT 20",
+            (f"%{lowered}%",),
+        ).fetchall()
+    results["reviews"] = [dict(r) for r in rows]
+
+    with transaction(db_path) as conn:
+        rows = conn.execute(
+            "SELECT id, name FROM clients WHERE LOWER(id) LIKE ? OR LOWER(name) LIKE ? ORDER BY id",
+            (f"%{lowered}%", f"%{lowered}%"),
+        ).fetchall()
+    results["clients"] = [dict(r) for r in rows]
+
+    with transaction(db_path) as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT playbook_id FROM playbook_versions "
+            "WHERE LOWER(playbook_id) LIKE ? "
+            "ORDER BY playbook_id",
+            (f"%{lowered}%",),
+        ).fetchall()
+    results["playbooks"] = [{"playbook_id": str(r["playbook_id"])} for r in rows]
+
+    return results
+
+
 def list_comparison_history(db_path: Path, limit: int = 50) -> list[dict[str, Any]]:
     """Return recent comparison history entries, newest first.
 

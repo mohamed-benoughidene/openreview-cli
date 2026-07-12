@@ -25,10 +25,15 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_CONFIDENCE_THRESHOLD: float = 0.7
 
+# --no-tui: strip before Typer sees it (Typer/Click don't know about this flag)
+_NO_TUI = "--no-tui" in sys.argv
+if _NO_TUI:
+    sys.argv = [a for a in sys.argv if a != "--no-tui"]
+
 app = typer.Typer(
     name="openreview",
     help="Privacy-first contract review tool.",
-    no_args_is_help=True,
+    no_args_is_help=False,  # We handle no-args via TUI dispatch
     add_completion=False,
 )
 
@@ -249,8 +254,9 @@ def _resolve_doc_id(file_path: Path) -> str:
     return doc_id
 
 
-@app.callback()
+@app.callback(invoke_without_command=True)
 def _root(
+    ctx: typer.Context,
     version: bool = typer.Option(
         False,
         "--version",
@@ -265,6 +271,21 @@ def _root(
     ),
 ) -> None:
     _init(debug=debug)
+
+    # If a subcommand was invoked, let it proceed normally
+    if ctx.invoked_subcommand is not None:
+        return
+
+    # No subcommand — TUI or friendly message
+    if _NO_TUI:
+        typer.echo(ctx.get_help())
+        raise typer.Exit(0)
+
+    # Delegate to launcher: handles TTY check internally (stderr msg + sys.exit if non-TTY)
+    from openreview_cli.tui.launcher import launch_tui
+
+    launch_tui()
+    raise typer.Exit(0)
 
 
 client_app = typer.Typer(
