@@ -1,12 +1,14 @@
-"""Integration tests for ClientsTab (T020)."""
+"""Integration tests for ClientsTab (T020) and ClientDetailScreen (FR-025a)."""
 
 from __future__ import annotations
 
 from unittest.mock import patch
 
-from textual.widgets import Label, ListItem
+from textual.widgets import Label, ListItem, ListView
 
+from openreview_cli.tui.screens.client_detail import ClientDetailScreen
 from openreview_cli.tui.screens.client_form import ClientForm
+from openreview_cli.tui.screens.confirm import ConfirmModal
 
 
 def _list_item_text(item: ListItem) -> str:
@@ -111,16 +113,14 @@ async def test_clients_tab_delete_opens_confirm_modal(
     ]
     mock_delete_client_via_tui.return_value = "has_reviews"
     from openreview_cli.tui.app import OpenReviewApp
-    from openreview_cli.tui.screens.confirm import ConfirmModal
 
     app = OpenReviewApp()
     async with app.run_test(size=(120, 40)) as pilot:
         await pilot.press("3")
         await pilot.pause()
-        # Select the client by clicking the first list item
-        items = list(app.query_one("#client-list").children)
-        assert len(items) == 1
-        await pilot.click(items[0])
+        # Highlight the first client via keyboard
+        lv = app.query_one("#client-list", ListView)
+        lv.index = 0
         await pilot.pause()
         # Delete button should now be enabled
         delete_btn = app.query_one("#btn-delete")
@@ -130,3 +130,57 @@ async def test_clients_tab_delete_opens_confirm_modal(
         await pilot.pause()
         # ConfirmModal should be the active screen
         assert isinstance(app.screen, ConfirmModal)
+
+
+@patch("openreview_cli.tui.domain.clients.list_clients_via_tui")
+async def test_enter_on_client_opens_detail(mock_list_clients_via_tui) -> None:
+    """Enter/click on a client pushes ClientDetailScreen."""
+    mock_list_clients_via_tui.return_value = [
+        {"id": "acme", "name": "Acme Corp"},
+    ]
+    from openreview_cli.tui.app import OpenReviewApp
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.press("3")
+        await pilot.pause()
+        # Click the first client item to push detail
+        items = list(app.query_one("#client-list").children)
+        assert len(items) == 1
+        await pilot.click(items[0])
+        await pilot.pause()
+        # Should now be on ClientDetailScreen
+        assert isinstance(app.screen, ClientDetailScreen)
+
+
+@patch("openreview_cli.tui.domain.clients.get_client_via_tui")
+@patch("openreview_cli.tui.domain.clients.list_reviews_for_client_via_tui")
+@patch("openreview_cli.tui.domain.clients.list_clients_via_tui")
+async def test_empty_client_detail_shows_no_reviews(
+    mock_list_clients, mock_list_reviews, mock_get_client
+) -> None:
+    """Client with no reviews shows empty-state button."""
+    mock_list_clients.return_value = [{"id": "acme", "name": "Acme Corp"}]
+    mock_list_reviews.return_value = []
+    mock_get_client.return_value = {"id": "acme", "name": "Acme Corp"}
+    from openreview_cli.tui.app import OpenReviewApp
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.press("3")
+        await pilot.pause()
+        # Click first client to push detail screen
+        items = list(app.query_one("#client-list").children)
+        assert len(items) == 1
+        await pilot.click(items[0])
+        await pilot.pause()
+        # Should now be on ClientDetailScreen
+        assert isinstance(app.screen, ClientDetailScreen)
+        screen = app.screen
+        assert isinstance(screen, ClientDetailScreen)
+        # Empty-state button should be visible
+        empty_btn = screen.query_one("#btn-empty-review")
+        assert empty_btn.display
+        # Review list should be hidden
+        review_list = screen.query_one("#review-list", ListView)
+        assert not review_list.display

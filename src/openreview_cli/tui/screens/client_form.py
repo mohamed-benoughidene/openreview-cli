@@ -51,6 +51,12 @@ class ClientForm(ModalScreen[dict[str, Any] | None]):
         elif event.button.id == "cancel":
             self.dismiss(None)
 
+    def on_key(self, event: Any) -> None:
+        if event.key == "enter":
+            self._save()
+        elif event.key == "escape":
+            self.dismiss(None)
+
     def _save(self) -> None:
         client_id = self.query_one("#form-client-id", Input).value.strip()
         name = self.query_one("#form-name", Input).value.strip()

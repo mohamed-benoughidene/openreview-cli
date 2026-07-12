@@ -8,6 +8,8 @@ from textual.app import ComposeResult
 from textual.containers import Container, Horizontal
 from textual.widgets import Button, Label, ListItem, ListView, Static
 
+from openreview_cli.tui.screens.review_wizard import ReviewWizard
+
 
 def fmt_counts(green: int, amber: int, red: int) -> str:
     """Format color counts as e.g. '3g/1a/0r'."""
@@ -112,4 +114,7 @@ class HomeTab(Container):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle quick action button presses."""
         if event.button.id == "btn-new-review":
+            self.app.action_show_tab("review")  # type: ignore[attr-defined]
+        elif event.button.id == "btn-import-doc":
+            self.app.push_screen(ReviewWizard())
             self.app.action_show_tab("review")  # type: ignore[attr-defined]

@@ -33,6 +33,7 @@ class ProgressScreen(Screen[None]):
         extraction_model: str = "extraction",
         qa_model: str | None = None,
         confidence_threshold: float = 0.7,
+        client_id: str | None = None,
     ) -> None:
         super().__init__()
         self._paths = paths
@@ -43,8 +44,10 @@ class ProgressScreen(Screen[None]):
         self._extraction_model = extraction_model
         self._qa_model = qa_model
         self._confidence_threshold = confidence_threshold
+        self._client_id = client_id
         self._start_time: float = 0.0
         self._review_task: asyncio.Task[Any] | None = None
+        self._cancelled: bool = False
 
     def compose(self) -> ComposeResult:
         with Vertical(id="progress-container"):
@@ -90,7 +93,14 @@ class ProgressScreen(Screen[None]):
                 extraction_model=self._extraction_model,
                 qa_model=self._qa_model,
                 confidence_threshold=self._confidence_threshold,
+                client_id=self._client_id,
+                cancel_requested=self._cancelled,
             )
+
+            # If cancelled during run_review_via_tui (e.g. signal handler
+            # popped us while sync code was executing), don't push result.
+            if self._cancelled:
+                return
 
             def _show_result() -> None:
                 self.app.pop_screen()
@@ -99,6 +109,8 @@ class ProgressScreen(Screen[None]):
             self.app.call_later(_show_result)
 
         except Exception as exc:
+            if self._cancelled:
+                return
             _error = str(exc)
 
             def _show_error() -> None:
@@ -117,6 +129,7 @@ class ProgressScreen(Screen[None]):
 
         def on_cancel(result: bool | None) -> None:
             if result:
+                self._cancelled = True
                 if self._review_task and not self._review_task.done():
                     self._review_task.cancel()
                 self.app.pop_screen()
@@ -125,3 +138,15 @@ class ProgressScreen(Screen[None]):
             ConfirmModal("Cancel review", "Are you sure you want to cancel this review?"),
             on_cancel,
         )
+
+    def on_unmount(self) -> None:
+        """Ensure review task is cancelled when screen is popped externally.
+
+        This covers the case where a signal handler (SIGTERM/SIGINT) pops
+        the screen while a review is in-flight — the task will be GC'd when
+        the event loop shuts down, but we also cancel it explicitly so any
+        pending CancelledError is raised cleanly (Edge case 6).
+        """
+        self._cancelled = True
+        if self._review_task and not self._review_task.done():
+            self._review_task.cancel()

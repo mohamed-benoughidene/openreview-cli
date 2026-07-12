@@ -7,12 +7,13 @@ from textual.containers import Horizontal
 from textual.widgets import Button, Input, Label, ListItem, ListView, Static
 
 from openreview_cli.tui.domain import clients as _dc
+from openreview_cli.tui.screens.client_detail import ClientDetailScreen
 from openreview_cli.tui.screens.client_form import ClientForm
 from openreview_cli.tui.screens.confirm import ConfirmModal
 
 
 class ClientsTab(Static):
-    """Clients tab with filterable list, add, and delete."""
+    """Clients tab with filterable list, add, delete, and detail view."""
 
     DEFAULT_CSS = """
     ClientsTab { padding: 1; }
@@ -34,6 +35,7 @@ class ClientsTab(Static):
         )
         yield ListView(id="client-list")
         yield Horizontal(
+            Button("View", id="btn-view", variant="default", disabled=True),
             Button("Delete selected", id="btn-delete", variant="error", disabled=True),
             id="clients-actions",
         )
@@ -71,20 +73,31 @@ class ClientsTab(Static):
         self._selected_client_id = None
         self.query_one("#btn-delete", Button).disabled = True
 
-    def _on_list_view_selected(self, event: ListView.Selected) -> None:
-        """Track selected client for delete action."""
+    def _on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
+        """Track highlighted client for delete button."""
         lv = event.list_view
         if lv.index is not None and lv.index < len(self._clients):
             self._selected_client_id = self._clients[lv.index]["id"]
             self.query_one("#btn-delete", Button).disabled = False
+            self.query_one("#btn-view", Button).disabled = False
         else:
             self._selected_client_id = None
             self.query_one("#btn-delete", Button).disabled = True
+            self.query_one("#btn-view", Button).disabled = True
+
+    def _on_list_view_selected(self, event: ListView.Selected) -> None:
+        """Push client detail screen on Enter/click."""
+        lv = event.list_view
+        if lv.index is not None and lv.index < len(self._clients):
+            client_id = self._clients[lv.index]["id"]
+            self.app.push_screen(ClientDetailScreen(client_id))
 
     def _on_button_pressed(self, event: Button.Pressed) -> None:
         btn_id = event.button.id
         if btn_id == "btn-new-client":
             self._open_add_form()
+        elif btn_id == "btn-view":
+            self._open_detail()
         elif btn_id == "btn-delete":
             self._confirm_delete()
 
@@ -101,6 +114,11 @@ class ClientsTab(Static):
                         break
 
         self.app.push_screen(ClientForm(), on_result)
+
+    def _open_detail(self) -> None:
+        """Push client detail screen for selected client."""
+        if self._selected_client_id:
+            self.app.push_screen(ClientDetailScreen(self._selected_client_id))
 
     def _confirm_delete(self) -> None:
         client_id = self._selected_client_id

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
+from pathlib import Path
 from typing import ClassVar
 
 from textual.app import ComposeResult
@@ -23,13 +25,73 @@ from textual.widgets import (
 
 logger = logging.getLogger(__name__)
 
-# Top 5 modes — text filter covers the rest
-PRODUCT_MODES = ["precheck", "hirecheck", "dealcheck", "leasecheck", "fullreview"]
+# 22 product modes grouped by category per FR-013
+PRODUCT_MODES: dict[str, list[str]] = {
+    "Basic": [
+        "precheck",
+    ],
+    "Employment": [
+        "hirecheck",
+        "consultcheck",
+        "engagecheck",
+        "workcheck",
+    ],
+    "Commercial": [
+        "dealcheck",
+        "leasecheck",
+        "licensecheck",
+        "buycheck",
+        "assetcheck",
+        "distrocheck",
+        "franchisecheck",
+        "partnercheck",
+        "guaranteecheck",
+    ],
+    "Specialized": [
+        "loicheck",
+        "subcheck",
+        "opcheck",
+        "privacycheck",
+        "loancheck",
+        "indemnitycheck",
+        "sponsorcheck",
+    ],
+    "Settlement": [
+        "settlementcheck",
+    ],
+}
 
 
 def _swap_content(container: Container, *new_children: Widget) -> None:
     container.remove_children()
     container.mount(*new_children)
+
+
+class FilteredDirectoryTree(DirectoryTree):
+    """DirectoryTree with hidden file filtering and name filtering per FR-033, FR-034."""
+
+    def __init__(
+        self,
+        path: str | Path,
+        *,
+        show_hidden: bool = False,
+        name: str | None = None,
+        id: str | None = None,
+        classes: str | None = None,
+        disabled: bool = False,
+    ) -> None:
+        super().__init__(path, name=name, id=id, classes=classes, disabled=disabled)
+        self._filter_text = ""
+        self._show_hidden = show_hidden
+
+    def filter_paths(self, paths: Iterable[Path]) -> Iterable[Path]:
+        """Filter hidden files and/or by name fragment."""
+        for p in paths:
+            if not self._show_hidden and p.name.startswith("."):
+                continue
+            if self._filter_text and self._filter_text.lower() not in p.name.lower():
+                continue
+            yield p
 
 
 class ReviewWizard(Screen[None]):
@@ -42,13 +104,16 @@ class ReviewWizard(Screen[None]):
     ReviewWizard .nav-bar { dock: bottom; height: 3; padding: 0 1; align: center middle; }
     ReviewWizard .nav-bar Button { margin: 0 1; min-width: 12; }
     ReviewWizard #mode-filter { margin: 0 0 1 0; }
+    ReviewWizard #file-filter { margin: 0 0 1 0; }
+    ReviewWizard .category-header { text-style: bold; padding: 0 0 0 1; }
     """
 
     BINDINGS: ClassVar = [
         Binding("escape", "cancel_wizard", "Cancel"),
+        Binding("ctrl+h", "toggle_hidden", "Hidden files"),
     ]
 
-    def __init__(self) -> None:
+    def __init__(self, client_id: str | None = None) -> None:
         super().__init__()
         self._step = 1
         self._selected_mode: str | None = None
@@ -57,6 +122,7 @@ class ReviewWizard(Screen[None]):
         self._disable_pii = False
         self._override_model: str | None = None
         self._mode_filter_text = ""
+        self._client_id = client_id
 
     def compose(self) -> ComposeResult:
         with Vertical(id="wizard-container"):
@@ -90,13 +156,23 @@ class ReviewWizard(Screen[None]):
         self._rebuild_mode_list(event.value)
 
     def _rebuild_mode_list(self, filter_text: str) -> None:
-        """Rebuild mode list filtered by text."""
+        """Rebuild mode list filtered by text, grouped by category per FR-013."""
         lowered = filter_text.lower()
-        items = [
-            ListItem(Label(m), id=f"mode-{m}")
-            for m in PRODUCT_MODES
-            if not filter_text or lowered in m.lower()
-        ]
+        items: list[ListItem] = []
+        for category, mode_list in PRODUCT_MODES.items():
+            matched = [m for m in mode_list if not filter_text or lowered in m.lower()]
+            if not matched:
+                continue
+            items.append(
+                ListItem(
+                    Label(category),
+                    id=f"cat-{category}",
+                    disabled=True,
+                    classes="category-header",
+                )
+            )
+            for m in matched:
+                items.append(ListItem(Label(m), id=f"mode-{m}"))
         lv = self.query_one("#mode-list", ListView)
         lv.remove_children()
         if not items:
@@ -114,11 +190,11 @@ class ReviewWizard(Screen[None]):
         """Step 2: file picker."""
         self._step = 2
         self.query_one("#step-indicator", Static).update("Step 2 of 4 — Select document")
-        import os
 
         _swap_content(
             self.query_one("#step-content", Container),
-            DirectoryTree(path=os.getcwd(), id="file-tree"),
+            Input(placeholder="Type to filter files or enter path...", id="file-filter"),
+            FilteredDirectoryTree(path=Path.cwd(), id="file-tree", show_hidden=False),
         )
         self.query_one("#btn-back", Button).disabled = False
         self.query_one("#btn-next", Button).disabled = False
@@ -126,6 +202,22 @@ class ReviewWizard(Screen[None]):
     def _on_directory_tree_file_selected(self, event: DirectoryTree.FileSelected) -> None:
         self._selected_file = str(event.path)
         self.query_one("#btn-next", Button).disabled = False
+
+    def _on_file_filter_input_changed(self, event: Input.Changed) -> None:
+        """Filter file tree or navigate to direct path per FR-033."""
+        if self._step != 2:
+            return
+        tree = self.query_one("#file-tree", FilteredDirectoryTree)
+        value = event.value
+        if value.startswith("/") or value.startswith("~"):
+            p = Path(value).expanduser()
+            if p.exists():
+                tree.path = p if p.is_dir() else p.parent
+                tree._filter_text = ""
+                tree.reload()
+        else:
+            tree._filter_text = value
+            tree.reload()
 
     def _render_step3(self) -> None:
         """Step 3: playbook picker."""
@@ -157,7 +249,6 @@ class ReviewWizard(Screen[None]):
         """Step 4: confirmation with checkboxes."""
         self._step = 4
         self.query_one("#step-indicator", Static).update("Step 4 of 4 — Confirm settings")
-        from pathlib import Path
 
         mode_str = self._selected_mode or "—"
         file_str = self._selected_file or "—"
@@ -216,6 +307,13 @@ class ReviewWizard(Screen[None]):
         elif self._step == 4:
             self._render_step3()
 
+    def action_toggle_hidden(self) -> None:
+        """Toggle hidden file visibility per FR-034."""
+        if self._step == 2:
+            tree = self.query_one("#file-tree", FilteredDirectoryTree)
+            tree._show_hidden = not tree._show_hidden
+            tree.reload()
+
     def action_cancel_wizard(self) -> None:
         self.app.pop_screen()
 
@@ -231,5 +329,6 @@ class ReviewWizard(Screen[None]):
                 playbook_id=self._selected_playbook
                 if self._selected_playbook and self._selected_playbook != "default"
                 else None,
+                client_id=self._client_id,
             )
         )

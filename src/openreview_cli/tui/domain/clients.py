@@ -11,6 +11,7 @@ from openreview_cli.storage.database import (
     delete_client,
     get_client,
     list_clients,
+    list_reviews_for_client,
 )
 
 
@@ -32,6 +33,11 @@ def list_clients_via_tui() -> list[dict[str, str]]:
 def get_client_via_tui(client_id: str) -> dict[str, str] | None:
     """Get a single client by id."""
     return get_client(get_db_path(), client_id)
+
+
+def list_reviews_for_client_via_tui(client_id: str) -> list[dict[str, object]]:
+    """Return review reports for a specific client."""
+    return list_reviews_for_client(get_db_path(), client_id)
 
 
 def delete_client_via_tui(client_id: str, cascade: bool = False) -> str:

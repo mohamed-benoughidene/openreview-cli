@@ -20,12 +20,15 @@ class _PlaybookItem(ListItem):
         latest_version: int,
         current_version: int,
         mode: str = "",
+        corrupt: bool = False,
     ) -> None:
         self.playbook_id = playbook_id
         cur_mark = ""
         if current_version != latest_version:
             cur_mark = f" [current: v{current_version}]"
         label = f"{playbook_id} (v{latest_version}{cur_mark})"
+        if corrupt:
+            label = f"{label} (corrupt)"
         if mode:
             label = f"{label} [{mode}]"
         super().__init__(Label(label))
@@ -90,6 +93,7 @@ class PlaybooksTab(Static):
                     playbook_id=p["id"],
                     latest_version=p["latest_version"],
                     current_version=p["current_version"],
+                    corrupt=p.get("corrupt", False),
                 )
             )
 

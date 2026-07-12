@@ -17,6 +17,11 @@ logger = logging.getLogger(__name__)
 
 _db_path = get_data_dir() / "openreview.db"
 
+# Set by signal handler in app.py when SIGTERM/SIGINT is received mid-review.
+# Checked inside run_review_via_tui before each DB save so a cancelled review
+# never appears in the recent-reviews list (Edge case 6).
+_tui_cancel_requested: bool = False
+
 
 def run_review_via_tui(
     paths: list[str],
@@ -28,8 +33,15 @@ def run_review_via_tui(
     qa_model: str | None = None,
     confidence_threshold: float = 0.7,
     verbose: bool = False,
+    client_id: str | None = None,
+    cancel_requested: bool = False,
 ) -> list[ReviewReport]:
     """Run a review from the TUI with PII stripping enabled by default."""
+    # If cancel was requested before we even started (e.g. signal received
+    # during the yield-point loop in _run_review), bail immediately.
+    if cancel_requested or _tui_cancel_requested:
+        return []
+
     reports = run_review(
         paths=paths,
         playbook_path=playbook_path,
@@ -42,7 +54,9 @@ def run_review_via_tui(
         mode=mode,
     )
 
-    # Persist each report to the database for the recent-reviews list
+    # Persist each report to the database for the recent-reviews list.
+    # If a signal arrived during run_review() we skip all saves so the
+    # cancelled review never appears in recent-reviews (Edge case 6).
     from dataclasses import asdict as _asdict
 
     from openreview_cli.storage.database import (
@@ -50,6 +64,9 @@ def run_review_via_tui(
     )
 
     for report in reports:
+        if _tui_cancel_requested:
+            logger.info("Cancel requested — skipping DB save for %s", report)
+            break
         report_id = str(_uuid.uuid4())
         filename = report.document.filename if report.document else "unknown"
         report_json = json.dumps(_asdict(report), default=str)
@@ -65,6 +82,7 @@ def run_review_via_tui(
             green,
             amber,
             red,
+            client_id=client_id,
         )
         logger.info("Saved review report %s for %s", report_id, filename)
 

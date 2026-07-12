@@ -68,6 +68,10 @@ class SettingsTab(Vertical):
         elif btn_id == "copy-doc-url":
             self._copy_path("doc_url")
 
+    def select_section(self, section: str) -> None:
+        """Switch to a section and re-render its content (T052)."""
+        self._show_section(section)
+
     def _copy_path(self, key: str) -> None:
         """Copy path/URL to clipboard and show confirmation."""
         from openreview_cli.config.paths import get_config_dir, get_data_dir
@@ -109,6 +113,20 @@ class SettingsTab(Vertical):
     def _gateway_text(self) -> str:
         """Render gateway model slots section."""
         slots = get_slot_configs()
+        all_unconfigured = not slots or all(not cfg.get("provider") for cfg in slots.values())
+
+        if all_unconfigured:
+            return "\n".join(
+                [
+                    "[bold]Model Slots[/bold]",
+                    "",
+                    "[yellow]No providers configured yet.[/yellow]",
+                    "",
+                    "Use the [bold]Run setup wizard[/bold] button below",
+                    "to configure your first AI provider.",
+                ]
+            )
+
         health = gateway_health_check()
         lines: list[str] = ["[bold]Model Slots[/bold]"]
         for slot in SLOT_ORDER:
@@ -155,13 +173,44 @@ class SettingsTab(Vertical):
             ]
         )
 
+    def _get_usage_stats(self) -> dict[str, int]:
+        """Query cost_logs for aggregate usage statistics."""
+        from openreview_cli.config.paths import get_data_dir
+        from openreview_cli.storage.database import get_connection
+
+        try:
+            db_path = get_data_dir() / "openreview.db"
+            conn = get_connection(db_path)
+            try:
+                row = conn.execute(
+                    "SELECT COALESCE(SUM(prompt_tokens), 0), "
+                    "COALESCE(SUM(completion_tokens), 0), "
+                    "COALESCE(SUM(cost_cents), 0) FROM cost_logs"
+                ).fetchone()
+                return {
+                    "prompt_tokens": int(row[0]),
+                    "completion_tokens": int(row[1]),
+                    "cost_cents": int(row[2]),
+                }
+            finally:
+                conn.close()
+        except Exception:
+            return {"prompt_tokens": 0, "completion_tokens": 0, "cost_cents": 0}
+
     def _pricing_text(self) -> str:
         """Render pricing tier section."""
+        stats = self._get_usage_stats()
+        cost_dollars = stats["cost_cents"] / 100.0
         return "\n".join(
             [
                 "[bold]Pricing Tier[/bold]",
                 "",
                 "—",
+                "",
+                "Usage Statistics",
+                f"Prompt tokens:     {stats['prompt_tokens']}",
+                f"Completion tokens: {stats['completion_tokens']}",
+                f"Estimated cost:    ${cost_dollars:.2f}",
                 "",
                 "[dim]Not available yet.[/dim]",
             ]

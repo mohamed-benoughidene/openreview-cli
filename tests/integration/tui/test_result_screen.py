@@ -346,3 +346,54 @@ async def test_export_error_on_empty_report() -> None:
         await pilot.pause()
 
     # No crash = success
+
+
+# ── T062: Clause pagination ──────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_pagination_with_many_clauses() -> None:
+    """150 clauses, assert pagination at 100/page with next/prev navigation."""
+    from textual.widgets import ListView
+
+    from openreview_cli.tui.app import OpenReviewApp
+    from openreview_cli.tui.screens.result import ResultScreen
+
+    assessments = [_make_mock_assessment(text=f"Clause {i}") for i in range(150)]
+    report = _make_mock_report(assessments)
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        app.push_screen(ResultScreen(reports=[report], mode="precheck"))
+        await pilot.pause()
+
+        screen = _get_result_screen_checked(app)
+
+        # Page 0: first 100 visible
+        clause_list = screen.query_one("#clause-list-pane", ListView)
+        assert len(clause_list.children) == 100, "Page 0 should show 100 clauses"
+
+        # Summary header includes page indicator
+        headers = screen.query(".summary-header")
+        header_text = str(headers[0].render())
+        assert "Page 1 of 2" in header_text, "Summary should show page 1 of 2"
+
+        # Navigate to next page via key binding
+        await pilot.press("right")
+        await pilot.pause()
+
+        screen = _get_result_screen_checked(app)
+        clause_list = screen.query_one("#clause-list-pane", ListView)
+        assert len(clause_list.children) == 50, "Page 1 should show 50 clauses"
+
+        headers = screen.query(".summary-header")
+        header_text = str(headers[0].render())
+        assert "Page 2 of 2" in header_text, "Summary should show page 2 of 2"
+
+        # Navigate back to previous page
+        await pilot.press("left")
+        await pilot.pause()
+
+        screen = _get_result_screen_checked(app)
+        clause_list = screen.query_one("#clause-list-pane", ListView)
+        assert len(clause_list.children) == 100, "Back to page 0 should show 100 clauses"

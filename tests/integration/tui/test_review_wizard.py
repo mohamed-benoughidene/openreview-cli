@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from textual.widgets import DirectoryTree
+from textual.widgets import DirectoryTree, Input
 
 
 def _get_wizard(app):
@@ -207,3 +207,147 @@ class TestReviewWizard:
             # Should be back on step 1
             step_indicator = wizard.query_one("#step-indicator")
             assert step_indicator is not None, "Step indicator should exist"
+
+    # ── T050: Hidden file filtering ──
+
+    async def test_hidden_files_hidden_by_default(self) -> None:
+        """T050: Hidden files are hidden by default in step 2."""
+        import tempfile
+        from pathlib import Path
+
+        from openreview_cli.tui.app import OpenReviewApp
+        from openreview_cli.tui.screens.review_wizard import FilteredDirectoryTree
+
+        app = OpenReviewApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            wizard = await _home_and_open_wizard(app, pilot)
+            await _select_first_mode(wizard, pilot)
+            await pilot.pause()
+            wizard.query_one("#btn-next").press()
+            await pilot.pause()
+
+            tree = wizard.query_one("#file-tree", FilteredDirectoryTree)
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                Path(tmpdir, "visible.txt").write_text("hello")
+                Path(tmpdir, ".hidden").write_text("secret")
+
+                tree.path = Path(tmpdir)
+                tree.reload()
+                await pilot.pause()
+
+                children_names = [
+                    child.label.plain if hasattr(child.label, "plain") else str(child.label)
+                    for child in tree.root.children
+                ]
+                assert ".hidden" not in children_names, (
+                    f"Hidden file '.hidden' should be hidden, got {children_names}"
+                )
+                assert "visible.txt" in children_names, (
+                    f"Visible file 'visible.txt' should appear, got {children_names}"
+                )
+
+    async def test_ctrl_h_toggles_hidden_files(self) -> None:
+        """T050: Ctrl+H toggles hidden file visibility."""
+        import tempfile
+        from pathlib import Path
+
+        from openreview_cli.tui.app import OpenReviewApp
+        from openreview_cli.tui.screens.review_wizard import FilteredDirectoryTree
+
+        app = OpenReviewApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            wizard = await _home_and_open_wizard(app, pilot)
+            await _select_first_mode(wizard, pilot)
+            await pilot.pause()
+            wizard.query_one("#btn-next").press()
+            await pilot.pause()
+
+            tree = wizard.query_one("#file-tree", FilteredDirectoryTree)
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                Path(tmpdir, "visible.txt").write_text("hello")
+                Path(tmpdir, ".hidden").write_text("secret")
+
+                tree.path = Path(tmpdir)
+                tree.reload()
+                await pilot.pause()
+
+                # Toggle hidden files ON
+                await pilot.press("ctrl+h")
+                await pilot.pause()
+
+                children_names = [
+                    child.label.plain if hasattr(child.label, "plain") else str(child.label)
+                    for child in tree.root.children
+                ]
+                assert ".hidden" in children_names, (
+                    f"Hidden file '.hidden' should be visible after toggle, got {children_names}"
+                )
+
+                # Toggle hidden files OFF again
+                await pilot.press("ctrl+h")
+                await pilot.pause()
+
+                children_names_off = [
+                    child.label.plain if hasattr(child.label, "plain") else str(child.label)
+                    for child in tree.root.children
+                ]
+                assert ".hidden" not in children_names_off, (
+                    f"Hidden file '.hidden' should be hidden after second toggle, got {children_names_off}"
+                )
+
+    # ── T054: File filter and direct path entry ──
+
+    async def test_file_filter_input_visible(self) -> None:
+        """T054: File filter Input is visible above DirectoryTree in step 2."""
+        from openreview_cli.tui.app import OpenReviewApp
+
+        app = OpenReviewApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            wizard = await _home_and_open_wizard(app, pilot)
+            await _select_first_mode(wizard, pilot)
+            await pilot.pause()
+            wizard.query_one("#btn-next").press()
+            await pilot.pause()
+
+            file_filter = wizard.query_one("#file-filter", Input)
+            assert file_filter is not None, "File filter Input should exist in step 2"
+
+            tree = wizard.query_one("#file-tree")
+            assert tree is not None, "DirectoryTree should exist in step 2"
+
+    async def test_direct_path_entry_navigates(self) -> None:
+        """T054: Typing a direct path in filter Input navigates DirectoryTree."""
+        import tempfile
+        from pathlib import Path
+
+        from openreview_cli.tui.app import OpenReviewApp
+        from openreview_cli.tui.screens.review_wizard import FilteredDirectoryTree
+
+        app = OpenReviewApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            wizard = await _home_and_open_wizard(app, pilot)
+            await _select_first_mode(wizard, pilot)
+            await pilot.pause()
+            wizard.query_one("#btn-next").press()
+            await pilot.pause()
+
+            tree = wizard.query_one("#file-tree", FilteredDirectoryTree)
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                tmp_path = Path(tmpdir)
+
+                # Create a subdir to navigate to
+                subdir = tmp_path / "subdir"
+                subdir.mkdir()
+                (subdir / "nested.txt").write_text("nested")
+
+                # Simulate direct path entry by invoking handler directly
+                class FakeEvent:
+                    value = str(subdir)
+
+                wizard._on_file_filter_input_changed(FakeEvent())
+                await pilot.pause()
+
+                assert tree.path == subdir, f"Tree path should be {subdir}, got {tree.path}"

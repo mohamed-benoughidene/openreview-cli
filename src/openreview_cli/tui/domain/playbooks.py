@@ -12,6 +12,7 @@ from openreview_cli.review.playbook import (
     VersionDiff,
     compute_playbook_diff,
     load_playbook,
+    load_playbook_from_db,
 )
 from openreview_cli.storage.database import (
     diff_playbook_versions,
@@ -27,7 +28,7 @@ _db_path = get_data_dir() / "openreview.db"
 
 
 def list_playbooks_via_tui() -> list[dict[str, Any]]:
-    """List all playbooks with latest version info."""
+    """List all playbooks with latest version info and corruption status."""
 
     def _cur(pid: str, ver: int) -> int:
         try:
@@ -36,15 +37,23 @@ def list_playbooks_via_tui() -> list[dict[str, Any]]:
             return ver
 
     raw = list_playbooks(_db_path)
-    return [
-        {
-            "id": pid,
-            "latest_version": ver,
-            "current_version": _cur(pid, ver),
-            "created_at": created,
-        }
-        for pid, ver, created in raw
-    ]
+    result: list[dict[str, Any]] = []
+    for pid, ver, created in raw:
+        corrupt = False
+        try:
+            load_playbook_from_db(pid)
+        except (PlaybookLoadError, ValueError):
+            corrupt = True
+        result.append(
+            {
+                "id": pid,
+                "latest_version": ver,
+                "current_version": _cur(pid, ver),
+                "created_at": created,
+                "corrupt": corrupt,
+            }
+        )
+    return result
 
 
 def import_playbook_via_tui(yaml_path: Path) -> dict[str, Any]:
