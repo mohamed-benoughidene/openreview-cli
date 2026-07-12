@@ -43,7 +43,7 @@ def run_migrations(db_path: Path) -> None:
         for sql_file in sorted(MIGRATIONS_DIR.glob("*.sql")):
             num = int(sql_file.stem.split("_")[0])
             if num > version:
-                conn.executescript(sql_file.read_text())
+                _exec_migration_safely(conn, sql_file)
                 conn.execute(f"PRAGMA user_version = {num}")
         conn.commit()
     except Exception:
@@ -51,6 +51,29 @@ def run_migrations(db_path: Path) -> None:
         raise
     finally:
         conn.close()
+
+
+def _exec_migration_safely(conn: sqlite3.Connection, sql_file: Path) -> None:
+    """Execute a migration script, tolerating idempotent re-runs.
+
+    Some migration scripts (e.g. 011) use `ALTER TABLE ADD COLUMN` which is not
+    idempotent in SQLite. If a previous run partially applied the migration
+    (e.g. test fixture left the column but user_version wasn't bumped), a
+    plain re-run would fail with "duplicate column name". Split the script on
+    `;` and execute statements individually, skipping those that fail with a
+    "duplicate column" / "already exists" OperationalError.
+    """
+    import sqlite3 as _sqlite3
+
+    text = sql_file.read_text()
+    for stmt in [s.strip() for s in text.split(";") if s.strip()]:
+        try:
+            conn.executescript(stmt + ";")
+        except _sqlite3.OperationalError as exc:
+            msg = str(exc).lower()
+            if "duplicate column" in msg or "already exists" in msg:
+                continue
+            raise
 
 
 def log_cost(
