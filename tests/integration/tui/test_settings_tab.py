@@ -184,8 +184,15 @@ class TestSettingsTab:
             display = app.query_one("#section-content-display", Static)
             assert "Config file:" in display.content
 
-    async def test_pricing_tier_shows_usage_stats(self) -> None:
-        """Pricing tier section shows pricing information."""
+    async def test_pricing_tier_shows_usage_stats(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Pricing tier section shows usage statistics."""
+        from openreview_cli.tui.tabs.settings import SettingsTab
+
+        def mock_usage(self: Any) -> dict[str, int]:
+            return {"prompt_tokens": 1234, "completion_tokens": 567, "cost_cents": 42}
+
+        monkeypatch.setattr(SettingsTab, "_get_usage_stats", mock_usage)
+
         app = OpenReviewApp()
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.press("5")
@@ -194,7 +201,10 @@ class TestSettingsTab:
             await pilot.pause()
             display = app.query_one("#section-content-display", Static)
             assert "Pricing Tier" in display.content
-            assert "—" in display.content
+            assert "Usage Statistics" in display.content
+            assert "1234" in display.content
+            assert "567" in display.content
+            assert "$0.42" in display.content
 
     async def test_pricing_tier_em_dash_with_note(self) -> None:
         """Pricing tier shows em-dash with 'not available yet' note."""
@@ -273,6 +283,24 @@ class TestSettingsTab:
             await pilot.pause()
 
             assert "Copied!" in notified
+
+    # ── T058: Zero-provider prompt ──────────────────────────────────
+
+    async def test_zero_providers_shows_setup_prompt(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Empty slot configs shows setup prompt instead of slot list."""
+        monkeypatch.setattr(
+            "openreview_cli.tui.tabs.settings.get_slot_configs",
+            lambda: {},
+        )
+        app = OpenReviewApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.press("5")
+            await pilot.pause()
+
+            display = app.query_one("#section-content-display", Static)
+            text = display.content
+            assert "No providers configured yet" in text
+            assert "Run setup wizard" in text
 
     # ── T045: Accessibility note ────────────────────────────────────
 

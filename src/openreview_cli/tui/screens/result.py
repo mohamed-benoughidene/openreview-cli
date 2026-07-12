@@ -13,6 +13,8 @@ from textual.widgets import Button, Label, ListItem, ListView, Static
 
 from openreview_cli.review.models import ClauseAssessment, ReviewReport
 
+CLAUSES_PER_PAGE = 100
+
 
 class ResultScreen(Screen[None]):
     """Result screen with split view, layout toggle, summary header, and export."""
@@ -32,6 +34,8 @@ class ResultScreen(Screen[None]):
 
     BINDINGS: ClassVar = [
         Binding("l", "toggle_layout", "Toggle layout"),
+        Binding("right", "next_page", "Next page"),
+        Binding("left", "prev_page", "Prev page"),
         Binding("escape", "close", "Close"),
     ]
 
@@ -48,8 +52,13 @@ class ResultScreen(Screen[None]):
         self._layout_split = True
         self._export_format: str = "md"
         self._right_labels: dict[str, Label] = {}
+        self._current_page: int = 0
 
     def compose(self) -> ComposeResult:
+        total_pages = 1
+        if self._reports and self._reports[0].assessments:
+            total = len(self._reports[0].assessments)
+            total_pages = max(1, (total + CLAUSES_PER_PAGE - 1) // CLAUSES_PER_PAGE)
         with Vertical(id="result-container"):
             yield Static(
                 "Review complete" if not self._error else f"Review failed: {self._error}",
@@ -60,18 +69,23 @@ class ResultScreen(Screen[None]):
             elif not self._reports or not self._reports[0].assessments:
                 yield Container(Static("No clauses found."), id="step-content")
             else:
-                assessments = self._reports[0].assessments
-                total = len(assessments)
-                green = sum(1 for a in assessments if a.color and a.color == "green")
-                amber = sum(1 for a in assessments if a.color and a.color == "amber")
-                red = sum(1 for a in assessments if a.color and a.color == "red")
+                all_assessments = self._reports[0].assessments
+                total = len(all_assessments)
+                green = sum(1 for a in all_assessments if a.color and a.color == "green")
+                amber = sum(1 for a in all_assessments if a.color and a.color == "amber")
+                red = sum(1 for a in all_assessments if a.color and a.color == "red")
+                start = self._current_page * CLAUSES_PER_PAGE
+                end = min(start + CLAUSES_PER_PAGE, total)
+                page_assessments = all_assessments[start:end]
+                summary = (
+                    f"{green} Green \u00b7 {amber} Amber \u00b7 {red} Red \u00b7 {total} clauses"
+                )
+                if total_pages > 1:
+                    summary += f" \u00b7 Page {self._current_page + 1} of {total_pages}"
                 with Container(id="step-content"):
-                    yield Static(
-                        f"{green} Green \u00b7 {amber} Amber \u00b7 {red} Red \u00b7 {total} clauses",
-                        classes="summary-header",
-                    )
-                    yield self._build_split_view(assessments)
-                    yield self._build_full_screen(assessments)
+                    yield Static(summary, classes="summary-header")
+                    yield self._build_split_view(page_assessments)
+                    yield self._build_full_screen(page_assessments)
             with Container(id="export-view"):
                 with Vertical():
                     yield Static("Select export format", id="export-title")
@@ -88,8 +102,22 @@ class ResultScreen(Screen[None]):
                     yield Button("Cancel", id="btn-save-cancel", variant="default")
             yield Static("", id="description-bar")
             with Horizontal(id="result-nav"):
+                if total_pages > 1:
+                    yield Button(
+                        "Prev page",
+                        id="btn-prev-page",
+                        variant="default",
+                        disabled=self._current_page == 0,
+                    )
                 yield Button("Export memo", id="btn-export", variant="primary")
                 yield Button("Close", id="btn-close", variant="default")
+                if total_pages > 1:
+                    yield Button(
+                        "Next page",
+                        id="btn-next-page",
+                        variant="default",
+                        disabled=self._current_page >= total_pages - 1,
+                    )
 
     def _build_split_view(self, assessments: list[ClauseAssessment]) -> Horizontal:
         """Build split view with clause list (left) and detail (right)."""
@@ -145,6 +173,22 @@ class ResultScreen(Screen[None]):
     def action_close(self) -> None:
         self.app.pop_screen()
 
+    async def action_next_page(self) -> None:
+        """Go to next page of clauses."""
+        total_pages = 1
+        if self._reports and self._reports[0].assessments:
+            total = len(self._reports[0].assessments)
+            total_pages = max(1, (total + CLAUSES_PER_PAGE - 1) // CLAUSES_PER_PAGE)
+        if self._current_page < total_pages - 1:
+            self._current_page += 1
+            await self.recompose()
+
+    async def action_prev_page(self) -> None:
+        """Go to previous page of clauses."""
+        if self._current_page > 0:
+            self._current_page -= 1
+            await self.recompose()
+
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         if event.list_view.id != "clause-list-pane":
             return
@@ -156,9 +200,13 @@ class ResultScreen(Screen[None]):
     def _update_focus(self, assessments: list[ClauseAssessment]) -> None:
         """Update detail pane and description bar for focused clause."""
         idx = self.query_one("#clause-list-pane", ListView).index
-        if idx is None or idx < 0 or idx >= len(assessments):
+        if idx is None or idx < 0:
             return
-        focused = assessments[idx]
+        start = self._current_page * CLAUSES_PER_PAGE
+        full_idx = start + idx
+        if full_idx < 0 or full_idx >= len(assessments):
+            return
+        focused = assessments[full_idx]
         if self._layout_split and self._right_labels:
             self._right_labels["status"].update(f"Status: {focused.color}")
             self._right_labels["confidence"].update(
@@ -173,13 +221,17 @@ class ResultScreen(Screen[None]):
                 f"Reasoning: {str(reasoning)[:200]}" if reasoning else ""
             )
         self.query_one("#description-bar", Static).update(
-            f"Clause {idx + 1} \u2014 Status: {focused.color}  "
+            f"Clause {full_idx + 1} \u2014 Status: {focused.color}  "
             f"Confidence: {focused.effective_confidence or focused.confidence:.2f}"
         )
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         btn_id = event.button.id
-        if btn_id == "btn-close":
+        if btn_id == "btn-next-page":
+            await self.action_next_page()
+        elif btn_id == "btn-prev-page":
+            await self.action_prev_page()
+        elif btn_id == "btn-close":
             self.action_close()
         elif btn_id == "btn-export":
             self.query_one("#step-content", Container).display = False

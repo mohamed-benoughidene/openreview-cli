@@ -706,6 +706,7 @@ def save_review_report(
     green_count: int = 0,
     amber_count: int = 0,
     red_count: int = 0,
+    client_id: str | None = None,
 ) -> None:
     """Save a review report to the review_reports table.
 
@@ -715,9 +716,9 @@ def save_review_report(
     with transaction(db_path) as conn:
         conn.execute(
             "INSERT OR REPLACE INTO review_reports "
-            "(id, filename, mode, report_json, green_count, amber_count, red_count, created_at) "
+            "(id, filename, mode, report_json, green_count, amber_count, red_count, created_at, client_id) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, "
-            "  COALESCE((SELECT created_at FROM review_reports WHERE id = ?), datetime('now')))",
+            "  COALESCE((SELECT created_at FROM review_reports WHERE id = ?), datetime('now')), ?)",
             (
                 report_id,
                 filename,
@@ -727,6 +728,7 @@ def save_review_report(
                 amber_count,
                 red_count,
                 report_id,
+                client_id,
             ),
         )
 
@@ -760,6 +762,22 @@ def list_recent_reviews(db_path: Path, limit: int = 5) -> list[dict[str, Any]]:
             "SELECT id, filename, mode, green_count, amber_count, red_count, created_at "
             "FROM review_reports ORDER BY created_at DESC LIMIT ?",
             (limit,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def list_reviews_for_client(db_path: Path, client_id: str) -> list[dict[str, Any]]:
+    """Return review reports for a specific client, ordered by created_at DESC.
+
+    Each row contains: id, filename, mode, green_count, amber_count,
+    red_count, created_at.
+    """
+    init_database(db_path)
+    with transaction(db_path) as conn:
+        rows = conn.execute(
+            "SELECT id, filename, mode, green_count, amber_count, red_count, created_at "
+            "FROM review_reports WHERE client_id = ? ORDER BY created_at DESC",
+            (client_id,),
         ).fetchall()
     return [dict(r) for r in rows]
 

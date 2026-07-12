@@ -300,3 +300,54 @@ With multiple developers:
 - `Input(password=True)` for API key masking (per research.md, https://github.com/textualize/textual/blob/main/docs/widgets/input.md)
 - Memory tests for TUI deferred from this task list (per AGENTS.md caveat about `test_pii_memory.py` hanging under cumulative suite load)
 - quickstart.md validation task (T047) is conditional on its future creation
+
+---
+
+## Phase 9: Convergence
+
+**Purpose**: Close gaps between spec/plan and the current code identified by `/speckit.converge`. Each task traces to a specific source-ref and gap-type. No task may modify spec.md, plan.md, or any existing task in tasks.md.
+
+**Source**: Generated 2026-07-11 from in-session convergence assessment. 14 checks (A1-N5) across FRs, plan decisions, and constitution principles. 14 actionable findings emitted below; 1 false positive (F15 checkboxes) excluded.
+
+- [X] T048 CRITICAL [Convergence] Wire gateway health check into status bar per FR-007 in `/home/mohamed/lab/openreview/src/openreview_cli/tui/app.py` — replace static `Button("Gateway: —", id="status-gateway")` with a label that calls `gateway_health_check()` on mount AND on a 5-second interval; render one of the four formats per FR-007: "✓ All healthy" when all 6 slots reachable; "⚠ <slot> (<provider>): <error>" for exactly one failing slot; "⚠ <N>/6 slots: <slot1>, <slot2>" for multiple failing; "✗ All slots unreachable" for total failure. (missing)
+
+- [X] T049 CRITICAL [Convergence] Restore 22-mode grouped list in review wizard per FR-013 in `/home/mohamed/lab/openreview/src/openreview_cli/tui/screens/review_wizard.py` — the shrink pass collapsed `PRODUCT_MODES` to a 5-entry flat list; FR-013 requires all 22 product modes grouped into 5 collapsible categories (Basic: precheck, fullreview; Employment: hirecheck, termcheck; Commercial: dealcheck, leasecheck, salecheck; Specialized: ipcheck, compcheck, riskcheck; Settlement: settlecheck, releasecheck). Use Textual's `Collapsible` widget (or equivalent) for each category header. Type-to-filter must still work across the groups. (missing)
+
+- [X] T050 CRITICAL [Convergence] Hide hidden files in wizard file picker per FR-034 in `/home/mohamed/lab/openreview/src/openreview_cli/tui/screens/review_wizard.py` — `DirectoryTree(path=os.getcwd(), id="file-tree")` currently shows hidden files (those starting with `.`); pass `show_hidden=False` (or whatever Textual 8.x API exposes) so hidden files are hidden by default. Then add a Ctrl-H keybinding on the wizard that toggles `show_hidden` between True and False, and add a unit test in `/home/mohamed/lab/openreview/tests/integration/tui/test_review_wizard.py` that verifies hidden files are hidden by default and Ctrl-H reveals them. (missing)
+
+- [X] T051 CRITICAL [Convergence] Add client detail view per FR-025a in `/home/mohamed/lab/openreview/src/openreview_cli/tui/tabs/clients.py` and a new `/home/mohamed/lab/openreview/src/openreview_cli/tui/screens/client_detail.py` — currently `_on_list_view_selected` only tracks selection for delete; it must push a `ClientDetailScreen(client_id)` when Enter is pressed on a client. The detail screen shows that client's reviews (use `list_recent_reviews_via_tui` filtered by client_id, or a new `domain/clients.list_reviews_for_client_via_tui`). If the client has zero reviews, show the empty-state message "No reviews for this client yet. Start one with [New review]." and pressing Enter on that message must push `ReviewWizard` with the client pre-selected. (missing)
+
+- [X] T052 HIGH [Convergence] Gateway status click selects Gateway section per FR-008 in `/home/mohamed/lab/openreview/src/openreview_cli/tui/app.py` — `on_button_pressed` currently calls only `self.action_show_tab("settings")`; it must also call a new `action_show_section("gateway")` (or equivalent) on the SettingsTab so the Gateway section is auto-selected when the user clicks the gateway status bar item. Add a test in `/home/mohamed/lab/openreview/tests/integration/tui/test_app.py` that clicks `#status-gateway` and asserts the Gateway section is the active section in the Settings tab. (partial)
+
+- [X] T053 HIGH [Convergence] Enter to save and Escape to cancel in client form per FR-024 in `/home/mohamed/lab/openreview/src/openreview_cli/tui/screens/client_form.py` — add `on_key(self, event)` handler that calls `self._save()` on `event.key == "enter"` and `self.dismiss(None)` on `event.key == "escape"`. Add tests in `/home/mohamed/lab/openreview/tests/integration/tui/test_client_form.py` for both behaviors. (missing)
+
+- [X] T054 HIGH [Convergence] Add type-to-filter and direct path entry to wizard file picker per FR-033 in `/home/mohamed/lab/openreview/src/openreview_cli/tui/screens/review_wizard.py` — the file picker step currently has only `DirectoryTree`; add an `Input(placeholder="Type to filter files or enter path...", id="file-filter")` above the DirectoryTree. As the user types, the DirectoryTree's `filter` or `show_root` is set to filter visible files; if the typed string is a valid path (starts with `/` or `~`), navigate the DirectoryTree to that path. (missing)
+
+- [X] T055 MEDIUM [Convergence] Add visible Quit option to tab bar per FR-003 in `/home/mohamed/lab/openreview/src/openreview_cli/tui/app.py` — FR-003 says the tab bar MUST include a "Quit option, visible on every screen". Add a `Button("Quit", id="btn-quit", variant="error")` to the compose layout (or a separate footer button), wire `on_button_pressed` to call `self.exit()`. (missing)
+
+- [X] T056 MEDIUM [Convergence] Change status bar pricing tier label to "Pricing:" per FR-037 in `/home/mohamed/lab/openreview/src/openreview_cli/tui/app.py` — current label is "Tier:" which is ambiguous vs the "Privacy:" label; FR-037 requires them to be labeled separately with clear prefixes. Change `Static("Tier: —", id="status-tier")` to `Static("Pricing: —", id="status-tier")`. Update tests that assert on the label. (partial)
+
+- [X] T057 MEDIUM [Convergence] Add database error screen per Edge case 1 in `/home/mohamed/lab/openreview/src/openreview_cli/tui/screens/db_error.py` (new file) and `/home/mohamed/lab/openreview/src/openreview_cli/tui/launcher.py` — when `init_database()` raises (DB missing or corrupt), catch the exception in `launcher.py` and push a `DatabaseErrorScreen` modal that shows the error message and offers a "Reinitialize" button which calls `init_database(force=True)` and re-launches the TUI. (missing)
+
+- [X] T058 MEDIUM [Convergence] Add zero-provider gateway prompt per Edge case 2 in `/home/mohamed/lab/openreview/src/openreview_cli/tui/tabs/settings.py` — when `gateway_health_check()` returns an empty dict (zero providers configured), the Gateway section should show a "Set up providers" prompt with a single button that launches the gateway wizard. The status bar gateway item should show "⚠ No providers configured" instead of the generic "Gateway: —". (missing)
+
+- [X] T059 LOW [Convergence] Add "(corrupt)" marker for corrupt playbooks per Edge case 5 in `/home/mohamed/lab/openreview/src/openreview_cli/tui/tabs/playbooks.py` — when a playbook row exists in storage but its YAML content fails to load, append " (corrupt)" to the list item label. Currently only a notification appears when the user tries to open the detail view. (missing)
+
+- [X] T060 LOW [Convergence] Add usage statistics to Pricing tier section per FR-039 in `/home/mohamed/lab/openreview/src/openreview_cli/tui/tabs/settings.py` — FR-039 requires showing "usage statistics (prompt tokens, completion tokens, estimated cost) even though tier upgrades are not available." Re-add the `_get_usage_stats()` helper (deleted during the shrink pass) and display the three values in the Pricing tier section below the "—" line. Use `cost_logs` table in SQLite (queries: `SELECT SUM(prompt_tokens), SUM(completion_tokens), SUM(cost_cents) FROM cost_logs`). Add a test in `/home/mohamed/lab/openreview/tests/integration/tui/test_settings_tab.py` that seeds the cost_logs table and asserts the values are displayed. (partial)
+
+**Notes**:
+- T048-T060 are appended per `/speckit.converge` output 2026-07-11. No existing tasks were modified, renumbered, or deleted.
+- All tasks trace to spec.md or plan.md source-refs. None introduces new product behavior outside the spec.
+- Tasks are ordered CRITICAL → HIGH → MEDIUM → LOW for implementer priority.
+- F15 (checkboxes on step 4) was excluded as a false positive — the checkboxes exist at `review_wizard.py:173-178`.
+- F13 (click dep in pyproject.toml) was excluded — pre-existing, not introduced by TUI work; out of scope for this convergence pass.
+
+---
+
+## Phase 10: Convergence (round 2)
+
+**Purpose**: Address 2 edge-case gaps that the Phase 9 convergence pass missed: signal handling for terminal close mid-review, and clause pagination for memory-constrained / large result sets.
+
+- [X] T061 MEDIUM [Convergence] Add signal handler for terminal close mid-review per Edge case 6 in `/home/mohamed/lab/openreview/src/openreview_cli/tui/screens/progress.py` and `/home/mohamed/lab/openreview/src/openreview_cli/tui/launcher.py` — register handlers for `signal.SIGTERM` and `signal.SIGINT` in `OpenReviewApp.on_mount` (or in `launch_tui` after `OpenReviewApp()` is constructed) that cancel the in-progress `_review_task` in `ProgressScreen` (if one is active) and exit the app. Edge case 6 says "the review is cancelled by the OS signal handler; on next launch, the recent-reviews list does not include the cancelled review." This requires (a) the signal handler must NOT leave a partial report in the database; (b) on next launch, the recent-reviews list must reflect only completed reviews. Verify by adding a test that triggers SIGTERM mid-review via `os.kill(os.getpid(), signal.SIGTERM)` in a subprocess and asserts no report is added. (missing)
+
+- [X] T062 MEDIUM [Convergence] Add clause pagination to result screen per Edge case 7 in `/home/mohamed/lab/openreview/src/openreview_cli/tui/screens/result.py` — currently the result screen renders all clauses in one `ListView`/`Vertical`, which would be slow for reports with thousands of clauses. Edge case 7 says "the result screen paginates the clause list (e.g. 100 clauses per page) and the full report scrolls." Add pagination: cap visible clauses to 100 per page, add "Next page" / "Previous page" buttons (or `>`/`<` keybindings), and update the summary header to show "Page N of M" alongside the Green/Amber/Red counts. The full report export (Markdown/JSON/DOCX) must still include ALL clauses, not just the visible page. (missing)

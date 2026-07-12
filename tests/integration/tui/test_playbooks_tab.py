@@ -6,6 +6,8 @@ from unittest.mock import MagicMock, patch
 
 from textual.widgets import Label, ListItem
 
+from openreview_cli.review.playbook import PlaybookLoadError
+
 
 def _list_item_text(item: ListItem) -> str:
     """Extract visible text from a ListItem."""
@@ -31,6 +33,38 @@ def _make_detail_mock(return_value):
 
 
 # ── T033: Core tests ──
+
+
+async def test_corrupt_playbook_shows_marker() -> None:
+    """Corrupt playbook shows '(corrupt)' marker in list label (T059)."""
+    with (
+        patch(
+            "openreview_cli.tui.domain.playbooks.list_playbooks",
+            return_value=[("corrupt-pb", 1, "2026-01-01"), ("good-pb", 2, "2026-01-02")],
+        ),
+        patch(
+            "openreview_cli.tui.domain.playbooks.load_playbook_from_db",
+            side_effect=[PlaybookLoadError("corrupt content"), (MagicMock(), 2)],
+        ),
+        patch(
+            "openreview_cli.tui.domain.playbooks.get_current_version",
+            return_value=1,
+        ),
+    ):
+        from openreview_cli.tui.app import OpenReviewApp
+
+        app = OpenReviewApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.press("4")
+            await pilot.pause()
+            items = list(app.query_one("#playbook-list").children)
+            texts = [_list_item_text(item) for item in items]
+            corrupt_text = [t for t in texts if "corrupt-pb" in t]
+            good_text = [t for t in texts if "good-pb" in t]
+            assert len(corrupt_text) == 1
+            assert len(good_text) == 1
+            assert "(corrupt)" in corrupt_text[0]
+            assert "(corrupt)" not in good_text[0]
 
 
 async def test_playbooks_tab_empty_state() -> None:
