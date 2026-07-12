@@ -526,3 +526,23 @@ async def test_global_search_escape_closes() -> None:
         assert not any(isinstance(s, SearchScreen) for s in app._screen_stack), (
             "SearchScreen should be closed after Escape"
         )
+
+
+async def test_import_document_button_pushes_wizard() -> None:
+    """Home tab 'Import document' button pushes ReviewWizard."""
+    from openreview_cli.tui.app import OpenReviewApp
+    from openreview_cli.tui.screens.review_wizard import ReviewWizard
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        # On Home tab (default)
+        tabs = app.query_one("#tabs", TabbedContent)
+        assert tabs.active == "home"
+        # Click the Import document button
+        await pilot.click("#btn-import-doc")
+        await pilot.pause()
+        # ReviewWizard should now be on the screen stack
+        assert any(isinstance(s, ReviewWizard) for s in app._screen_stack), (
+            "ReviewWizard should be open after clicking 'Import document'"
+        )
