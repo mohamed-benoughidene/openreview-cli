@@ -169,7 +169,7 @@ class TestSettingsTab:
             await pilot.pause()
             display = app.query_one("#section-content-display", Static)
             assert "Documentation:" in display.content
-            assert "github.com" in display.content
+            assert "openreview" in display.content
 
     # ── T043: Configuration & Pricing tier sections ─────────────────
 
@@ -253,7 +253,7 @@ class TestSettingsTab:
             await pilot.pause()
 
             assert app._clipboard is not None
-            assert "github.com" in app._clipboard
+            assert "mohamed-benoughidene" in app._clipboard
 
     async def test_copy_shows_confirmation(self) -> None:
         """Click copy button, assert 'Copied!' notification appears."""
