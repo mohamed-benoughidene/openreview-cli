@@ -1,9 +1,9 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 1.1.0 → 1.2.0 (MINOR — GPU acceleration mandate + NLP model memory exemption)
-Modified principles: III (Hardware-Bounded) — added GPU auto-detection rule and NLP model memory exemption rule
-Added sections: Core Principles (I–V), Constraints, Development Workflow
+Version change: 1.2.0 → 1.3.0 (MINOR — `keyring` library added as optional runtime dependency)
+Modified principles: IV (Dependency Minimalism) — added explicit allowance for the `keyring` library as an optional runtime dependency for OS-level credential storage
+Added sections: none
 Removed sections: none
 Templates requiring updates: none — the current spec-kit templates have
   no principle-driven content that contradicts this constitution.
@@ -138,6 +138,8 @@ Rules:
   the stdlib `logging` module over equivalent third-party packages.
 - Pydantic is permitted for configuration and gateway routing. Pydantic
   is not a license to introduce ORM-style abstractions.
+
+**Exception for `keyring` library (added in v1.3.0):** The `keyring` library is permitted as an optional runtime dependency for OS-level credential storage. Justification: (1) standard library has no equivalent cross-platform secure credential store; (2) without it, the project would need to implement platform-specific crypto (Keychain on macOS, Credential Manager on Windows, Secret Service on Linux) or accept plaintext keys in `auth.json`; (3) the library is a thin wrapper (~50 KB) with no transitive deps; (4) the gateway MUST work without it (graceful fallback to `auth.json` with `chmod 600`). The library is added as an optional dependency (`pip install keyring`) — it is not required for the project to function. If a user does not install it, API key storage falls back to `auth.json` with a one-time warning.
 
 Rationale: every dependency is paid for at install time, at startup
 time, at memory time, and at maintenance time. The forbidden list
@@ -311,4 +313,4 @@ Before executing any task in tasks.md, read `.specify/memory/impl-context.md`.
   successor that fills the same role is a PATCH amendment, provided
   the replacement does not change observable behaviour.
 
-**Version**: 1.2.0 | **Ratified**: 2026-06-23 | **Last Amended**: 2026-06-25
+**Version**: 1.3.0 | **Ratified**: 2026-06-23 | **Last Amended**: 2026-07-13
