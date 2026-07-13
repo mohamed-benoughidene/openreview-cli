@@ -180,3 +180,22 @@ def test_discover_ollama_unreachable(tmp_path: Path, monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(httpx, "get", mock_get)
     models = registry.discover_ollama("http://localhost:11434")
     assert models == []
+
+
+def test_voyage_models_loaded() -> None:
+    models_path = (
+        Path(__file__).parent.parent.parent
+        / "src"
+        / "openreview_cli"
+        / "gateway"
+        / "models.json"
+    )
+    data = json.loads(models_path.read_text())
+    providers = data["providers"]
+    assert "voyage" in providers
+    assert "voyage-3" in providers["voyage"]["models"]
+    assert providers["voyage"]["models"]["voyage-3"]["slots"] == ["embedding"]
+    assert providers["voyage"]["models"]["voyage-3"]["dimensions"] == 1024
+    assert "rerank-2" in providers["voyage"]["models"]
+    assert providers["voyage"]["models"]["rerank-2"]["slots"] == ["reranking"]
+    assert providers["voyage"]["models"]["rerank-2"]["context"] == 8192

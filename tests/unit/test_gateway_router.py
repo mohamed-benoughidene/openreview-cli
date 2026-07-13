@@ -368,3 +368,9 @@ gateway:
         gw = _gateway(tmp_path, monkeypatch, config, "{}")
         result = gw.health_check()
         assert result["reasoning"].get("extra_params") == 3
+
+
+def test_voyage_api_key_redacted() -> None:
+    from openreview_cli.gateway.router import _REDACT_PATTERNS
+
+    assert "VOYAGE_API_KEY" in _REDACT_PATTERNS

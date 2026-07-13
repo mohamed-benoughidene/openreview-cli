@@ -43,6 +43,7 @@ _REDACT_PATTERNS = [
     "COHERE_API_KEY",
     "HUGGINGFACE_API_KEY",
     "CUSTOM_API_KEY",
+    "VOYAGE_API_KEY",
     "sk-",
     "sk-ant-",
 ]

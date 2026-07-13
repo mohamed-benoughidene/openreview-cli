@@ -163,6 +163,25 @@
         }
       }
     },
+    "voyage": {
+      "name": "Voyage",
+      "env_key": "VOYAGE_API_KEY",
+      "auth_required": true,
+      "models": {
+        "voyage-3": {
+          "slots": ["embedding"],
+          "dimensions": 1024,
+          "recommended": true,
+          "status": "active"
+        },
+        "rerank-2": {
+          "slots": ["reranking"],
+          "context": 8192,
+          "recommended": true,
+          "status": "active"
+        }
+      }
+    },
     "huggingface": {
       "name": "HuggingFace",
       "env_key": "HUGGINGFACE_API_KEY",
