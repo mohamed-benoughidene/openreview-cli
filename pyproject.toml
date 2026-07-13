@@ -33,6 +33,9 @@ dependencies = [
     "typer>=0.26.7",
 ]
 
+[project.optional-dependencies]
+auth = ["keyring>=24.0.0"]
+
 [project.scripts]
 openreview = "openreview_cli.app:app"
 

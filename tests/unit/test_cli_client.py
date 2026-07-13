@@ -74,7 +74,7 @@ def test_client_delete_refuses_with_reviews(
 
     result = runner.invoke(app, ["client", "delete", "acme"])
 
-    assert result.exit_code == 5
+    assert result.exit_code == 2
     assert "reviews" in result.output.lower()
 
 

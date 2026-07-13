@@ -205,7 +205,15 @@
       "name": "Custom (OpenAI-compatible)",
       "env_key": "CUSTOM_API_KEY",
       "auth_required": true,
-      "models": {}
+      "models": {
+        "custom-model": {
+          "slots": ["reasoning", "extraction", "graph"],
+          "context": 8192,
+          "recommended": false,
+          "status": "experimental",
+          "note": "Generic OpenAI-compatible endpoint. Use --base-url to configure."
+        }
+      }
     }
   }
 }

@@ -49,7 +49,7 @@ def test_config_get_unknown_key_shows_error(
 
     result = runner.invoke(app, ["config", "get", "nonexistent.key"])
 
-    assert result.exit_code == 5
+    assert result.exit_code == 2
 
 
 def test_config_set_updates_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -79,7 +79,7 @@ def test_config_set_rejects_invalid_value(monkeypatch: pytest.MonkeyPatch, tmp_p
 
     result = runner.invoke(app, ["config", "set", "privacy.tier", "invalid"])
 
-    assert result.exit_code == 5
+    assert result.exit_code == 2
 
 
 def test_config_set_rejects_invalid_int(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -88,7 +88,7 @@ def test_config_set_rejects_invalid_int(monkeypatch: pytest.MonkeyPatch, tmp_pat
 
     result = runner.invoke(app, ["config", "set", "gateway.cost_limits.per_review_cents", "0"])
 
-    assert result.exit_code == 5
+    assert result.exit_code == 2
 
 
 def test_config_operation_latency(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

@@ -11,6 +11,26 @@ import httpx
 from openreview_cli.gateway.models import ModelEntry, ProviderInfo
 
 
+def get_available_providers(auth_path: Path | None = None) -> list[str]:
+    """Return list of provider names that have at least one configured key.
+
+    Reads ``auth.json`` from *auth_path* (or default config dir) and returns
+    every provider name that has a non-empty key value.
+    """
+    if auth_path is None:
+        from openreview_cli.config.paths import get_config_dir
+
+        auth_path = get_config_dir() / "auth.json"
+
+    if not auth_path.exists():
+        return []
+
+    from openreview_cli.config.auth import load_auth
+
+    auth = load_auth(auth_path)
+    return [prov for prov, key in auth.items() if key]
+
+
 class ModelRegistry:
     def __init__(self, registry_path: Path) -> None:
         self._path = registry_path
@@ -69,6 +89,33 @@ class ModelRegistry:
         self._path.write_text(resp.text)
         self.load()
         return sum(len(p.models) for p in self._providers.values())
+
+    def get_available_models(self, configured_providers: list[str]) -> list[dict[str, Any]]:
+        """Return all models from registry whose provider is in configured_providers.
+
+        Each entry uses the flat format expected by the CLI::
+            {"model_id": str, "provider": str, "slots": list[str],
+             "context": int|None, "dimensions": int|None, "recommended": bool}
+        """
+        if not self._providers:
+            return []
+        prov_set = {p.lower() for p in configured_providers}
+        results: list[dict[str, Any]] = []
+        for prov_key, prov_info in self._providers.items():
+            if prov_key.lower() not in prov_set:
+                continue
+            for mid, mentry in prov_info.models.items():
+                results.append(
+                    {
+                        "model_id": mid,
+                        "provider": prov_key,
+                        "slots": mentry.slots,
+                        "context": mentry.context,
+                        "dimensions": mentry.dimensions,
+                        "recommended": mentry.recommended,
+                    }
+                )
+        return results
 
     def discover_ollama(self, base_url: str = "http://localhost:11434") -> list[dict[str, Any]]:
         try:

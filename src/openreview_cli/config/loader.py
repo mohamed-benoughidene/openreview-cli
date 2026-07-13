@@ -34,6 +34,11 @@ DEFAULT_CONFIG: dict[str, object] = {
                 "fallback": None,
                 "params": {"temperature": 0.0, "max_tokens": 4000},
             },
+            "grounding": {
+                "primary": "ollama/qwen3:8b",
+                "fallback": None,
+                "params": {"temperature": 0.0, "max_tokens": 4000},
+            },
         },
         "fallback": {
             "retries": 2,
@@ -118,6 +123,9 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
         embedding: EmbeddingSlot = EmbeddingSlot(primary="ollama/nomic-embed-text")
         reranking: RerankingSlot = RerankingSlot(primary="ollama/qwen3-reranker-0.6b")
         graph: ModelSlot = ModelSlot(
+            primary="ollama/qwen3:8b", params=ModelParams(temperature=0.0, max_tokens=4000)
+        )
+        grounding: ModelSlot = ModelSlot(
             primary="ollama/qwen3:8b", params=ModelParams(temperature=0.0, max_tokens=4000)
         )
 

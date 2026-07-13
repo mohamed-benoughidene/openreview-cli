@@ -1,14 +1,63 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from litellm import completion_cost
 
-from openreview_cli.storage.database import get_session_cost as db_get_session_cost
+from openreview_cli.storage.database import (
+    get_session_cost as db_get_session_cost,
+)
 from openreview_cli.storage.database import log_cost as db_log_cost
+from openreview_cli.storage.database import transaction
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+def get_costs(
+    db_path: Path,
+    filter: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Query cost records with optional filters.
+
+    Parameters
+    ----------
+    db_path:
+        Path to the SQLite database.
+    filter:
+        Optional dict with any of these keys:
+        - ``today`` (bool): if True, only today's records
+        - ``session_id`` (str): filter by session ID
+        - ``since`` (str): ISO date string, only records on or after this date
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        Each dict has keys: id, session_id, slot, model, provider,
+        prompt_tokens, completion_tokens, cost_cents, created_at.
+    """
+    query = (
+        "SELECT id, session_id, slot, model, provider, "
+        "  prompt_tokens, completion_tokens, cost_cents, created_at "
+        "FROM cost_logs WHERE 1=1"
+    )
+    params: list[Any] = []
+
+    if filter:
+        if filter.get("today"):
+            query += " AND date(created_at) = date('now')"
+        if filter.get("session_id"):
+            query += " AND session_id = ?"
+            params.append(filter["session_id"])
+        if filter.get("since"):
+            query += " AND created_at >= ?"
+            params.append(filter["since"])
+
+    query += " ORDER BY created_at DESC"
+
+    with transaction(db_path) as conn:
+        rows = conn.execute(query, params).fetchall()
+    return [dict(r) for r in rows]
 
 
 class CostTracker:
@@ -33,7 +82,7 @@ class CostTracker:
             cost_cents = 0
         return db_log_cost(
             self._data_path,
-            session_id or "",
+            session_id,
             model,
             provider,
             prompt_tokens,

@@ -78,7 +78,7 @@ def _exec_migration_safely(conn: sqlite3.Connection, sql_file: Path) -> None:
 
 def log_cost(
     db_path: Path,
-    session_id: str,
+    session_id: str | None,
     model: str,
     provider: str,
     prompt_tokens: int,

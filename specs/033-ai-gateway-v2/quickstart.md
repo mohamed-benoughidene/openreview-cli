@@ -15,7 +15,7 @@ Fix 3 concrete bugs: grounding slot schema, JSON-stdin setup, cost tracking FK.
 uv sync
 uv run openreview gateway setup --dry-run < .speckit/validate/v2-minimal.json
 # If this fails, create the file with:
-echo '{"version": 2, "providers": {"openai": {"name": "openai", "apiKeyRef": "OPENAI_API_KEY", "envVarName": "OPENAI_API_KEY"}}, "slots": {"reasoning": {"provider": "openai", "model": "gpt-4o"}}}' > /tmp/v2-test.json
+echo '{"version": 2, "providers": {"openai": {"name": "openai", "env_key": "OPENAI_API_KEY", "api_key_source": "file"}}, "slots": {"reasoning": {"provider": "openai", "model": "gpt-4o"}}}' > /tmp/v2-test.json
 ```
 
 ### Validation 1: Grounding Slot Persists
@@ -49,14 +49,14 @@ cat > /tmp/v2-test.json << 'EOF'
     "providers": {
         "openai": {
             "name": "openai",
-            "api_key_ref": "OPENAI_API_KEY",
-            "env_var_name": "OPENAI_API_KEY",
+            "env_key": "OPENAI_API_KEY",
+            "api_key_source": "file",
             "enabled": true
         },
         "voyage": {
             "name": "voyage",
-            "api_key_ref": "VOYAGE_API_KEY",
-            "env_var_name": "VOYAGE_API_KEY",
+            "env_key": "VOYAGE_API_KEY",
+            "api_key_source": "file",
             "enabled": true
         }
     },
@@ -260,31 +260,38 @@ version: 2
 providers:
   openai:
     name: openai
-    api_key_source: file
-    api_key_ref: openai
-    env_var_name: OPENAI_API_KEY
+    env_key: OPENAI_API_KEY
     enabled: true
   voyage:
     name: voyage
-    api_key_source: file
-    api_key_ref: voyage
-    env_var_name: VOYAGE_API_KEY
+    env_key: VOYAGE_API_KEY
     enabled: true
 slots:
   reasoning:
     provider: openai
-    model: openai/gpt-4o
+    model: gpt-4o
   extraction:
     provider: openai
-    model: openai/gpt-4o-mini
+    model: gpt-4o-mini
   embedding:
     provider: voyage
-    model: voyage/voyage-3
+    model: voyage-3
+  reranking:
+    provider: ""
+    model: ""
+  graph:
+    provider: ""
+    model: ""
+  grounding:
+    provider: openai
+    model: gpt-4o
 default_model: null
 fallback:
   retries: 2
   timeout: 60
-  circuit_breaker: null
+cost_limits:
+  per_session_cents: 100
+  daily_cents: 1000
 ```
 
 **Success**: All v1 slot assignments preserved in provider-first format. `auth.json` unchanged. Gateway status shows same effective model assignments.

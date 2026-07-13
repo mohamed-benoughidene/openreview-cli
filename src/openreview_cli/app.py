@@ -1,4 +1,5 @@
 import contextlib
+import json
 import logging
 import sys
 import time
@@ -12,7 +13,13 @@ from openreview_cli import __version__
 from openreview_cli.config.auth import ensure_auth
 from openreview_cli.config.loader import get_config_value, load_config, set_config_value
 from openreview_cli.config.paths import get_config_dir, get_data_dir, get_log_dir
-from openreview_cli.errors import config_error
+from openreview_cli.errors import (
+    EXIT_CONFIG_ERROR,
+    EXIT_PROVIDER_ERROR,
+    EXIT_USER_ERROR,
+    config_error,
+)
+from openreview_cli.gateway.formatting import format_output
 from openreview_cli.storage.database import (
     add_client,
     client_has_reviews,
@@ -252,6 +259,33 @@ def _resolve_doc_id(file_path: Path) -> str:
 
         doc_id = hashlib.sha256(file_path.read_bytes()).hexdigest()
     return doc_id
+
+
+def _is_tty() -> bool:
+    """Check whether stdin and stdout are connected to a terminal.
+
+    Per FR-030: commands requiring interactive input must exit with
+    code 1 when no TTY is detected.
+    """
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def _emit_json_error(
+    error: str, code: int, message: str, *, details: dict[str, object] | None = None
+) -> None:
+    """Emit a JSON error object to stderr.
+
+    Per FR-032: when ``--format json`` is set and an error occurs,
+    output ``{"error": str, "code": int, "message": str, "details": {...}}``.
+    """
+    obj: dict[str, object] = {
+        "error": error,
+        "code": code,
+        "message": message,
+    }
+    if details:
+        obj["details"] = details
+    typer.echo(json.dumps(obj, indent=2, default=str), err=True)
 
 
 @app.callback(invoke_without_command=True)
@@ -1305,23 +1339,147 @@ gateway_app = typer.Typer(
 
 
 @gateway_app.command("setup")
-def gateway_setup() -> None:
-    """Interactive setup wizard for provider and model configuration."""
-    from openreview_cli.gateway.wizard import gateway_setup as _wizard
+def gateway_setup(
+    dry_run: bool = typer.Option(False, "--dry-run", help="Validate JSON without writing files."),
+    format: str = typer.Option("text", "--format", help="Output format: text, json."),
+) -> None:
+    """Configure AI provider gateway from JSON piped to stdin.
 
-    _wizard()
+    Reads a JSON config from stdin, validates it against the V2Config
+    schema, and atomically writes config.yml and auth.json.
+
+    Examples::
+
+        # Validate a config without writing
+        echo '{"version":2,"providers":...}' | openreview gateway setup --dry-run
+
+        # Apply a config
+        cat my-config.json | openreview gateway setup
+
+        # JSON output
+        cat my-config.json | openreview gateway setup --format json
+
+    Arguments:
+        --dry-run: Validate JSON without writing files.
+        --format: Output format (text, json).
+    """
+    # TTY (interactive) → deprecation message, exit 0 (TUI handles setup)
+    if sys.stdin.isatty():
+        msg = (
+            "Interactive setup wizard is deprecated. "
+            "Pipe JSON to stdin or use `openreview gateway setup --help`."
+        )
+        if format == "json":
+            typer.echo(format_output({}, format, error="info", code=0, message=msg))
+        else:
+            typer.echo(msg, err=True)
+        raise typer.Exit(code=0)
+
+    # Non-TTY: read piped stdin
+    json_str = sys.stdin.read()
+
+    # Empty stdin → usage error
+    if not json_str.strip():
+        msg = "No config provided on stdin. Run `openreview gateway setup --help` for usage."
+        if format == "json":
+            _emit_json_error("user_error", EXIT_USER_ERROR, msg)
+        else:
+            typer.echo(msg, err=True)
+        raise typer.Exit(code=EXIT_USER_ERROR)
+
+    from openreview_cli.config.paths import get_config_dir
+
+    config_dir = get_config_dir()
+    config_path: Path = config_dir / "config.yml"
+    auth_path: Path = config_dir / "auth.json"
+
+    if dry_run:
+        from openreview_cli.gateway.apply import apply_config_with_dry_run
+
+        try:
+            result = apply_config_with_dry_run(json_str)
+        except (ValueError, json.JSONDecodeError) as e:
+            if format == "json":
+                _emit_json_error("user_error", EXIT_USER_ERROR, str(e))
+            else:
+                typer.echo(f"Error: {e}", err=True)
+            raise typer.Exit(code=EXIT_USER_ERROR) from None
+
+        if format == "json":
+            typer.echo(
+                format_output(
+                    {
+                        "status": "validated",
+                        "dry_run": True,
+                        "providers": result["providers"],
+                        "slots": result["slots"],
+                    },
+                    format,
+                )
+            )
+        else:
+            providers = ", ".join(result["providers"])
+            slots = ", ".join(result["slots"])
+            typer.echo(
+                f"Dry-run validation passed. "
+                f"Would configure {len(result['providers'])} provider(s) [{providers}] "
+                f"and {len(result['slots'])} slot(s) [{slots}]."
+            )
+        return
+
+    from openreview_cli.gateway.apply import apply_config
+
+    try:
+        apply_config(json_str, config_path, auth_path)
+    except (ValueError, json.JSONDecodeError) as e:
+        if format == "json":
+            _emit_json_error("user_error", EXIT_USER_ERROR, str(e))
+        else:
+            typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=EXIT_USER_ERROR) from None
+
+    if format == "json":
+        typer.echo(
+            format_output(
+                {
+                    "status": "applied",
+                    "dry_run": False,
+                },
+                format,
+            )
+        )
+    else:
+        typer.echo("Gateway setup complete. Configuration saved.")
 
 
 @gateway_app.command("status")
-def gateway_status() -> None:
-    """Show configured slots and provider reachability."""
-    from rich.console import Console
-    from rich.table import Table
+def gateway_status(
+    format: str = typer.Option("text", "--format", help="Output format: text, json."),
+) -> None:
+    """Show configured slots and provider reachability.
 
+    Displays a table of all 6 slots (reasoning, extraction, embedding,
+    reranking, graph, grounding) with their status and assigned provider.
+
+    Examples::
+
+        openreview gateway status
+        openreview gateway status --format json
+
+    Arguments:
+        --format: Output format (text, json).
+    """
     from openreview_cli.gateway.router import Gateway
 
     gw = Gateway()
     status = gw.health_check()
+
+    if format == "json":
+        typer.echo(format_output(status, format))
+        return
+
+    from rich.console import Console
+    from rich.table import Table
 
     console = Console()
     table = Table(title="Gateway Status")
@@ -1335,15 +1493,41 @@ def gateway_status() -> None:
 
 
 @gateway_app.command("providers")
-def gateway_providers() -> None:
-    """List all supported providers."""
-    from rich.console import Console
-    from rich.table import Table
+def gateway_providers(
+    format: str = typer.Option("text", "--format", help="Output format: text, json."),
+) -> None:
+    """List all supported providers.
 
+    Reads the static model registry and displays each provider's name,
+    authentication requirement, and model count.
+
+    Examples::
+
+        openreview gateway providers
+        openreview gateway providers --format json
+
+    Arguments:
+        --format: Output format (text, json).
+    """
     from openreview_cli.gateway.registry import ModelRegistry
 
     registry = ModelRegistry(_GATEWAY_REGISTRY_PATH)
     registry.load()
+
+    if format == "json":
+        typer.echo(
+            format_output(
+                {
+                    "providers": registry.list_providers(),
+                    "total": len(registry.list_providers()),
+                },
+                format,
+            )
+        )
+        return
+
+    from rich.console import Console
+    from rich.table import Table
 
     console = Console()
     table = Table(title="Supported Providers")
@@ -1361,11 +1545,24 @@ def gateway_providers() -> None:
 
 
 @gateway_app.command("models")
-def gateway_models(provider: str) -> None:
-    """List available models for a provider."""
-    from rich.console import Console
-    from rich.table import Table
+def gateway_models(
+    provider: str,
+    format: str = typer.Option("text", "--format", help="Output format: text, json."),
+) -> None:
+    """List available models for a provider.
 
+    Displays model IDs, compatible slots, context window, and recommended
+    badge. For Ollama, also discovers locally running models.
+
+    Examples::
+
+        openreview gateway models openai
+        openreview gateway models ollama --format json
+
+    Arguments:
+        provider: Provider name (e.g., openai, anthropic, ollama).
+        --format: Output format (text, json).
+    """
     from openreview_cli.gateway.registry import ModelRegistry
 
     registry = ModelRegistry(_GATEWAY_REGISTRY_PATH)
@@ -1381,8 +1578,44 @@ def gateway_models(provider: str) -> None:
                 seen.add(m["model_id"])
 
     if not models:
-        typer.echo(f"No models found for provider '{provider}'.")
+        if format == "json":
+            typer.echo(
+                format_output(
+                    {
+                        "provider": provider,
+                        "models": [],
+                        "total": 0,
+                    },
+                    format,
+                )
+            )
+        else:
+            typer.echo(f"No models found for provider '{provider}'.")
         return
+
+    if format == "json":
+        typer.echo(
+            format_output(
+                {
+                    "provider": provider,
+                    "models": [
+                        {
+                            "model_id": m["model_id"],
+                            "slots": m.get("slots", []),
+                            "context": m.get("context"),
+                            "recommended": m.get("recommended", False),
+                        }
+                        for m in models
+                    ],
+                    "total": len(models),
+                },
+                format,
+            )
+        )
+        return
+
+    from rich.console import Console
+    from rich.table import Table
 
     console = Console()
     table = Table(title=f"Models for {provider}")
@@ -1401,93 +1634,761 @@ def gateway_models(provider: str) -> None:
     console.print(table)
 
 
-@gateway_app.command("set")
-def gateway_set(slot: str, model: str) -> None:
-    """Assign a model to a slot."""
+# ── Shared resolve-and-set helper ───────────────────────────────────────────
+
+
+def _resolve_and_set_slot(slot: str, model: str, format: str = "text") -> None:
+    """Resolve short name (if needed) and write the model to config.yml."""
     from openreview_cli.config.loader import set_config_value
     from openreview_cli.config.paths import get_config_dir
+    from openreview_cli.gateway.registry import get_available_providers
+    from openreview_cli.gateway.resolver import (
+        ProviderNotConfiguredError,
+        UnknownModelError,
+        resolve,
+    )
     from openreview_cli.gateway.router import VALID_SLOTS
 
     if slot not in VALID_SLOTS:
-        typer.echo(
-            f"Invalid slot '{slot}'. Valid slots: {', '.join(sorted(VALID_SLOTS))}",
-            err=True,
-        )
-        raise typer.Exit(code=1)
+        msg = f"Invalid slot '{slot}'. Valid slots: {', '.join(sorted(VALID_SLOTS))}"
+        if format == "json":
+            _emit_json_error("user_error", EXIT_USER_ERROR, msg)
+        else:
+            typer.echo(msg, err=True)
+        raise typer.Exit(code=EXIT_USER_ERROR)
 
     config_path = get_config_dir() / "config.yml"
+    auth_path = get_config_dir() / "auth.json"
+
+    # Get configured providers (those with API keys)
+    configured = get_available_providers(auth_path)
+
+    # Resolve short name → full provider/model
     try:
-        set_config_value(config_path, f"gateway.models.{slot}.primary", model)
-        typer.echo(f"Set {slot} → {model}")
+        resolved = resolve(model, configured)
+        resolved_str = resolved.full
+    except (UnknownModelError, ProviderNotConfiguredError) as e:
+        if format == "json":
+            _emit_json_error("user_error", EXIT_USER_ERROR, str(e))
+        else:
+            typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=EXIT_USER_ERROR) from None
+
+    try:
+        set_config_value(config_path, f"gateway.models.{slot}.primary", resolved_str)
     except Exception as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(code=1) from None
+        if format == "json":
+            _emit_json_error("config_error", EXIT_CONFIG_ERROR, str(e))
+        else:
+            typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=EXIT_CONFIG_ERROR) from None
+
+    is_resolved = resolved.full != model
+    resolution_info = f' (resolved from "{model}")' if is_resolved else ""
+
+    if format == "json":
+        typer.echo(
+            format_output(
+                {
+                    "status": "configured",
+                    "slot": slot,
+                    "model": model,
+                    "resolved": resolved.full,
+                    "resolved_from": model if is_resolved else None,
+                },
+                format,
+            )
+        )
+    else:
+        typer.echo(f"Set {slot} \u2192 {resolved.full}{resolution_info}")
+
+
+@gateway_app.command("set")
+def gateway_set(
+    slot: str,
+    model: str,
+    format: str = typer.Option("text", "--format", help="Output format: text, json."),
+) -> None:
+    """Assign a model to a slot.
+
+    Supports short-name resolution: use 'gpt-4o' instead of 'openai/gpt-4o'.
+    The resolver automatically selects the best configured provider for the
+    model. Explicit 'provider/model' strings pass through unchanged.
+
+    Examples::
+
+        openreview gateway set reasoning gpt-4o
+        openreview gateway set embedding voyage-3 --format json
+        openreview gateway set extraction openai/gpt-4o-mini
+
+    Arguments:
+        slot: Slot name (reasoning, extraction, embedding, reranking, graph, grounding).
+        model: Model short name (gpt-4o) or explicit provider/model (openai/gpt-4o).
+        --format: Output format (text, json).
+    """
+    _resolve_and_set_slot(slot, model, format=format)
 
 
 @gateway_app.command("refresh")
-def gateway_refresh() -> None:
-    """Refresh model registry from remote."""
+def gateway_refresh(
+    format: str = typer.Option("text", "--format", help="Output format: text, json."),
+) -> None:
+    """Refresh model registry from the remote source.
+
+    Fetches the latest models.json from the openreview GitHub repository
+    and updates the local registry.
+
+    Examples::
+
+        openreview gateway refresh
+        openreview gateway refresh --format json
+
+    Arguments:
+        --format: Output format (text, json).
+    """
     from openreview_cli.gateway.registry import ModelRegistry
 
     registry = ModelRegistry(_GATEWAY_REGISTRY_PATH)
     url = "https://raw.githubusercontent.com/mohamed-benoughidene/openreview/main/src/openreview_cli/gateway/models.json"
     count = registry.refresh(url)
-    typer.echo(f"Registry refreshed: {count} models loaded.")
+    if format == "json":
+        typer.echo(
+            format_output(
+                {
+                    "status": "refreshed",
+                    "models_loaded": count,
+                },
+                format,
+            )
+        )
+    else:
+        typer.echo(f"Registry refreshed: {count} models loaded.")
 
 
 @gateway_app.command("test")
-def gateway_test(slot: str) -> None:
-    """Send a test request to a slot's model."""
+def gateway_test(
+    slot: str,
+    format: str = typer.Option("text", "--format", help="Output format: text, json."),
+) -> None:
+    """Send a test request to a slot's model.
+
+    Validates the slot name against the 6 known slots then sends a simple
+    API call through the Gateway. Reports success or failure.
+
+    Examples::
+
+        openreview gateway test reasoning
+        openreview gateway test embedding --format json
+
+    Arguments:
+        slot: Slot name (reasoning, extraction, embedding, reranking, graph, grounding).
+        --format: Output format (text, json).
+    """
+    from openreview_cli.gateway.errors import SlotNotConfiguredError
     from openreview_cli.gateway.router import VALID_SLOTS, Gateway
 
     if slot not in VALID_SLOTS:
-        typer.echo(f"Invalid slot '{slot}'. Valid slots: {', '.join(sorted(VALID_SLOTS))}")
-        raise typer.Exit(code=1)
+        msg = f"Invalid slot '{slot}'. Valid slots: {', '.join(sorted(VALID_SLOTS))}"
+        if format == "json":
+            _emit_json_error("user_error", EXIT_USER_ERROR, msg)
+        else:
+            typer.echo(msg, err=True)
+        raise typer.Exit(code=EXIT_USER_ERROR)
 
     gw = Gateway()
     try:
+        result: dict[str, object] = {}
         if slot in ("reasoning", "extraction", "graph"):
             response = gw.chat(slot, [{"role": "user", "content": "Hello — respond with 'OK'."}])
-            typer.echo(f"Response: {response}")
+            result = {"slot": slot, "status": "ok", "response": str(response)}
+            if format == "json":
+                typer.echo(format_output(result, format))
+            else:
+                typer.echo(f"Response: {response}")
         elif slot == "embedding":
             emb = gw.embed(slot, ["Hello world"])
-            typer.echo(f"Embedding: {len(emb[0])} dimensions")
+            result = {"slot": slot, "status": "ok", "dimensions": len(emb[0])}
+            if format == "json":
+                typer.echo(format_output(result, format))
+            else:
+                typer.echo(f"Embedding: {len(emb[0])} dimensions")
         elif slot == "reranking":
             rnk = gw.rerank(slot, "test", ["doc1", "doc2"], top_n=2)
-            typer.echo(f"Reranked: {len(rnk)} results")
+            result = {"slot": slot, "status": "ok", "results": len(rnk)}
+            if format == "json":
+                typer.echo(format_output(result, format))
+            else:
+                typer.echo(f"Reranked: {len(rnk)} results")
+        elif slot == "grounding":
+            response = gw.chat(slot, [{"role": "user", "content": "Hello — respond with 'OK'."}])
+            result = {"slot": slot, "status": "ok", "response": str(response)}
+            if format == "json":
+                typer.echo(format_output(result, format))
+            else:
+                typer.echo(f"Response: {response}")
+    except SlotNotConfiguredError:
+        msg = (
+            f"'{slot}' slot is not configured. Use 'openreview set {slot} <model>' to configure it."
+        )
+        if format == "json":
+            _emit_json_error("config_error", EXIT_CONFIG_ERROR, msg)
+        else:
+            typer.echo(f"Error: {msg}", err=True)
+        raise typer.Exit(code=EXIT_CONFIG_ERROR) from None
     except Exception as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(code=1) from None
+        if format == "json":
+            _emit_json_error("provider_error", EXIT_PROVIDER_ERROR, str(e))
+        else:
+            typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=EXIT_PROVIDER_ERROR) from None
 
 
 @gateway_app.command("costs")
 def gateway_costs(
-    today: bool = typer.Option(False, "--today", help="Show today's costs"),
-    session: str | None = typer.Option(None, "--session", help="Session ID to query"),
+    today: bool = typer.Option(False, "--today", help="Show only today's cost records."),
+    session: str | None = typer.Option(None, "--session", help="Filter by session ID."),
+    since: str | None = typer.Option(
+        None,
+        "--since",
+        help="Show records since a date (ISO format, e.g. 2026-07-01).",
+    ),
+    format: str = typer.Option("text", "--format", help="Output format: text, json."),
 ) -> None:
-    """Show cost summary."""
-    from openreview_cli.gateway.router import Gateway
+    """Show cost records with optional filters.
 
-    gw = Gateway()
+    Examples:
+
+      openreview gateway costs                     # no filter (shows all)
+
+      openreview gateway costs --today             # today only
+
+      openreview gateway costs --session <id>      # single session
+
+      openreview gateway costs --since 2026-07-01  # records on or after date
+
+      openreview gateway costs --format json       # machine-readable JSON
+
+    Cost records include: session_id, slot, model, provider,
+    prompt_tokens, completion_tokens, cost_cents, and timestamp.
+    """
+    from openreview_cli.config.loader import load_config
+    from openreview_cli.gateway.cost import get_costs
+
+    db_path = get_data_dir() / "openreview.db"
+    init_database(db_path)
+
+    filter_dict: dict[str, Any] = {}
+    if today:
+        filter_dict["today"] = True
     if session:
-        cost = gw.get_cost(session)
-        typer.echo(
-            f"Session {session}: {cost['prompt_tokens']} prompt tokens, "
-            f"{cost['completion_tokens']} completion tokens, "
-            f"{cost['cost_cents']}¢"
-        )
-    elif today:
-        from openreview_cli.config.paths import get_data_dir
-        from openreview_cli.storage.database import check_daily_limit
+        filter_dict["session_id"] = session
+    if since:
+        filter_dict["since"] = since
 
-        db_path = get_data_dir() / "openreview.db"
-        under = check_daily_limit(db_path, 999999)
-        typer.echo(f"Daily cost limit: {'under' if under else 'exceeded'}")
+    records = get_costs(db_path, filter_dict or None)
+
+    if format == "json":
+        total_cost = sum(r["cost_cents"] for r in records)
+        typer.echo(
+            format_output(
+                {
+                    "records": records,
+                    "total_cost_cents": total_cost,
+                    "record_count": len(records),
+                    "filters": filter_dict,
+                },
+                format,
+            )
+        )
+    elif not records:
+        typer.echo("No cost records found.")
     else:
-        typer.echo("Use --today or --session <id> to query costs.")
+        from rich.console import Console
+        from rich.table import Table
+
+        table = Table(title="Cost Records")
+        table.add_column("ID", style="dim")
+        table.add_column("Session", style="dim")
+        table.add_column("Slot")
+        table.add_column("Model")
+        table.add_column("Provider")
+        table.add_column("Prompt Tkn", justify="right")
+        table.add_column("Comp Tkn", justify="right")
+        table.add_column("Cost (¢)", justify="right")
+        table.add_column("Created", style="dim")
+
+        for r in records:
+            table.add_row(
+                str(r["id"])[:8],
+                str(r["session_id"]) if r["session_id"] else "-",
+                str(r["slot"]) if r["slot"] else "-",
+                str(r["model"]),
+                str(r["provider"]),
+                str(r["prompt_tokens"]),
+                str(r["completion_tokens"]),
+                str(r["cost_cents"]),
+                str(r["created_at"]),
+            )
+
+        Console().print(table)
+
+    # Warn if daily limit exceeded (T060)
+    try:
+        config = load_config(get_config_dir() / "config.yml")
+        limits = config.get("gateway", {}).get("cost_limits", {})
+        daily_cents = limits.get("daily_cents")
+        if daily_cents is not None:
+            from openreview_cli.storage.database import check_daily_limit
+
+            under = check_daily_limit(db_path, daily_cents)
+            if not under:
+                typer.echo(
+                    f"Warning: daily cost limit ({daily_cents}¢) exceeded.",
+                    err=True,
+                )
+    except Exception:
+        pass
 
 
 app.add_typer(gateway_app)
+
+
+# ── auth sub-app (US6: OS keyring integration) ───────────────────────────────
+
+
+auth_app = typer.Typer(
+    name="auth",
+    help="Manage provider API keys (OS keyring with file fallback).",
+    no_args_is_help=True,
+)
+
+
+@auth_app.command("add")
+def auth_add(
+    provider: str = typer.Argument(..., help="Provider name (e.g., openai, anthropic)."),
+    key: str = typer.Argument(..., help="API key value."),
+    base_url: str | None = typer.Option(
+        None, "--base-url", help="Custom base URL for the provider (optional)."
+    ),
+    format: str = typer.Option("text", "--format", help="Output format: text, json."),
+) -> None:
+    """Store an API key for a provider.
+
+    Uses the OS keyring when available; falls back to auth.json with chmod 600.
+    Supports optional --base-url for self-hosted OpenAI-compatible endpoints.
+
+    Examples::
+
+        openreview auth add openai sk-...
+        openreview auth add openrouter sk-or-... --base-url https://my-endpoint.example.com
+        openreview auth add custom sk-custom --base-url http://localhost:8080/v1
+        openreview auth add openai sk-... --format json
+
+    Arguments:
+        provider: Provider name (e.g., openai, anthropic, openrouter, voyage, ollama).
+        key: API key value.
+        --base-url: Custom base URL for self-hosted or custom endpoints.
+        --format: Output format (text, json).
+    """
+    from openreview_cli.gateway.keyring_store import save_base_url, set_key
+
+    try:
+        set_key(provider, key)
+    except Exception as e:
+        if format == "json":
+            _emit_json_error("config_error", EXIT_CONFIG_ERROR, str(e))
+        else:
+            typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=EXIT_CONFIG_ERROR) from None
+
+    # Store base URL if provided
+    if base_url:
+        # Persist to auth.json for keyring_store visibility
+        save_base_url(provider, base_url)
+        # Also persist to config.yml for the gateway router
+        from openreview_cli.config.loader import set_config_value
+        from openreview_cli.config.paths import get_config_dir
+
+        config_path = get_config_dir() / "config.yml"
+        try:
+            set_config_value(config_path, f"gateway.providers.{provider}.baseURL", base_url)
+        except Exception as e:
+            if format == "json":
+                _emit_json_error("config_error", EXIT_CONFIG_ERROR, str(e))
+            else:
+                typer.echo(f"Error: {e}", err=True)
+            raise typer.Exit(code=EXIT_CONFIG_ERROR) from None
+
+    if format == "json":
+        typer.echo(json.dumps({"status": "stored", "provider": provider}, indent=2))
+    else:
+        typer.echo(f"API key stored for provider '{provider}'.")
+
+
+@auth_app.command("list")
+def auth_list(
+    format: str = typer.Option("text", "--format", help="Output format: text, json."),
+) -> None:
+    """List configured providers with key metadata (source, last-4 chars).
+
+    Shows provider name, last 4 characters of the API key, storage source
+    (keyring, file, or env), and optional custom base URL.
+
+    Examples::
+
+        openreview auth list
+        openreview auth list --format json
+
+    Arguments:
+        --format: Output format (text, json).
+    """
+    from openreview_cli.gateway.keyring_store import list_providers
+
+    providers = list_providers()
+
+    if format == "json":
+        typer.echo(json.dumps({"providers": providers, "total": len(providers)}, indent=2))
+        return
+
+    if not providers:
+        typer.echo("No API keys configured.")
+        return
+
+    from rich.console import Console
+    from rich.table import Table
+
+    console = Console()
+    table = Table(title="Configured API Keys")
+    table.add_column("Provider", style="cyan")
+    table.add_column("Last 4", style="yellow")
+    table.add_column("Source", style="green")
+    table.add_column("Base URL", style="white")
+
+    for p in providers:
+        table.add_row(
+            p["provider"],
+            f"...{p['last_4']}",
+            p["source"],
+            p.get("base_url", ""),
+        )
+
+    console.print(table)
+
+
+@auth_app.command("remove")
+def auth_remove(
+    provider: str = typer.Argument(..., help="Provider name to remove."),
+    format: str = typer.Option("text", "--format", help="Output format: text, json."),
+) -> None:
+    """Remove an API key for a provider.
+
+    Deletes the key from whichever store it was read from (keyring or file).
+    Also removes any stored base URL for this provider.
+
+    Examples::
+
+        openreview auth remove openai
+        openreview auth remove openrouter --format json
+
+    Arguments:
+        provider: Provider name to remove.
+        --format: Output format (text, json).
+    """
+    from openreview_cli.config.paths import get_config_dir
+    from openreview_cli.gateway.keyring_store import delete_key, get_key
+
+    # Check the key exists
+    existing = get_key(provider)
+    if existing is None:
+        # Also check auth.json directly (e.g., empty string stored)
+        auth_path = get_config_dir() / "auth.json"
+        if not auth_path.exists() or provider not in json.loads(auth_path.read_text()):
+            msg = f"No API key found for provider '{provider}'."
+            if format == "json":
+                _emit_json_error("user_error", EXIT_USER_ERROR, msg)
+            else:
+                typer.echo(f"Error: {msg}", err=True)
+            raise typer.Exit(code=EXIT_USER_ERROR)
+
+    delete_key(provider)
+
+    if format == "json":
+        typer.echo(json.dumps({"status": "removed", "provider": provider}, indent=2))
+    else:
+        typer.echo(f"API key removed for provider '{provider}'.")
+
+
+app.add_typer(auth_app)
+
+
+# ── models available command (US2) ──────────────────────────────────────────
+
+
+models_app = typer.Typer(
+    name="models",
+    help="Discover available models from configured providers.",
+    no_args_is_help=True,
+)
+
+
+@models_app.command("available")
+def models_available(
+    provider: str | None = typer.Option(None, "--provider", help="Filter models by provider name."),
+    format: str = typer.Option("text", "--format", help="Output format: text, json."),
+) -> None:
+    """List all models reachable with currently configured API keys.
+
+    Scans the static model registry and returns models whose provider
+    has an API key configured in auth.json. Use --provider to filter
+    results to a single provider.
+
+    Examples::
+
+        openreview models available
+        openreview models available --provider openai
+        openreview models available --format json
+
+    Arguments:
+        --provider: Filter models by provider name (optional).
+        --format: Output format (text, json).
+    """
+    from openreview_cli.config.paths import get_config_dir
+    from openreview_cli.gateway.registry import ModelRegistry, get_available_providers
+
+    # Get configured providers from auth.json
+    auth_path = get_config_dir() / "auth.json"
+    configured = get_available_providers(auth_path)
+
+    if not configured:
+        msg = "No API keys configured. Run `openreview gateway setup` to add providers."
+        if format == "json":
+            typer.echo(json.dumps({"models": [], "providers_found": [], "total": 0}))
+        else:
+            typer.echo(msg, err=True)
+        raise typer.Exit(code=0)
+
+    # Apply --provider filter
+    if provider:
+        filtered = [p for p in configured if p.lower() == provider.lower()]
+        if not filtered:
+            msg = f"Provider '{provider}' not found among configured providers."
+            if format == "json":
+                typer.echo(json.dumps({"models": [], "providers_found": configured, "total": 0}))
+            else:
+                typer.echo(msg, err=True)
+            raise typer.Exit(code=0)
+        configured = filtered
+
+    # Query registry
+    registry = ModelRegistry(_GATEWAY_REGISTRY_PATH)
+    registry.load()
+    models = registry.get_available_models(configured)
+
+    if format == "json":
+        out = {
+            "models": [
+                {
+                    "short_name": m["model_id"],
+                    "provider": m["provider"],
+                    "slots": m["slots"],
+                    "context": m["context"],
+                }
+                for m in models
+            ],
+            "providers_found": configured,
+            "total": len(models),
+        }
+        typer.echo(json.dumps(out, indent=2))
+        return
+
+    if not models:
+        msg = "No models available. No API keys configured. Run `openreview gateway setup` to add providers."
+        typer.echo(msg, err=True)
+        raise typer.Exit(code=0)
+
+    from rich.console import Console
+    from rich.table import Table
+
+    console = Console()
+    table = Table(title="Available Models")
+    table.add_column("Model", style="cyan")
+    table.add_column("Provider", style="yellow")
+    table.add_column("Slots", style="green")
+    table.add_column("Context", style="white")
+
+    for m in sorted(models, key=lambda x: (x["provider"], x["model_id"])):
+        ctx = str(m["context"]) if m["context"] else "—"
+        table.add_row(
+            m["model_id"],
+            m["provider"],
+            ", ".join(m["slots"]),
+            ctx,
+        )
+    console.print(table)
+
+
+app.add_typer(models_app)
+
+
+# ── migrate config (US5: v1→v2 config migration) ────────────────────────────
+
+
+migrate_app = typer.Typer(
+    name="migrate",
+    help="Migrate configuration between schema versions.",
+    no_args_is_help=True,
+)
+
+
+@migrate_app.command("config")
+def migrate_config(
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be migrated without writing files."
+    ),
+    format: str = typer.Option("text", "--format", help="Output format: text, json."),
+    config_path: str | None = typer.Option(
+        None, "--config-path", help="Path to config.yml (default: ~/.config/openreview/config.yml)."
+    ),
+) -> None:
+    """Migrate v1 config.yml to v2 provider-first format.
+
+    The v1 config uses a slot-first format where each slot (reasoning, extraction,
+    etc.) has its own provider/model assignment. v2 uses a provider-first format
+    with a dedicated `providers` section and `slots` referencing named providers.
+
+    Changes:
+      - Splits "provider/model" strings in slots into separate provider+model fields
+      - Creates a deduplicated `providers` section with env_key and settings
+      - Adds `grounding` slot (copied from reasoning's provider/model)
+      - Adds `defaultModel`, `fallback`, `costLimits` with sensible defaults
+      - Preserves auth.json — API keys are NEVER touched by migration
+
+    The original v1 config is backed up as config.v1.bak alongside the v2 output.
+    If the config is already v2, the command is a no-op (exit 0, no changes).
+
+    Examples::
+
+        # Preview migration
+        openreview migrate config --dry-run
+
+        # Run migration
+        openreview migrate config
+
+        # Migrate a specific config file
+        openreview migrate config --config-path /tmp/config.yml
+
+        # JSON output
+        openreview migrate config --format json
+
+    Arguments:
+        --dry-run: Preview migration without writing files.
+        --config-path: Path to config.yml (default: platformdirs config dir).
+        --format: Output format (text, json).
+    """
+    from openreview_cli.config.paths import get_config_dir
+    from openreview_cli.gateway.migrate import migrate_config as _migrate
+
+    v1_path = Path(config_path) if config_path else get_config_dir() / "config.yml"
+
+    v2_path = v1_path  # migrate in-place (overwrite with v2)
+
+    if not v1_path.exists():
+        msg = f"Config not found: {v1_path}"
+        if format == "json":
+            _emit_json_error("config_error", EXIT_CONFIG_ERROR, msg)
+        else:
+            typer.echo(f"Error: {msg}", err=True)
+        raise typer.Exit(code=EXIT_CONFIG_ERROR)
+
+    result = _migrate(str(v1_path), str(v2_path), dry_run=dry_run)
+
+    if result["status"] == "noop":
+        reason = result.get("reason", "already v2")
+        if format == "json":
+            typer.echo(json.dumps({"status": "noop", "reason": reason}, indent=2))
+        else:
+            typer.echo(f"No migration needed: {reason}.")
+        raise typer.Exit(code=0)
+
+    if result["status"] in ("dry_run", "migrated"):
+        is_dry = result["status"] == "dry_run"
+        if format == "json":
+            payload: dict[str, Any] = {
+                "status": "dry_run" if is_dry else "migrated",
+                "providers_added": result.get("providers_added", []),
+                "slots_migrated": result.get("slots_migrated", []),
+            }
+            if not is_dry:
+                payload["backup"] = result.get("backup")
+            else:
+                payload["dry_run"] = True
+            typer.echo(json.dumps(payload, indent=2))
+        else:
+            providers = ", ".join(result.get("providers_added", []))
+            slots = ", ".join(result.get("slots_migrated", []))
+            label = "Dry-run" if is_dry else "migrated"
+            typer.echo(
+                f"Configuration {label} from v1 to v2.\n"
+                f"Providers added: {providers}\n"
+                f"Slots migrated: {slots}"
+            )
+            if not is_dry:
+                backup = result.get("backup", "")
+                typer.echo(f"Backup: {backup}")
+        raise typer.Exit(code=0)
+
+    msg = f"Migration failed: unexpected status '{result.get('status')}'"
+    if format == "json":
+        _emit_json_error("internal_error", EXIT_CONFIG_ERROR, msg)
+    else:
+        typer.echo(f"Error: {msg}", err=True)
+    raise typer.Exit(code=EXIT_CONFIG_ERROR)
+
+
+app.add_typer(migrate_app)
+
+
+# ── set <slot> <model> (top-level, US3) ─────────────────────────────────────
+
+
+set_app = typer.Typer(
+    name="set",
+    help="Assign a model to a slot (supports short-name resolution).",
+    no_args_is_help=True,
+)
+
+
+@set_app.callback(invoke_without_command=True)
+def set_main(
+    ctx: typer.Context,
+    slot: str = typer.Argument(
+        ..., help="Slot name (reasoning, extraction, embedding, reranking, graph, grounding)"
+    ),
+    model: str = typer.Argument(
+        ..., help="Model short name (gpt-4o) or explicit provider/model (openai/gpt-4o)"
+    ),
+    format: str = typer.Option("text", "--format", help="Output format: text, json."),
+) -> None:
+    """Assign a model to a slot, with short-name resolution.
+
+    This is an alias for 'openreview gateway set <slot> <model>'.
+    Supports both short names (e.g., 'gpt-4o') and explicit
+    provider/model strings (e.g., 'openai/gpt-4o').
+
+    Examples::
+
+        openreview set reasoning gpt-4o
+        openreview set extraction openai/gpt-4o-mini --format json
+
+    Arguments:
+        slot: Slot name (reasoning, extraction, embedding, reranking, graph, grounding).
+        model: Model short name or explicit provider/model.
+        --format: Output format (text, json).
+    """
+    _resolve_and_set_slot(slot, model, format=format)
+
+
+app.add_typer(set_app)
 
 
 @app.command()

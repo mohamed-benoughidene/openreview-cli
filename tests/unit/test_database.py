@@ -31,6 +31,15 @@ def test_init_database_latency(tmp_path: Path) -> None:
     assert elapsed < 2.0, f"DB init took {elapsed:.3f}s, expected <2.0s"
 
 
+def _seed_session(db_path: Path, session_id: str) -> None:
+    """Insert a session row so cost_logs FK constraint is satisfied."""
+    with transaction(db_path) as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO sessions (id) VALUES (?)",
+            (session_id,),
+        )
+
+
 def _seed_review(db_path: Path, review_id: str = "test-review") -> None:
     with transaction(db_path) as conn:
         conn.execute(
@@ -46,6 +55,7 @@ def test_log_cost_inserts_row(tmp_path: Path) -> None:
     db_path = tmp_path / "openreview.db"
     init_database(db_path)
     _seed_review(db_path)
+    _seed_session(db_path, "test-review")
     log_cost(db_path, "test-review", "ollama/qwen3:8b", "ollama", 100, 50, 5)
     conn = get_connection(db_path)
     row = conn.execute("SELECT * FROM cost_logs").fetchone()
@@ -65,6 +75,7 @@ def test_check_daily_limit(tmp_path: Path) -> None:
     init_database(db_path)
     for i in range(3):
         _seed_review(db_path, f"review-{i}")
+        _seed_session(db_path, f"review-{i}")
         log_cost(db_path, f"review-{i}", "gpt4", "openai", 0, 0, 100)
     assert not check_daily_limit(db_path, 200)
     assert check_daily_limit(db_path, 400)
@@ -74,6 +85,7 @@ def test_check_session_limit(tmp_path: Path) -> None:
     db_path = tmp_path / "openreview.db"
     init_database(db_path)
     _seed_review(db_path, "session-1")
+    _seed_session(db_path, "session-1")
     log_cost(db_path, "session-1", "gpt4", "openai", 0, 0, 100)
     log_cost(db_path, "session-1", "gpt4", "openai", 0, 0, 50)
     assert not check_session_limit(db_path, "session-1", 100)
@@ -84,6 +96,7 @@ def test_log_cost_latency(tmp_path: Path) -> None:
     db_path = tmp_path / "openreview.db"
     init_database(db_path)
     _seed_review(db_path, "latency-test")
+    _seed_session(db_path, "latency-test")
     start = time.perf_counter()
     log_cost(db_path, "latency-test", "gpt4", "openai", 0, 0, 1)
     elapsed = time.perf_counter() - start

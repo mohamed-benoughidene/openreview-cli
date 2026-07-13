@@ -23,11 +23,33 @@ def ensure_auth(auth_dir: Path) -> Path:
 
 def load_auth(path: Path) -> dict[str, str]:
     data: dict[str, str] = json.loads(path.read_text())
+
+    # Filter out :base_url sentinel keys (used by custom providers)
+    data = {k: v for k, v in data.items() if not k.endswith(":base_url")}
+
+    # Overlay keyring values (keyring > file per FR-018)
+    for key in list(data.keys()):
+        kr_val = _load_from_keyring(key)
+        if kr_val is not None:
+            data[key] = kr_val
+
+    # Overlay env vars (env var > keyring > file per FR-018)
     for key in list(data.keys()):
         env_val = os.environ.get(key_to_env(key))
         if env_val:
             data[key] = env_val
+
     return data
+
+
+def _load_from_keyring(provider: str) -> str | None:
+    """Try to load a key from the OS keyring.
+
+    Returns ``None`` if keyring is unavailable or no key is stored.
+    """
+    from openreview_cli.gateway.keyring_store import get_key
+
+    return get_key(provider)
 
 
 def key_to_env(key: str) -> str:

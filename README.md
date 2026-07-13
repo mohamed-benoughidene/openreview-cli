@@ -431,15 +431,27 @@ openreview pii list              # Documents with PII data
 openreview pii delete abc123     # Delete PII data for a document
 openreview pii cleanup           # Delete expired PII data
 
-# AI Gateway
+# AI Gateway (v2)
+openreview gateway setup                # JSON-stdin setup (pipe JSON to stdin)
+openreview gateway setup --dry-run      # Validate JSON without writing files
+openreview gateway status               # Show configured slots and providers
+openreview gateway status --format json # Machine-readable status
 openreview gateway providers            # List supported providers
 openreview gateway models openai        # List models for a provider
-openreview gateway setup                # Interactive setup wizard
-openreview gateway status               # Show configured slots
-openreview gateway set reasoning gpt-4  # Assign model to a slot
+openreview gateway set reasoning gpt-4o # Assign model to a slot (supports short-name resolution)
 openreview gateway test reasoning       # Send a test request
 openreview gateway costs --today        # Show daily cost summary
+openreview gateway costs --today --format json  # JSON cost report
 openreview gateway refresh              # Refresh model registry
+openreview models available             # Discover models reachable with current keys
+openreview models available --provider openai  # Filter by provider
+openreview auth add openrouter sk-or-...       # Store API key (keyring or file)
+openreview auth list                           # List configured providers with key metadata
+openreview auth remove openrouter              # Remove a provider's API key
+openreview auth add custom sk-custom --base-url https://my-endpoint.example.com  # Custom provider
+openreview migrate config                      # Migrate v1 → v2 config format
+openreview migrate config --dry-run            # Preview migration without writing
+openreview set reasoning gpt-4o                # Set slot with short-name resolution (alias for gateway set)
 
 # Prompt management
 openreview prompt create --name extract-clauses --content "Extract clauses..." --description "Clause extraction" --tags "extraction,default"
@@ -617,6 +629,40 @@ openreview benchmark --prompt-variant v1 --prompt-variant v2  # A/B prompt test
 | `openreview benchmark baseline --format json --output baseline.json --save-baseline` | Save official baseline |
 | `openreview benchmark --prompt-variant v1 --prompt-variant v2` | Prompt A/B test |
 | `openreview benchmark --format json --output report.json` | JSON report to file |
+
+### AI Gateway v2 (Spec 033)
+
+The AI Gateway was redesigned in spec 033 to be fully agent-friendly, adding:
+
+- **JSON-stdin setup** — Pipe a JSON config to `openreview gateway setup` for non-interactive configuration. Supports `--dry-run` for validation.
+- **Short-name resolution** — Set slots with model short names like `gpt-4o` instead of `openai/gpt-4o`. The resolver auto-selects the best configured provider.
+- **Model discovery** — `openreview models available` lists only models whose providers have API keys configured, with optional `--provider` filter.
+- **Structured output** — All gateway commands support `--format json` for machine-parseable output with consistent error objects.
+- **OS keyring storage** — API keys stored in the OS keyring with transparent fallback to `auth.json` (chmod 600). `openreview auth add/list/remove` commands.
+- **Config migration** — v1 → v2 format migration via `openreview migrate config`. Preserves slot assignments and auth.json.
+- **Cost tracking** — Historical cost queries with `--today`, `--session`, `--since` filters and JSON output.
+- **Grounding slot** — Full `set grounding`, `test grounding`, and status display for the 6th model slot.
+- **Custom providers** — `openreview auth add --base-url` supports self-hosted OpenAI-compatible endpoints.
+- **V2 config format** — Provider-first YAML with `version: 2`, `providers`, `slots`, `fallback`, and `cost_limits` sections.
+
+See [specs/033-ai-gateway-v2/spec.md](specs/033-ai-gateway-v2/spec.md) for the full specification.
+
+```bash
+# Quick start: setup gateway with JSON
+echo '{"version":2,"providers":{"openai":{"name":"openai","env_key":"OPENAI_API_KEY","api_key_source":"file"}},"slots":{"reasoning":{"provider":"openai","model":"gpt-4o"}}}' | openreview gateway setup --dry-run
+
+# Discover available models
+openreview models available
+
+# Set a slot with short-name resolution
+openreview set reasoning gpt-4o
+
+# Store API key
+openreview auth add openai sk-...
+
+# Query costs
+openreview gateway costs --today --format json
+```
 
 ## Configuration
 

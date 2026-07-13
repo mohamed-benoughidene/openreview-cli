@@ -8,6 +8,8 @@ occur.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from typer.testing import CliRunner
 
@@ -144,7 +146,94 @@ class TestGatewayCli:
         """
         result = runner.invoke(app, ["gateway", "test", "invalid_slot"])
         assert result.exit_code == 1
-        assert "Invalid slot" in result.stdout
+        # Error messages go to stderr (FR-032)
+        output = (result.stderr or "") + (result.stdout or "")
+        assert "Invalid slot" in output
         # Valid slots should be listed in the error message
         for slot in sorted(VALID_SLOTS):
-            assert slot in result.stdout
+            assert slot in output
+
+
+class TestGatewayCosts:
+    """Integration tests for ``openreview gateway costs``."""
+
+    @pytest.mark.integration
+    def test_costs_json_roundtrip(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        """Insert cost record, query via CLI, verify record appears in JSON output."""
+        from openreview_cli.storage.database import init_database, log_cost
+
+        cost_db = tmp_path / "openreview.db"
+        init_database(cost_db)
+        log_cost(cost_db, None, "openai/gpt-4o", "openai", 100, 50, 5, slot="reasoning")
+
+        monkeypatch.setattr("openreview_cli.app.get_data_dir", lambda: tmp_path)
+
+        result = runner.invoke(app, ["gateway", "costs", "--format", "json"])
+        assert result.exit_code == 0, result.stdout
+
+        import json
+
+        data = json.loads(result.stdout)
+        assert len(data["records"]) == 1
+        rec = data["records"][0]
+        assert rec["model"] == "openai/gpt-4o"
+        assert rec["provider"] == "openai"
+        assert rec["prompt_tokens"] == 100
+        assert rec["completion_tokens"] == 50
+        assert rec["cost_cents"] == 5
+
+    @pytest.mark.integration
+    def test_costs_filter_by_session(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        """Insert 2 cost records for different sessions, filter by one."""
+        from openreview_cli.storage.database import get_connection, init_database, log_cost
+
+        cost_db = tmp_path / "openreview.db"
+        init_database(cost_db)
+        conn = get_connection(cost_db)
+        conn.execute("INSERT INTO sessions (id) VALUES (?), (?)", ("s1", "s2"))
+        conn.commit()
+        conn.close()
+
+        log_cost(cost_db, "s1", "model-a", "p1", 10, 5, 1, slot="slot-a")
+        log_cost(cost_db, "s2", "model-b", "p2", 20, 10, 2, slot="slot-b")
+
+        monkeypatch.setattr("openreview_cli.app.get_data_dir", lambda: tmp_path)
+
+        result = runner.invoke(
+            app,
+            ["gateway", "costs", "--session", "s1", "--format", "json"],
+        )
+        assert result.exit_code == 0, result.stdout
+
+        import json
+
+        data = json.loads(result.stdout)
+        assert data["record_count"] == 1
+        assert data["records"][0]["model"] == "model-a"
+        assert data["records"][0]["session_id"] == "s1"
+
+    @pytest.mark.integration
+    def test_costs_json_is_valid_json(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """Insert a record, verify JSON output parses correctly."""
+        from openreview_cli.storage.database import init_database, log_cost
+
+        cost_db = tmp_path / "openreview.db"
+        init_database(cost_db)
+        log_cost(cost_db, None, "m1", "p1", 5, 5, 1, slot="s1")
+
+        monkeypatch.setattr("openreview_cli.app.get_data_dir", lambda: tmp_path)
+
+        result = runner.invoke(app, ["gateway", "costs", "--format", "json"])
+        assert result.exit_code == 0, result.stdout
+
+        import json
+
+        data = json.loads(result.stdout)
+        assert isinstance(data, dict)
+        assert "records" in data
+        assert isinstance(data["records"], list)
+        assert "total_cost_cents" in data
+        assert "record_count" in data
+        assert data["record_count"] == 1
