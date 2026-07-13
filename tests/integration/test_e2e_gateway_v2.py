@@ -8,7 +8,9 @@ real user configuration is modified.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pytest
 import yaml
@@ -956,7 +958,9 @@ class TestCustomProviderFlow:
         result = runner.invoke(app, ["auth", "list"])
         assert result.exit_code == 0
         assert "custom" in result.stdout
-        assert "my-endpoint.example.com" in result.stdout
+        urls = re.findall(r"https?://[^\s|]+", result.stdout)
+        parsed_hosts = [urlparse(u).netloc for u in urls]
+        assert "my-endpoint.example.com" in parsed_hosts
 
     def test_auth_list_json_shows_custom_with_base_url(
         self, isolated_config: Path, auth_path: Path

@@ -7,8 +7,10 @@ T068: Test custom model resolution
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from unittest.mock import MagicMock
+from urllib.parse import urlparse
 
 import pytest
 
@@ -190,7 +192,9 @@ class TestT067CustomProviderBaseUrl:
         assert result.exit_code == 0
         # Should show custom provider and its base URL
         assert "custom" in result.stdout
-        assert "my-endpoint.example.com" in result.stdout
+        urls = re.findall(r"https?://[^\s|]+", result.stdout)
+        parsed_hosts = [urlparse(u).netloc for u in urls]
+        assert "my-endpoint.example.com" in parsed_hosts
 
     def test_base_url_in_gateway_status_json(
         self, monkeypatch: pytest.MonkeyPatch, config_dir: Path, auth_path: Path, config_yml: Path
