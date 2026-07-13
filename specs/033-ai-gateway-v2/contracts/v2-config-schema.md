@@ -33,7 +33,7 @@ providers:
 **Field details**:
 - `name`: Must be lowercase alphanumeric with hyphens/underscores. Used for display and slot referencing.
 - `apiKeySource`: Where to find the key. `keyring` requires `keyring` library. `file` reads from `auth.json`. `env` reads from environment at runtime.
-- `apiKeyRef`: 
+- `apiKeyRef`:
   - If `apiKeySource=env`: the env var name (e.g., `OPENAI_API_KEY`)
   - If `apiKeySource=file`: the key in auth.json (usually matches `name`)
   - If `apiKeySource=keyring`: the service entry name (usually matches `name`)

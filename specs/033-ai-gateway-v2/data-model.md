@@ -174,7 +174,7 @@ class AuthEntry:
     provider: str       # Provider identifier (e.g., "openai")
     key: str            # The actual API key (in-memory only, never serialized)
     source: ApiKeySource  # Where the key was loaded from
-    
+
     def masked_key(self) -> str:
         """Return last 4 chars only for display."""
         if len(self.key) < 8:

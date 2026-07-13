@@ -184,11 +184,7 @@ def test_discover_ollama_unreachable(tmp_path: Path, monkeypatch: pytest.MonkeyP
 
 def test_voyage_models_loaded() -> None:
     models_path = (
-        Path(__file__).parent.parent.parent
-        / "src"
-        / "openreview_cli"
-        / "gateway"
-        / "models.json"
+        Path(__file__).parent.parent.parent / "src" / "openreview_cli" / "gateway" / "models.json"
     )
     data = json.loads(models_path.read_text())
     providers = data["providers"]
