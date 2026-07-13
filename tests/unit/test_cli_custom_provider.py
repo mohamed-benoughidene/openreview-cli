@@ -194,7 +194,7 @@ class TestT067CustomProviderBaseUrl:
         assert "custom" in result.stdout
         urls = re.findall(r"https?://[^\s|]+", result.stdout)
         parsed_hosts = [urlparse(u).netloc for u in urls]
-        assert "my-endpoint.example.com" in parsed_hosts
+        assert parsed_hosts == ["my-endpoint.example.com"]
 
     def test_base_url_in_gateway_status_json(
         self, monkeypatch: pytest.MonkeyPatch, config_dir: Path, auth_path: Path, config_yml: Path
