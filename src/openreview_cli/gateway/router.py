@@ -20,12 +20,12 @@ from openreview_cli.gateway.errors import (
     SlotNotConfiguredError,
 )
 from openreview_cli.gateway.redaction import RedactingFilter, redact_key
+from openreview_cli.slots import VALID_SLOTS
 from openreview_cli.storage.database import check_daily_limit, check_session_limit
 
 logger = logging.getLogger(__name__)
 
 _PROTECTED_KEYS = frozenset({"model", "messages", "input", "timeout"})
-VALID_SLOTS = frozenset({"reasoning", "extraction", "embedding", "reranking", "graph", "grounding"})
 _PRIMARY_ONLY_SLOTS = frozenset({"embedding", "reranking"})
 _SLOT_METHOD_MAP: dict[str, str] = {
     "reasoning": "chat",

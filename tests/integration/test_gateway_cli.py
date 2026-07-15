@@ -13,7 +13,8 @@ from typer.testing import CliRunner
 
 from openreview_cli.app import app
 from openreview_cli.gateway.registry import ModelRegistry
-from openreview_cli.gateway.router import VALID_SLOTS, Gateway
+from openreview_cli.gateway.router import Gateway
+from openreview_cli.slots import VALID_SLOTS
 
 runner = CliRunner()
 

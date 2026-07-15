@@ -10,7 +10,7 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Button, Footer, Header, Static, TabbedContent, TabPane
 
-from openreview_cli.gateway.router import VALID_SLOTS
+from openreview_cli.slots import VALID_SLOTS
 from openreview_cli.tui.domain.gateway import gateway_health_check, get_slot_configs
 
 

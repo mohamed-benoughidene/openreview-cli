@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from functools import lru_cache
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 T = TypeVar("T")
 
@@ -12,8 +13,11 @@ from openreview_cli.config.auth import has_key as _has_key
 from openreview_cli.config.auth import save_key as _save_key
 from openreview_cli.config.loader import load_config, set_config_value
 from openreview_cli.config.paths import get_config_dir, get_data_dir
-from openreview_cli.gateway.registry import ModelRegistry
-from openreview_cli.gateway.router import VALID_SLOTS, Gateway
+from openreview_cli.slots import VALID_SLOTS
+
+if TYPE_CHECKING:
+    from openreview_cli.gateway.registry import ModelRegistry
+
 
 _PATHS: dict[str, Path] = {
     "config": get_config_dir() / "config.yml",
@@ -22,8 +26,20 @@ _PATHS: dict[str, Path] = {
     "registry": get_config_dir() / "models.json",
 }
 
-_REGISTRY = ModelRegistry(_PATHS["registry"])
-_REGISTRY.load()
+
+@lru_cache(maxsize=1)
+def _get_registry() -> ModelRegistry:
+    """Lazily build the model registry.
+
+    Avoids importing the gateway package (which pulls litellm) at TUI import
+    time; the registry is only constructed when a provider/model list is
+    actually requested.
+    """
+    from openreview_cli.gateway.registry import ModelRegistry
+
+    reg = ModelRegistry(_PATHS["registry"])
+    reg.load()
+    return reg
 
 
 def _safe(fn: Callable[..., T], default: T) -> T:
@@ -36,6 +52,7 @@ def _safe(fn: Callable[..., T], default: T) -> T:
 def gateway_health_check() -> dict[str, Any]:
     """Run gateway health check, return slot->status dict."""
     from openreview_cli.config.auth import ensure_auth
+    from openreview_cli.gateway.router import Gateway
 
     return _safe(
         lambda: (
@@ -68,12 +85,12 @@ def get_slot_configs() -> dict[str, dict[str, Any]]:
 
 def list_providers() -> list[dict[str, Any]]:
     """List available providers from registry."""
-    return _safe(lambda: _REGISTRY.list_providers(), [])
+    return _safe(lambda: _get_registry().list_providers(), [])
 
 
 def list_models(provider: str) -> list[dict[str, Any]]:
     """List models for a given provider."""
-    return _safe(lambda: _REGISTRY.list_models(provider), [])
+    return _safe(lambda: _get_registry().list_models(provider), [])
 
 
 def save_slot_config(slot: str, provider: str, model_name: str) -> None:

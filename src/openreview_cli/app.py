@@ -1406,7 +1406,7 @@ def gateway_set(slot: str, model: str) -> None:
     """Assign a model to a slot."""
     from openreview_cli.config.loader import set_config_value
     from openreview_cli.config.paths import get_config_dir
-    from openreview_cli.gateway.router import VALID_SLOTS
+    from openreview_cli.slots import VALID_SLOTS
 
     if slot not in VALID_SLOTS:
         typer.echo(
@@ -1438,7 +1438,8 @@ def gateway_refresh() -> None:
 @gateway_app.command("test")
 def gateway_test(slot: str) -> None:
     """Send a test request to a slot's model."""
-    from openreview_cli.gateway.router import VALID_SLOTS, Gateway
+    from openreview_cli.gateway.router import Gateway
+    from openreview_cli.slots import VALID_SLOTS
 
     if slot not in VALID_SLOTS:
         typer.echo(f"Invalid slot '{slot}'. Valid slots: {', '.join(sorted(VALID_SLOTS))}")

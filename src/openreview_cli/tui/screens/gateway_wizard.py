@@ -9,7 +9,7 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Button, Input, Label, ListItem, ListView, Static
 
-from openreview_cli.gateway.router import VALID_SLOTS
+from openreview_cli.slots import VALID_SLOTS
 from openreview_cli.tui.domain.gateway import (
     gateway_health_check,
     list_models,

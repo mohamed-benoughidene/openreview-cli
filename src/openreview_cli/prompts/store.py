@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     import builtins
 
-from openreview_cli.gateway.router import VALID_SLOTS
 from openreview_cli.prompts.models import Prompt, PromptBinding, PromptVersion
+from openreview_cli.slots import VALID_SLOTS
 
 
 class PromptStore:
