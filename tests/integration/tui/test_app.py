@@ -234,8 +234,8 @@ async def test_ctrl_c_warn_resets_after_timeout() -> None:
         await pilot.pause()
         await pilot.press("ctrl+c")
         assert app._ctrl_c_warned is True
-        # Wait for the 2s timer to fire
-        await asyncio.sleep(2.5)
+        # Wait for the 2s timer to fire (small margin)
+        await asyncio.sleep(2.1)
         await pilot.pause()
         assert app._ctrl_c_warned is False
 
@@ -606,46 +606,53 @@ async def test_sigterm_mid_review_cancels_cleanly() -> None:
             old_sigterm = signal.signal(signal.SIGTERM, lambda *a: None)
             try:
                 app = OpenReviewApp()
-                async with app.run_test(size=(120, 40)) as pilot:
-                    await pilot.pause()
+                try:
+                    async with app.run_test(size=(120, 40)) as pilot:
+                        await pilot.pause()
 
-                    # Start a review via the wizard (matches
-                    # test_full_review_workflow pattern).
-                    btn = app.query_one("#btn-new-review")
-                    btn.press()
-                    await pilot.pause()
+                        # Start a review via the wizard (matches
+                        # test_full_review_workflow pattern).
+                        btn = app.query_one("#btn-new-review")
+                        btn.press()
+                        await pilot.pause()
 
-                    review_btn = app.query_one("#btn-new-review-tab")
-                    await pilot.click(review_btn)
-                    await pilot.pause()
+                        review_btn = app.query_one("#btn-new-review-tab")
+                        await pilot.click(review_btn)
+                        await pilot.pause()
 
-                    wizard: ReviewWizard | None = None
-                    for s in app._screen_stack:
-                        if isinstance(s, ReviewWizard):
-                            wizard = s
-                            break
-                    assert wizard is not None
+                        wizard: ReviewWizard | None = None
+                        for s in app._screen_stack:
+                            if isinstance(s, ReviewWizard):
+                                wizard = s
+                                break
+                        assert wizard is not None
 
-                    # Step through all 4 wizard stages
-                    wizard.query_one("#mode-list").focus()
-                    await pilot.pause()
-                    await pilot.press("down", "down", "enter")
-                    await pilot.pause()
-                    wizard.query_one("#btn-next").press()
-                    await pilot.pause()
-                    wizard.query_one("#btn-next").press()
-                    await pilot.pause()
-                    wizard.query_one("#btn-next").press()
-                    await pilot.pause()
-                    wizard.query_one("#btn-next").press()
-                    await pilot.pause()
+                        # Step through all 4 wizard stages
+                        wizard.query_one("#mode-list").focus()
+                        await pilot.pause()
+                        await pilot.press("down", "down", "enter")
+                        await pilot.pause()
+                        wizard.query_one("#btn-next").press()
+                        await pilot.pause()
+                        wizard.query_one("#btn-next").press()
+                        await pilot.pause()
+                        wizard.query_one("#btn-next").press()
+                        await pilot.pause()
+                        wizard.query_one("#btn-next").press()
+                        await pilot.pause()
 
-                    # ProgressScreen is now running the slow mock; send SIGTERM
-                    os.kill(os.getpid(), signal.SIGTERM)
+                        # ProgressScreen is now running the slow mock; send SIGTERM
+                        os.kill(os.getpid(), signal.SIGTERM)
 
-                    # Give the signal handler time to run and the app to exit
-                    await asyncio.sleep(0.5)
-
+                        # Give the signal handler time to run and the app to exit
+                        await asyncio.sleep(0.5)
+                except SystemExit as exc:
+                    # The TUI exits with the conventional code on SIGTERM.
+                    # Any other exit code is a real regression and must surface.
+                    expected = 128 + signal.SIGTERM
+                    assert exc.code == expected, (
+                        f"SIGTERM handler exited with {exc.code!r}, expected {expected}"
+                    )
             finally:
                 signal.signal(signal.SIGTERM, old_sigterm)
 
