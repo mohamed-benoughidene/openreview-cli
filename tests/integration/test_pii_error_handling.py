@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from openreview_cli.pii.engine import PiiEngine
 from openreview_cli.pii.models import PiiError
 
 
@@ -45,11 +46,9 @@ class TestPiiErrorHandling:
         assert "offset" not in str(err).lower()
 
     @pytest.mark.integration
-    def test_non_english_regex_only(self) -> None:
+    def test_non_english_regex_only(self, pii_engine: PiiEngine) -> None:
         """T041: Non-English text skips NLP but catches regex PII (emails, phones)."""
         from types import SimpleNamespace
-
-        from openreview_cli.pii.engine import PiiEngine
 
         clause = SimpleNamespace(
             id="1",
@@ -63,8 +62,7 @@ class TestPiiErrorHandling:
             is_non_english=True,
         )
 
-        engine = PiiEngine(threshold=0.0)
-        entities, warnings = engine.detect_all_pages([clause], threshold=0.0)[:2]
+        entities, warnings = pii_engine.detect_all_pages([clause], threshold=0.0)[:2]
 
         assert any("Non-English" in w for w in warnings), f"No non-English warning: {warnings}"
 
