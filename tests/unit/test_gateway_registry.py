@@ -2,14 +2,18 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import httpx
+import pytest
+import yaml
 
-from openreview_cli.gateway.registry import ModelRegistry
-
-if TYPE_CHECKING:
-    import pytest
+from openreview_cli.gateway.errors import EnvKeyCollisionError
+from openreview_cli.gateway.registry import (
+    ModelRegistry,
+    add_custom_provider,
+    load_registry,
+)
 
 MODELS_JSON = {
     "providers": {
@@ -180,3 +184,177 @@ def test_discover_ollama_unreachable(tmp_path: Path, monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(httpx, "get", mock_get)
     models = registry.discover_ollama("http://localhost:11434")
     assert models == []
+
+
+def test_load_registry_deepseek_complete_entry() -> None:
+    reg = load_registry()
+    assert "deepseek" in reg
+    assert reg["deepseek"].base_url == "https://api.deepseek.com"
+    assert reg["deepseek"].source == "bundled"
+    caps = reg["deepseek"].capabilities
+    assert caps is not None
+    assert isinstance(caps.reasoning, bool)
+    assert isinstance(caps.embedding, bool)
+
+
+def test_build_provider_reads_api_key_env() -> None:
+    from openreview_cli.gateway.registry import _build_provider
+
+    info = {
+        "name": "foo",
+        "api_key_env": "FOO_API_KEY",
+        "base_url": "http://x",
+        "source": "custom",
+        "capabilities": {},
+    }
+    provider = _build_provider("foo", info)
+    assert provider.env_key == "FOO_API_KEY"
+
+
+def test_load_registry_custom_provider_surfaces_env_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from openreview_cli.gateway import registry as reg_mod
+
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    cfg = {
+        "gateway": {
+            "custom_providers": [
+                {
+                    "name": "foo",
+                    "api_key_env": "FOO_API_KEY",
+                    "base_url": "http://x",
+                    "source": "custom",
+                }
+            ]
+        }
+    }
+    (config_dir / "config.yml").write_text(yaml.safe_dump(cfg))
+    monkeypatch.setattr(reg_mod, "_config_dir", lambda: config_dir)
+
+    assert load_registry()["foo"].env_key == "FOO_API_KEY"
+
+
+def test_load_registry_custom_provider_from_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from openreview_cli.gateway import registry as reg_mod
+
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    cfg = {
+        "gateway": {
+            "custom_providers": [
+                {
+                    "name": "myllm",
+                    "base_url": "https://myllm.example.com/v1",
+                    "capabilities": {
+                        "embedding": False,
+                        "reasoning": True,
+                        "context_window": 8192,
+                        "tool_call": False,
+                    },
+                }
+            ]
+        }
+    }
+    (config_dir / "config.yml").write_text(yaml.safe_dump(cfg))
+    monkeypatch.setattr(reg_mod, "_config_dir", lambda: config_dir)
+
+    reg = load_registry()
+    assert "myllm" in reg
+    assert reg["myllm"].source == "custom"
+    assert reg["myllm"].base_url == "https://myllm.example.com/v1"
+
+
+def test_load_registry_merges_new_pre_listed_without_overwriting_user_edit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from openreview_cli.gateway import registry as reg_mod
+
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    # User-edited pre-listed provider (ollama) + missing deepseek.
+    user_models = {
+        "providers": {
+            "ollama": {
+                "name": "Ollama (user edited)",
+                "base_url": "http://user-edited:11434",
+                "source": "user-edited",
+                "models": {},
+            }
+        }
+    }
+    (config_dir / "models.json").write_text(json.dumps(user_models))
+    monkeypatch.setattr(reg_mod, "_config_dir", lambda: config_dir)
+
+    reg = load_registry()
+    # User edit preserved.
+    assert reg["ollama"].base_url == "http://user-edited:11434"
+    assert reg["ollama"].source != "bundled"
+    # New pre-listed provider merged in from bundled.
+    assert "deepseek" in reg
+    assert reg["deepseek"].source == "bundled"
+
+
+def test_load_registry_keeps_user_custom_provider_when_bundled_gains_new(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """FR-9: a user's OWN custom provider must survive when the bundled
+    registry gains a new pre-listed provider (e.g. after an app update)."""
+    from openreview_cli.gateway import registry as reg_mod
+
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    # User has a custom provider in config.yml...
+    cfg = {
+        "gateway": {
+            "custom_providers": [
+                {
+                    "name": "myllm",
+                    "base_url": "https://myllm.example.com/v1",
+                    "api_key_env": "MYLLM_API_KEY",
+                    "capabilities": {
+                        "embedding": False,
+                        "reasoning": True,
+                        "context_window": 8192,
+                        "tool_call": False,
+                    },
+                    "source": "custom",
+                }
+            ]
+        }
+    }
+    (config_dir / "config.yml").write_text(yaml.safe_dump(cfg))
+    monkeypatch.setattr(reg_mod, "_config_dir", lambda: config_dir)
+
+    reg = load_registry()
+    # User's custom provider still present...
+    assert "myllm" in reg
+    assert reg["myllm"].source == "custom"
+    # ...and the new pre-listed provider bundled with the app is also present.
+    assert "deepseek" in reg
+
+
+def test_env_key_collision_message_matches_contract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """FR-3 edge case: collision error wording must be
+    'provider <name> derives to env var <X> already used by <existing>'."""
+    from openreview_cli.gateway import registry as reg_mod
+
+    # Point registry at an empty config dir so only bundled providers apply.
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    monkeypatch.setattr(reg_mod, "_config_dir", lambda: config_dir)
+
+    # Supplying --env-key OPENAI_API_KEY collides with the bundled openai
+    # provider's env_key -> real EnvKeyCollisionError path (name "mycustom"
+    # does not collide, so we reach the env-key check).
+    with pytest.raises(EnvKeyCollisionError) as exc_info:
+        add_custom_provider("mycustom", "https://example.com/v1", api_key_env="OPENAI_API_KEY")
+    msg = str(exc_info.value)
+    assert msg == ("provider mycustom derives to env var OPENAI_API_KEY already used by OpenAI")
+    assert exc_info.value.provider == "mycustom"
+    assert exc_info.value.existing == "OpenAI"

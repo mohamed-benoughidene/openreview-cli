@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from openreview_cli.gateway.router import Gateway
 
+from openreview_cli.gateway.models import CapabilityRequirement
+
 
 def compute_embedding(
     text: str,
@@ -25,7 +27,11 @@ def compute_embedding(
     """
     try:
         # The gateway embed method returns a list of embeddings (one per input text)
-        embeddings = gateway.embed("embedding", [text])
+        embeddings = gateway.embed(
+            "embedding",
+            [text],
+            requirement=CapabilityRequirement(capability="embedding"),
+        )
     except Exception as exc:
         from openreview_cli.retrieval.errors import EmbeddingError
 

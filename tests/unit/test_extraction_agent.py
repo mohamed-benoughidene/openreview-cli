@@ -78,7 +78,7 @@ class TestExtractionAgent:
         """Integration-style test: extract from a clause using mocked Gateway."""
         from openreview_cli.review.extraction import extract_clause
 
-        def mock_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_chat(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
             return (
                 '{"position": "preferred", "confidence": 0.85, '
                 '"citation": "for 3 years", "category_match": true}'
@@ -103,7 +103,7 @@ class TestExtractionAgent:
         """When extraction returns 'no-match' position, falls back to category default."""
         from openreview_cli.review.extraction import extract_clause
 
-        def mock_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_chat(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
             return (
                 '{"position": "no-match", "confidence": 0.0, '
                 '"citation": "", "category_match": false}'

@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from openreview_cli.retrieval.models import RetrievalResult
 
+from openreview_cli.gateway.models import CapabilityRequirement
+
 logger = logging.getLogger(__name__)
 
 
@@ -70,6 +72,7 @@ class Reranker:
                 query,
                 texts,
                 top_n=top_k,
+                requirement=CapabilityRequirement(capability="rerank"),
             )
         except Exception as exc:
             logger.warning("Reranker unavailable (%s); returning original order.", exc)

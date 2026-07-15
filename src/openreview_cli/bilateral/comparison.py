@@ -21,6 +21,7 @@ from openreview_cli.bilateral.models import (
     RCBSFDimension,
 )
 from openreview_cli.bilateral.prompts import build_comparison_messages
+from openreview_cli.gateway.models import CapabilityRequirement
 from openreview_cli.review._gateway import call_gateway_chat
 
 if TYPE_CHECKING:
@@ -78,7 +79,11 @@ def compare_pair(
 
     effective_model = model if comparison_model is None else comparison_model
     try:
-        raw_response = call_gateway_chat(effective_model, messages)
+        raw_response = call_gateway_chat(
+            effective_model,
+            messages,
+            requirement=CapabilityRequirement(capability="reasoning"),
+        )
     except Exception as exc:
         logger.warning("Gateway call failed for %s: %s", alignment.pair_id, exc)
         return PairedAssessment(

@@ -6,10 +6,22 @@ from typing import Any
 from pydantic import BaseModel
 
 
+class Capability(BaseModel):
+    embedding: bool = False
+    reasoning: bool = False
+    context_window: int | None = None
+    tool_call: bool = False
+    rerank: bool = False
+
+
 class ProviderInfo(BaseModel):
     name: str
     env_key: str | None = None
     auth_required: bool = True
+    base_url: str | None = None
+    is_local: bool = False
+    source: str = "bundled"  # "bundled" | "custom" | "discovered"
+    capabilities: Capability = Capability()
     models: dict[str, ModelEntry] = {}
 
 
@@ -34,6 +46,20 @@ class CostRecord(BaseModel):
     completion_tokens: int
     cost_cents: int
     created_at: str
+
+
+class CapabilityRequirement(BaseModel):
+    capability: str | None = None  # one of "embedding","reasoning","tool_call"
+    min_context_window: int | None = None
+    tool_call: bool | None = None
+
+
+class StreamingOutputEvent(BaseModel):
+    type: str  # "chunk" | "done" | "error"
+    text: str | None = None
+    error: str | None = None
+    metadata: dict[str, Any] | None = None
+    timeout_kind: str | None = None
 
 
 @dataclass
