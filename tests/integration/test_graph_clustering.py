@@ -86,6 +86,19 @@ def sample_clauses_json(tmp_path: Path) -> Path:
     return path
 
 
+# network fixture: pre-emptive skip so CI without HF access doesn't hard-fail the legal-bert download
+@pytest.fixture
+def network() -> None:
+    """Skip test when HuggingFace hub is unreachable."""
+    import socket
+
+    try:
+        sock = socket.create_connection(("huggingface.co", 443), timeout=5)
+        sock.close()
+    except OSError:
+        pytest.skip("HuggingFace hub unreachable")
+
+
 @pytest.mark.slow
 class TestGraphClusteringCLI:
     """Test --cluster-clauses flag on graph build.
@@ -93,7 +106,8 @@ class TestGraphClusteringCLI:
     Requires the legal-bert model. Skipped if offline.
     """
 
-    def test_cluster_flag_parses(self, sample_clauses_json: Path) -> None:
+    @pytest.mark.network
+    def test_cluster_flag_parses(self, sample_clauses_json: Path, network: None) -> None:
         """--cluster-clauses flag is accepted by graph build."""
         from typer.testing import CliRunner
 

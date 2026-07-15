@@ -148,11 +148,12 @@ testpaths = ["tests"]
 addopts = "-v --tb=short"
 asyncio_mode = "auto"
 markers = [
-    "slow: marks tests as slow (deselected by default)",
+    "slow: marks tests as slow (skip with '-m not slow')",
     "integration: marks integration tests (mocked APIs)",
     "e2e: marks end-to-end tests (CLI invocation)",
     "memory: marks memory profiling tests",
     "benchmark: marks benchmark tests",
     "accuracy: marks clause boundary accuracy tests",
+    "network: marks tests requiring HuggingFace hub network access (legal-bert model download)",
 ]
 filterwarnings = ["ignore::DeprecationWarning"]
