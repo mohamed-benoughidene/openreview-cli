@@ -152,7 +152,7 @@ def test_cancellation_mid_pipeline() -> None:
 
     stages: list[Any] = [
         MockStage("fast1", return_value={"a": 1}),
-        SlowCancellableStage("slow", sleep=10),
+        SlowCancellableStage("slow", sleep=0.5),
         MockStage("fast2", return_value={"b": 2}),
     ]
     pipeline = Pipeline(stages=stages, cancellation_token=token)

@@ -222,7 +222,7 @@ def test_progress_callback_invoked() -> None:
 def test_cancellation_returns_partial_report() -> None:
     """Setting cancellation_token returns partial PipelineReport with cancelled=True."""
     token = asyncio.Event()
-    slow = SlowStage("slow", sleep=10)
+    slow = SlowStage("slow", sleep=0.5)
     after = MockStage("after")
 
     pipeline = Pipeline(stages=[slow, after], cancellation_token=token)
