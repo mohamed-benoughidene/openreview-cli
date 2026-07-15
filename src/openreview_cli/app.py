@@ -2298,6 +2298,7 @@ def graph_build(
     # --cluster-clauses: embed + cluster and attach to graph metadata
     if cluster_clauses:
         _run_clause_clustering(graph, path)
+        graph.to_file(output)
 
     if store:
         from openreview_cli.config.paths import get_config_dir
