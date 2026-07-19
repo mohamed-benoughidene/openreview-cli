@@ -107,6 +107,26 @@ class TestChat:
         result = gw.chat("reasoning", [{"role": "user", "content": "Hi"}])
         assert result == "Hello!"
 
+    def test_chat_survives_cost_logging_failure(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """T030: a cost-logging failure (e.g. missing session FK for non-review
+        flows like grounding) must NOT block the AI call. chat must still
+        return the model response."""
+        import openreview_cli.gateway.router as router_mod
+
+        monkeypatch.setattr(
+            router_mod, "completion", lambda **kw: _MockCompletionResponse("Hello!")
+        )
+        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
+
+        def _boom(*args: object, **kwargs: object) -> str:
+            raise RuntimeError("cost log exploded")
+
+        gw._cost_tracker.log_call = _boom  # type: ignore[method-assign]
+        result = gw.chat("reasoning", [{"role": "user", "content": "Hi"}])
+        assert result == "Hello!"
+
     def test_raises_slot_not_configured_for_invalid_slot(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

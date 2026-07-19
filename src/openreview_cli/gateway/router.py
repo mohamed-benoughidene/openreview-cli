@@ -378,9 +378,15 @@ class Gateway:
         call_kwargs.update(kwargs)
         response = self._call_with_fallback(slot, completion, call_kwargs)
         self._record_cloud_call(slot)
-        self._cost_tracker.log_call(
-            session_id, slot, call_kwargs["model"], provider_prefix, response
-        )
+        # Cost logging must never block the AI call (T030): a logging failure
+        # (e.g. missing session FK for non-review flows like grounding) is
+        # non-fatal — warn and return the model response regardless.
+        try:
+            self._cost_tracker.log_call(
+                session_id, slot, call_kwargs["model"], provider_prefix, response
+            )
+        except Exception as cost_err:
+            logger.warning("Cost logging failed (non-fatal): %s", cost_err)
         return response.choices[0].message.content or ""
 
     def chat_stream(
