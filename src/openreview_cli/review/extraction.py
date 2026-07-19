@@ -12,6 +12,7 @@ import json
 import logging
 from typing import Any
 
+from openreview_cli.gateway.models import CapabilityRequirement
 from openreview_cli.review._gateway import call_gateway_chat
 from openreview_cli.review.models import Category, ClauseAssessment, Playbook, Position, QAVerdict
 from openreview_cli.review.prompts import _build_extraction_messages_common
@@ -103,7 +104,11 @@ def extract_clause(
     )
 
     try:
-        raw_response = call_gateway_chat(extraction_model, messages)
+        raw_response = call_gateway_chat(
+            extraction_model,
+            messages,
+            requirement=CapabilityRequirement(capability="reasoning"),
+        )
         parsed = _parse_response(raw_response)
     except Exception as exc:
         logger.warning("Extraction failed for %s: %s", clause_id, exc)

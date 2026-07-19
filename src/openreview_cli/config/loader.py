@@ -136,6 +136,7 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
         fallback: FallbackConfig = FallbackConfig()
         cost_limits: CostLimits = CostLimits()
         model_registry_refresh_days: int = 7
+        custom_providers: list[Any] = []
 
     _valid_recognizers = frozenset(
         {
@@ -306,3 +307,48 @@ def load_config(config_path: Path) -> dict[str, Any]:
     env_overrides = _get_env_overrides()
     merged = _deep_merge(raw, env_overrides)
     return _validate_and_merge(merged, dict(DEFAULT_CONFIG))
+
+
+def add_custom_provider(
+    config_path: Path,
+    name: str,
+    base_url: str,
+    api_key_env: str,
+    capabilities: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Append a custom provider to config.yml and return the validated config.
+
+    No collision check here — callers (registry.add_custom_provider) check first.
+    """
+    import shutil
+
+    import yaml
+
+    with open(config_path) as f:
+        raw = yaml.safe_load(f) or {}
+
+    backup = config_path.with_suffix(".yml.bak")
+    shutil.copy2(config_path, backup)
+
+    entry = {
+        "name": name,
+        "base_url": base_url,
+        "api_key_env": api_key_env,
+        "capabilities": capabilities,
+        "source": "custom",
+    }
+    gateway = raw.setdefault("gateway", {})
+    custom = gateway.setdefault("custom_providers", [])
+    custom.append(entry)
+
+    validated = _validate_and_merge(raw, dict(DEFAULT_CONFIG))
+    with open(config_path, "w") as f:
+        yaml.safe_dump(validated, f, default_flow_style=False)
+    return validated
+
+
+def get_custom_providers(config_path: Path) -> list[dict[str, Any]]:
+    """Return the list of custom providers declared in config.yml."""
+    gateway = load_config(config_path).get("gateway", {})
+    providers: list[dict[str, Any]] = gateway.get("custom_providers", [])
+    return providers

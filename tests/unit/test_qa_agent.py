@@ -50,7 +50,7 @@ class TestQAAgent:
             qa_model="m1",
         )
 
-        def mock_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_chat(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
             return (
                 '{"verdict": "agree", "revised_position": null, '
                 '"rationale": "", "citation_valid": true, '
@@ -85,7 +85,7 @@ class TestQAAgent:
             qa_model="m1",
         )
 
-        def mock_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_chat(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
             return (
                 '{"verdict": "disagree", "revised_position": "acceptable", '
                 '"rationale": "5 years is standard market term, not short", '
@@ -121,7 +121,7 @@ class TestQAAgent:
             qa_model="m1",
         )
 
-        def mock_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_chat(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
             return (
                 '{"verdict": "uncertain", "revised_position": null, '
                 '"rationale": "Unusual term length, cannot determine confidently", '
@@ -155,7 +155,7 @@ class TestQAAgent:
             qa_model="m1",
         )
 
-        def mock_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_chat(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
             return "This is not JSON"
 
         monkeypatch.setattr("openreview_cli.review.qa.call_gateway_chat", mock_chat)

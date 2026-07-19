@@ -32,12 +32,14 @@ class TestGatewayErrors:
         assert str(err) == "all failed"
 
     def test_auth_error(self) -> None:
-        err = AuthError("auth required")
-        assert str(err) == "auth required"
+        err = AuthError("anthropic", "auth required")
+        assert err.provider == "anthropic"
+        assert str(err) == "auth failed for anthropic: auth required"
 
     def test_model_not_found(self) -> None:
-        err = ModelNotFoundError("model not found")
-        assert str(err) == "model not found"
+        err = ModelNotFoundError("openai", "model not found")
+        assert err.provider == "openai"
+        assert str(err) == "model not found for openai: model not found"
 
 
 class TestTierRoutingErrors:

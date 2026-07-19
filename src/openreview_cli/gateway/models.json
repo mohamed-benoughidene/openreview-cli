@@ -4,6 +4,10 @@
       "name": "OpenAI",
       "env_key": "OPENAI_API_KEY",
       "auth_required": true,
+      "base_url": "https://api.openai.com/v1",
+      "is_local": false,
+      "source": "bundled",
+      "capabilities": {"embedding": true, "reasoning": true, "context_window": 128000, "tool_call": true},
       "models": {
         "gpt-4o": {
           "slots": ["reasoning", "extraction", "graph"],
@@ -30,6 +34,10 @@
       "name": "Anthropic",
       "env_key": "ANTHROPIC_API_KEY",
       "auth_required": true,
+      "base_url": "https://api.anthropic.com/v1",
+      "is_local": false,
+      "source": "bundled",
+      "capabilities": {"embedding": false, "reasoning": true, "context_window": 200000, "tool_call": true},
       "models": {
         "claude-sonnet-latest": {
           "slots": ["reasoning", "extraction", "graph"],
@@ -49,6 +57,10 @@
       "name": "Google",
       "env_key": "GOOGLE_API_KEY",
       "auth_required": true,
+      "base_url": "https://generativelanguage.googleapis.com/v1",
+      "is_local": false,
+      "source": "bundled",
+      "capabilities": {"embedding": true, "reasoning": true, "context_window": 1048576, "tool_call": true},
       "models": {
         "gemini-2.0-flash": {
           "slots": ["reasoning", "extraction", "graph"],
@@ -68,6 +80,10 @@
       "name": "Ollama",
       "env_key": null,
       "auth_required": false,
+      "base_url": "http://localhost:11434/v1",
+      "is_local": true,
+      "source": "bundled",
+      "capabilities": {"embedding": true, "reasoning": true, "context_window": 32768, "tool_call": true},
       "models": {
         "qwen3:8b": {
           "slots": ["reasoning", "extraction", "graph"],
@@ -121,6 +137,10 @@
       "name": "OpenRouter",
       "env_key": "OPENROUTER_API_KEY",
       "auth_required": true,
+      "base_url": "https://openrouter.ai/api/v1",
+      "is_local": false,
+      "source": "bundled",
+      "capabilities": {"embedding": true, "reasoning": true, "context_window": 200000, "tool_call": true},
       "models": {
         "openai/gpt-4o": {
           "slots": ["reasoning", "extraction", "graph"],
@@ -142,6 +162,10 @@
       "name": "Cohere",
       "env_key": "COHERE_API_KEY",
       "auth_required": true,
+      "base_url": "https://api.cohere.ai/v1",
+      "is_local": false,
+      "source": "bundled",
+      "capabilities": {"embedding": true, "reasoning": true, "context_window": 128000, "tool_call": true},
       "models": {
         "command-r-plus": {
           "slots": ["reasoning", "extraction", "graph"],
@@ -167,6 +191,10 @@
       "name": "HuggingFace",
       "env_key": "HUGGINGFACE_API_KEY",
       "auth_required": true,
+      "base_url": "https://api-inference.huggingface.co/v1",
+      "is_local": false,
+      "source": "bundled",
+      "capabilities": {"embedding": true, "reasoning": true, "context_window": 8192, "tool_call": true},
       "models": {
         "meta-llama/Llama-3.3-70B-Instruct": {
           "slots": ["reasoning", "extraction", "graph"],
@@ -182,11 +210,56 @@
         }
       }
     },
-    "custom": {
-      "name": "Custom (OpenAI-compatible)",
-      "env_key": "CUSTOM_API_KEY",
+    "deepseek": {
+      "name": "DeepSeek",
+      "env_key": "DEEPSEEK_API_KEY",
       "auth_required": true,
-      "models": {}
+      "base_url": "https://api.deepseek.com",
+      "is_local": false,
+      "source": "bundled",
+      "capabilities": {"embedding": false, "reasoning": true, "context_window": 64000, "tool_call": true},
+      "models": {
+        "deepseek-chat": {
+          "slots": ["extraction", "reasoning", "qa"],
+          "context": 64000,
+          "recommended": true,
+          "status": "active"
+        }
+      }
+    },
+    "qwen": {
+      "name": "Qwen",
+      "env_key": "DASHSCOPE_API_KEY",
+      "auth_required": true,
+      "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "is_local": false,
+      "source": "bundled",
+      "capabilities": {"embedding": true, "reasoning": true, "context_window": 32768, "tool_call": true},
+      "models": {
+        "qwen-plus": {
+          "slots": ["extraction", "embedding", "reasoning"],
+          "context": 32768,
+          "recommended": true,
+          "status": "active"
+        }
+      }
+    },
+    "minimax": {
+      "name": "MiniMax",
+      "env_key": "MINIMAX_API_KEY",
+      "auth_required": true,
+      "base_url": "https://api.minimax.io/v1",
+      "is_local": false,
+      "source": "bundled",
+      "capabilities": {"embedding": false, "reasoning": true, "context_window": 32000, "tool_call": true},
+      "models": {
+        "minimax-chat": {
+          "slots": ["extraction", "reasoning"],
+          "context": 32000,
+          "recommended": true,
+          "status": "active"
+        }
+      }
     }
   }
 }

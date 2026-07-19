@@ -8,10 +8,16 @@ from __future__ import annotations
 
 import logging
 
+from openreview_cli.gateway.models import CapabilityRequirement
+
 logger = logging.getLogger(__name__)
 
 
-def call_gateway_chat(slot: str, messages: list[dict[str, str]]) -> str:
+def call_gateway_chat(
+    slot: str,
+    messages: list[dict[str, str]],
+    requirement: CapabilityRequirement | None = None,
+) -> str:
     """Call the AI Gateway's chat method.
 
     Separated into its own function for testability (monkeypatching).
@@ -19,4 +25,4 @@ def call_gateway_chat(slot: str, messages: list[dict[str, str]]) -> str:
     from openreview_cli.gateway.router import Gateway
 
     gw = Gateway()
-    return gw.chat(slot, messages)
+    return gw.chat(slot, messages, requirement=requirement)

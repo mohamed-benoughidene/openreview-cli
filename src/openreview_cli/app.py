@@ -1,5 +1,7 @@
 import contextlib
+import json
 import logging
+import re
 import sys
 import time
 from datetime import UTC
@@ -1303,6 +1305,12 @@ gateway_app = typer.Typer(
     no_args_is_help=True,
 )
 
+provider_app = typer.Typer(
+    name="provider",
+    help="Manage custom providers.",
+    no_args_is_help=True,
+)
+
 
 @gateway_app.command("setup")
 def gateway_setup() -> None:
@@ -1335,15 +1343,31 @@ def gateway_status() -> None:
 
 
 @gateway_app.command("providers")
-def gateway_providers() -> None:
-    """List all supported providers."""
+def gateway_providers(json_mode: bool = typer.Option(False, "--json")) -> None:
+    """List all supported providers (bundled + custom)."""
+    from openreview_cli.gateway.registry import load_registry
+
+    registry = load_registry()
+
+    if json_mode:
+        data = {
+            "providers": [
+                {
+                    "name": p.name,
+                    "base_url": p.base_url,
+                    "api_key_env": p.env_key,
+                    "capabilities": p.capabilities.model_dump(),
+                    "is_local": p.is_local,
+                    "source": p.source,
+                }
+                for p in registry.values()
+            ]
+        }
+        typer.echo(json.dumps(data, indent=2))
+        return
+
     from rich.console import Console
     from rich.table import Table
-
-    from openreview_cli.gateway.registry import ModelRegistry
-
-    registry = ModelRegistry(_GATEWAY_REGISTRY_PATH)
-    registry.load()
 
     console = Console()
     table = Table(title="Supported Providers")
@@ -1351,36 +1375,54 @@ def gateway_providers() -> None:
     table.add_column("Auth", style="green")
     table.add_column("Models", style="white")
 
-    for p in registry.list_providers():
+    for p in registry.values():
         table.add_row(
-            p["name"],
-            "key required" if p["auth_required"] else "none",
-            str(p["model_count"]),
+            p.name,
+            "key required" if p.auth_required else "none",
+            str(len(p.models)),
         )
     console.print(table)
 
 
 @gateway_app.command("models")
-def gateway_models(provider: str) -> None:
+def gateway_models(
+    provider: str,
+    json_mode: bool = typer.Option(False, "--json"),
+) -> None:
     """List available models for a provider."""
+    from openreview_cli.gateway.registry import load_registry
+
+    registry = load_registry()
+    p = registry.get(provider)
+    if p is None:
+        typer.echo(f"No provider '{provider}' found.", err=True)
+        raise typer.Exit(code=1)
+
+    if json_mode:
+        data = {
+            provider: [
+                {
+                    "id": mid,
+                    "capabilities": (
+                        m.capabilities.model_dump() if hasattr(m, "capabilities") else {}
+                    ),
+                    "slots": m.slots,
+                    "context": m.context,
+                    "dimensions": m.dimensions,
+                    "recommended": m.recommended,
+                    "status": m.status,
+                    "note": m.note,
+                }
+                for mid, m in p.models.items()
+            ]
+        }
+        typer.echo(json.dumps(data, indent=2))
+        return
+
     from rich.console import Console
     from rich.table import Table
 
-    from openreview_cli.gateway.registry import ModelRegistry
-
-    registry = ModelRegistry(_GATEWAY_REGISTRY_PATH)
-    registry.load()
-
-    models = registry.list_models(provider)
-    if provider.lower() == "ollama":
-        dynamic = registry.discover_ollama()
-        seen = {m["model_id"] for m in models}
-        for m in dynamic:
-            if m["model_id"] not in seen:
-                models.append(m)
-                seen.add(m["model_id"])
-
-    if not models:
+    if not p.models:
         typer.echo(f"No models found for provider '{provider}'.")
         return
 
@@ -1391,12 +1433,12 @@ def gateway_models(provider: str) -> None:
     table.add_column("Context", style="white")
     table.add_column("Recommended", style="yellow")
 
-    for m in models:
+    for mid, m in p.models.items():
         table.add_row(
-            m["model_id"],
-            ", ".join(m.get("slots", [])),
-            str(m.get("context", "-")),
-            "✓" if m.get("recommended") else "",
+            mid,
+            ", ".join(m.slots),
+            str(m.context if m.context is not None else "-"),
+            "✓" if m.recommended else "",
         )
     console.print(table)
 
@@ -1486,6 +1528,52 @@ def gateway_costs(
         typer.echo(f"Daily cost limit: {'under' if under else 'exceeded'}")
     else:
         typer.echo("Use --today or --session <id> to query costs.")
+
+
+@provider_app.command("add")
+def provider_add(
+    name: str = typer.Argument(..., help="Custom provider name."),
+    base_url: str = typer.Option(..., "--base-url", help="OpenAI-compatible base URL."),
+    env_key: str | None = typer.Option(
+        None, "--env-key", help="API key env var (derived if omitted)."
+    ),
+    cap_embedding: bool = typer.Option(False, "--cap-embedding", help="Supports embeddings."),
+    cap_reasoning: bool = typer.Option(False, "--cap-reasoning", help="Supports reasoning/chat."),
+    cap_tool_call: bool = typer.Option(False, "--cap-tool-call", help="Supports tool calls."),
+    context_window: int | None = typer.Option(
+        None, "--context-window", help="Context window in tokens."
+    ),
+) -> None:
+    """Add a custom OpenAI-compatible provider (non-interactive)."""
+    from openreview_cli.gateway.errors import (
+        EnvKeyCollisionError,
+        ProviderNameCollisionError,
+    )
+    from openreview_cli.gateway.registry import add_custom_provider
+
+    if env_key is None:
+        env_key = re.sub(r"[^A-Z0-9]", "_", name.upper()) + "_API_KEY"
+
+    capabilities = {
+        "embedding": cap_embedding,
+        "reasoning": cap_reasoning,
+        "tool_call": cap_tool_call,
+        "context_window": context_window,
+    }
+
+    try:
+        add_custom_provider(name, base_url, capabilities, api_key_env=env_key)
+    except (ProviderNameCollisionError, EnvKeyCollisionError) as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+    typer.echo(
+        f"Added provider '{name}' (source: custom). "
+        f"Set a slot with: openreview gateway set <slot> {name}/<model>"
+    )
+
+
+gateway_app.add_typer(provider_app, name="provider")
 
 
 app.add_typer(gateway_app)

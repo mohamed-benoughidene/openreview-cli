@@ -84,7 +84,9 @@ class TestRunComparison:
         # Mock gateway for extraction
         extraction_call_count: list[int] = [0]
 
-        def mock_extraction_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_extraction_chat(
+            _slot: str, _messages: list[dict[str, str]], **_kwargs: object
+        ) -> str:
             extraction_call_count[0] += 1
             return (
                 '{"position": "preferred", "confidence": 0.85, '
@@ -96,7 +98,7 @@ class TestRunComparison:
         )
 
         # Mock QA gateway
-        def mock_qa_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_qa_chat(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
             return (
                 '{"verdict": "agree", "revised_position": null, '
                 '"rationale": "correct", "citation_valid": true, '
@@ -109,7 +111,9 @@ class TestRunComparison:
         # Mock comparison agent gateway
         comparison_call_count: list[int] = [0]
 
-        def mock_comparison_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_comparison_chat(
+            _slot: str, _messages: list[dict[str, str]], **_kwargs: object
+        ) -> str:
             comparison_call_count[0] += 1
             return (
                 '{"divergence": "evidence", "confidence": 0.82, '
@@ -162,7 +166,9 @@ class TestRunComparison:
 
         monkeypatch.setattr("openreview_cli.bilateral._parse_document", mock_parse)
 
-        def mock_extraction_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_extraction_chat(
+            _slot: str, _messages: list[dict[str, str]], **_kwargs: object
+        ) -> str:
             call_order.append("extract")
             return (
                 '{"position": "preferred", "confidence": 0.85, '
@@ -173,7 +179,7 @@ class TestRunComparison:
             "openreview_cli.review.extraction.call_gateway_chat", mock_extraction_chat
         )
 
-        def mock_qa_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_qa_chat(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
             call_order.append("qa")
             return (
                 '{"verdict": "agree", "revised_position": null, '
@@ -184,7 +190,9 @@ class TestRunComparison:
 
         monkeypatch.setattr("openreview_cli.review.qa.call_gateway_chat", mock_qa_chat)
 
-        def mock_comparison_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_comparison_chat(
+            _slot: str, _messages: list[dict[str, str]], **_kwargs: object
+        ) -> str:
             call_order.append("compare")
             return (
                 '{"divergence": "no_divergence", "confidence": 0.95, '
@@ -257,7 +265,7 @@ class TestRunComparison:
 
         monkeypatch.setattr("openreview_cli.bilateral._parse_document", mock_parse)
 
-        def mock_qa_chat_fn(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_qa_chat_fn(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
             return (
                 '{"verdict": "agree", "revised_position": null, '
                 '"rationale": "ok", "citation_valid": true, '
@@ -265,7 +273,9 @@ class TestRunComparison:
                 '"confidence_valid": true}'
             )
 
-        def mock_extraction_chat_fn(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_extraction_chat_fn(
+            _slot: str, _messages: list[dict[str, str]], **_kwargs: object
+        ) -> str:
             return (
                 '{"position": "acceptable", "confidence": 0.9, '
                 '"citation": "text", "category_match": true}'
@@ -276,7 +286,7 @@ class TestRunComparison:
         )
         monkeypatch.setattr("openreview_cli.review.qa.call_gateway_chat", mock_qa_chat_fn)
 
-        def mock_comp_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_comp_chat(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
             return (
                 '{"divergence": "no_divergence", "confidence": 0.95, '
                 '"citations": [], "rationale": "Aligned"}'
@@ -313,7 +323,7 @@ class TestRunComparison:
         # If align_only=True, no extraction/QA/comparison calls should happen
         chat_called: list[bool] = [False]
 
-        def mock_chat(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_chat(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
             chat_called[0] = True
             return ""
 

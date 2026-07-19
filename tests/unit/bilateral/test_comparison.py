@@ -213,7 +213,7 @@ class TestComparisonAgent:
     ) -> None:
         from openreview_cli.bilateral.comparison import compare_pair
 
-        def mock_gateway(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_gateway(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
             return (
                 '{"divergence": "evidence", "confidence": 0.85, '
                 '"citations": ["Party A requires best efforts", '
@@ -244,7 +244,7 @@ class TestComparisonAgent:
     def test_no_divergence_response(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from openreview_cli.bilateral.comparison import compare_pair
 
-        def mock_gateway(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_gateway(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
             return (
                 '{"divergence": "no_divergence", "confidence": 0.95, '
                 '"citations": [], '
@@ -276,7 +276,7 @@ class TestComparisonAgent:
                     f'"citations": ["a", "b"], "rationale": "test"}}'
                 )
 
-            def mock_gateway(_slot: str, _messages: list[dict[str, str]]) -> str:
+            def mock_gateway(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
                 return _make_gateway()
 
             monkeypatch.setattr(
@@ -298,7 +298,7 @@ class TestComparisonAgent:
     def test_invalid_json_response_returns_uncertain(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from openreview_cli.bilateral.comparison import compare_pair
 
-        def mock_gateway(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_gateway(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
             return "not valid json"
 
         monkeypatch.setattr("openreview_cli.bilateral.comparison.call_gateway_chat", mock_gateway)
@@ -317,7 +317,7 @@ class TestComparisonAgent:
     def test_out_of_range_confidence_clamped(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from openreview_cli.bilateral.comparison import compare_pair
 
-        def mock_gateway(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_gateway(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
             return (
                 '{"divergence": "evidence", "confidence": 1.5, '
                 '"citations": [], "rationale": "test"}'
@@ -339,7 +339,7 @@ class TestComparisonAgent:
     def test_gateway_failure_raises_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from openreview_cli.bilateral.comparison import compare_pair
 
-        def mock_gateway(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_gateway(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
             raise RuntimeError("Gateway unreachable")
 
         monkeypatch.setattr("openreview_cli.bilateral.comparison.call_gateway_chat", mock_gateway)
@@ -361,7 +361,7 @@ class TestComparisonAgent:
 
         citations = ["Party A: 'shall use reasonable efforts'", "Party B: 'shall use best efforts'"]
 
-        def mock_gateway(_slot: str, _messages: list[dict[str, str]]) -> str:
+        def mock_gateway(_slot: str, _messages: list[dict[str, str]], **_kwargs: object) -> str:
             return (
                 f'{{"divergence": "evidence", "confidence": 0.82, '
                 f'"citations": {citations!s}, '

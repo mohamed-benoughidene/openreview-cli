@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from openreview_cli.parsing.models import Clause, Document
     from openreview_cli.review.models import ReviewReport
 
+from openreview_cli.gateway.models import CapabilityRequirement
 from openreview_cli.grounding.audit import GroundingAuditLog
 from openreview_cli.grounding.metrics import compute_cg_metrics
 from openreview_cli.grounding.models import (
@@ -102,6 +103,7 @@ class CitationGroundingDiscriminator:
             response = self._gateway.chat(
                 "grounding",
                 messages,
+                requirement=CapabilityRequirement(capability="reasoning"),
             )
         except Exception as e:
             logger.warning("Gateway call failed: %s", e)
@@ -239,6 +241,7 @@ class CitationGroundingDiscriminator:
             response = self._gateway.chat(
                 "grounding",
                 messages,
+                requirement=CapabilityRequirement(capability="reasoning"),
             )
         except Exception as e:
             logger.warning("Gateway batch call failed: %s", e)
