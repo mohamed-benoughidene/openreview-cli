@@ -1498,6 +1498,15 @@ def gateway_test(slot: str) -> None:
         elif slot == "reranking":
             rnk = gw.rerank(slot, "test", ["doc1", "doc2"], top_n=2)
             typer.echo(f"Reranked: {len(rnk)} results")
+        elif slot == "grounding":
+            from openreview_cli.gateway.models import CapabilityRequirement
+
+            response = gw.chat(
+                "grounding",
+                [{"role": "user", "content": "Does clause 1 require confidentiality? Answer OK."}],
+                requirement=CapabilityRequirement(capability="reasoning"),
+            )
+            typer.echo(f"Response: {response}")
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1) from None
