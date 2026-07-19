@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from openreview_cli.gateway.router import Gateway
@@ -100,11 +100,12 @@ class CitationGroundingDiscriminator:
         )
 
         try:
-            response = self._gateway.chat(
-                "grounding",
-                messages,
-                requirement=CapabilityRequirement(capability="reasoning"),
-            )
+            chat_kwargs: dict[str, Any] = {
+                "requirement": CapabilityRequirement(capability="reasoning")
+            }
+            if self._model:
+                chat_kwargs["model"] = self._model
+            response = self._gateway.chat("grounding", messages, **chat_kwargs)
         except Exception as e:
             logger.warning("Gateway call failed: %s", e)
             return (GroundingVerdict.UNCERTAIN, [], 0.0)
@@ -238,11 +239,12 @@ class CitationGroundingDiscriminator:
         messages = build_grounding_messages(matched_clauses, batch)
 
         try:
-            response = self._gateway.chat(
-                "grounding",
-                messages,
-                requirement=CapabilityRequirement(capability="reasoning"),
-            )
+            chat_kwargs: dict[str, Any] = {
+                "requirement": CapabilityRequirement(capability="reasoning")
+            }
+            if self._model:
+                chat_kwargs["model"] = self._model
+            response = self._gateway.chat("grounding", messages, **chat_kwargs)
         except Exception as e:
             logger.warning("Gateway batch call failed: %s", e)
             return [
