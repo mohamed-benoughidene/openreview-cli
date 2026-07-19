@@ -358,3 +358,57 @@ def test_env_key_collision_message_matches_contract(
     assert msg == ("provider mycustom derives to env var OPENAI_API_KEY already used by OpenAI")
     assert exc_info.value.provider == "mycustom"
     assert exc_info.value.existing == "OpenAI"
+
+
+def test_load_registry_voyage_native_entry() -> None:
+    reg = load_registry()
+    assert "voyage" in reg
+    p = reg["voyage"]
+    assert p.base_url == "https://api.voyageai.com/v1"
+    assert p.env_key == "VOYAGE_API_KEY"
+    assert p.source == "bundled"
+    caps = p.capabilities
+    assert caps.embedding is True
+    assert caps.rerank is True
+    assert caps.reasoning is False
+    assert caps.tool_call is False
+    assert "voyage-3.5" in p.models
+    assert "rerank-2.5" in p.models
+
+
+def test_load_registry_moonshot_native_entry() -> None:
+    reg = load_registry()
+    assert "moonshot" in reg
+    p = reg["moonshot"]
+    assert p.base_url == "https://api.moonshot.ai/v1"
+    assert p.env_key == "MOONSHOT_API_KEY"
+    assert p.source == "bundled"
+    caps = p.capabilities
+    assert caps.reasoning is True
+    assert "kimi-k2" in p.models
+
+
+def test_load_registry_mistral_native_entry() -> None:
+    reg = load_registry()
+    assert "mistral" in reg
+    p = reg["mistral"]
+    assert p.base_url == "https://api.mistral.ai/v1"
+    assert p.env_key == "MISTRAL_API_KEY"
+    assert p.source == "bundled"
+    caps = p.capabilities
+    assert caps.reasoning is True
+    assert caps.tool_call is True
+    assert "magistral-medium-2506" in p.models
+    assert "mistral-large-latest" in p.models
+
+
+def test_load_registry_zai_native_entry() -> None:
+    reg = load_registry()
+    assert "zai" in reg
+    p = reg["zai"]
+    assert p.base_url == "https://api.z.ai/v1"
+    assert p.env_key == "ZAI_API_KEY"
+    assert p.source == "bundled"
+    caps = p.capabilities
+    assert caps.reasoning is True
+    assert "glm-4.7" in p.models
