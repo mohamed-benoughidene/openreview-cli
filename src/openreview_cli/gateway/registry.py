@@ -30,6 +30,7 @@ def _build_provider(name: str, info: dict[str, Any]) -> ProviderInfo:
     caps_raw = info.pop("capabilities", None)
     caps = Capability(**caps_raw) if caps_raw else Capability()
     env_key = info.get("env_key") or info.get("api_key_env")
+    creds_raw = info.pop("credentials", [])
     return ProviderInfo(
         name=info.get("name", name),
         env_key=env_key,
@@ -39,6 +40,7 @@ def _build_provider(name: str, info: dict[str, Any]) -> ProviderInfo:
         source=info.get("source", "bundled"),
         capabilities=caps,
         models=models,
+        credentials=creds_raw,
     )
 
 
@@ -125,11 +127,13 @@ class ModelRegistry:
         for name, info in providers_raw.items():
             models_raw = info.pop("models", {})
             models = {k: ModelEntry(**v) for k, v in models_raw.items()}
+            creds_raw = info.pop("credentials", [])
             self._providers[name] = ProviderInfo(
                 name=info["name"],
                 env_key=info.get("env_key"),
                 auth_required=info.get("auth_required", True),
                 models=models,
+                credentials=creds_raw,
             )
 
     def list_providers(self) -> list[dict[str, Any]]:

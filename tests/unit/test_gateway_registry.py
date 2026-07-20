@@ -11,6 +11,7 @@ import yaml
 from openreview_cli.gateway.errors import EnvKeyCollisionError
 from openreview_cli.gateway.registry import (
     ModelRegistry,
+    _build_provider,
     add_custom_provider,
     load_registry,
 )
@@ -412,3 +413,29 @@ def test_load_registry_zai_native_entry() -> None:
     caps = p.capabilities
     assert caps.reasoning is True
     assert "glm-4.7" in p.models
+
+
+def test_build_provider_without_credentials_defaults_empty() -> None:
+    result = _build_provider("openai", {"name": "OpenAI", "env_key": "OPENAI_API_KEY"})
+    assert result.credentials == []
+
+
+def test_build_provider_forwards_credentials() -> None:
+    result = _build_provider(
+        "bedrock",
+        {
+            "name": "Bedrock",
+            "credentials": [
+                {
+                    "env_key": "AWS_REGION_NAME",
+                    "label": "Region",
+                    "litellm_param": "aws_region_name",
+                    "secret": False,
+                    "required": True,
+                    "is_file_path": False,
+                }
+            ],
+        },
+    )
+    assert len(result.credentials) == 1
+    assert result.credentials[0].litellm_param == "aws_region_name"
