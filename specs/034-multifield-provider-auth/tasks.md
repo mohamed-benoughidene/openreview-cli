@@ -31,8 +31,8 @@ mapping, US3 per-field health, US4 wizard/CLI collection).
 **Purpose**: No new project scaffolding needed — repo + deps already present.
 Confirm grounding artifacts and tooling.
 
-- [ ] T001 Verify Context7-verified sources present at `.specify/memory/verified-sources.md` (litellm/pydantic/typer) before implementing
-- [ ] T002 [P] Confirm `uv run pre-commit run --all-files` passes on current branch as the baseline
+- [x] T001 Verify Context7-verified sources present at `.specify/memory/verified-sources.md` (litellm/pydantic/typer) before implementing — CONFIRMED (verified-sources.md + task-context.md present 2026-07-20)
+- [x] T002 [P] Confirm `uv run pre-commit run --all-files` passes on current branch as the baseline — CONFIRMED green 2026-07-20
 
 ---
 
@@ -43,10 +43,10 @@ every user story depends on.
 
 **⚠️ CRITICAL**: US2/US3/US4 cannot start until T003–T006 land.
 
-- [ ] T003 [P] Add `CredentialField` pydantic model in `src/openreview_cli/gateway/models.py` (fields: env_key, label, secret, required, litellm_param, is_file_path) per contracts/provider-model.md
-- [ ] T004 [P] Extend `ProviderInfo` with `credentials: list[CredentialField] = []` in `src/openreview_cli/gateway/models.py` (backward-compatible default, FR-1/FR-2)
-- [ ] T005 [P] Ensure `load_registry()` in `src/openreview_cli/gateway/registry.py` tolerates providers without a `credentials` key (pydantic default) — no API change
-- [ ] T006 [P] Unit test `ProviderInfo` backward compat + `CredentialField` in `tests/unit/test_gateway_models.py` (single-key provider loads with credentials==[]; CredentialField constructs)
+- [x] T003 [P] Add `CredentialField` pydantic model in `src/openreview_cli/gateway/models.py` (fields: env_key, label, secret, required, litellm_param, is_file_path) per contracts/provider-model.md — DONE (models.py:17, commit e5d05ab merged)
+- [x] T004 [P] Extend `ProviderInfo` with `credentials: list[CredentialField] = []` in `src/openreview_cli/gateway/models.py` (backward-compatible default, FR-1/FR-2) — DONE (models.py:42, merged)
+- [x] T005 [P] Ensure `load_registry()` in `src/openreview_cli/gateway/registry.py` tolerates providers without a `credentials` key (pydantic default) — no API change — DONE (_build_provider + ModelRegistry.load forward credentials raw list, default [], registry.py:33/43/130/136, merged 4aa729d)
+- [x] T006 [P] Unit test `ProviderInfo` backward compat + `CredentialField` in `tests/unit/test_gateway_models.py` (single-key provider loads with credentials==[]; CredentialField constructs) — DONE (TestCredentialField + ProviderInfo cred tests; 36 passed models+registry)
 
 **Checkpoint**: Model layer ready. US1 complete (model half of FR-1/FR-2).
 
