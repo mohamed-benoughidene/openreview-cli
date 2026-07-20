@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Capability(BaseModel):
@@ -12,6 +12,21 @@ class Capability(BaseModel):
     context_window: int | None = None
     tool_call: bool = False
     rerank: bool = False
+
+
+class CredentialField(BaseModel):
+    """A single provider credential that the wizard collects and the gateway
+    resolves into a litellm kwarg.
+
+    Grounded on spec 034 data-model.md.
+    """
+
+    env_key: str
+    label: str
+    secret: bool = False
+    required: bool = True
+    litellm_param: str
+    is_file_path: bool = False
 
 
 class ProviderInfo(BaseModel):
@@ -23,6 +38,8 @@ class ProviderInfo(BaseModel):
     source: str = "bundled"  # "bundled" | "custom" | "discovered"
     capabilities: Capability = Capability()
     models: dict[str, ModelEntry] = {}
+    # ponytail: default [] keeps single-key providers backward compatible (FR-2)
+    credentials: list[CredentialField] = Field(default_factory=list)
 
 
 class ModelEntry(BaseModel):
