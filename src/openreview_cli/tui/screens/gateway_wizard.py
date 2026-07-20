@@ -84,7 +84,17 @@ class GatewayWizard(Screen[bool]):
 
     def _render_provider_step(self, body: Vertical) -> None:
         body.mount(Input(placeholder="Type to filter...", id="provider-filter"))
-        items = [ListItem(Label(p["name"]), name=p["name"]) for p in self._providers]
+        items = []
+        for p in self._providers:
+            label = p["name"]
+            creds = p.get("credentials") or []
+            if creds:
+                parts = []
+                for c in creds:
+                    mark = "✓" if c.get("resolved") else "✗"
+                    parts.append(f"{c.get('label', c.get('env_key', ''))} {mark}")
+                label = f"{label}  [{' · '.join(parts)}]"
+            items.append(ListItem(Label(label), name=p["name"]))
         _mount_list(body, "Select a provider (type to filter):", items, "provider-list")
 
     def _render_model_step(self, body: Vertical) -> None:

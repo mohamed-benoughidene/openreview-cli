@@ -1,4 +1,9 @@
-from openreview_cli.gateway.models import CostRecord, ModelEntry, ProviderInfo
+from openreview_cli.gateway.models import (
+    CostRecord,
+    CredentialField,
+    ModelEntry,
+    ProviderInfo,
+)
 
 
 class TestModelEntry:
@@ -47,6 +52,42 @@ class TestModelEntry:
         assert d["extra_params"] == {"top_k": 40, "top_p": 0.9}
 
 
+class TestCredentialField:
+    def test_construct_with_all_fields(self) -> None:
+        c = CredentialField(
+            env_key="AWS_REGION_NAME",
+            label="AWS Region",
+            secret=True,
+            required=False,
+            litellm_param="aws_region_name",
+            is_file_path=False,
+        )
+        assert c.env_key == "AWS_REGION_NAME"
+        assert c.label == "AWS Region"
+        assert c.secret is True
+        assert c.required is False
+        assert c.litellm_param == "aws_region_name"
+        assert c.is_file_path is False
+
+    def test_defaults(self) -> None:
+        c = CredentialField(env_key="K", label="L", litellm_param="k")
+        assert c.secret is False
+        assert c.required is True
+        assert c.is_file_path is False
+
+    def test_model_dump_round_trip(self) -> None:
+        c = CredentialField(
+            env_key="GOOGLE_APPLICATION_CREDENTIALS",
+            label="Vertex ADC JSON",
+            secret=False,
+            required=True,
+            litellm_param="vertex_credentials",
+            is_file_path=True,
+        )
+        restored = CredentialField(**c.model_dump())
+        assert restored == c
+
+
 class TestProviderInfo:
     def test_creates_with_minimal_fields(self) -> None:
         p = ProviderInfo(name="ollama")
@@ -54,6 +95,24 @@ class TestProviderInfo:
         assert p.env_key is None
         assert p.auth_required is True
         assert p.models == {}
+        assert p.credentials == []
+
+    def test_credentials_stored(self) -> None:
+        p = ProviderInfo(
+            name="x",
+            credentials=[CredentialField(env_key="K", label="L", litellm_param="k")],
+        )
+        assert len(p.credentials) == 1
+        assert p.credentials[0].env_key == "K"
+
+    def test_model_dump_includes_credentials(self) -> None:
+        p = ProviderInfo(
+            name="x",
+            credentials=[CredentialField(env_key="K", label="L", litellm_param="k")],
+        )
+        d = p.model_dump()
+        assert "credentials" in d
+        assert d["credentials"][0]["env_key"] == "K"
 
     def test_env_key_optional(self) -> None:
         p = ProviderInfo(name="custom", env_key="CUSTOM_API_KEY", auth_required=False)

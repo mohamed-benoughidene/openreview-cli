@@ -11,6 +11,7 @@ import yaml
 from openreview_cli.gateway.errors import EnvKeyCollisionError
 from openreview_cli.gateway.registry import (
     ModelRegistry,
+    _build_provider,
     add_custom_provider,
     load_registry,
 )
@@ -412,3 +413,114 @@ def test_load_registry_zai_native_entry() -> None:
     caps = p.capabilities
     assert caps.reasoning is True
     assert "glm-4.7" in p.models
+
+
+def test_registry_loads_multifield_providers_unconfigured() -> None:
+    """Spec 034 US2 (T014): bedrock/vertex/azure expose multi-field
+    credentials lists; registry tolerates empty models."""
+    reg = load_registry()
+
+    assert "bedrock" in reg
+    assert "vertex" in reg
+    assert "azure" in reg
+
+    bedrock = reg["bedrock"]
+    assert len(bedrock.credentials) >= 1
+    assert bedrock.credentials[0].litellm_param == "aws_region_name"
+
+    vertex = reg["vertex"]
+    assert len(vertex.credentials) >= 1
+    assert vertex.credentials[0].litellm_param == "vertex_project"
+
+    azure = reg["azure"]
+    assert len(azure.credentials) >= 1
+    assert azure.credentials[0].litellm_param == "api_key"
+
+
+def test_build_provider_without_credentials_defaults_empty() -> None:
+    result = _build_provider("openai", {"name": "OpenAI", "env_key": "OPENAI_API_KEY"})
+    assert result.credentials == []
+
+
+def test_build_provider_forwards_credentials() -> None:
+    result = _build_provider(
+        "bedrock",
+        {
+            "name": "Bedrock",
+            "credentials": [
+                {
+                    "env_key": "AWS_REGION_NAME",
+                    "label": "Region",
+                    "litellm_param": "aws_region_name",
+                    "secret": False,
+                    "required": True,
+                    "is_file_path": False,
+                }
+            ],
+        },
+    )
+    assert len(result.credentials) == 1
+    assert result.credentials[0].litellm_param == "aws_region_name"
+
+
+def test_provider_credential_status_partial(monkeypatch: pytest.MonkeyPatch) -> None:
+    """US3 FR-4: per-field credential health, secret VALUES never emitted."""
+    from openreview_cli.gateway.models import CredentialField, ProviderInfo
+    from openreview_cli.gateway.registry import provider_credential_status
+
+    info = ProviderInfo(
+        name="bedrock",
+        credentials=[
+            CredentialField(
+                env_key="AWS_REGION_NAME",
+                label="Region",
+                litellm_param="aws_region_name",
+                secret=False,
+                required=True,
+            ),
+            CredentialField(
+                env_key="AWS_ACCESS_KEY_ID",
+                label="Access Key ID",
+                litellm_param="aws_access_key_id",
+                secret=True,
+                required=True,
+            ),
+            CredentialField(
+                env_key="AWS_SECRET_ACCESS_KEY",
+                label="Secret Access Key",
+                litellm_param="aws_secret_access_key",
+                secret=True,
+                required=True,
+            ),
+        ],
+    )
+
+    # Hermetic: clear any AWS_* leaked by earlier tests in the suite.
+    for var in ("AWS_REGION_NAME", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"):
+        monkeypatch.delenv(var, raising=False)
+
+    # No env, empty auth -> not configured, all fields unresolved.
+    result = provider_credential_status(info, {})
+    assert result["configured"] is False
+    assert len(result["credentials"]) == 3
+    assert all(not c["resolved"] for c in result["credentials"])
+    # No value-bearing keys anywhere.
+    for c in result["credentials"]:
+        assert "value" not in c
+        assert "secret_value" not in c
+
+    # Set only the region -> still not configured (2 missing), region resolved.
+    monkeypatch.setenv("AWS_REGION_NAME", "us-east-1")
+    result = provider_credential_status(info, {})
+    assert result["configured"] is False
+    assert result["credentials"][0]["resolved"] is True
+    assert result["credentials"][1]["resolved"] is False
+    assert result["credentials"][2]["resolved"] is False
+    # The secret value must never appear in the serialized output.
+    assert "us-east-1" not in json.dumps(result)
+
+    # Set the secret too -> resolved, but its value still never emitted.
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "fake")
+    result = provider_credential_status(info, {})
+    assert result["credentials"][2]["resolved"] is True
+    assert "fake" not in json.dumps(result)

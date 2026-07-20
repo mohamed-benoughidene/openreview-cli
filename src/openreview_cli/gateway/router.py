@@ -137,15 +137,18 @@ class Gateway:
             raise CapabilityMismatchError(model.name, "requires tool_call support")
 
     def _set_env_vars(self) -> None:
-        for provider, key in self._auth.items():
-            from openreview_cli.config.auth import key_to_env
+        from openreview_cli.config.auth import key_to_env
 
-            env_name = key_to_env(provider)
-            if env_name and key:
-                import os
-
-                os.environ.setdefault(env_name, key)
-                logger.debug("Set %s to %s", env_name, redact_key(key))
+        for provider, creds in self._auth.items():
+            if isinstance(creds, str):
+                env_name = key_to_env(provider)
+                if env_name and creds:
+                    os.environ.setdefault(env_name, creds)
+                    logger.debug("Set %s to %s", env_name, redact_key(creds))
+            elif isinstance(creds, dict):
+                for env_key, val in creds.items():
+                    if env_key and val:
+                        os.environ.setdefault(env_key, val)
 
     def _get_slot_config(self, slot: str) -> dict[str, Any]:
         models = self._config.get("gateway", {}).get("models", {})
@@ -162,6 +165,22 @@ class Gateway:
         provider = cfg["primary"].split("/")[0]
         registry = load_registry()  # new registry source, not ModelRegistry.load()
         return registry.get(provider)
+
+    def _apply_provider_credentials(self, info: ProviderInfo, kwargs: dict[str, Any]) -> None:
+        """Map each declared CredentialField to its litellm kwarg.
+
+        Resolution order: environment variable, then auth.json per-provider
+        mapping ({provider: {env_key: value}}). Exact litellm param names come
+        from each field's litellm_param (verified via Context7).
+        """
+        for field in info.credentials:
+            value = os.environ.get(field.env_key)
+            if value is None:
+                stored = self._auth.get(info.name)
+                if isinstance(stored, dict):
+                    value = stored.get(field.env_key)
+            if value is not None:
+                kwargs[field.litellm_param] = value
 
     def _get_litellm_kwargs(self, slot: str) -> dict[str, Any]:
         cfg = self._get_slot_config(slot)
@@ -187,6 +206,9 @@ class Gateway:
         info = self._resolve_provider_info(slot)
         if info is not None and info.base_url:
             kwargs["api_base"] = info.base_url
+        # spec 034: map each declared credential field to its litellm kwarg.
+        if info is not None and info.credentials:
+            self._apply_provider_credentials(info, kwargs)
         # Custom OpenAI-compatible provider: litellm does not recognize the
         # provider prefix, so route via its openai provider with api_base set
         # above and inject the resolved key (litellm would otherwise look for
@@ -518,13 +540,14 @@ class Gateway:
         fallback_cfg = self._config.get("gateway", {}).get("fallback", {})
         timeout: int = fallback_cfg.get("timeout", 60)
 
+        kwargs = self._get_litellm_kwargs(slot)
         try:
             response = rerank(
-                model=cfg["primary"],
                 query=query,
                 documents=documents,
                 top_n=top_n,
                 timeout=timeout,
+                **kwargs,
             )
         except Exception as e:
             classified = self._classify_error(e, provider=cfg["primary"].split("/")[0])

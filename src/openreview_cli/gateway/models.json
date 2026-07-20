@@ -399,6 +399,50 @@
                     "status": "active"
                 }
             }
+        },
+        "bedrock": {
+            "name": "AWS Bedrock",
+            "env_key": "AWS_ACCESS_KEY_ID",
+            "auth_required": true,
+            "base_url": null,
+            "is_local": false,
+            "source": "bundled",
+            "capabilities": { "embedding": false, "reasoning": true, "context_window": 200000, "tool_call": true, "rerank": false },
+            "credentials": [
+                {"env_key": "AWS_REGION_NAME", "label": "AWS Region", "litellm_param": "aws_region_name", "secret": false, "required": true, "is_file_path": false},
+                {"env_key": "AWS_ACCESS_KEY_ID", "label": "AWS Access Key ID", "litellm_param": "aws_access_key_id", "secret": true, "required": true, "is_file_path": false},
+                {"env_key": "AWS_SECRET_ACCESS_KEY", "label": "AWS Secret Access Key", "litellm_param": "aws_secret_access_key", "secret": true, "required": true, "is_file_path": false}
+            ],
+            "models": {}
+        },
+        "vertex": {
+            "name": "Google Vertex AI",
+            "env_key": "GOOGLE_APPLICATION_CREDENTIALS",
+            "auth_required": true,
+            "base_url": null,
+            "is_local": false,
+            "source": "bundled",
+            "capabilities": { "embedding": true, "reasoning": true, "context_window": 200000, "tool_call": true, "rerank": false },
+            "credentials": [
+                {"env_key": "VERTEX_PROJECT", "label": "GCP Project ID", "litellm_param": "vertex_project", "secret": false, "required": true, "is_file_path": false},
+                {"env_key": "VERTEX_LOCATION", "label": "GCP Region", "litellm_param": "vertex_location", "secret": false, "required": true, "is_file_path": false},
+                {"env_key": "GOOGLE_APPLICATION_CREDENTIALS", "label": "ADC JSON Path", "litellm_param": "vertex_credentials", "secret": false, "required": true, "is_file_path": true}
+            ],
+            "models": {}
+        },
+        "azure": {
+            "name": "Azure OpenAI",
+            "env_key": "AZURE_API_KEY",
+            "auth_required": true,
+            "base_url": "https://your-resource.openai.azure.com",
+            "is_local": false,
+            "source": "bundled",
+            "capabilities": { "embedding": true, "reasoning": true, "context_window": 128000, "tool_call": true, "rerank": false },
+            "credentials": [
+                {"env_key": "AZURE_API_KEY", "label": "Azure API Key", "litellm_param": "api_key", "secret": true, "required": true, "is_file_path": false},
+                {"env_key": "AZURE_API_VERSION", "label": "Azure API Version", "litellm_param": "api_version", "secret": false, "required": true, "is_file_path": false}
+            ],
+            "models": {}
         }
     }
 }

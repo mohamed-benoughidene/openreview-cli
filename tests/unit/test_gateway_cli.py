@@ -146,3 +146,40 @@ def test_provider_add_derives_env_when_omitted(monkeypatch: Any) -> None:
     result = runner.invoke(app, ["gateway", "provider", "add", "myfoo", "--base-url", "http://x"])
     assert result.exit_code == 0, result.output
     assert recorded["api_key_env"] == "MYFOO_API_KEY"
+
+
+def test_provider_add_rejects_empty_cred(tmp_path: Any, monkeypatch: Any) -> None:
+    """T038 — FR-5: `--cred KEY=` (empty value) must be rejected, not stored."""
+    monkeypatch.setattr("openreview_cli.config.paths.get_config_dir", lambda: tmp_path)
+
+    def _stub(
+        name: str, base_url: str, capabilities: Any = None, api_key_env: str | None = None
+    ) -> Any:
+        return _make_provider(
+            name, source="custom", env_key=api_key_env or f"{name.upper()}_API_KEY"
+        )
+
+    monkeypatch.setattr("openreview_cli.gateway.registry.add_custom_provider", _stub)
+
+    result = runner.invoke(
+        app,
+        [
+            "gateway",
+            "provider",
+            "add",
+            "myfoo",
+            "--base-url",
+            "http://x",
+            "--cred",
+            "AWS_REGION_NAME=",
+        ],
+    )
+    assert result.exit_code != 0, result.output
+    assert "empty" in result.output.lower(), result.output
+
+    auth_path = tmp_path / "auth.json"
+    if auth_path.exists():
+        data = json.loads(auth_path.read_text())
+        for prov in data.values():
+            if isinstance(prov, dict):
+                assert all(v != "" for v in prov.values()), f"empty cred stored: {data}"

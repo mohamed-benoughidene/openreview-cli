@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -30,6 +31,7 @@ def _build_provider(name: str, info: dict[str, Any]) -> ProviderInfo:
     caps_raw = info.pop("capabilities", None)
     caps = Capability(**caps_raw) if caps_raw else Capability()
     env_key = info.get("env_key") or info.get("api_key_env")
+    creds_raw = info.pop("credentials", [])
     return ProviderInfo(
         name=info.get("name", name),
         env_key=env_key,
@@ -39,6 +41,7 @@ def _build_provider(name: str, info: dict[str, Any]) -> ProviderInfo:
         source=info.get("source", "bundled"),
         capabilities=caps,
         models=models,
+        credentials=creds_raw,
     )
 
 
@@ -76,6 +79,37 @@ def load_registry() -> dict[str, ProviderInfo]:
                 merged[custom["name"]] = _build_provider(custom["name"], custom)
 
     return merged
+
+
+def provider_credential_status(info: ProviderInfo, auth: dict[str, Any]) -> dict[str, Any]:
+    """Per-field credential resolution for a provider. Never includes values.
+
+    Resolution order matches router._apply_provider_credentials: environment
+    variable first, then the auth.json dict (new dict form keyed by env_key).
+    """
+    stored = auth.get(info.name)
+    stored_dict = stored if isinstance(stored, dict) else {}
+    fields: list[dict[str, Any]] = []
+    for f in info.credentials:
+        resolved = bool(os.environ.get(f.env_key) or stored_dict.get(f.env_key))
+        fields.append(
+            {
+                "env_key": f.env_key,
+                "label": f.label,
+                "secret": f.secret,
+                "required": f.required,
+                "litellm_param": f.litellm_param,
+                "resolved": resolved,
+            }
+        )
+    if fields:
+        configured = all(f["resolved"] for f in fields if f["required"])
+    elif info.env_key:
+        # ponytail: legacy single-key providers — configured if env or stored string set
+        configured = bool(stored or os.environ.get(info.env_key))
+    else:
+        configured = bool(stored)
+    return {"configured": configured, "credentials": fields}
 
 
 def add_custom_provider(
@@ -125,11 +159,13 @@ class ModelRegistry:
         for name, info in providers_raw.items():
             models_raw = info.pop("models", {})
             models = {k: ModelEntry(**v) for k, v in models_raw.items()}
+            creds_raw = info.pop("credentials", [])
             self._providers[name] = ProviderInfo(
                 name=info["name"],
                 env_key=info.get("env_key"),
                 auth_required=info.get("auth_required", True),
                 models=models,
+                credentials=creds_raw,
             )
 
     def list_providers(self) -> list[dict[str, Any]]:

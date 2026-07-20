@@ -80,8 +80,12 @@ def get_slot_configs() -> dict[str, dict[str, Any]]:
 
 
 def list_providers() -> list[dict[str, Any]]:
-    """List available providers from registry."""
+    """List available providers from registry, with per-field credential health."""
+    from openreview_cli.config.auth import load_auth
+    from openreview_cli.gateway.registry import provider_credential_status
+
     reg = _get_registry()
+    auth = load_auth(_PATHS["auth"])
     return _safe(
         lambda: [
             {
@@ -89,6 +93,7 @@ def list_providers() -> list[dict[str, Any]]:
                 "env_key": p.env_key,
                 "auth_required": p.auth_required,
                 "model_count": len(p.models),
+                **provider_credential_status(p, auth),
             }
             for n, p in reg.items()
         ],

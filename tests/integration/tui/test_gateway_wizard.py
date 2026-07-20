@@ -213,6 +213,62 @@ class TestGatewayWizard:
             gw_mod.save_slot_config = orig_save  # type: ignore[method-assign]
             gw_mod.gateway_health_check = orig_health  # type: ignore[method-assign]
 
+    async def test_wizard_step2_shows_per_field_status(self) -> None:
+        """T036 — FR-4 (TUI half): provider list renders per-field status.
+
+        A multi-field provider's list item must expose each credential
+        field's resolved flag (✓/✗), not just the provider name.
+        """
+        bedrock = {
+            "name": "AWS Bedrock",
+            "auth_required": True,
+            "model_count": 0,
+            "credentials": [
+                {
+                    "env_key": "AWS_REGION_NAME",
+                    "label": "Region",
+                    "resolved": True,
+                    "secret": False,
+                    "required": True,
+                },
+                {
+                    "env_key": "AWS_ACCESS_KEY_ID",
+                    "label": "Access Key ID",
+                    "resolved": False,
+                    "secret": True,
+                    "required": True,
+                },
+                {
+                    "env_key": "AWS_SECRET_ACCESS_KEY",
+                    "label": "Secret Access Key",
+                    "resolved": False,
+                    "secret": True,
+                    "required": True,
+                },
+            ],
+        }
+        gw_mod.list_providers = lambda: [bedrock]  # type: ignore[method-assign]
+
+        app = OpenReviewApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await app.push_screen(gw_mod.GatewayWizard())
+            await pilot.pause()
+            await pilot.click("#slot-list ListItem")
+            await pilot.pause()
+            await pilot.click("#wizard-next")
+            await pilot.pause()
+
+            provider_list = app.screen.query_one("#provider-list")
+            labels: dict[str, str] = {}
+            for child in provider_list.children:
+                c = child.children[0] if child.children else None
+                txt = str(c.content) if hasattr(c, "content") else ""
+                labels[child.name or ""] = txt
+
+            assert "AWS Bedrock" in labels
+            assert "✓" in labels["AWS Bedrock"], labels["AWS Bedrock"]
+            assert "✗" in labels["AWS Bedrock"], labels["AWS Bedrock"]
+
 
 class TestGatewayWizardExtended:
     """T027a — Paste into masked field test."""
