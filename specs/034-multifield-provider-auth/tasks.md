@@ -134,15 +134,13 @@ writes the mapping into `auth.json` (mode 600); wizard loop prompts per field an
 rejects a non-existent Vertex ADC path.
 
 ### Tests for User Story 4
-- [ ] T027 [P] [US4] Unit test `gateway provider add --cred` repeatable parsing in `tests/unit/test_gateway_cli.py`
-- [ ] T027a [P] [US4] Unit test `save_auth()` (or equivalent auth persistence method) supports dictionary mapping for multi-field providers in `tests/unit/test_config_loader.py`
-- [ ] T028 [P] [US4] Unit test wizard questionary loop over `provider.credentials` (mocked) + Vertex `is_file_path` existence/readability rejection in `tests/unit/test_gateway_wizard.py`
-
-### Implementation for User Story 4
-- [ ] T028a [US4] Update auth persistence in `src/openreview_cli/config/loader.py` to support dictionary mapping for multi-field providers instead of just strings (depends on T027a)
-- [ ] T029 [US4] Add repeatable `--cred` list-option (`Annotated[list[str]|None, typer.Option()]`) to `gateway provider add` in `src/openreview_cli/app.py`; parse `key=value`, store in `auth.json` per-provider mapping
-- [ ] T030 [US4] Extend wizard in `src/openreview_cli/gateway/wizard.py` to loop `provider.credentials`, prompt per `label`, mask `secret=true`, validate `is_file_path=true` via `os.path.isfile` + `os.access(..., os.R_OK)`
-- [ ] T031 [US4] Run US4 unit tests green
+- [x] T027 [P] [US4] Unit test `gateway provider add --cred` repeatable parsing in `tests/unit/test_gateway_cli.py` — DONE (test_provider_add_writes_dict_shaped_auth, merged 4f4663b)
+- [x] T027a [P] [US4] Unit test auth persistence supports dictionary mapping for multi-field providers — DONE (test_save_provider_credentials_writes_dict_and_preserves_legacy in test_auth.py; NOTE: load_auth/save live in config/auth.py, not config/loader.py as task text guessed)
+- [x] T028 [P] [US4] Unit test wizard questionary loop over `provider.credentials` (mocked) + Vertex `is_file_path` rejection in `tests/unit/test_gateway_wizard.py` — DONE (test_wizard_collects_per_field_credentials + test_wizard_rejects_missing_vertex_adc_path)
+- [x] T028a [US4] Update auth persistence to support dictionary mapping for multi-field providers — DONE in config/auth.py (load_auth -> dict[str, Any] preserves both shapes; save_provider_credentials merges dict; ALSO fixed _set_env_vars bug: legacy string + new dict coexist, regression test added) — merged 4f4663b
+- [x] T029 [US4] Add repeatable `--cred` list-option to `gateway provider add` in `src/openreview_cli/app.py`; parse `key=value`, store dict in auth.json — DONE (merged 4f4663b)
+- [x] T030 [US4] Extend wizard in `src/openreview_cli/gateway/wizard.py` to loop `provider.credentials`, mask secret, validate `is_file_path` — DONE (merged 4f4663b)
+- [x] T031 [US4] Run US4 unit tests green — DONE (74 passed; pre-commit clean)
 
 **Checkpoint**: US4 functional + testable. FR-5, FR-7 covered.
 
