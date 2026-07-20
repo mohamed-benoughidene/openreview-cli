@@ -62,13 +62,13 @@ without `credentials` re-loads with `credentials == []`; existing `openai` entry
 `models.json` still loads via `load_registry()`.
 
 ### Tests for User Story 1
-- [ ] T007 [P] [US1] Test `CredentialField` construction + `model_dump()` includes `credentials` in `tests/unit/test_gateway_models.py`
-- [ ] T008 [P] [US1] Test `ProviderInfo` without `credentials` loads with `[]` default in `tests/unit/test_gateway_models.py`
-- [ ] T009 [P] [US1] Test `load_registry()` returns single-key providers with empty `credentials` in `tests/unit/test_gateway_registry.py`
+- [x] T007 [P] [US1] Test `CredentialField` construction + `model_dump()` includes `credentials` in `tests/unit/test_gateway_models.py` — SATISFIED by Phase 2 T006 (TestCredentialField @models.py:55, model_dump round-trip @:78/:108)
+- [x] T008 [P] [US1] Test `ProviderInfo` without `credentials` loads with `[]` default in `tests/unit/test_gateway_models.py` — SATISFIED by Phase 2 T006 (assert p.credentials==[] @models.py:98)
+- [x] T009 [P] [US1] Test `load_registry()` returns single-key providers with empty `credentials` in `tests/unit/test_gateway_registry.py` — SATISFIED by Phase 2 T006 (test_build_provider_without_credentials_defaults_empty @registry.py:418)`
 
 ### Implementation for User Story 1
-- [ ] T010 [US1] Finalize `CredentialField` + `ProviderInfo.credentials` in `src/openreview_cli/gateway/models.py` (depends on T003, T004)
-- [ ] T011 [US1] Run `tests/unit/test_gateway_models.py` and `tests/unit/test_gateway_registry.py` green
+- [x] T010 [US1] Finalize `CredentialField` + `ProviderInfo.credentials` in `src/openreview_cli/gateway/models.py` (depends on T003, T004) — DONE in Phase 2 (models.py:17/42, merged e5d05ab)
+- [x] T011 [US1] Run `tests/unit/test_gateway_models.py` and `tests/unit/test_gateway_registry.py` green — DONE Phase 2 (36 passed, pre-commit clean)
 
 **Checkpoint**: US1 fully functional and testable independently.
 
