@@ -1,265 +1,404 @@
 {
-  "providers": {
-    "openai": {
-      "name": "OpenAI",
-      "env_key": "OPENAI_API_KEY",
-      "auth_required": true,
-      "base_url": "https://api.openai.com/v1",
-      "is_local": false,
-      "source": "bundled",
-      "capabilities": {"embedding": true, "reasoning": true, "context_window": 128000, "tool_call": true},
-      "models": {
-        "gpt-4o": {
-          "slots": ["reasoning", "extraction", "graph"],
-          "context": 128000,
-          "recommended": true,
-          "status": "active"
-        },
-        "gpt-4o-mini": {
-          "slots": ["reasoning", "extraction", "graph"],
-          "context": 128000,
-          "recommended": true,
-          "status": "active"
-        },
-        "text-embedding-3-small": {
-          "slots": ["embedding"],
-          "context": 8192,
-          "dimensions": 1536,
-          "recommended": true,
-          "status": "active"
-        }
-      }
-    },
-    "anthropic": {
-      "name": "Anthropic",
-      "env_key": "ANTHROPIC_API_KEY",
-      "auth_required": true,
-      "base_url": "https://api.anthropic.com/v1",
-      "is_local": false,
-      "source": "bundled",
-      "capabilities": {"embedding": false, "reasoning": true, "context_window": 200000, "tool_call": true},
-      "models": {
-        "claude-sonnet-latest": {
-          "slots": ["reasoning", "extraction", "graph"],
-          "context": 200000,
-          "recommended": true,
-          "status": "active"
-        },
-        "claude-haiku-latest": {
-          "slots": ["reasoning", "extraction", "graph"],
-          "context": 200000,
-          "recommended": false,
-          "status": "active"
-        }
-      }
-    },
-    "google": {
-      "name": "Google",
-      "env_key": "GOOGLE_API_KEY",
-      "auth_required": true,
-      "base_url": "https://generativelanguage.googleapis.com/v1",
-      "is_local": false,
-      "source": "bundled",
-      "capabilities": {"embedding": true, "reasoning": true, "context_window": 1048576, "tool_call": true},
-      "models": {
-        "gemini-2.0-flash": {
-          "slots": ["reasoning", "extraction", "graph"],
-          "context": 1048576,
-          "recommended": true,
-          "status": "active"
-        },
-        "text-embedding-004": {
-          "slots": ["embedding"],
-          "dimensions": 768,
-          "recommended": true,
-          "status": "active"
-        }
-      }
-    },
-    "ollama": {
-      "name": "Ollama",
-      "env_key": null,
-      "auth_required": false,
-      "base_url": "http://localhost:11434/v1",
-      "is_local": true,
-      "source": "bundled",
-      "capabilities": {"embedding": true, "reasoning": true, "context_window": 32768, "tool_call": true},
-      "models": {
-        "qwen3:8b": {
-          "slots": ["reasoning", "extraction", "graph"],
-          "context": 32768,
-          "ram": "5.2 GB",
-          "recommended": true,
-          "status": "active",
-          "note": "Local — requires ~5.2 GB RAM",
-          "extra_params": {
-            "num_ctx": 32768,
-            "num_gpu": 1,
-            "num_predict": 4096
-          }
-        },
-        "qwen3:4b": {
-          "slots": ["reasoning", "extraction", "graph"],
-          "context": 32768,
-          "ram": "2.8 GB",
-          "recommended": false,
-          "status": "active",
-          "note": "Local — faster, less capable",
-          "extra_params": {
-            "num_ctx": 16384,
-            "num_gpu": 0,
-            "num_predict": 2048,
-            "options": {
-              "mirostat": 2
+    "providers": {
+        "openai": {
+            "name": "OpenAI",
+            "env_key": "OPENAI_API_KEY",
+            "auth_required": true,
+            "base_url": "https://api.openai.com/v1",
+            "is_local": false,
+            "source": "bundled",
+            "capabilities": {
+                "embedding": true,
+                "reasoning": true,
+                "context_window": 128000,
+                "tool_call": true
+            },
+            "models": {
+                "gpt-4o": {
+                    "slots": ["reasoning", "extraction", "graph"],
+                    "context": 128000,
+                    "recommended": true,
+                    "status": "active"
+                },
+                "gpt-4o-mini": {
+                    "slots": ["reasoning", "extraction", "graph"],
+                    "context": 128000,
+                    "recommended": true,
+                    "status": "active"
+                },
+                "text-embedding-3-small": {
+                    "slots": ["embedding"],
+                    "context": 8192,
+                    "dimensions": 1536,
+                    "recommended": true,
+                    "status": "active"
+                }
             }
-          }
         },
-        "nomic-embed-text": {
-          "slots": ["embedding"],
-          "context": 8192,
-          "dimensions": 768,
-          "ram": "274 MB",
-          "recommended": true,
-          "status": "active",
-          "note": "Local embedding, ~274 MB"
+        "anthropic": {
+            "name": "Anthropic",
+            "env_key": "ANTHROPIC_API_KEY",
+            "auth_required": true,
+            "base_url": "https://api.anthropic.com/v1",
+            "is_local": false,
+            "source": "bundled",
+            "capabilities": {
+                "embedding": false,
+                "reasoning": true,
+                "context_window": 200000,
+                "tool_call": true
+            },
+            "models": {
+                "claude-sonnet-latest": {
+                    "slots": ["reasoning", "extraction", "graph"],
+                    "context": 200000,
+                    "recommended": true,
+                    "status": "active"
+                },
+                "claude-haiku-latest": {
+                    "slots": ["reasoning", "extraction", "graph"],
+                    "context": 200000,
+                    "recommended": false,
+                    "status": "active"
+                }
+            }
         },
-        "qwen3-reranker-0.6b": {
-          "slots": ["reranking"],
-          "context": 8192,
-          "ram": "600 MB",
-          "recommended": true,
-          "status": "active",
-          "note": "Local reranker"
-        }
-      }
-    },
-    "openrouter": {
-      "name": "OpenRouter",
-      "env_key": "OPENROUTER_API_KEY",
-      "auth_required": true,
-      "base_url": "https://openrouter.ai/api/v1",
-      "is_local": false,
-      "source": "bundled",
-      "capabilities": {"embedding": true, "reasoning": true, "context_window": 200000, "tool_call": true},
-      "models": {
-        "openai/gpt-4o": {
-          "slots": ["reasoning", "extraction", "graph"],
-          "context": 128000,
-          "recommended": true,
-          "status": "active",
-          "note": "Routed through OpenRouter"
+        "google": {
+            "name": "Google",
+            "env_key": "GOOGLE_API_KEY",
+            "auth_required": true,
+            "base_url": "https://generativelanguage.googleapis.com/v1",
+            "is_local": false,
+            "source": "bundled",
+            "capabilities": {
+                "embedding": true,
+                "reasoning": true,
+                "context_window": 1048576,
+                "tool_call": true
+            },
+            "models": {
+                "gemini-2.0-flash": {
+                    "slots": ["reasoning", "extraction", "graph"],
+                    "context": 1048576,
+                    "recommended": true,
+                    "status": "active"
+                },
+                "text-embedding-004": {
+                    "slots": ["embedding"],
+                    "dimensions": 768,
+                    "recommended": true,
+                    "status": "active"
+                }
+            }
         },
-        "anthropic/claude-sonnet-latest": {
-          "slots": ["reasoning", "extraction", "graph"],
-          "context": 200000,
-          "recommended": false,
-          "status": "active",
-          "note": "Routed through OpenRouter"
-        }
-      }
-    },
-    "cohere": {
-      "name": "Cohere",
-      "env_key": "COHERE_API_KEY",
-      "auth_required": true,
-      "base_url": "https://api.cohere.ai/v1",
-      "is_local": false,
-      "source": "bundled",
-      "capabilities": {"embedding": true, "reasoning": true, "context_window": 128000, "tool_call": true},
-      "models": {
-        "command-r-plus": {
-          "slots": ["reasoning", "extraction", "graph"],
-          "context": 128000,
-          "recommended": true,
-          "status": "active"
+        "ollama": {
+            "name": "Ollama",
+            "env_key": null,
+            "auth_required": false,
+            "base_url": "http://localhost:11434/v1",
+            "is_local": true,
+            "source": "bundled",
+            "capabilities": {
+                "embedding": true,
+                "reasoning": true,
+                "context_window": 32768,
+                "tool_call": true
+            },
+            "models": {
+                "qwen3:8b": {
+                    "slots": ["reasoning", "extraction", "graph"],
+                    "context": 32768,
+                    "ram": "5.2 GB",
+                    "recommended": true,
+                    "status": "active",
+                    "note": "Local — requires ~5.2 GB RAM",
+                    "extra_params": {"num_ctx": 32768, "num_gpu": 1, "num_predict": 4096}
+                },
+                "qwen3:4b": {
+                    "slots": ["reasoning", "extraction", "graph"],
+                    "context": 32768,
+                    "ram": "2.8 GB",
+                    "recommended": false,
+                    "status": "active",
+                    "note": "Local — faster, less capable",
+                    "extra_params": {
+                        "num_ctx": 16384,
+                        "num_gpu": 0,
+                        "num_predict": 2048,
+                        "options": {"mirostat": 2}
+                    }
+                },
+                "nomic-embed-text": {
+                    "slots": ["embedding"],
+                    "context": 8192,
+                    "dimensions": 768,
+                    "ram": "274 MB",
+                    "recommended": true,
+                    "status": "active",
+                    "note": "Local embedding, ~274 MB"
+                },
+                "qwen3-reranker-0.6b": {
+                    "slots": ["reranking"],
+                    "context": 8192,
+                    "ram": "600 MB",
+                    "recommended": true,
+                    "status": "active",
+                    "note": "Local reranker"
+                }
+            }
         },
-        "embed-english-v3.0": {
-          "slots": ["embedding"],
-          "dimensions": 1024,
-          "recommended": true,
-          "status": "active"
+        "openrouter": {
+            "name": "OpenRouter",
+            "env_key": "OPENROUTER_API_KEY",
+            "auth_required": true,
+            "base_url": "https://openrouter.ai/api/v1",
+            "is_local": false,
+            "source": "bundled",
+            "capabilities": {
+                "embedding": true,
+                "reasoning": true,
+                "context_window": 200000,
+                "tool_call": true
+            },
+            "models": {
+                "openai/gpt-4o": {
+                    "slots": ["reasoning", "extraction", "graph"],
+                    "context": 128000,
+                    "recommended": true,
+                    "status": "active",
+                    "note": "Routed through OpenRouter"
+                },
+                "anthropic/claude-sonnet-latest": {
+                    "slots": ["reasoning", "extraction", "graph"],
+                    "context": 200000,
+                    "recommended": false,
+                    "status": "active",
+                    "note": "Routed through OpenRouter"
+                }
+            }
         },
-        "rerank-english-v3.0": {
-          "slots": ["reranking"],
-          "context": 8192,
-          "recommended": true,
-          "status": "active"
-        }
-      }
-    },
-    "huggingface": {
-      "name": "HuggingFace",
-      "env_key": "HUGGINGFACE_API_KEY",
-      "auth_required": true,
-      "base_url": "https://api-inference.huggingface.co/v1",
-      "is_local": false,
-      "source": "bundled",
-      "capabilities": {"embedding": true, "reasoning": true, "context_window": 8192, "tool_call": true},
-      "models": {
-        "meta-llama/Llama-3.3-70B-Instruct": {
-          "slots": ["reasoning", "extraction", "graph"],
-          "context": 8192,
-          "recommended": true,
-          "status": "active"
+        "cohere": {
+            "name": "Cohere",
+            "env_key": "COHERE_API_KEY",
+            "auth_required": true,
+            "base_url": "https://api.cohere.ai/v1",
+            "is_local": false,
+            "source": "bundled",
+            "capabilities": {
+                "embedding": true,
+                "reasoning": true,
+                "context_window": 128000,
+                "tool_call": true
+            },
+            "models": {
+                "command-r-plus": {
+                    "slots": ["reasoning", "extraction", "graph"],
+                    "context": 128000,
+                    "recommended": true,
+                    "status": "active"
+                },
+                "embed-english-v3.0": {
+                    "slots": ["embedding"],
+                    "dimensions": 1024,
+                    "recommended": true,
+                    "status": "active"
+                },
+                "rerank-english-v3.0": {
+                    "slots": ["reranking"],
+                    "context": 8192,
+                    "recommended": true,
+                    "status": "active"
+                }
+            }
         },
-        "BAAI/bge-large-en-v1.5": {
-          "slots": ["embedding"],
-          "dimensions": 1024,
-          "recommended": true,
-          "status": "active"
+        "huggingface": {
+            "name": "HuggingFace",
+            "env_key": "HUGGINGFACE_API_KEY",
+            "auth_required": true,
+            "base_url": "https://api-inference.huggingface.co/v1",
+            "is_local": false,
+            "source": "bundled",
+            "capabilities": {
+                "embedding": true,
+                "reasoning": true,
+                "context_window": 8192,
+                "tool_call": true
+            },
+            "models": {
+                "meta-llama/Llama-3.3-70B-Instruct": {
+                    "slots": ["reasoning", "extraction", "graph"],
+                    "context": 8192,
+                    "recommended": true,
+                    "status": "active"
+                },
+                "BAAI/bge-large-en-v1.5": {
+                    "slots": ["embedding"],
+                    "dimensions": 1024,
+                    "recommended": true,
+                    "status": "active"
+                }
+            }
+        },
+        "deepseek": {
+            "name": "DeepSeek",
+            "env_key": "DEEPSEEK_API_KEY",
+            "auth_required": true,
+            "base_url": "https://api.deepseek.com",
+            "is_local": false,
+            "source": "bundled",
+            "capabilities": {
+                "embedding": false,
+                "reasoning": true,
+                "context_window": 64000,
+                "tool_call": true
+            },
+            "models": {
+                "deepseek-chat": {
+                    "slots": ["extraction", "reasoning", "qa"],
+                    "context": 64000,
+                    "recommended": true,
+                    "status": "active"
+                }
+            }
+        },
+        "qwen": {
+            "name": "Qwen",
+            "env_key": "DASHSCOPE_API_KEY",
+            "auth_required": true,
+            "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "is_local": false,
+            "source": "bundled",
+            "capabilities": {
+                "embedding": true,
+                "reasoning": true,
+                "context_window": 32768,
+                "tool_call": true
+            },
+            "models": {
+                "qwen-plus": {
+                    "slots": ["extraction", "embedding", "reasoning"],
+                    "context": 32768,
+                    "recommended": true,
+                    "status": "active"
+                }
+            }
+        },
+        "minimax": {
+            "name": "MiniMax",
+            "env_key": "MINIMAX_API_KEY",
+            "auth_required": true,
+            "base_url": "https://api.minimax.io/v1",
+            "is_local": false,
+            "source": "bundled",
+            "capabilities": {
+                "embedding": false,
+                "reasoning": true,
+                "context_window": 32000,
+                "tool_call": true
+            },
+            "models": {
+                "minimax-chat": {
+                    "slots": ["extraction", "reasoning"],
+                    "context": 32000,
+                    "recommended": true,
+                    "status": "active"
+                }
+            }
+        },
+        "voyage": {
+            "name": "Voyage AI",
+            "env_key": "VOYAGE_API_KEY",
+            "auth_required": true,
+            "base_url": "https://api.voyageai.com/v1",
+            "is_local": false,
+            "source": "bundled",
+            "capabilities": {
+                "embedding": true,
+                "reasoning": false,
+                "context_window": null,
+                "tool_call": false,
+                "rerank": true
+            },
+            "models": {
+                "voyage-3.5": {
+                    "slots": ["embedding"],
+                    "dimensions": 1024,
+                    "recommended": true,
+                    "status": "active"
+                },
+                "rerank-2.5": {"slots": ["rerank"], "recommended": true, "status": "active"}
+            }
+        },
+        "moonshot": {
+            "name": "Moonshot AI (Kimi)",
+            "env_key": "MOONSHOT_API_KEY",
+            "auth_required": true,
+            "base_url": "https://api.moonshot.ai/v1",
+            "is_local": false,
+            "source": "bundled",
+            "capabilities": {
+                "embedding": false,
+                "reasoning": true,
+                "context_window": 131072,
+                "tool_call": true
+            },
+            "models": {
+                "kimi-k2": {
+                    "slots": ["extraction", "reasoning", "qa"],
+                    "context": 131072,
+                    "recommended": true,
+                    "status": "active"
+                }
+            }
+        },
+        "mistral": {
+            "name": "Mistral AI",
+            "env_key": "MISTRAL_API_KEY",
+            "auth_required": true,
+            "base_url": "https://api.mistral.ai/v1",
+            "is_local": false,
+            "source": "bundled",
+            "capabilities": {
+                "embedding": false,
+                "reasoning": true,
+                "context_window": 128000,
+                "tool_call": true
+            },
+            "models": {
+                "magistral-medium-2506": {
+                    "slots": ["reasoning"],
+                    "context": 128000,
+                    "recommended": true,
+                    "status": "active"
+                },
+                "mistral-large-latest": {
+                    "slots": ["extraction", "tool_call", "qa"],
+                    "context": 128000,
+                    "status": "active"
+                }
+            }
+        },
+        "zai": {
+            "name": "Z.ai (GLM)",
+            "env_key": "ZAI_API_KEY",
+            "auth_required": true,
+            "base_url": "https://api.z.ai/v1",
+            "is_local": false,
+            "source": "bundled",
+            "capabilities": {
+                "embedding": false,
+                "reasoning": true,
+                "context_window": 200000,
+                "tool_call": false
+            },
+            "models": {
+                "glm-4.7": {
+                    "slots": ["extraction", "reasoning", "qa"],
+                    "context": 200000,
+                    "recommended": true,
+                    "status": "active"
+                }
+            }
         }
-      }
-    },
-    "deepseek": {
-      "name": "DeepSeek",
-      "env_key": "DEEPSEEK_API_KEY",
-      "auth_required": true,
-      "base_url": "https://api.deepseek.com",
-      "is_local": false,
-      "source": "bundled",
-      "capabilities": {"embedding": false, "reasoning": true, "context_window": 64000, "tool_call": true},
-      "models": {
-        "deepseek-chat": {
-          "slots": ["extraction", "reasoning", "qa"],
-          "context": 64000,
-          "recommended": true,
-          "status": "active"
-        }
-      }
-    },
-    "qwen": {
-      "name": "Qwen",
-      "env_key": "DASHSCOPE_API_KEY",
-      "auth_required": true,
-      "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-      "is_local": false,
-      "source": "bundled",
-      "capabilities": {"embedding": true, "reasoning": true, "context_window": 32768, "tool_call": true},
-      "models": {
-        "qwen-plus": {
-          "slots": ["extraction", "embedding", "reasoning"],
-          "context": 32768,
-          "recommended": true,
-          "status": "active"
-        }
-      }
-    },
-    "minimax": {
-      "name": "MiniMax",
-      "env_key": "MINIMAX_API_KEY",
-      "auth_required": true,
-      "base_url": "https://api.minimax.io/v1",
-      "is_local": false,
-      "source": "bundled",
-      "capabilities": {"embedding": false, "reasoning": true, "context_window": 32000, "tool_call": true},
-      "models": {
-        "minimax-chat": {
-          "slots": ["extraction", "reasoning"],
-          "context": 32000,
-          "recommended": true,
-          "status": "active"
-        }
-      }
     }
-  }
 }

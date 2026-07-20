@@ -933,3 +933,40 @@ class TestCitationGroundingDiscriminator:
         lines = [line for line in audit_path.read_text().strip().split("\n") if line]
         # Only the valid claim should have an entry
         assert len(lines) == 1
+
+
+def test_model_override_passed_to_gateway(
+    mock_gateway: MagicMock, sample_document: MagicMock
+) -> None:
+    """Regression: CitationGroundingDiscriminator(model=...) must override the
+    config default and reach Gateway.chat as the `model` kwarg. Without this,
+    run_grounding(model=...) / the CLI --model flag silently did nothing and
+    the config slot's primary was always used."""
+    d = CitationGroundingDiscriminator(
+        mode="lenient",
+        gateway=mock_gateway,
+        model="openrouter/deepseek/deepseek-r1",
+    )
+    d.ground_claim(
+        claim_text="The term is twelve months.",
+        cited_clause_id="clause-2",
+        clause_text="Clause 2. Term. Twelve months.",
+    )
+    assert mock_gateway.chat.called
+    _, kwargs = mock_gateway.chat.call_args
+    assert kwargs.get("model") == "openrouter/deepseek/deepseek-r1"
+
+
+def test_no_model_override_omits_model_kwarg(mock_gateway: MagicMock) -> None:
+    """When no model is given, the discriminator must NOT pass model=None
+    (which would clobber the config default). It should leave the model
+    resolution to Gateway via the slot config."""
+    d = CitationGroundingDiscriminator(mode="lenient", gateway=mock_gateway)
+    d.ground_claim(
+        claim_text="The term is twelve months.",
+        cited_clause_id="clause-2",
+        clause_text="Clause 2. Term. Twelve months.",
+    )
+    assert mock_gateway.chat.called
+    _, kwargs = mock_gateway.chat.call_args
+    assert "model" not in kwargs
