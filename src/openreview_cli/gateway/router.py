@@ -163,6 +163,22 @@ class Gateway:
         registry = load_registry()  # new registry source, not ModelRegistry.load()
         return registry.get(provider)
 
+    def _apply_provider_credentials(self, info: ProviderInfo, kwargs: dict[str, Any]) -> None:
+        """Map each declared CredentialField to its litellm kwarg.
+
+        Resolution order: environment variable, then auth.json per-provider
+        mapping ({provider: {env_key: value}}). Exact litellm param names come
+        from each field's litellm_param (verified via Context7).
+        """
+        for field in info.credentials:
+            value = os.environ.get(field.env_key)
+            if value is None:
+                stored = self._auth.get(info.name)
+                if isinstance(stored, dict):
+                    value = stored.get(field.env_key)
+            if value is not None:
+                kwargs[field.litellm_param] = value
+
     def _get_litellm_kwargs(self, slot: str) -> dict[str, Any]:
         cfg = self._get_slot_config(slot)
         kwargs: dict[str, Any] = {"model": cfg["primary"]}
@@ -187,6 +203,9 @@ class Gateway:
         info = self._resolve_provider_info(slot)
         if info is not None and info.base_url:
             kwargs["api_base"] = info.base_url
+        # spec 034: map each declared credential field to its litellm kwarg.
+        if info is not None and info.credentials:
+            self._apply_provider_credentials(info, kwargs)
         # Custom OpenAI-compatible provider: litellm does not recognize the
         # provider prefix, so route via its openai provider with api_base set
         # above and inject the resolved key (litellm would otherwise look for

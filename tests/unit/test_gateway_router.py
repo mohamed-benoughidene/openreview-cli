@@ -243,6 +243,66 @@ class TestGetLitellmKwargs:
         assert kwargs["max_tokens"] == 2048
         assert kwargs["top_p"] == 0.9
 
+    def test_get_litellm_kwargs_injects_bedrock_creds(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from openreview_cli.gateway.models import CredentialField
+
+        bedrock_info = ProviderInfo(
+            name="bedrock",
+            base_url=None,
+            credentials=[
+                CredentialField(
+                    env_key="AWS_REGION_NAME",
+                    label="Region",
+                    litellm_param="aws_region_name",
+                    secret=False,
+                    required=True,
+                ),
+                CredentialField(
+                    env_key="AWS_ACCESS_KEY_ID",
+                    label="Key",
+                    litellm_param="aws_access_key_id",
+                    secret=True,
+                    required=True,
+                ),
+                CredentialField(
+                    env_key="AWS_SECRET_ACCESS_KEY",
+                    label="Secret",
+                    litellm_param="aws_secret_access_key",
+                    secret=True,
+                    required=True,
+                ),
+            ],
+        )
+        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
+        monkeypatch.setattr(gw, "_resolve_provider_info", lambda slot: bedrock_info)
+        monkeypatch.setenv("AWS_REGION_NAME", "us-east-1")
+        monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIA_TEST")
+        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "secret_test")
+        try:
+            kwargs = gw._get_litellm_kwargs("extraction")
+            assert kwargs["aws_region_name"] == "us-east-1"
+            assert kwargs["aws_access_key_id"] == "AKIA_TEST"
+            assert kwargs["aws_secret_access_key"] == "secret_test"
+        finally:
+            monkeypatch.delenv("AWS_REGION_NAME", raising=False)
+            monkeypatch.delenv("AWS_ACCESS_KEY_ID", raising=False)
+            monkeypatch.delenv("AWS_SECRET_ACCESS_KEY", raising=False)
+
+    def test_get_litellm_kwargs_single_key_no_extra_creds(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
+        openai_info = ProviderInfo(name="openai", base_url=None, credentials=[])
+        monkeypatch.setattr(gw, "_resolve_provider_info", lambda slot: openai_info)
+
+        kwargs = gw._get_litellm_kwargs("extraction")
+
+        assert "aws_region_name" not in kwargs
+        assert "vertex_project" not in kwargs
+        assert "api_key" not in kwargs
+
 
 class TestExtraParamsPassThrough:
     def test_keys_appear_in_kwargs(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
