@@ -66,8 +66,18 @@ spend is invisible.
 - Should grounding cost be rolled into the parent review's totals when a
   grounding run IS part of a review session? (Currently grounding runs after
   `run_review` returns, so it has no session even then.)
-- Migration safety: existing `cost_logs` rows have real `session_id`s — the
-  alter must preserve them and only relax the constraint.
+ - Migration safety: existing `cost_logs` rows have real `session_id`s — the
+   alter must preserve them and only relax the constraint.
+ - Whichever option is picked (A or B) must also correctly feed the **daily and
+   session spend-LIMIT check**, not just the cost *report*. A grounding call
+   that is invisible to the limit check could let someone exceed real spending
+   caps unnoticed — the limit enforcement path must read the same cost rows the
+   report reads.
+ - Does 035 actually depend on 034 landing first? (Likely **no** — 035 is about
+   the `cost_logs.session_id` foreign key and cost recording; 034 is about
+   multi-field *provider* auth. They touch different layers. Confirm during
+   planning; the dependency was probably listed in error.)
+
 
 ## Acceptance criteria (draft)
 1. A grounding call (or any `Gateway.chat` without a review session) records its

@@ -62,7 +62,14 @@ Open questions to resolve during implementation:
   `api_base` from `info.base_url` and `api_key` from one key. Multi-field
   providers need each field mapped to the correct litellm param
   (e.g. `aws_region_name`, `vertex_project`, `api_base`). Map
-  `CredentialField.env_key` → litellm kwarg by a `litellm_param` attribute.
+   `CredentialField.env_key` → litellm kwarg by a `litellm_param` attribute.
+ - Where do multi-field credential *values* get stored — env vars only (like
+   today's single `env_key` providers), or also a fallback file such as the
+   `auth.json` that existing single-key providers use?
+ - `GOOGLE_APPLICATION_CREDENTIALS` is a **file path**, not a secret string.
+   Should the wizard validate that the file actually exists (and is readable)
+   when collecting it, rather than just storing the path?
+
 
 ## Scope guard
 
