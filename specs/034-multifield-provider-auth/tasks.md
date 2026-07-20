@@ -85,18 +85,18 @@ required env vars resolve (FR-3, FR-6).
 Single-key provider → no extra kwargs.
 
 ### Tests for User Story 2
-- [ ] T012 [P] [US2] Unit test `_get_litellm_kwargs` injects `aws_region_name` from credential field in `tests/unit/test_gateway_router.py`
-- [ ] T013 [P] [US2] Unit test single-key provider yields no extra credential kwargs (backward compat) in `tests/unit/test_gateway_router.py`
-- [ ] T014 [P] [US2] Unit test bedrock/vertex/azure entries load via `load_registry()` and report `configured=False` until env set, in `tests/unit/test_gateway_registry.py`
-- [ ] T015 [P] [US2] Integration: `tests/integration/test_provider_live.py` — live Bedrock `Gateway.chat` with real creds, skipped otherwise (guard like `test_grounding_live.py`)
+- [x] T012 [P] [US2] Unit test `_get_litellm_kwargs` injects `aws_region_name` from credential field in `tests/unit/test_gateway_router.py` — DONE (test asserts kwargs["aws_region_name"]=="us-east-1", merged ea6188e)
+- [x] T013 [P] [US2] Unit test single-key provider yields no extra credential kwargs (backward compat) in `tests/unit/test_gateway_router.py` — DONE (asserts no aws_/vertex_/api_key when credentials==[], merged ea6188e)
+- [x] T014 [P] [US2] Unit test bedrock/vertex/azure entries load via `load_registry()` and report `configured=False` until env set, in `tests/unit/test_gateway_registry.py` — DONE (test_registry_loads_multifield_providers_unconfigured, merged da6d899)
+- [x] T015 [P] [US2] Integration: `tests/integration/test_provider_live.py` — live Bedrock `Gateway.chat` with real creds, skipped otherwise — DONE (1 skipped, no AWS creds, expected per STOP #2; commit 2020576)
 
 ### Implementation for User Story 2
-- [ ] T016 [US2] Extend `Gateway._get_litellm_kwargs` in `src/openreview_cli/gateway/router.py` to loop `info.credentials` and set `kwargs[field.litellm_param] = env_or_auth(field)` (depends on T010)
-- [ ] T017 [US2] Add `auth` resolution helper in `src/openreview_cli/gateway/router.py`: `os.environ.get(field.env_key) or self._auth.get(info.name, {}).get(field.env_key)`
-- [ ] T018 [US2] Add bedrock entry (3 creds) to `src/openreview_cli/gateway/models.json` per contracts/provider-model.md
-- [ ] T019 [US2] Add vertex entry (project/location/ADC file-path cred) to `src/openreview_cli/gateway/models.json`
-- [ ] T020 [US2] Add azure entry (base_url endpoint + key/api_version creds) to `src/openreview_cli/gateway/models.json`
-- [ ] T021 [US2] Run router + registry unit tests and `tests/integration/test_provider_live.py` (skipped w/o creds) green
+- [x] T016 [US2] Extend `Gateway._get_litellm_kwargs` in `src/openreview_cli/gateway/router.py` to loop `info.credentials` and set `kwargs[field.litellm_param] = env_or_auth(field)` (depends on T010) — DONE (_apply_provider_credentials at router.py:166, called :208, merged ea6188e)
+- [x] T017 [US2] Add `auth` resolution helper in `src/openreview_cli/gateway/router.py`: `os.environ.get(field.env_key) or self._auth.get(info.name, {}).get(field.env_key)` — DONE (env-first then auth.json dict, isinstance guard, router.py:173-180)
+- [x] T018 [US2] Add bedrock entry (3 creds) to `src/openreview_cli/gateway/models.json` per contracts/provider-model.md — DONE (models.json bedrock, merged da6d899)
+- [x] T019 [US2] Add vertex entry (project/location/ADC file-path cred) to `src/openreview_cli/gateway/models.json` — DONE (vertex, is_file_path=true ADC, merged da6d899)
+- [x] T020 [US2] Add azure entry (base_url endpoint + key/api_version creds) to `src/openreview_cli/gateway/models.json` — DONE (azure, merged da6d899)
+- [x] T021 [US2] Run router + registry unit tests and `tests/integration/test_provider_live.py` (skipped w/o creds) green — DONE (75 passed, 1 skipped; pre-commit clean)
 
 **Checkpoint**: US2 functional + testable. FR-3, FR-6 covered.
 
