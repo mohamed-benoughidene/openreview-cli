@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+from typing import Any
 
 import questionary
 
 from openreview_cli.config.auth import _set_secure_permissions, load_auth
 from openreview_cli.config.paths import get_config_dir
+from openreview_cli.gateway.models import CredentialField
 from openreview_cli.gateway.registry import ModelRegistry
 
 SLOT_NAMES = ["reasoning", "extraction", "embedding", "reranking", "graph"]
@@ -22,9 +25,32 @@ PROVIDER_CHOICES = [
 ]
 
 
-def _write_auth(path: Path, data: dict[str, str]) -> None:
+def _write_auth(path: Path, data: dict[str, Any]) -> None:
     path.write_text(json.dumps(data, indent=2))
     _set_secure_permissions(path)
+
+
+def _collect_provider_credentials(creds: list[CredentialField]) -> dict[str, str] | None:
+    """Prompt the user for each declared credential field.
+
+    Returns the collected dict, or None if the user aborts (None answer) or
+    supplies an unreadable file path for an is_file_path field.
+    """
+    collected: dict[str, str] = {}
+    for field in creds:
+        prompt = (
+            questionary.password(f"{field.label}:")
+            if field.secret
+            else questionary.text(f"{field.label}:")
+        )
+        value = prompt.ask()
+        if value is None:
+            return None
+        if field.is_file_path and not (os.path.isfile(value) and os.access(value, os.R_OK)):
+            questionary.print(f"Path not readable, skipping: {value}", style="fg:red")
+            return None
+        collected[field.env_key] = value
+    return collected or None
 
 
 def gateway_setup() -> None:
@@ -68,11 +94,17 @@ def gateway_setup() -> None:
             info = next(
                 (p for p in registry.list_providers() if p["name"].lower() == provider), None
             )
-            env_key = info["env_key"] if info else None
-            if env_key and provider not in auth:
-                key = questionary.password(f"Enter your {provider} API key:").ask()
-                if key:
-                    auth[provider] = key
+            creds = info.get("credentials", []) if info else []
+            if creds:
+                collected = _collect_provider_credentials(creds)
+                if collected:
+                    auth[provider] = collected
+            else:
+                env_key = info["env_key"] if info else None
+                if env_key and provider not in auth:
+                    key = questionary.password(f"Enter your {provider} API key:").ask()
+                    if key:
+                        auth[provider] = key
 
     _write_auth(auth_path, auth)
     print("Gateway setup complete. Configuration saved.")

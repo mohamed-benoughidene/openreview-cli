@@ -1546,6 +1546,9 @@ def provider_add(
     env_key: str | None = typer.Option(
         None, "--env-key", help="API key env var (derived if omitted)."
     ),
+    creds: list[str] | None = typer.Option(
+        None, "--cred", help="key=value credential, repeatable (multi-field providers)."
+    ),
     cap_embedding: bool = typer.Option(False, "--cap-embedding", help="Supports embeddings."),
     cap_reasoning: bool = typer.Option(False, "--cap-reasoning", help="Supports reasoning/chat."),
     cap_tool_call: bool = typer.Option(False, "--cap-tool-call", help="Supports tool calls."),
@@ -1554,6 +1557,8 @@ def provider_add(
     ),
 ) -> None:
     """Add a custom OpenAI-compatible provider (non-interactive)."""
+    from openreview_cli.config.auth import save_provider_credentials
+    from openreview_cli.config.paths import get_config_dir
     from openreview_cli.gateway.errors import (
         EnvKeyCollisionError,
         ProviderNameCollisionError,
@@ -1575,6 +1580,16 @@ def provider_add(
     except (ProviderNameCollisionError, EnvKeyCollisionError) as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1) from None
+
+    if creds:
+        parsed: dict[str, str] = {}
+        for item in creds:
+            if "=" not in item:
+                typer.echo(f"Error: --cred must be key=value, got {item!r}", err=True)
+                raise typer.Exit(code=2)
+            key, value = item.split("=", 1)
+            parsed[key] = value
+        save_provider_credentials(get_config_dir() / "auth.json", name, parsed)
 
     typer.echo(
         f"Added provider '{name}' (source: custom). "

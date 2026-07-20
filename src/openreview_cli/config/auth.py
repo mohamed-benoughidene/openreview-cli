@@ -3,6 +3,7 @@ import logging
 import os
 import platform
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -21,12 +22,23 @@ def ensure_auth(auth_dir: Path) -> Path:
     return path
 
 
-def load_auth(path: Path) -> dict[str, str]:
-    data: dict[str, str] = json.loads(path.read_text())
-    for key in list(data.keys()):
-        env_val = os.environ.get(key_to_env(key))
-        if env_val:
-            data[key] = env_val
+def load_auth(path: Path) -> dict[str, Any]:
+    """Load auth.json, preserving both legacy single-string entries and new
+    multi-field dict entries.
+
+    Legacy string entries are overridable from the environment (keyed by
+    key_to_env(provider)). Dict-shaped (multi-field) entries are left as-is;
+    per-field environment overrides are resolved at call time in
+    Gateway._apply_provider_credentials.
+    """
+    if not path.exists():
+        return {}
+    data: dict[str, Any] = json.loads(path.read_text())
+    for key, val in list(data.items()):
+        if isinstance(val, str):
+            env_val = os.environ.get(key_to_env(key))
+            if env_val:
+                data[key] = env_val
     return data
 
 
@@ -63,6 +75,25 @@ def save_key(auth_path: Path, provider: str, key: str) -> None:
     ensure_auth(auth_path.parent)
     auth = json.loads(auth_path.read_text())
     auth[provider] = key
+    auth_path.write_text(json.dumps(auth, indent=2))
+    _set_secure_permissions(auth_path)
+
+
+def save_provider_credentials(auth_path: Path, provider: str, creds: dict[str, str]) -> None:
+    """Save multi-field credentials for a provider as a dict-shaped entry.
+
+    Merges into any existing dict-shaped entry for the provider (so repeated
+    calls add fields without clobbering others). A pre-existing legacy
+    string entry is replaced by the dict.
+    """
+    ensure_auth(auth_path.parent)
+    auth: dict[str, Any] = json.loads(auth_path.read_text()) if auth_path.exists() else {}
+    existing = auth.get(provider)
+    if isinstance(existing, dict):
+        existing.update(creds)
+        auth[provider] = existing
+    else:
+        auth[provider] = dict(creds)
     auth_path.write_text(json.dumps(auth, indent=2))
     _set_secure_permissions(auth_path)
 

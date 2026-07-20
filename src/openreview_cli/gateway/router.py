@@ -137,15 +137,18 @@ class Gateway:
             raise CapabilityMismatchError(model.name, "requires tool_call support")
 
     def _set_env_vars(self) -> None:
-        for provider, key in self._auth.items():
-            from openreview_cli.config.auth import key_to_env
+        from openreview_cli.config.auth import key_to_env
 
-            env_name = key_to_env(provider)
-            if env_name and key:
-                import os
-
-                os.environ.setdefault(env_name, key)
-                logger.debug("Set %s to %s", env_name, redact_key(key))
+        for provider, creds in self._auth.items():
+            if isinstance(creds, str):
+                env_name = key_to_env(provider)
+                if env_name and creds:
+                    os.environ.setdefault(env_name, creds)
+                    logger.debug("Set %s to %s", env_name, redact_key(creds))
+            elif isinstance(creds, dict):
+                for env_key, val in creds.items():
+                    if env_key and val:
+                        os.environ.setdefault(env_key, val)
 
     def _get_slot_config(self, slot: str) -> dict[str, Any]:
         models = self._config.get("gateway", {}).get("models", {})

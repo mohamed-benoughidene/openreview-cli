@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import pytest
 
+from openreview_cli.gateway.models import CredentialField
 from openreview_cli.gateway.wizard import gateway_setup
 
 
@@ -96,3 +98,152 @@ class TestGatewayWizard:
         gateway_setup()
 
         assert config_path.exists()
+
+    def test_wizard_collects_per_field_credentials(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(
+            "openreview_cli.gateway.wizard.get_config_dir",
+            lambda: tmp_path,
+        )
+        config_path = tmp_path / "config.yml"
+        config_path.write_text("gateway:\n  models: {}\n")
+        auth_path = tmp_path / "auth.json"
+        auth_path.write_text("{}")
+
+        class FakeRegistry:
+            def __init__(self, *a: object, **k: object) -> None:
+                pass
+
+            def load(self) -> None:
+                pass
+
+            def list_providers(self) -> list[dict[str, object]]:
+                return [
+                    {
+                        "name": "bedrock",
+                        "env_key": None,
+                        "credentials": [
+                            CredentialField(
+                                env_key="AWS_REGION_NAME",
+                                label="Region",
+                                litellm_param="aws_region_name",
+                                secret=False,
+                            ),
+                            CredentialField(
+                                env_key="AWS_SECRET_ACCESS_KEY",
+                                label="Secret",
+                                litellm_param="aws_secret_access_key",
+                                secret=True,
+                                is_file_path=False,
+                            ),
+                        ],
+                    }
+                ]
+
+            def list_models(self, provider: str) -> list[dict[str, str]]:
+                return []
+
+        monkeypatch.setattr("openreview_cli.gateway.wizard.ModelRegistry", FakeRegistry)
+
+        class FakeSelect:
+            def __init__(self, title: str, choices: list[str]) -> None:
+                self._title = title
+
+            def ask(self) -> str:
+                return "bedrock"
+
+        class FakeText:
+            def __init__(self, prompt: str) -> None:
+                self._prompt = prompt
+
+            def ask(self) -> str:
+                return "us-east-1"
+
+        class FakePassword:
+            def __init__(self, prompt: str) -> None:
+                self._prompt = prompt
+
+            def ask(self) -> str:
+                return "topsecret"
+
+        monkeypatch.setattr("questionary.select", FakeSelect)
+        monkeypatch.setattr("questionary.text", FakeText)
+        monkeypatch.setattr("questionary.password", FakePassword)
+
+        gateway_setup()
+
+        data = json.loads(auth_path.read_text())
+        assert data["bedrock"] == {
+            "AWS_REGION_NAME": "us-east-1",
+            "AWS_SECRET_ACCESS_KEY": "topsecret",
+        }
+
+    def test_wizard_rejects_missing_vertex_adc_path(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(
+            "openreview_cli.gateway.wizard.get_config_dir",
+            lambda: tmp_path,
+        )
+        config_path = tmp_path / "config.yml"
+        config_path.write_text("gateway:\n  models: {}\n")
+        auth_path = tmp_path / "auth.json"
+        auth_path.write_text("{}")
+
+        missing = tmp_path / "does-not-exist.json"
+
+        class FakeRegistry:
+            def __init__(self, *a: object, **k: object) -> None:
+                pass
+
+            def load(self) -> None:
+                pass
+
+            def list_providers(self) -> list[dict[str, object]]:
+                return [
+                    {
+                        "name": "vertex",
+                        "env_key": None,
+                        "credentials": [
+                            CredentialField(
+                                env_key="GOOGLE_APPLICATION_CREDENTIALS",
+                                label="ADC path",
+                                litellm_param="google_credentials_path",
+                                secret=False,
+                                is_file_path=True,
+                            ),
+                        ],
+                    }
+                ]
+
+            def list_models(self, provider: str) -> list[dict[str, str]]:
+                return []
+
+        monkeypatch.setattr("openreview_cli.gateway.wizard.ModelRegistry", FakeRegistry)
+
+        class FakeSelect:
+            def __init__(self, title: str, choices: list[str]) -> None:
+                self._title = title
+
+            def ask(self) -> str:
+                return "vertex"
+
+        class FakeText:
+            def __init__(self, prompt: str) -> None:
+                self._prompt = prompt
+
+            def ask(self) -> str:
+                return str(missing)
+
+        monkeypatch.setattr("questionary.select", FakeSelect)
+        monkeypatch.setattr("questionary.text", FakeText)
+
+        gateway_setup()
+
+        data = json.loads(auth_path.read_text())
+        assert "vertex" not in data
