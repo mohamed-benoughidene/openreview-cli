@@ -112,13 +112,13 @@ Single-key provider → no extra kwargs.
 values leaked.
 
 ### Tests for User Story 3
-- [ ] T022 [P] [US3] Unit test `gateway providers --json` emits per-field `resolved` + `configured` and redacts `secret=true` in `tests/unit/test_gateway_cli.py` (or `app.py` tests)
-- [ ] T023 [P] [US3] Unit test TUI health uses per-field resolution (falls back to `env_key` when list empty) in TUI test module
+- [x] T022 [P] [US3] Unit test `gateway providers --json` emits per-field `resolved` + `configured` and redacts `secret=true` in `tests/unit/test_gateway_cli.py` (or `app.py` tests) — DONE (test_provider_credential_status_partial in test_gateway_registry.py; asserts "us-east-1"/"fake" never in json.dumps, merged 7038294)
+- [x] T023 [P] [US3] Unit test TUI health uses per-field resolution (falls back to `env_key` when list empty) in TUI test module — DONE (test_gateway_providers_json.py T023 + tui/domain/gateway.py list_providers spreads configured+credentials)
 
 ### Implementation for User Story 3
-- [ ] T024 [US3] Update `gateway_providers` JSON branch in `src/openreview_cli/app.py` to emit `credentials` list + `configured` (depends on T010)
-- [ ] T025 [US3] Update TUI health check (currently `os.environ.get(info.env_key)`) to iterate `info.credentials` per-field in the TUI health module
-- [ ] T026 [US3] Run US3 unit + TUI tests green
+- [x] T024 [US3] Update `gateway_providers` JSON branch in `src/openreview_cli/app.py` to emit `credentials` list + `configured` (depends on T010) — DONE (app.py:1346, provider_credential_status single source of truth, backward-compat api_key_env kept)
+- [x] T025 [US3] Update TUI health check (currently `os.environ.get(info.env_key)`) to iterate `info.credentials` per-field in the TUI health module — DONE (tui/domain/gateway.py list_providers emits configured+credentials per field)
+- [x] T026 [US3] Run US3 unit + TUI tests green — DONE (24 passed registry+providers_json; ruff + targeted mypy clean; LITERAL `openreview gateway providers --json` run confirmed: configured:false partial, per-field resolved, secret values never printed even when resolved)
 
 **Checkpoint**: US3 functional + testable. FR-4 covered.
 
