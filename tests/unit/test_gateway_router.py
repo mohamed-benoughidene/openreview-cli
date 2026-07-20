@@ -233,6 +233,44 @@ class TestRerank:
             gw.rerank("reranking", "test query", ["doc a", "doc b"])
         assert getattr(exc_info.value, "provider", None) == "cohere"
 
+    def test_rerank_applies_provider_credentials(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """T039 — FR-3: rerank must map multi-field creds like chat/embed."""
+        import litellm
+
+        captured: dict[str, Any] = {}
+
+        def fake_rerank(**kw: Any) -> _MockRerankResponse:
+            captured.update(kw)
+            return _MockRerankResponse([{"index": 0, "relevance_score": 0.9}])
+
+        monkeypatch.setattr(litellm, "rerank", fake_rerank)
+        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
+
+        from openreview_cli.gateway.models import CredentialField
+
+        bedrock_info = ProviderInfo(
+            name="bedrock",
+            base_url=None,
+            credentials=[
+                CredentialField(
+                    env_key="AWS_REGION_NAME",
+                    label="Region",
+                    litellm_param="aws_region_name",
+                    secret=False,
+                    required=True,
+                ),
+            ],
+        )
+        monkeypatch.setattr(gw, "_resolve_provider_info", lambda slot: bedrock_info)
+        monkeypatch.setenv("AWS_REGION_NAME", "us-east-1")
+        try:
+            gw.rerank("reranking", "q", ["d"])
+        finally:
+            monkeypatch.delenv("AWS_REGION_NAME", raising=False)
+        assert captured.get("aws_region_name") == "us-east-1"
+
 
 class TestGetLitellmKwargs:
     def test_returns_correct_kwargs(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

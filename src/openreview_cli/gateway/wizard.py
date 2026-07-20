@@ -44,10 +44,13 @@ def _collect_provider_credentials(creds: list[CredentialField]) -> dict[str, str
             else questionary.text(f"{field.label}:")
         )
         value = prompt.ask()
-        if value is None:
+        if value is None or (field.required and value == ""):
+            questionary.print(f"{field.label} is required.", style="fg:red")
             return None
-        if field.is_file_path and not (os.path.isfile(value) and os.access(value, os.R_OK)):
-            questionary.print(f"Path not readable, skipping: {value}", style="fg:red")
+        if field.is_file_path and not (
+            os.path.isfile(value) and os.access(value, os.R_OK) and os.path.getsize(value) > 0
+        ):
+            questionary.print(f"File empty or not readable, skipping: {value}", style="fg:red")
             return None
         collected[field.env_key] = value
     return collected or None

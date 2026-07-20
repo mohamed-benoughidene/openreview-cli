@@ -231,3 +231,18 @@ Task: "T020 Add azure entry to models.json"
 - TDD: tests included per repo AGENTS.md + spec Success Criteria 5.
 - No new dependencies (litellm/pydantic/typer already present — Context7-verified).
 - MVP = US1 (FR-1, FR-2 model contract).
+
+---
+
+## Phase 8: Convergence
+
+**Purpose**: Close gaps between spec 034 FRs and the implemented code, found by
+`/speckit.converge`. Four `partial` gaps (no `missing`/`contradicts`, no constitution
+MUST violation). Single-key backward compat (FR-2), secret redaction in output/logs
+(FR-4/T035), auth.json chmod 0o600 (FR-8), and FR-3/FR-6 kwargs on chat+embed paths are
+confirmed met. TDD: each task needs a unit test.
+
+- [x] T036 Render per-field credential status (resolved/secret/required) in the TUI provider/health view, consuming the per-field data `tui/domain/gateway.py:list_providers()` already exposes (currently only `p["name"]` is rendered at `tui/screens/gateway_wizard.py:87`) per FR-4 (partial) — DONE (`gateway_wizard.py:_render_provider_step` appends `✓`/`✗` per field; test_wizard_step2_shows_per_field_status in tests/integration/tui/test_gateway_wizard.py GREEN)
+- [x] T037 Validate that file-based credentials are non-empty (file size > 0) in `src/openreview_cli/gateway/wizard.py:49-51`, in addition to existence + read access, per FR-7 (partial) — DONE (`os.path.getsize(value) > 0` added; test_wizard_rejects_empty_vertex_adc_file GREEN)
+- [x] T038 Reject empty required credential fields in both the wizard (`_collect_provider_credentials`, `wizard.py:46-52`) and `gateway provider add --cred` parsing (`app.py:1596-1597`, currently stores `""`) per FR-5 (partial) — DONE (wizard: `field.required and value == ""` → abort; CLI: `--cred KEY=` → exit 2; tests test_provider_add_rejects_empty_cred + test_wizard_rejects_empty_required_field GREEN)
+- [x] T039 Route `Gateway.rerank()` through `_get_litellm_kwargs()` so multi-field provider credentials are mapped to litellm kwargs (currently bypassed at `router.py:543-550`, unlike chat/embed) per FR-3 (partial) — DONE (rerank now builds kwargs via `_get_litellm_kwargs`; test_rerank_applies_provider_credentials GREEN)

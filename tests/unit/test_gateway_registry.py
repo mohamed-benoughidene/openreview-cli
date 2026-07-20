@@ -495,6 +495,10 @@ def test_provider_credential_status_partial(monkeypatch: pytest.MonkeyPatch) -> 
         ],
     )
 
+    # Hermetic: clear any AWS_* leaked by earlier tests in the suite.
+    for var in ("AWS_REGION_NAME", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"):
+        monkeypatch.delenv(var, raising=False)
+
     # No env, empty auth -> not configured, all fields unresolved.
     result = provider_credential_status(info, {})
     assert result["configured"] is False

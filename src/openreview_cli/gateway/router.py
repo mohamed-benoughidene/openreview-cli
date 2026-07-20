@@ -540,13 +540,14 @@ class Gateway:
         fallback_cfg = self._config.get("gateway", {}).get("fallback", {})
         timeout: int = fallback_cfg.get("timeout", 60)
 
+        kwargs = self._get_litellm_kwargs(slot)
         try:
             response = rerank(
-                model=cfg["primary"],
                 query=query,
                 documents=documents,
                 top_n=top_n,
                 timeout=timeout,
+                **kwargs,
             )
         except Exception as e:
             classified = self._classify_error(e, provider=cfg["primary"].split("/")[0])

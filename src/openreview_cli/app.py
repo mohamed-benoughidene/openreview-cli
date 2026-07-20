@@ -1594,6 +1594,9 @@ def provider_add(
                 typer.echo(f"Error: --cred must be key=value, got {item!r}", err=True)
                 raise typer.Exit(code=2)
             key, value = item.split("=", 1)
+            if value == "":
+                typer.echo(f"Error: --cred {key} has empty value", err=True)
+                raise typer.Exit(code=2)
             parsed[key] = value
         save_provider_credentials(get_config_dir() / "auth.json", name, parsed)
 
