@@ -1345,9 +1345,12 @@ def gateway_status() -> None:
 @gateway_app.command("providers")
 def gateway_providers(json_mode: bool = typer.Option(False, "--json")) -> None:
     """List all supported providers (bundled + custom)."""
-    from openreview_cli.gateway.registry import load_registry
+    from openreview_cli.config.auth import load_auth
+    from openreview_cli.config.paths import get_config_dir
+    from openreview_cli.gateway.registry import load_registry, provider_credential_status
 
     registry = load_registry()
+    auth = load_auth(get_config_dir() / "auth.json")
 
     if json_mode:
         data = {
@@ -1359,8 +1362,11 @@ def gateway_providers(json_mode: bool = typer.Option(False, "--json")) -> None:
                     "capabilities": p.capabilities.model_dump(),
                     "is_local": p.is_local,
                     "source": p.source,
+                    "configured": status["configured"],
+                    "credentials": status["credentials"],
                 }
                 for p in registry.values()
+                if (status := provider_credential_status(p, auth))
             ]
         }
         typer.echo(json.dumps(data, indent=2))
