@@ -2,23 +2,9 @@
 
 ## Context
 
-`feat/ai-gateway-v2` shipped a unified provider registry
-(`gateway/models.json` + `ProviderInfo` in `src/openreview_cli/gateway/models.py:17-25`).
-It models provider auth as a single `env_key`:
+The recent AI Gateway update shipped a unified provider registry that models provider authentication via a single environment variable key.
 
-```python
-class ProviderInfo(BaseModel):
-    env_key: str | None = None   # one env var
-    auth_required: bool = True
-    base_url: str | None = None
-    is_local: bool = False
-    source: str = "bundled"
-    capabilities: Capability = Capability()
-    models: dict[str, ModelEntry] = {}
-```
-
-Three real providers cannot be expressed with one `env_key`. Confirmed
-against litellm docs during the `033` provider-addition pass:
+Three major cloud providers cannot be expressed this way due to requiring multiple authentication fields simultaneously. Confirmed against litellm docs during the `033` provider-addition pass:
 
 | Provider | Required credentials (per litellm docs) | Why single `env_key` fails |
 |----------|------------------------------------------|----------------------------|
@@ -26,46 +12,32 @@ against litellm docs during the `033` provider-addition pass:
 | **AWS Bedrock** | `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` + `AWS_REGION_NAME` | 3-field AWS credential set |
 | **Google Vertex AI** | `VERTEXAI_PROJECT` + `VERTEXAI_LOCATION` + `GOOGLE_APPLICATION_CREDENTIALS` | project + region + service-account path |
 
-Forcing them into `env_key` would either break resolution or silently
-mis-route the call, so they were deliberately excluded from `033`. This
-spec extends the credential model so those three can be configured
-without bending the single-key pattern.
+Forcing them into a single-key pattern would either break resolution or silently misroute the call. This specification extends the credential handling so complex providers can be configured cleanly alongside single-key ones.
 
 ## Goal
 
 A user can configure Azure / Bedrock / Vertex via the existing
-`gateway provider add` / wizard flow, with each credential field
-validated and surfaced in health checks, using only litellm's existing
-provider support (no new dependency).
+wizard flow, with each credential field validated and surfaced in health checks, using only the existing provider support (no new dependency).
+
+## Clarifications
+
+### Session 2026-07-20
+- Q: Where should credential values be stored? → A: Extend the secure local auth file (store a flat mapping of keys to values as a fallback).
+- Q: Does base URL stay a top-level field? → A: Keep base URL as a top-level field.
+- Q: How does the wizard collect multiple fields via CLI arguments? → A: Repeated flag arguments.
+- Q: Should the wizard validate credential files? → A: Yes, validate existence, read access, and that the file is non-empty.
+- Q: How are parameters mapped to the inference engine? → A: Via an explicit mapping attribute in the configuration model (see technical contract).
 
 ## Functional Requirements
 
-- **FR-1:** `ProviderInfo` accepts an ordered list of `CredentialField`
-  (each with `env_key`, `label`, `secret` flag, `required` flag, and a
-  `litellm_param` mapping) in addition to the legacy single `env_key`.
-- **FR-2:** Single-key providers (openai, anthropic, deepseek, qwen,
-  minimax, voyage, moonshot, mistral, zai, ...) load **unchanged** from
-  `env_key` — fully backward compatible, no regression.
-- **FR-3:** `Gateway._get_litellm_kwargs`
-  (`src/openreview_cli/gateway/router.py`, ~line 186) maps each
-  `CredentialField` to the correct litellm kwarg (e.g. `api_base`,
-  `aws_region_name`, `vertex_project`, `vertex_location`) when the
-  provider is invoked.
-- **FR-4:** `gateway providers --json` (`app.py:1346`) and the TUI health
-  check (currently `os.environ.get(info.env_key)`) report **per-field**
-  status; a provider is "configured" only when ALL required fields
-  resolve from the environment.
-- **FR-5:** The wizard / `gateway provider add` collects N fields
-  (repeated `--cred env_key=LABEL`, or a structured form), validating
-  presence for each required field.
-- **FR-6:** A Bedrock (and separately Vertex, Azure) entry added to
-  `models.json` loads via `load_registry()` and is healthy only when its
-  required env vars are set; a live call through `Gateway` with those
-  providers succeeds — verified with a real key, skipped otherwise (same
-  guard pattern as `tests/integration/test_grounding_live.py`).
-- **FR-7:** `GOOGLE_APPLICATION_CREDENTIALS` is a **file path**, not a
-  secret string; when collected by the wizard it is validated to exist
-  on disk and be readable (open question Q2).
+- **FR-1:** The gateway configuration accepts an ordered list of credential fields per provider in addition to the legacy single key.
+- **FR-2:** Single-key providers load **unchanged** — fully backward compatible, no regression.
+- **FR-3:** When a provider is invoked, the gateway correctly maps each defined credential field to the underlying inference engine's required parameters.
+- **FR-4:** The CLI providers list and the TUI health check report **per-field** configuration status; a provider is considered "configured" only when ALL required fields resolve successfully from the environment or fallback storage.
+- **FR-5:** The interactive wizard and the CLI setup command collect N fields via repeated key-value flags, validating presence for each required field.
+- **FR-6:** A complex provider entry loads successfully and is marked healthy only when its required credentials are set; a live integration call with those providers succeeds (verified with real keys during testing, skipped otherwise).
+- **FR-7:** For providers requiring file-based credentials (e.g., Google), the CLI wizard MUST validate that the specified file exists on disk, is readable, and is non-empty before setup succeeds.
+- **FR-8:** Multi-field credential values are securely persisted locally as a fallback to system environment variables, mirroring the privacy and persistence guarantees of single-key secrets.
 
 ## Constraints
 
@@ -83,22 +55,6 @@ provider support (no new dependency).
 - Any change to the privacy-tier model.
 - Adding the actual Azure/Bedrock/Vertex registry entries is a task
   that **depends on** this model change landing first.
-
-## Open Questions (decision gates — resolve during planning)
-
-- **Q1:** Does `base_url` stay a top-level `ProviderInfo` field, or move
-  under a credential/deployment concept (Azure needs both endpoint AND
-  deployment name)?
-- **Q2:** Where do multi-field credential *values* get stored — env vars
-  only (like today's single `env_key` providers), or also a fallback
-  file such as the `auth.json` that existing single-key providers use?
-- **Q3:** `GOOGLE_APPLICATION_CREDENTIALS` is a file path, not a secret
-  string. Should the wizard validate the file actually exists (and is
-  readable) when collecting it, rather than just storing the path?
-- **Q4:** How does `add_custom_provider` / the wizard collect N fields?
-  Extend to `--cred env_key=LABEL` repeated, or a structured form?
-- **Q5:** `CredentialField.env_key` → litellm kwarg mapping attribute
-  name (e.g. `litellm_param`).
 
 ## Success Criteria
 

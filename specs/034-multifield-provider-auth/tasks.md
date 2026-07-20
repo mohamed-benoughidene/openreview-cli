@@ -91,7 +91,7 @@ Single-key provider → no extra kwargs.
 - [ ] T015 [P] [US2] Integration: `tests/integration/test_provider_live.py` — live Bedrock `Gateway.chat` with real creds, skipped otherwise (guard like `test_grounding_live.py`)
 
 ### Implementation for User Story 2
-- [ ] T016 [US2] Extend `Gateway._get_litellm_kwargs` in `src/openreview_cli/gateway/router.py` (~line 186) to loop `info.credentials` and set `kwargs[field.litellm_param] = env_or_auth(field)` (depends on T010)
+- [ ] T016 [US2] Extend `Gateway._get_litellm_kwargs` in `src/openreview_cli/gateway/router.py` to loop `info.credentials` and set `kwargs[field.litellm_param] = env_or_auth(field)` (depends on T010)
 - [ ] T017 [US2] Add `auth` resolution helper in `src/openreview_cli/gateway/router.py`: `os.environ.get(field.env_key) or self._auth.get(info.name, {}).get(field.env_key)`
 - [ ] T018 [US2] Add bedrock entry (3 creds) to `src/openreview_cli/gateway/models.json` per contracts/provider-model.md
 - [ ] T019 [US2] Add vertex entry (project/location/ADC file-path cred) to `src/openreview_cli/gateway/models.json`
@@ -116,7 +116,7 @@ values leaked.
 - [ ] T023 [P] [US3] Unit test TUI health uses per-field resolution (falls back to `env_key` when list empty) in TUI test module
 
 ### Implementation for User Story 3
-- [ ] T024 [US3] Update `gateway_providers` JSON branch in `src/openreview_cli/app.py` (~line 1346) to emit `credentials` list + `configured` (depends on T010)
+- [ ] T024 [US3] Update `gateway_providers` JSON branch in `src/openreview_cli/app.py` to emit `credentials` list + `configured` (depends on T010)
 - [ ] T025 [US3] Update TUI health check (currently `os.environ.get(info.env_key)`) to iterate `info.credentials` per-field in the TUI health module
 - [ ] T026 [US3] Run US3 unit + TUI tests green
 
@@ -134,10 +134,12 @@ writes the mapping into `auth.json` (mode 600); wizard loop prompts per field an
 rejects a non-existent Vertex ADC path.
 
 ### Tests for User Story 4
-- [ ] T027 [P] [US4] Unit test `gateway provider add --cred` repeatable parsing + `auth.json` mapping write in `tests/unit/test_gateway_cli.py`
+- [ ] T027 [P] [US4] Unit test `gateway provider add --cred` repeatable parsing in `tests/unit/test_gateway_cli.py`
+- [ ] T027a [P] [US4] Unit test `save_auth()` (or equivalent auth persistence method) supports dictionary mapping for multi-field providers in `tests/unit/test_config_loader.py`
 - [ ] T028 [P] [US4] Unit test wizard questionary loop over `provider.credentials` (mocked) + Vertex `is_file_path` existence/readability rejection in `tests/unit/test_gateway_wizard.py`
 
 ### Implementation for User Story 4
+- [ ] T028a [US4] Update auth persistence in `src/openreview_cli/config/loader.py` to support dictionary mapping for multi-field providers instead of just strings (depends on T027a)
 - [ ] T029 [US4] Add repeatable `--cred` list-option (`Annotated[list[str]|None, typer.Option()]`) to `gateway provider add` in `src/openreview_cli/app.py`; parse `key=value`, store in `auth.json` per-provider mapping
 - [ ] T030 [US4] Extend wizard in `src/openreview_cli/gateway/wizard.py` to loop `provider.credentials`, prompt per `label`, mask `secret=true`, validate `is_file_path=true` via `os.path.isfile` + `os.access(..., os.R_OK)`
 - [ ] T031 [US4] Run US4 unit tests green
