@@ -415,6 +415,28 @@ def test_load_registry_zai_native_entry() -> None:
     assert "glm-4.7" in p.models
 
 
+def test_registry_loads_multifield_providers_unconfigured() -> None:
+    """Spec 034 US2 (T014): bedrock/vertex/azure expose multi-field
+    credentials lists; registry tolerates empty models."""
+    reg = load_registry()
+
+    assert "bedrock" in reg
+    assert "vertex" in reg
+    assert "azure" in reg
+
+    bedrock = reg["bedrock"]
+    assert len(bedrock.credentials) >= 1
+    assert bedrock.credentials[0].litellm_param == "aws_region_name"
+
+    vertex = reg["vertex"]
+    assert len(vertex.credentials) >= 1
+    assert vertex.credentials[0].litellm_param == "vertex_project"
+
+    azure = reg["azure"]
+    assert len(azure.credentials) >= 1
+    assert azure.credentials[0].litellm_param == "api_key"
+
+
 def test_build_provider_without_credentials_defaults_empty() -> None:
     result = _build_provider("openai", {"name": "OpenAI", "env_key": "OPENAI_API_KEY"})
     assert result.credentials == []
