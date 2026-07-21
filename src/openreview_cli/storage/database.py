@@ -46,16 +46,6 @@ def run_migrations(db_path: Path) -> None:
             if num > version:
                 _exec_migration_safely(conn, sql_file)
                 conn.execute(f"PRAGMA user_version = {num}")
-        for f in sorted(MIGRATIONS_DIR.iterdir()):
-            if f.suffix != ".py":
-                continue
-            try:
-                num = int(f.stem.split("_")[0])
-            except ValueError:
-                continue
-            if num > version:
-                _exec_py_migration(conn, f)
-                conn.execute(f"PRAGMA user_version = {num}")
         conn.commit()
     except Exception:
         conn.rollback()
@@ -91,17 +81,6 @@ def _exec_migration_safely(conn: sqlite3.Connection, sql_file: Path) -> None:
                 )
                 continue
             raise
-
-
-def _exec_py_migration(conn: sqlite3.Connection, py_file: Path) -> None:
-    """Execute a Python migration script.
-
-    The script must define a ``migrate(conn)`` function.
-    """
-    ns: dict[str, Any] = {"conn": conn}
-    exec(py_file.read_text(), ns)
-    if "migrate" in ns:
-        ns["migrate"](conn)
 
 
 def log_cost(
