@@ -1,4 +1,5 @@
 import json
+import logging
 import sqlite3
 import uuid
 from collections.abc import Generator
@@ -45,6 +46,16 @@ def run_migrations(db_path: Path) -> None:
             if num > version:
                 _exec_migration_safely(conn, sql_file)
                 conn.execute(f"PRAGMA user_version = {num}")
+        for f in sorted(MIGRATIONS_DIR.iterdir()):
+            if f.suffix != ".py":
+                continue
+            try:
+                num = int(f.stem.split("_")[0])
+            except ValueError:
+                continue
+            if num > version:
+                _exec_py_migration(conn, f)
+                conn.execute(f"PRAGMA user_version = {num}")
         conn.commit()
     except Exception:
         conn.rollback()
@@ -61,19 +72,36 @@ def _exec_migration_safely(conn: sqlite3.Connection, sql_file: Path) -> None:
     (e.g. test fixture left the column but user_version wasn't bumped), a
     plain re-run would fail with "duplicate column name". Split the script on
     `;` and execute statements individually, skipping those that fail with a
-    "duplicate column" / "already exists" OperationalError.
+    "duplicate column" / "already exists" / "no such column" OperationalError.
     """
     import sqlite3 as _sqlite3
 
+    _logger = logging.getLogger(__name__)
     text = sql_file.read_text()
     for stmt in [s.strip() for s in text.split(";") if s.strip()]:
         try:
             conn.executescript(stmt + ";")
         except _sqlite3.OperationalError as exc:
             msg = str(exc).lower()
-            if "duplicate column" in msg or "already exists" in msg:
+            if "duplicate column" in msg or "already exists" in msg or "no such column" in msg:
+                _logger.warning(
+                    "Migration %s: skipped statement (schema already matches): %.80s",
+                    sql_file.name,
+                    stmt,
+                )
                 continue
             raise
+
+
+def _exec_py_migration(conn: sqlite3.Connection, py_file: Path) -> None:
+    """Execute a Python migration script.
+
+    The script must define a ``migrate(conn)`` function.
+    """
+    ns: dict[str, Any] = {"conn": conn}
+    exec(py_file.read_text(), ns)
+    if "migrate" in ns:
+        ns["migrate"](conn)
 
 
 def log_cost(
