@@ -116,3 +116,43 @@ def test_log_call_empty_usage_defaults_to_zero(
     assert captured["prompt_tokens"] == 0
     assert captured["completion_tokens"] == 0
     assert captured["cost_cents"] == 0
+
+
+def test_log_call_writes_row_without_session(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Spec 035 crit. 2: a cost-log call without a session_id actually writes a
+    row to the database, instead of silently swallowing the cost."""
+    import sqlite3
+
+    from openreview_cli.storage.database import init_database
+
+    db_path = tmp_path / "cost_test.db"
+    init_database(db_path)
+
+    monkeypatch.setattr("openreview_cli.gateway.cost.completion_cost", lambda r: 0.05)
+    tracker = CostTracker(db_path)
+    response = MockResponse(MockUsage(prompt_tokens=100, completion_tokens=50))
+    entry_id = tracker.log_call(
+        session_id=None,
+        slot="test-slot",
+        model="gpt-4",
+        provider="openai",
+        response=response,
+    )
+    assert isinstance(entry_id, str), "log_call must return a valid entry_id"
+
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    try:
+        row = conn.execute("SELECT * FROM cost_logs WHERE id = ?", (entry_id,)).fetchone()
+        assert row is not None, "row must exist in cost_logs"
+        assert row["session_id"] == ""
+        assert row["slot"] == "test-slot"
+        assert row["model"] == "gpt-4"
+        assert row["provider"] == "openai"
+        assert row["prompt_tokens"] == 100
+        assert row["completion_tokens"] == 50
+        assert row["cost_cents"] == 5  # 0.05 USD → 5 cents
+    finally:
+        conn.close()
