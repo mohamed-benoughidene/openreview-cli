@@ -200,6 +200,29 @@ class TestEmbed:
         result = gw.embed("embedding", ["hello", "world"])
         assert result == [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
 
+    def test_survives_cost_logging_failure(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Cost-logging failure must NOT block embed from returning vectors."""
+        import logging
+
+        caplog.set_level(logging.WARNING)
+
+        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
+
+        def _fake_fallback(slot: str, call_fn: object, call_kwargs: dict[str, object]) -> object:
+            return _MockEmbeddingResponse([{"embedding": [0.1, 0.2, 0.3]}])
+
+        monkeypatch.setattr(gw, "_call_with_fallback", _fake_fallback)
+
+        def _boom(*args: object, **kwargs: object) -> str:
+            raise RuntimeError("cost log exploded")
+
+        gw._cost_tracker.log_call = _boom  # type: ignore[method-assign]
+        result = gw.embed("embedding", ["hello"])
+        assert result == [[0.1, 0.2, 0.3]]
+        assert "Cost logging failed (non-fatal)" in caplog.text
+
 
 class TestRerank:
     def test_returns_ranked_results(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -218,6 +241,32 @@ class TestRerank:
             {"index": 1, "relevance_score": 0.95},
             {"index": 0, "relevance_score": 0.85},
         ]
+
+    def test_survives_cost_logging_failure(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Cost-logging failure must NOT block rerank from returning ranked results."""
+        import logging
+
+        import litellm
+
+        caplog.set_level(logging.WARNING)
+
+        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
+
+        monkeypatch.setattr(
+            litellm,
+            "rerank",
+            lambda **kw: _MockRerankResponse([{"index": 0, "relevance_score": 0.9}]),
+        )
+
+        def _boom(*args: object, **kwargs: object) -> str:
+            raise RuntimeError("cost log exploded")
+
+        gw._cost_tracker.log_call = _boom  # type: ignore[method-assign]
+        result = gw.rerank("reranking", "test query", ["doc a"])
+        assert result == [{"index": 0, "relevance_score": 0.9}]
+        assert "Cost logging failed (non-fatal)" in caplog.text
 
     def test_rerank_error_names_provider(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

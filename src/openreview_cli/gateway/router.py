@@ -505,7 +505,12 @@ class Gateway:
         response = self._call_with_fallback(slot, embedding, call_kwargs)
         self._record_cloud_call(slot)
         orig_provider = self._get_slot_config(slot)["primary"].split("/")[0]
-        self._cost_tracker.log_call(session_id, slot, call_kwargs["model"], orig_provider, response)
+        try:
+            self._cost_tracker.log_call(
+                session_id, slot, call_kwargs["model"], orig_provider, response
+            )
+        except Exception as cost_err:
+            logger.warning("Cost logging failed (non-fatal): %s", cost_err)
         return [item["embedding"] for item in response.data]
 
     def rerank(
@@ -553,9 +558,12 @@ class Gateway:
             classified = self._classify_error(e, provider=cfg["primary"].split("/")[0])
             raise classified from e
 
-        self._cost_tracker.log_call(
-            session_id, slot, cfg["primary"], cfg["primary"].split("/")[0], response
-        )
+        try:
+            self._cost_tracker.log_call(
+                session_id, slot, cfg["primary"], cfg["primary"].split("/")[0], response
+            )
+        except Exception as cost_err:
+            logger.warning("Cost logging failed (non-fatal): %s", cost_err)
         self._record_cloud_call(slot)
         return [
             {"index": r["index"], "relevance_score": r["relevance_score"]} for r in response.results
