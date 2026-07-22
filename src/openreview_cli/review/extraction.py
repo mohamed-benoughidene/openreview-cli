@@ -144,9 +144,22 @@ def extract_clause(
 
 
 def _parse_response(raw: str) -> dict[str, Any]:
-    """Parse the extraction agent's JSON response, with fallback."""
+    """Parse the extraction agent's JSON response, with fallback.
+
+    Handles markdown-wrapped JSON (`` ```json ... ``` ``) which is a
+    common LLM output format.
+    """
+    stripped = raw.strip()
+    # Strip markdown code fences (```json ... ``` or ``` ... ```)
+    if stripped.startswith("```"):
+        first_nl = stripped.find("\n")
+        if first_nl >= 0:
+            stripped = stripped[first_nl + 1 :]
+        if stripped.endswith("```"):
+            stripped = stripped[:-3].strip()
+
     try:
-        data = json.loads(raw)
+        data = json.loads(stripped)
     except (json.JSONDecodeError, ValueError):
         return {"position": "uncertain", "confidence": 0.0, "citation": "", "category_match": False}
 

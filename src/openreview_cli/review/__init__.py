@@ -265,12 +265,17 @@ def _run_review_doc_pipeline(
 
     pipeline = Pipeline(stages=stages, progress_callback=_progress)
 
+    pipeline_ctx: dict[str, Any] = {"document_path": str(doc_path)}
     try:
-        asyncio.run(pipeline.run({"document_path": str(doc_path)}))
+        asyncio.run(pipeline.run(pipeline_ctx))
     except Exception:
         logger.exception("Pipeline failed for %s", doc_path)
         return None
 
     if review_stage.report is None:
         return None
-    return review_stage.report, review_stage.clauses or []
+
+    # ponytail: read source_clauses from pipeline context (survives stage.cleanup
+    # which sets review_stage.clauses to None after merge into context)
+    source_clauses: list[Any] = pipeline_ctx.get("source_clauses", [])
+    return review_stage.report, source_clauses

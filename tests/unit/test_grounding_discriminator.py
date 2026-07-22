@@ -589,6 +589,82 @@ class TestCitationGroundingDiscriminator:
         )
         assert clause_text in user_content, "Clause text should appear in grounding prompt"
 
+    def test_ground_report_uses_citation_not_clause_text(
+        self, mock_gateway: MagicMock, sample_document: MagicMock
+    ) -> None:
+        """ground_report must use assessment.citation as the claim text and
+        assessment.clause_id as the cited clause ID, NOT clause_text / citation
+        (the old swapped-field bug)."""
+        from datetime import datetime
+
+        from openreview_cli.grounding.discriminator import CitationGroundingDiscriminator
+        from openreview_cli.parsing.models import Clause
+        from openreview_cli.review.models import (
+            ClauseAssessment,
+            DocMeta,
+            Position,
+            QAVerdict,
+            ReviewReport,
+            ReviewSummary,
+        )
+
+        # Create source clause
+        source_clauses = [
+            Clause(
+                id="clause-1",
+                title=None,
+                text="The receiving party shall protect Confidential Information.",
+                level=1,
+                parent_id=None,
+                source_page=1,
+                source_paragraph=None,
+                source_span=None,
+            ),
+        ]
+
+        # Assessment where citation (a short quote) is DIFFERENT from clause_text
+        # This is the scenario the old bug mishandled:
+        assessment = ClauseAssessment(
+            clause_id="clause-1",
+            clause_text="The receiving party shall protect Confidential Information.",
+            playbook_category="confidentiality",
+            position=Position.PREFERRED,
+            confidence=0.9,
+            citation="the specific short quote from the clause",  # ← claim text should be THIS
+            qa_verdict=QAVerdict.agree,
+            extraction_model="test",
+            qa_model="test",
+        )
+        doc_meta = DocMeta(filename="test.pdf", page_count=1, clause_count=1, pii_stripped=False)
+        summary = ReviewSummary()
+        report = ReviewReport(
+            document=doc_meta,
+            assessments=[assessment],
+            summary=summary,
+            playbook_id="test",
+            generated_at=datetime.now(),
+        )
+
+        d = CitationGroundingDiscriminator(mode="lenient", gateway=mock_gateway)
+        d.ground_report(report, sample_document, source_clauses)
+
+        # Verify the gateway was called with a message containing the CITATION
+        # as the claim text, NOT the full clause_text.
+        call_args = mock_gateway.chat.call_args
+        assert call_args is not None
+        messages = call_args[0][1] if len(call_args[0]) > 1 else call_args[0][0]
+        user_content = next(
+            (
+                m["content"]
+                for m in (messages if isinstance(messages, list) else [messages])
+                if m.get("role") == "user"
+            ),
+            "",
+        )
+        assert "the specific short quote from the clause" in user_content, (
+            "Claim text in grounding prompt must be the CITATION, not the full clause_text"
+        )
+
     # ── Audit log tests (T014) ─────────────────────────────────────────────────
     # These tests verify the GroundingAuditLog integration with the discriminator
 

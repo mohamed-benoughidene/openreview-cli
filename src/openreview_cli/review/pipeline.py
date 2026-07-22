@@ -135,7 +135,11 @@ class ReviewStage(Stage):
 
         report = self._build_report(assessments)
         self.report = report
-        return {"review_report": report, "review_assessments": assessments}
+        return {
+            "review_report": report,
+            "review_assessments": assessments,
+            "source_clauses": self.clauses,
+        }
 
     def cleanup(self, ctx: PipelineContext) -> None:
         """Release large clause and document references after merge."""
@@ -159,7 +163,7 @@ class ReviewStage(Stage):
             mode=self._mode,
         )
         self.report = report
-        return {"review_report": report, "review_assessments": []}
+        return {"review_report": report, "review_assessments": [], "source_clauses": []}
 
     @property
     def _effective_threshold(self) -> float:

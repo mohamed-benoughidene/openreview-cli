@@ -121,3 +121,45 @@ class TestExtractionAgent:
         # Falls back to category default_position (acceptable)
         assert result.position == Position.ACCEPTABLE
         assert result.confidence == 0.0
+
+    def test_parse_response_strips_markdown_fences(self) -> None:
+        """_parse_response must handle JSON wrapped in ```json markdown fences."""
+        from openreview_cli.review.extraction import _parse_response
+
+        raw = (
+            "```json\n"
+            "{\n"
+            '  "position": "preferred",\n'
+            '  "confidence": 0.85,\n'
+            '  "citation": "for 3 years",\n'
+            '  "category_match": true\n'
+            "}\n"
+            "```"
+        )
+        result = _parse_response(raw)
+        assert result["citation"] == "for 3 years"
+        assert result["position"] == "preferred"
+        assert result["confidence"] == 0.85
+        assert result["category_match"] is True
+
+    def test_parse_response_plain_json_still_works(self) -> None:
+        """_parse_response still handles plain (unwrapped) JSON correctly."""
+        from openreview_cli.review.extraction import _parse_response
+
+        raw = (
+            '{"position": "acceptable", "confidence": 0.5, '
+            '"citation": "clause 3.2", "category_match": true}'
+        )
+        result = _parse_response(raw)
+        assert result["citation"] == "clause 3.2"
+        assert result["position"] == "acceptable"
+
+    def test_parse_response_fallback_on_invalid(self) -> None:
+        """_parse_response returns defaults when JSON is completely unparseable."""
+        from openreview_cli.review.extraction import _parse_response
+
+        result = _parse_response("not json at all")
+        assert result["citation"] == ""
+        assert result["position"] == "uncertain"
+        assert result["confidence"] == 0.0
+        assert result["category_match"] is False

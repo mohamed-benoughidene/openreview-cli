@@ -166,8 +166,8 @@ class CitationGroundingDiscriminator:
                 logger.debug("Skipping claim %d: QA disagrees", i)
                 continue
 
-            claim_text = assessment.clause_text
-            cited_clause_id = assessment.citation
+            claim_text = assessment.citation or assessment.clause_text
+            cited_clause_id = assessment.clause_id
 
             if not claim_text.strip():
                 logger.warning("Zero-length claim text at index %d", i)
