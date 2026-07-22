@@ -169,6 +169,15 @@ class CitationGroundingDiscriminator:
             claim_text = assessment.citation or assessment.clause_text
             cited_clause_id = assessment.clause_id
 
+            # Skip assessments where extraction produced no citation
+            # (no-match clauses or genuine extraction failures).
+            # Grounding a non-existent citation produces a tautology —
+            # the claim_text falls back to the full clause_text, which
+            # trivially matches itself.
+            if not assessment.citation:
+                logger.debug("Skipping claim %d: no extraction citation to ground", i)
+                continue
+
             if not claim_text.strip():
                 logger.warning("Zero-length claim text at index %d", i)
                 verdicts.append(

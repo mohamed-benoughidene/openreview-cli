@@ -197,6 +197,51 @@ class TestCitationGroundingDiscriminator:
         # At least one claim should go through
         assert len(result.verdicts) > 0
 
+    def test_skip_no_citation(self, mock_gateway: MagicMock, sample_document: MagicMock) -> None:
+        """Assessments with empty citation are skipped (no tautology grounding)."""
+        from datetime import datetime
+
+        from openreview_cli.grounding.discriminator import CitationGroundingDiscriminator
+        from openreview_cli.review.models import (
+            ClauseAssessment,
+            DocMeta,
+            Position,
+            QAVerdict,
+            ReviewReport,
+            ReviewSummary,
+        )
+
+        no_cite = ClauseAssessment(
+            clause_id="clause-0",
+            clause_text="NON-DISCLOSURE AGREEMENT",
+            playbook_category="no-match",
+            position=Position.UNCERTAIN,
+            confidence=0.0,
+            citation="",  # Empty — no extraction citation to ground
+            qa_verdict=QAVerdict.agree,
+            extraction_model="test",
+            qa_model="test",
+        )
+        doc_meta = DocMeta(filename="test.pdf", page_count=1, clause_count=1, pii_stripped=False)
+        summary = ReviewSummary()
+        report = ReviewReport(
+            document=doc_meta,
+            assessments=[no_cite],
+            summary=summary,
+            playbook_id="test",
+            generated_at=datetime.now(),
+        )
+
+        d = CitationGroundingDiscriminator(mode="strict", gateway=mock_gateway)
+        result = d.ground_report(report, sample_document)
+        assert result.total_claims == 1
+        assert len(result.verdicts) == 0, (
+            "No-citation assessment should produce zero verdicts (skipped)"
+        )
+        assert result.grounded_count == 0
+        assert result.ungrounded_count == 0
+        assert result.uncertain_count == 0
+
     def test_merge_into_strict_removes_ungrounded(
         self, mock_gateway: MagicMock, sample_document: MagicMock
     ) -> None:
