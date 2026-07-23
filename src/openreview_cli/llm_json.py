@@ -22,6 +22,9 @@ def strip_fences(text: str) -> str:
     """
     stripped = text.strip()
     if stripped.startswith("```"):
+        # ponytail: fence without newline (```json{...}```) is not stripped —
+        # no provider observed emitting it; json.loads then fails and every
+        # call site falls back safely. Handle it here if one ever does.
         first_nl = stripped.find("\n")
         if first_nl >= 0:
             stripped = stripped[first_nl + 1 :]
