@@ -13,6 +13,7 @@ import logging
 from typing import Any
 
 from openreview_cli.gateway.models import CapabilityRequirement
+from openreview_cli.llm_json import strip_fences
 from openreview_cli.review._gateway import call_gateway_chat
 from openreview_cli.review.models import Category, ClauseAssessment, Playbook, Position, QAVerdict
 from openreview_cli.review.prompts import _build_extraction_messages_common
@@ -151,14 +152,7 @@ def _parse_response(raw: str) -> dict[str, Any]:
     Handles markdown-wrapped JSON (`` ```json ... ``` ``) which is a
     common LLM output format.
     """
-    stripped = raw.strip()
-    # Strip markdown code fences (```json ... ``` or ``` ... ```)
-    if stripped.startswith("```"):
-        first_nl = stripped.find("\n")
-        if first_nl >= 0:
-            stripped = stripped[first_nl + 1 :]
-        if stripped.endswith("```"):
-            stripped = stripped[:-3].strip()
+    stripped = strip_fences(raw)
 
     try:
         data = json.loads(stripped)
