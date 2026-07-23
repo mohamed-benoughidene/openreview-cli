@@ -54,6 +54,7 @@ def extract_clause(
     category: Category | None,
     extraction_model: str,
     mode: str = "precheck",
+    session_id: str | None = None,
 ) -> ClauseAssessment:
     """Run extraction for a single clause against a playbook category.
 
@@ -108,6 +109,7 @@ def extract_clause(
             extraction_model,
             messages,
             requirement=CapabilityRequirement(capability="reasoning"),
+            session_id=session_id,
         )
         parsed = _parse_response(raw_response)
     except Exception as exc:

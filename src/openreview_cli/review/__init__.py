@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import sys
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -83,6 +84,7 @@ def run_review(  # noqa: PLR0912
     mode_threshold_overrides: dict[str, float] | None = None,
     mode: str = "precheck",
     dual_path: bool = False,
+    session_id: str | None = None,
 ) -> list[ReviewReport]:
     """Run the PAKTON 3-agent review pipeline on one or more documents.
 
@@ -119,6 +121,12 @@ def run_review(  # noqa: PLR0912
     dual_path : bool
         When ``True``, use dual-path execution: call providers in parallel
         and return first success.  Default ``False`` (sequential).
+    session_id : str | None
+        Optional caller-provided session identifier for cost attribution.
+        When a single document is processed, this ID is used directly.
+        When ``None`` or multiple documents, a unique ``review:<uuid>`` ID
+        is minted per document.  All extraction, QA, and grounding calls
+        for the same document share the same ID.
 
     Returns
     -------
@@ -148,6 +156,7 @@ def run_review(  # noqa: PLR0912
 
     reports: list[ReviewReport] = []
 
+    n_paths = len(paths)
     for path_str in paths:
         doc_path = Path(path_str)
         if not doc_path.exists():
@@ -156,6 +165,15 @@ def run_review(  # noqa: PLR0912
 
         if verbose:
             print(f"Processing: {doc_path.name}", file=sys.stderr)
+
+        # Mint or reuse session ID — caller-provided ID used only for a
+        # single-doc invocation; multi-doc always mints per document.
+        doc_session_id: str
+        if session_id is not None and n_paths == 1:
+            doc_session_id = session_id
+        else:
+            doc_session_id = f"review:{uuid.uuid4()}"
+            logger.info("Minted session ID %s for %s", doc_session_id, doc_path.name)
 
         try:
             result = _run_review_doc_pipeline(
@@ -169,6 +187,7 @@ def run_review(  # noqa: PLR0912
                 confidence_threshold=confidence_threshold,
                 mode_threshold_overrides=mode_threshold_overrides,
                 mode=mode,
+                session_id=doc_session_id,
             )
         except Exception as exc:
             logger.warning("Failed to process %s: %s", doc_path, exc)
@@ -193,6 +212,7 @@ def run_review(  # noqa: PLR0912
                     report.document,  # type: ignore[arg-type]  # DocMeta matches Document subset
                     mode=grounding_mode,  # type: ignore[arg-type]  # validated as 'strict'/'lenient' above
                     source_clauses=clauses,
+                    session_id=doc_session_id,
                 )
                 grounding_result.merge_into(report)
                 logger.info(
@@ -225,6 +245,7 @@ def _run_review_doc_pipeline(
     confidence_threshold: float,
     mode_threshold_overrides: dict[str, float] | None = None,
     mode: str = "precheck",
+    session_id: str | None = None,
 ) -> tuple[ReviewReport, list[Any]] | None:
     """Run a pipeline for a single document using the pipeline framework.
 
@@ -234,6 +255,13 @@ def _run_review_doc_pipeline(
 
     Returns ``(report, clauses)`` where *clauses* are the parsed source
     clauses (used for downstream grounding).
+
+    Parameters
+    ----------
+    session_id:
+        Optional session identifier for cost attribution.  Passed through
+        to the review stage so all extraction and QA calls for this
+        document share the same ID.
     """
     from openreview_cli.review.pipeline import ReviewStage
 
@@ -246,6 +274,7 @@ def _run_review_doc_pipeline(
         playbook_version=playbook_version,
         verbose=verbose,
         mode=mode,
+        session_id=session_id,
     )
 
     stages: list[Any] = [ParseStage()]

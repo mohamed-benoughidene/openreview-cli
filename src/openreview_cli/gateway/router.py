@@ -440,9 +440,13 @@ class Gateway:
         # ponytail: streaming `response` is a generator, so log_call sees no
         # `.usage` yet → cost recorded as 0. Capturing real cost needs the
         # final chunk; defer until a non-streaming cost path or stream-drain.
-        self._cost_tracker.log_call(
-            session_id, slot, call_kwargs["model"], provider_prefix, response
-        )
+        # Cost logging must never kill the stream (mirrors chat() T030 fix).
+        try:
+            self._cost_tracker.log_call(
+                session_id, slot, call_kwargs["model"], provider_prefix, response
+            )
+        except Exception as cost_err:
+            logger.warning("Cost logging failed (non-fatal): %s", cost_err)
         yield from self._iter_stream(response, provider_prefix)
 
     def _iter_stream(self, response: Any, provider_prefix: str) -> Iterator[StreamingOutputEvent]:

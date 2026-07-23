@@ -55,6 +55,7 @@ class ReviewStage(Stage):
         playbook_version: int | None = None,
         verbose: bool = False,
         mode: str = "precheck",
+        session_id: str | None = None,
     ) -> None:
         """Initialise the review stage.
 
@@ -77,6 +78,10 @@ class ReviewStage(Stage):
             Database version of the playbook, if loaded from DB.
         verbose:
             Emit per-clause progress to stderr when ``True``.
+        session_id:
+            Optional session identifier for cost attribution.  Passed through
+            to every ``call_gateway_chat`` invocation so extraction and QA
+            costs land under the same session ID.
         """
         self._playbook = playbook
         self._extraction_model = extraction_model
@@ -86,6 +91,7 @@ class ReviewStage(Stage):
         self._playbook_version = playbook_version
         self._verbose = verbose
         self._mode = mode
+        self._session_id = session_id
         self.report: ReviewReport | None = None
         self.document: Any = None
         self.clauses: list[Any] | None = []
@@ -121,6 +127,7 @@ class ReviewStage(Stage):
                 category=category,
                 extraction_model=self._extraction_model,
                 mode=self._mode,
+                session_id=self._session_id,
             )
 
             if category is not None and assessment.playbook_category != "no-match":
@@ -129,6 +136,7 @@ class ReviewStage(Stage):
                     assessment,
                     category,
                     qa_model=self._qa_model,
+                    session_id=self._session_id,
                 )
 
             assessments.append(assessment)

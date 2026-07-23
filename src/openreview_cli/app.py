@@ -1265,6 +1265,7 @@ def review(
         raise typer.Exit(code=2) from None
 
     _emit_reviews(reports, format, output, _privacy_footer(), memo_format, output_dir)
+    typer.echo("Costs: see `openreview gateway costs --today`")
 
 
 app.add_typer(precheck_app)

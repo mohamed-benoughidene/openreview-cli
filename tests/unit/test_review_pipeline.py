@@ -74,6 +74,7 @@ class TestRunReviewPublicAPI:
             confidence_threshold: float,
             mode: str = "precheck",
             mode_threshold_overrides: dict[str, float] | None = None,
+            **kwargs: Any,
         ) -> tuple[ReviewReport, list[Any]] | None:
             return (
                 ReviewReport(

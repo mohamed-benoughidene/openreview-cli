@@ -49,6 +49,7 @@ def run_grounding(
     gateway: Gateway | None = None,
     model: str | None = None,
     source_clauses: list[Clause] | None = None,
+    session_id: str | None = None,
 ) -> CGReport:
     """Run citation grounding on a ReviewReport.
 
@@ -61,6 +62,9 @@ def run_grounding(
         source_clauses: The parsed clause objects from the source document.
             When provided, enables clause-text-aware CP/CR/CL metrics and
             populates the prompt with actual clause text.
+        session_id: Optional session identifier for cost attribution.
+            Passed through to the discriminator so grounding gateway calls
+            share the same session ID as the review pipeline.
 
     Returns:
         CGReport with per-claim verdicts, provenances, and metrics.
@@ -69,5 +73,6 @@ def run_grounding(
         mode=mode,
         gateway=gateway,
         model=model,
+        session_id=session_id,
     )
     return discriminator.ground_report(report, source_document, source_clauses)

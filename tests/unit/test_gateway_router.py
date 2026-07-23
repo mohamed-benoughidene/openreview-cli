@@ -876,6 +876,30 @@ def _build_gw() -> Gateway:
     return gw
 
 
+def test_chat_stream_survives_cost_logging_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """T030 replica for streaming: cost-logging raise must not kill stream."""
+    chunks = [_make_chunk("Hello"), _make_chunk(" world")]
+    monkeypatch.setattr("openreview_cli.gateway.router.completion", lambda **kwargs: iter(chunks))
+    monkeypatch.setattr(
+        "openreview_cli.prompts.store.PromptStore",
+        MagicMock(resolve=lambda *a, **k: None),
+    )
+
+    gw = _build_gw()
+
+    def _boom(*args: object, **kwargs: object) -> str:
+        raise RuntimeError("cost log exploded")
+
+    gw._cost_tracker.log_call = _boom  # type: ignore[method-assign]
+
+    events = list(gw.chat_stream("extraction", [{"role": "user", "content": "hi"}]))
+    assert events == [
+        StreamingOutputEvent(type="chunk", text="Hello"),
+        StreamingOutputEvent(type="chunk", text=" world"),
+        StreamingOutputEvent(type="done"),
+    ]
+
+
 def test_chat_stream_yields_chunks_and_done(monkeypatch: pytest.MonkeyPatch) -> None:
     chunks = [_make_chunk("Hello"), _make_chunk(" world")]
     monkeypatch.setattr("openreview_cli.gateway.router.completion", lambda **kwargs: iter(chunks))

@@ -45,10 +45,12 @@ class CitationGroundingDiscriminator:
         gateway: Gateway | None = None,
         model: str | None = None,
         output_dir: str | None = None,
+        session_id: str | None = None,
     ) -> None:
         self.mode: Literal["strict", "lenient"] = mode
         self._model = model
         self._output_dir = output_dir
+        self._session_id = session_id
 
         from openreview_cli.gateway.router import Gateway as _Gateway
 
@@ -105,6 +107,8 @@ class CitationGroundingDiscriminator:
             }
             if self._model:
                 chat_kwargs["model"] = self._model
+            if self._session_id is not None:
+                chat_kwargs["session_id"] = self._session_id
             response = self._gateway.chat("grounding", messages, **chat_kwargs)
         except Exception as e:
             logger.warning("Gateway call failed: %s", e)
@@ -253,6 +257,8 @@ class CitationGroundingDiscriminator:
             }
             if self._model:
                 chat_kwargs["model"] = self._model
+            if self._session_id is not None:
+                chat_kwargs["session_id"] = self._session_id
             response = self._gateway.chat("grounding", messages, **chat_kwargs)
         except Exception as e:
             logger.warning("Gateway batch call failed: %s", e)

@@ -23,6 +23,7 @@ def verify_assessment(
     assessment: ClauseAssessment,
     category: Category,
     qa_model: str,
+    session_id: str | None = None,
 ) -> ClauseAssessment:
     """Run QA verification on a single clause assessment.
 
@@ -63,6 +64,7 @@ def verify_assessment(
             qa_model,
             messages,
             requirement=CapabilityRequirement(capability="reasoning"),
+            session_id=session_id,
         )
         parsed = _parse_qa_response(raw_response)
     except Exception as exc:
