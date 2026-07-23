@@ -10,7 +10,7 @@ Product design lives in `products/openreview/` (gitignored) and is **preliminary
 
 ## Tracked vs. local
 
-- **Gitignored:** `AGENTS.md` (this file — local only), `products/`, `Papers/`, `.venv/`.
+- **Gitignored:**  (this file — local only), `products/`, `Papers/`, `.venv/`.
 - **Tracked:** `specs/`, `.specify/` (constitution at `.specify/memory/constitution.md`), `.opencode/`, everything in "Layout" below.
 - **Submodule:** `.tools/ponytail` — after clone, `git submodule update --init` or `opencode.json` points at a missing path and the ponytail plugin won't load.
 
