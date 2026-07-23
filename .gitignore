@@ -10,7 +10,6 @@ wheels/
 .venv
 
 # Local agent/tooling state (regenerable, may contain secrets)
-AGENTS.md
 .drafts
 
 
