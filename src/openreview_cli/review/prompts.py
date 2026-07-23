@@ -5,11 +5,13 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from openreview_cli.llm_json import strip_fences
+
 
 def _parse_json(raw: str, fallback: dict[str, Any]) -> dict[str, Any]:
     """Shared JSON parser with fallback for extraction and QA responses."""
     try:
-        data = json.loads(raw)
+        data = json.loads(strip_fences(raw))
     except (json.JSONDecodeError, ValueError):
         return fallback
     return data  # type: ignore[no-any-return]

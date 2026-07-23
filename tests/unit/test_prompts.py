@@ -82,3 +82,42 @@ class TestModePromptContent:
         assert messages[0]["role"] == "system"
         assert messages[1]["role"] == "user"
         assert "test clause" in messages[1]["content"]
+
+
+def test_parse_qa_response_strips_markdown_fences() -> None:
+    """Regression: real providers wrap JSON in ```json fences (see retro doc)."""
+    from openreview_cli.review.prompts import parse_qa_response
+
+    raw = (
+        "```json\n{\n"
+        '  "verdict": "agree",\n'
+        '  "revised_position": null,\n'
+        '  "rationale": "checks out",\n'
+        '  "citation_valid": true,\n'
+        '  "position_valid": true,\n'
+        '  "category_valid": true,\n'
+        '  "confidence_valid": true\n'
+        "}\n```"
+    )
+    result = parse_qa_response(raw)
+    assert result["verdict"] == "agree"
+    assert result["citation_valid"] is True
+    assert result["rationale"] == "checks out"
+
+
+def test_parse_extraction_response_strips_markdown_fences() -> None:
+    """Regression: real providers wrap JSON in ```json fences (see retro doc)."""
+    from openreview_cli.review.prompts import parse_extraction_response
+
+    raw = (
+        "```json\n{\n"
+        '  "position": "preferred",\n'
+        '  "confidence": 0.9,\n'
+        '  "citation": "clause 3.2",\n'
+        '  "category_match": true\n'
+        "}\n```"
+    )
+    result = parse_extraction_response(raw)
+    assert result["position"] == "preferred"
+    assert result["confidence"] == 0.9
+    assert result["citation"] == "clause 3.2"
