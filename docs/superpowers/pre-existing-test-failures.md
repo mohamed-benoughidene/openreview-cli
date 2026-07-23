@@ -6,13 +6,13 @@ Evidence gathered per-test; fix directions are one-line starting points, not pla
 
 ## Priority 1 — Real bugs (code or test)
 
-### 1. `test_retrieval_fusion.py::TestRRFFusion::test_sparse_hybrid_correlation_less_than_one` — TEST BUG (mock signature drift)
+### 1. `test_retrieval_fusion.py::TestRRFFusion::test_sparse_hybrid_correlation_less_than_one` — TEST BUG (mock signature drift) — **FIXED** (branch `fix/test-mock-drift-and-offline`)
 - **Source:** `tests/integration/test_retrieval_fusion.py:211` — `def _mock_embed(slot: str, texts: list[str])` (no `requirement` param)
 - **Call site:** `src/openreview_cli/retrieval/dense.py:33` — `gateway.embed("embedding", [text], requirement=CapabilityRequirement(capability="embedding"))`
 - **Real signature:** `src/openreview_cli/gateway/router.py:484-490` — `embed(self, slot, texts, *, session_id=None, requirement=None)`
 - **Mechanism:** `MagicMock.side_effect` receives all caller kwargs → `TypeError: _mock_embed() got an unexpected keyword argument 'requirement'` → dense path dies, falls back to BM25, assertion fails.
-- **Fix:** `def _mock_embed(slot, texts, *, requirement=None, session_id=None)`.
-- **Action:** sweep ALL `_mock_embed` definitions in tests/ for the same drift (at least `test_retrieval_fusion.py:211` and check `test_retrieval_benchmark.py:175`).
+- **Fix applied:** added `*, requirement: CapabilityRequirement | None = None, session_id: str | None = None` to both `_mock_embed` defs (`test_retrieval_fusion.py:211`, `test_retrieval_benchmark.py:175`). Swept all other `embed` side_effects: exception/list side_effects are arity-immune, no other callable mocks exist.
+- **Side effect to watch:** the same TypeError killed the dense path in `test_retrieval_benchmark.py` — likely true root cause of flake #6 (not patch leakage). Confirm on next full-suite runs.
 
 ### 2. `test_gateway_cli.py` — 3 tests fail consistently on base AND branch (fully mocked — NOT environmental)
 - `TestGatewayCli::test_gateway_providers` (asserts `'ollama' in result.stdout`; table renders providers with 0 models, ollama row absent)
@@ -32,19 +32,20 @@ Evidence gathered per-test; fix directions are one-line starting points, not pla
 - **Source:** `test_benchmark_modes.py:86-94` — `subprocess.run([... "-m", "openreview_cli", "benchmark", "run" ...], timeout=30)` → same `httpx.get(CUAD_URL, timeout=300)` chain. 30s wall-clock < 300s httpx timeout; chunk runs add bandwidth contention.
 - **Fix applied:** converted subprocess → `CliRunner` invoke with monkeypatched loaders (pattern from `TestMultiMode` in same file). Verified: 6 passed in 8.8s hermetically.
 
-### 5. `test_dense_offline_fallback_notice` — ambient-environment-dependent — **PARTIALLY MITIGATED**
+### 5. `test_dense_offline_fallback_notice` — ambient-environment-dependent — **FIXED** (branch `fix/test-mock-drift-and-offline`)
 - **Source:** `test_retrieval_offline.py:92-113` — NO gateway mock. Test passes only when `Gateway()` construction fails.
 - **Dependency:** `src/openreview_cli/app.py:2069-2072` constructs real `Gateway()` → `router.py:118` `load_auth()` reads real `auth.json`. Dev machine has valid API keys → LiteLLM call succeeds → no "Dense retrieval unavailable" notice → assertion fails.
-- **Fix:** add `@patch("openreview_cli.gateway.router.Gateway", side_effect=Exception("no auth"))` to force the fallback path deterministically.
-- **2026-07-23 note:** passes under the new global `--disable-socket` (LiteLLM call blocked → fallback notice appears) but the test still has no explicit mock — deterministic fix above still owed (Phase 2).
+- **Fix applied:** `@patch("openreview_cli.gateway.router.Gateway", side_effect=Exception("no auth"))` — construction-time failure, the doc's original prescription. Covers engine.py:183-187 (`gateway=None`) branch, untested elsewhere. Rejected variant: plain `@patch` (MagicMock embed silently returns empty → no notice).
+- **"Logging error" quirk — RESOLVED (non-issue):** a subagent observed `--- Logging error ---` instead of the notice with the construction-fail patch. Could not reproduce: passes in isolation, full file, and full 588-test integration suite. Transient artifact of that session, not code behavior.
 
 ## Priority 3 — Flakes
 
-### 6. `test_retrieval_benchmark.py::TestRerankerBenchmark::test_reranker_returns_results` — chunk-ordering flake
+### 6. `test_retrieval_benchmark.py::TestRerankerBenchmark::test_reranker_returns_results` — chunk-ordering flake — **RESOLVED (side effect of #1 fix)**
 - Fails inside a ~30-file chunk run; passes isolated on the same code.
 - **Source:** `test_retrieval_benchmark.py:297-336`; fixtures are function-scoped `tmp_path` (no shared DB state found).
-- **Hypothesis:** module-level `@patch("openreview_cli.gateway.router.Gateway")` affects all importers in the same process; interaction with neighboring tests.
-- **Fix:** narrow patch scope or isolate the test's process.
+- **Original hypothesis:** module-level `@patch("openreview_cli.gateway.router.Gateway")` affects all importers in the same process; interaction with neighboring tests.
+- **Actual root cause:** same `_mock_embed` signature drift as #1 — `TypeError` killed the dense path whenever the drifted mock was exercised, producing BM25-only rankings and order-dependent assertion failures. Fixed with #1 (kwargs added at `test_retrieval_benchmark.py:175`).
+- **Evidence:** 10/10 consecutive isolated passes + 1/1 full 588-test integration run post-fix, vs regular in-chunk failures pre-fix. Mechanism + evidence combined: declared resolved. If it reappears, reopen with the patch-leak hypothesis.
 
 ### 6b. TUI suite (`tests/integration/tui/`) — non-deterministic flake storm under full-suite load
 - Two consecutive full `-m slow` runs on identical code: run 1 = 16 failed/96 passed, run 2 = 18 failed/94 passed, with **different failure sets** (overlap partial; `test_settings_tab`, `test_result_screen`, `test_search_screen`, `test_review_wizard`, `test_gateway_wizard`, `test_client_form`, `test_clients_tab`, `test_progress_screen`, `test_recent_reviews` variously).
@@ -64,12 +65,12 @@ Evidence gathered per-test; fix directions are one-line starting points, not pla
 
 | # | Test | Class | One-line fix |
 |---|------|-------|--------------|
-| 1 | test_sparse_hybrid_correlation_less_than_one | TEST BUG (mock drift) | add `requirement=None` to `_mock_embed` |
+| 1 | test_sparse_hybrid_correlation_less_than_one | TEST BUG (mock drift) | **FIXED** — `requirement`/`session_id` kwargs added, all mocks swept |
 | 2 | test_gateway_cli ×3 | REAL FAILURE (unknown) | trace which registry method the CLI calls vs mocks |
 | 3 | test_mock_baseline_produces_correct_result_count | network-dependent | **FIXED** — canned loader monkeypatch |
 | 4 | test_modes_validation_accepts_all_22 | network + 30s timeout | **FIXED** — CliRunner + canned loaders |
-| 5 | test_dense_offline_fallback_notice | ambient auth-dependent | force-patch Gateway to fail |
-| 6 | test_reranker_returns_results | ordering flake | narrow patch scope |
+| 5 | test_dense_offline_fallback_notice | ambient auth-dependent | **FIXED** — construction-fail Gateway patch |
+| 6 | test_reranker_returns_results | ordering flake | **RESOLVED** — root cause was #1's drift; 11/11 passes post-fix |
 | 7 | test_sigterm_mid_review_cancels_cleanly | known TUI bug (AGENTS.md) | cancel-and-return in `_on_signal` |
 
 ## Discovered 2026-07-23 (network-hermeticity branch, full integration run)

@@ -17,6 +17,7 @@ import pytest
 from typer.testing import CliRunner
 
 from openreview_cli.app import app
+from openreview_cli.gateway.models import CapabilityRequirement
 from openreview_cli.retrieval.ingest import ingest_document
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "retrieval"
@@ -208,7 +209,13 @@ class TestRRFFusion:
         """Kendall tau correlation between sparse and hybrid rankings is < 1.0."""
 
         # Mock gateway embed(slot, texts) → list[list[float]]
-        def _mock_embed(slot: str, texts: list[str]) -> list[list[float]]:
+        def _mock_embed(
+            slot: str,
+            texts: list[str],
+            *,
+            requirement: CapabilityRequirement | None = None,
+            session_id: str | None = None,
+        ) -> list[list[float]]:
             return [[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]]
 
         mock_gw = MagicMock()

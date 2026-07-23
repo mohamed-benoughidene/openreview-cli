@@ -15,6 +15,7 @@ import pytest
 from typer.testing import CliRunner
 
 from openreview_cli.app import app
+from openreview_cli.gateway.models import CapabilityRequirement
 from openreview_cli.retrieval.ingest import ingest_document
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "retrieval"
@@ -172,7 +173,13 @@ def _text_trigrams(text: str, n: int = 3) -> set[str]:
     return {normalized[i : i + n] for i in range(len(normalized) - n + 1)}
 
 
-def _mock_embed(slot: str, texts: list[str]) -> list[list[float]]:
+def _mock_embed(
+    slot: str,
+    texts: list[str],
+    *,
+    requirement: CapabilityRequirement | None = None,
+    session_id: str | None = None,
+) -> list[list[float]]:
     """Mock gateway.embed(slot, texts) returning deterministic embeddings.
 
     Uses character trigram hashing so that texts sharing substrings
