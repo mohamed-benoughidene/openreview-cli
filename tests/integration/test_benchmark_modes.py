@@ -80,18 +80,33 @@ class TestModeValidation:
         )
         assert "Unknown mode" in result.stderr, f"stderr: {result.stderr}"
 
-    def test_modes_validation_accepts_all_22(self) -> None:
+    def test_modes_validation_accepts_all_22(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """Assert --modes=<all 22> succeeds (exit 0)."""
+        _fake_items = [
+            {
+                "example_id": "doc1_governing_law",
+                "document_text": "This Agreement shall be governed by the laws of New York.",
+                "category": "governing_law",
+                "ground_truth_spans": [(42, 52)],
+                "is_positive": True,
+            }
+        ]
+        for module, loader in (
+            ("cuad", "load_cuad_dataset"),
+            ("maud", "load_maud_dataset"),
+            ("contract_nli", "load_contract_nli_dataset"),
+        ):
+            monkeypatch.setattr(
+                f"openreview_cli.benchmark.datasets.{module}.{loader}",
+                lambda cache_dir=None, _items=_fake_items: iter(_items),
+            )
         modes_str = ",".join(sorted(_KNOWN_MODES))
-        result = subprocess.run(
-            [sys.executable, "-m", "openreview_cli", "benchmark", "run", f"--modes={modes_str}"],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        assert result.returncode == 0, (
-            f"Expected 0, got {result.returncode}. stderr: {result.stderr}"
-        )
+        runner = CliRunner()
+        result = runner.invoke(app, ["benchmark", "run", f"--modes={modes_str}"])
+        assert result.exit_code == 0, f"stdout: {result.stdout}\nstderr: {result.stderr}"
 
 
 class TestDeadParam:

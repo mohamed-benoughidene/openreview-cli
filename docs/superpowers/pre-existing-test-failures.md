@@ -24,18 +24,19 @@ Evidence gathered per-test; fix directions are one-line starting points, not pla
 
 ## Priority 2 — Test-infra issues (environment-sensitive tests)
 
-### 3. `test_benchmark_baseline.py::TestMockBaseline::test_mock_baseline_produces_correct_result_count` — network-dependent
+### 3. `test_benchmark_baseline.py::TestMockBaseline::test_mock_baseline_produces_correct_result_count` — network-dependent — **FIXED** (branch `fix/test-network-hermeticity`)
 - **Chain:** `run_mock_baseline` → `BenchmarkRunner(cache_dir=None)` (`baseline.py:66-72`) → `runner.py:192-194` → `load_cuad_dataset(cache_dir=None)` → `cuad.py:109` `httpx.get(CUAD_URL, timeout=300)`. Sandbox has no/blocked network → 300s hang.
-- **Fix:** pass a `cache_dir` with pre-cached fixture JSONs, or monkeypatch the three dataset loaders (`cuad`, `maud`, `contract_nli`) to return canned data.
+- **Fix applied:** class-level autouse fixture monkeypatches all three dataset loaders (`cuad`, `maud`, `contract_nli`) with canned 5-field items. Verified: 28 passed in 16.5s, no network.
 
-### 4. `test_benchmark_modes.py::TestModeValidation::test_modes_validation_accepts_all_22` — network + 30s subprocess timeout
+### 4. `test_benchmark_modes.py::TestModeValidation::test_modes_validation_accepts_all_22` — network + 30s subprocess timeout — **FIXED** (branch `fix/test-network-hermeticity`)
 - **Source:** `test_benchmark_modes.py:86-94` — `subprocess.run([... "-m", "openreview_cli", "benchmark", "run" ...], timeout=30)` → same `httpx.get(CUAD_URL, timeout=300)` chain. 30s wall-clock < 300s httpx timeout; chunk runs add bandwidth contention.
-- **Fix:** pre-seed dataset cache in test setup, or raise subprocess timeout to 120s+, or run with canned datasets.
+- **Fix applied:** converted subprocess → `CliRunner` invoke with monkeypatched loaders (pattern from `TestMultiMode` in same file). Verified: 6 passed in 8.8s hermetically.
 
-### 5. `test_retrieval_offline.py::TestOfflineIntegration::test_dense_offline_fallback_notice` — ambient-environment-dependent
+### 5. `test_dense_offline_fallback_notice` — ambient-environment-dependent — **PARTIALLY MITIGATED**
 - **Source:** `test_retrieval_offline.py:92-113` — NO gateway mock. Test passes only when `Gateway()` construction fails.
 - **Dependency:** `src/openreview_cli/app.py:2069-2072` constructs real `Gateway()` → `router.py:118` `load_auth()` reads real `auth.json`. Dev machine has valid API keys → LiteLLM call succeeds → no "Dense retrieval unavailable" notice → assertion fails.
 - **Fix:** add `@patch("openreview_cli.gateway.router.Gateway", side_effect=Exception("no auth"))` to force the fallback path deterministically.
+- **2026-07-23 note:** passes under the new global `--disable-socket` (LiteLLM call blocked → fallback notice appears) but the test still has no explicit mock — deterministic fix above still owed (Phase 2).
 
 ## Priority 3 — Flakes
 
@@ -65,8 +66,23 @@ Evidence gathered per-test; fix directions are one-line starting points, not pla
 |---|------|-------|--------------|
 | 1 | test_sparse_hybrid_correlation_less_than_one | TEST BUG (mock drift) | add `requirement=None` to `_mock_embed` |
 | 2 | test_gateway_cli ×3 | REAL FAILURE (unknown) | trace which registry method the CLI calls vs mocks |
-| 3 | test_mock_baseline_produces_correct_result_count | network-dependent | cache datasets or patch loaders |
-| 4 | test_modes_validation_accepts_all_22 | network + 30s timeout | pre-seed cache / raise timeout |
+| 3 | test_mock_baseline_produces_correct_result_count | network-dependent | **FIXED** — canned loader monkeypatch |
+| 4 | test_modes_validation_accepts_all_22 | network + 30s timeout | **FIXED** — CliRunner + canned loaders |
 | 5 | test_dense_offline_fallback_notice | ambient auth-dependent | force-patch Gateway to fail |
 | 6 | test_reranker_returns_results | ordering flake | narrow patch scope |
 | 7 | test_sigterm_mid_review_cancels_cleanly | known TUI bug (AGENTS.md) | cancel-and-return in `_on_signal` |
+
+## Discovered 2026-07-23 (network-hermeticity branch, full integration run)
+
+### 8. Test-suite repo pollution — tests write artifacts into the working tree
+- One full `tests/integration` run created **565 untracked YAML files in repo root** (`bulk-*`, `diff-*`, `export-*`, `del-*`, `hist-*`, `set-*`, …) and **modified tracked fixtures** `tests/fixtures/nda_corpus/pairs/*.json` + `manifest.json`.
+- **Mechanism:** playbook/client CLI tests pass relative output paths (or default to cwd) instead of `tmp_path`.
+- **Impact:** dirty tree after every verification run; risk of committing artifacts; fixture mutation can leak across tests (ordering-dependent behavior).
+- **Fix:** sweep the offending tests to use `tmp_path`/isolated cwd (`CliRunner`'s `isolated_filesystem` or `monkeypatch.chdir`), and assert tree cleanliness in CI.
+
+### 9. `test_pii_accuracy.py::TestPiiAccuracy::test_finds_pii_on_real_contracts` — ordering-dependent failure
+- Failed inside the full integration run; passed isolated on identical code (104s). Not network-related (no socket use).
+- **Hypothesis:** shared session-scoped PII engine state or fixture pollution (#8) interaction. Needs investigation alongside #6.
+
+### 10. `test_benchmark_tier.py::test_benchmark_tier_all_runs` — borderline 30s subprocess timeout — **FIXED** (branch `fix/test-network-hermeticity`)
+- `--benchmark-tier all` runs 3 tiers sequentially in one subprocess; 29.78s observed on main vs 30s limit. Raised to 90s with comment.

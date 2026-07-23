@@ -51,6 +51,27 @@ class TestBaselineCommand:
 class TestMockBaseline:
     """T-B-02, T-B-03: mock baseline result count and schema."""
 
+    @pytest.fixture(autouse=True)
+    def _canned_loaders(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        items = [
+            {
+                "example_id": "doc1_governing_law",
+                "document_text": "This Agreement shall be governed by the laws of New York.",
+                "category": "governing_law",
+                "ground_truth_spans": [(42, 52)],
+                "is_positive": True,
+            }
+        ]
+        for module, loader in (
+            ("cuad", "load_cuad_dataset"),
+            ("maud", "load_maud_dataset"),
+            ("contract_nli", "load_contract_nli_dataset"),
+        ):
+            monkeypatch.setattr(
+                f"openreview_cli.benchmark.datasets.{module}.{loader}",
+                lambda cache_dir=None, _items=items: iter(_items),
+            )
+
     def test_mock_baseline_produces_correct_result_count(self) -> None:
         results = run_mock_baseline(list(VALID_MODES))
         mode_count = len(VALID_MODES)

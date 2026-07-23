@@ -12,6 +12,13 @@ import pytest
 from openreview_cli.pii.engine import PiiEngine
 from openreview_cli.pipeline.base import Stage
 
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    for item in items:
+        if item.get_closest_marker("network"):
+            item.add_marker(pytest.mark.enable_socket)
+
+
 # Silence transformers advisory/info warnings during pytest runs.
 # Avoids "I/O operation on closed file" from warnings emitted while
 # pytest has already closed the capture output.

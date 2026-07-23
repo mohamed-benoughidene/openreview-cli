@@ -98,7 +98,7 @@ def test_benchmark_tier_all_runs() -> None:
         ],
         capture_output=True,
         text=True,
-        timeout=30,
+        timeout=90,  # all = 3 tiers sequential; 30s was borderline (29.8s observed)
     )
     assert result.returncode == 0 or "Error" not in result.stderr
 

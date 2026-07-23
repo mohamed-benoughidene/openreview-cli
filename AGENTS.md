@@ -96,6 +96,7 @@ Repo `openreview` · PyPI `openreview-cli` · CLI `openreview` · import `openre
 - **`tests/conftest.py` caches one `PiiEngine`/spaCy model per session** and autouse-injects it into `strip_pii`/`strip_pii_clauses`. Don't instantiate `PiiEngine` per test — use the `pii_engine` fixture.
 - **TUI tests auto-marked `slow`** via `tests/integration/tui/conftest.py` (`pytest_collection_modifyitems`).
 - **Known-broken test:** `test_sigterm_mid_review_cancels_cleanly` — `tui/app.py:167` `_on_signal` calls `sys.exit`, escapes Textual `run_test`. Pre-existing; don't "fix" the test by accident when nearby.
+- **Sockets disabled in tests by default** (`pytest-socket`, `--disable-socket --allow-unix-socket` in addopts). Internet tests: `@pytest.mark.network` (conftest auto-enables). Local 127.0.0.1 test servers: `@pytest.mark.enable_socket` directly — localhost is AF_INET, still blocked. `--allow-unix-socket` is load-bearing: asyncio needs `socket.socketpair()`.
 - **`tests/integration/test_no_pii_flag.py`, `test_pii_memory.py`, `test_pii_accuracy.py`, `test_config_change.py` are real tests now** — older notes calling them skeletons are stale.
 
 ## Don'ts

@@ -67,12 +67,21 @@ Ordered by leverage. Each item is independently shippable.
    hook that FAILS collection of unmarked tests. Document the canonical local
    commands in AGENTS.md: fast feedback = `-m "fast"`, full = `-m "not live"`.
 
-2. **Kill real network in tests.**
-   - Add `pytest-socket` (or a small conftest fixture) disabling sockets by
-     default; tests that need network must opt in via the `network` marker.
-   - Pre-cache dataset fixtures (CUAD/MAUD/ContractNLI JSONs are small) and
-     point `BenchmarkRunner(cache_dir=...)` at them in test fixtures.
-   - Mock Ollama discovery at the `httpx` boundary everywhere it appears.
+2. **Kill real network in tests.** — **PARTIALLY DONE** (branch `fix/test-network-hermeticity`, 2026-07-23)
+   - ~~Add `pytest-socket` (or a small conftest fixture) disabling sockets by
+     default; tests that need network must opt in via the `network` marker.~~
+     DONE: `pytest-socket` added, `--disable-socket --allow-unix-socket` in
+     addopts, conftest auto-enables socket for `network`-marked tests.
+     `--allow-unix-socket` is required — asyncio event loops need
+     `socket.socketpair()`.
+   - Dataset fixtures: chose **canned loader monkeypatches** over committed
+     cache JSONs (no big files in git). `test_benchmark_baseline` and
+     `test_benchmark_modes` now hermetic.
+   - Ollama discovery: no per-test mocks needed — socket block makes
+     `discover_ollama` return `[]` deterministically.
+   - Remaining: sweep for other tests that assume ambient network
+     (`test_gateway_streaming` + one unit test needed `enable_socket` for
+     **local** 127.0.0.1 test servers — localhost is AF_INET, still blocked).
 
 3. **Isolate the TUI suite in CI.**
    Give `-m slow` its own CI job (memory tests already got this treatment).
