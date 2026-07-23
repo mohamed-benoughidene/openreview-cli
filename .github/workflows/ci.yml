@@ -47,6 +47,9 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
       - run: uv sync --frozen
+      # spaCy model needed by unit PII tests; without it Presidio tries to
+      # download at test time, which the pytest-socket block (addopts) rejects
+      - run: uv pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl
       - run: uv run pytest tests/unit/ -q
 
   memory:

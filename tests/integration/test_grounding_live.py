@@ -27,6 +27,7 @@ requires_openrouter = pytest.mark.skipif(
 )
 
 
+@pytest.mark.network
 @requires_openrouter
 def test_ground_claim_live_reasoning_wiring() -> None:
     """Real gateway call: a claim that IS supported by the clause must
@@ -47,6 +48,7 @@ def test_ground_claim_live_reasoning_wiring() -> None:
     assert confidence > 0.0
 
 
+@pytest.mark.network
 @requires_openrouter
 def test_ground_claim_live_unsupported_returns_ungrounded() -> None:
     """Real gateway call: a claim that contradicts the clause must come
@@ -65,6 +67,7 @@ def test_ground_claim_live_unsupported_returns_ungrounded() -> None:
     assert isinstance(confidence, float)
 
 
+@pytest.mark.network
 @requires_openrouter
 def test_discriminator_passes_reasoning_requirement() -> None:
     """Confirm the discriminator's gateway call carries the reasoning

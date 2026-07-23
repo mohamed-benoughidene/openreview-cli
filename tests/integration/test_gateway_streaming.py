@@ -73,6 +73,7 @@ def _build_gateway(monkeypatch: pytest.MonkeyPatch, port: int) -> Gateway:
 
 
 @pytest.mark.timeout(180)
+@pytest.mark.enable_socket  # local ThreadingTCPServer on 127.0.0.1, no internet
 def test_stream_idle_20_runs_95pct_reliable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

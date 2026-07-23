@@ -941,6 +941,7 @@ def test_stream_timeout_is_dual_not_single(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 @pytest.mark.timeout(75)
+@pytest.mark.enable_socket  # local ThreadingTCPServer on 127.0.0.1, no internet
 def test_stream_idle_timeout_cuts_stalled_provider(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
