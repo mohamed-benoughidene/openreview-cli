@@ -1310,3 +1310,23 @@ class TestDispatchCombinations:
         assert captured.get("confidence_threshold") == 0.5
         assert captured.get("no_pii") is True
         assert captured.get("grounding_mode") == "lenient"
+
+
+# ---------------------------------------------------------------------------
+# _parse_comparison_response — markdown fence stripping
+# ---------------------------------------------------------------------------
+
+
+def test_parse_comparison_response_strips_markdown_fences() -> None:
+    """Fenced JSON must parse identically to bare JSON.
+
+    Regression: real providers wrap JSON in ```json fences; the fallback
+    silently returned DivergenceVerdict.uncertain (see retro doc).
+    """
+    from openreview_cli.bilateral.comparison import _parse_comparison_response
+
+    bare = '{"divergence": "no_divergence", "confidence": 0.9, "rationale": "same"}'
+    fenced = f"```json\n{bare}\n```"
+    fenced_result = _parse_comparison_response(fenced)
+    assert fenced_result.get("error") is None
+    assert fenced_result == _parse_comparison_response(bare)
