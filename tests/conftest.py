@@ -145,6 +145,32 @@ def memory_tracker() -> Generator[None, None, None]:
         )
 
 
+@pytest.fixture(autouse=True)
+def _tracemalloc_state_isolation(request: pytest.FixtureRequest) -> Generator[None, None, None]:
+    """Restore tracemalloc on/off state after memory-marked tests.
+
+    Tests carrying ``pytest.mark.memory`` often call ``tracemalloc.start()``
+    and ``.stop()`` inside their body.  Leaving tracemalloc in a different
+    running state than the per-test ``memory_tracker`` fixture expects
+    interacts badly with pytest-socket under heavy memory pressure
+    (en_core_web_lg's tok2vec triggers ``SocketBlockedError`` through an
+    unexplained CPython/thinc interop).  This sandbox unconditionally resets
+    tracemalloc to ``was_tracing`` after any memory-marked test.
+
+    See https://docs.pytest.org/en/stable/how-to/fixtures.html#autouse-fixtures
+    """
+    if not any(m.name == "memory" for m in request.node.iter_markers()):
+        yield
+        return
+    was_tracing = tracemalloc.is_tracing()
+    yield
+    if was_tracing:
+        if not tracemalloc.is_tracing():
+            tracemalloc.start()
+    elif tracemalloc.is_tracing():
+        tracemalloc.stop()
+
+
 @pytest.fixture
 def fixtures_dir() -> Path:
     """Return the path to the test fixtures directory."""

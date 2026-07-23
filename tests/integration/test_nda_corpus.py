@@ -32,9 +32,16 @@ PAIRS_DIR = FIXTURES_DIR / "pairs"
 
 
 @pytest.fixture(scope="module")
-def corpus_pairs() -> list[dict[str, Any]]:
+def corpus_pairs(tmp_path_factory: pytest.TempPathFactory) -> list[dict[str, Any]]:
     """Generate the full corpus once per test module."""
-    return generate_corpus()
+    import tests.fixtures.nda_corpus.generate as _gen
+
+    _original_pairs_dir = _gen.PAIRS_DIR
+    _gen.PAIRS_DIR = tmp_path_factory.mktemp("corpus_pairs") / "pairs"
+    try:
+        return generate_corpus()
+    finally:
+        _gen.PAIRS_DIR = _original_pairs_dir
 
 
 def test_corpus_size(corpus_pairs: list[dict[str, Any]]) -> None:

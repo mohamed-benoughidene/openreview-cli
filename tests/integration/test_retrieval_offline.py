@@ -89,7 +89,13 @@ class TestOfflineIntegration:
         assert data["method"] == "sparse"
         assert len(data["results"]) > 0
 
-    def test_dense_offline_fallback_notice(self, runner: CliRunner, indexed_db: Path) -> None:
+    @patch("openreview_cli.gateway.router.Gateway", side_effect=Exception("no auth"))
+    def test_dense_offline_fallback_notice(
+        self,
+        _mock_gateway_class: MagicMock,
+        runner: CliRunner,
+        indexed_db: Path,
+    ) -> None:
         """Dense retrieval without gateway falls back to BM25 and shows notice."""
         result = runner.invoke(
             app,
