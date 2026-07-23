@@ -22,6 +22,7 @@ from openreview_cli.bilateral.models import (
 )
 from openreview_cli.bilateral.prompts import build_comparison_messages
 from openreview_cli.gateway.models import CapabilityRequirement
+from openreview_cli.llm_json import strip_fences
 from openreview_cli.review._gateway import call_gateway_chat
 
 if TYPE_CHECKING:
@@ -134,7 +135,7 @@ def _parse_comparison_response(raw: str) -> dict[str, Any]:
     }
 
     try:
-        data = json.loads(raw)
+        data = json.loads(strip_fences(raw))
     except (json.JSONDecodeError, ValueError):
         logger.warning("Invalid JSON from comparison agent: %s", raw[:200])
         return fallback
