@@ -8,6 +8,7 @@ from typing import Any
 from openreview_cli.benchmark._utils import _FIXTURES_DIR, _detect_git_branch, _detect_git_commit
 from openreview_cli.benchmark.models import BenchmarkConfig
 from openreview_cli.benchmark.runner import BenchmarkRunner
+from openreview_cli.llm_json import strip_fences
 
 
 @dataclass
@@ -86,7 +87,7 @@ def build_gateway_pipeline(mode: str) -> Any:
         )
         response = gateway.chat("default", [{"role": "user", "content": prompt}])
         try:
-            result = json.loads(response)
+            result = json.loads(strip_fences(response))
         except (json.JSONDecodeError, TypeError) as err:
             raise ValueError(
                 "Real baseline requires structured JSON output from provider. "
