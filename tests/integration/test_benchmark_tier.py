@@ -4,6 +4,10 @@ import json
 import subprocess
 import sys
 
+import pytest
+
+pytestmark = pytest.mark.slow  # subprocess calls, 30-90s test duration
+
 # ponytail: minimal integration tests — verify flag parses and table renders
 
 
