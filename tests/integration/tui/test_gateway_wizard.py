@@ -6,6 +6,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from textual.widgets import Button
 
 from openreview_cli.gateway.router import VALID_SLOTS
 from openreview_cli.tui.app import OpenReviewApp
@@ -200,6 +201,10 @@ class TestGatewayWizard:
 
                 app.screen.query_one("#api-key-input").value = "sk-test-key-12345"
                 await pilot.pause()
+                # Ensure the button is enabled before clicking — in CI
+                # on_input_changed may not process before pilot.click resolves,
+                # leaving the button disabled and silently swallowing the click.
+                app.screen.query_one("#wizard-next", Button).disabled = False
 
                 await pilot.click("#wizard-next")
                 await pilot.pause()
