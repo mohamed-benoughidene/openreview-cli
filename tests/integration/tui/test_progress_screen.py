@@ -46,14 +46,15 @@ async def test_progress_screen_lists_pipeline_steps() -> None:
             screen = _get_progress_screen_checked(app)
 
             step_ids = ["step-parse", "step-pii", "step-extract", "step-qa", "step-report"]
-            for sid in step_ids:
-                label = screen.query_one(f"#{sid}")
-                assert label is not None, f"Step {sid} should be visible"
+            try:
+                for sid in step_ids:
+                    label = screen.query_one(f"#{sid}")
+                    assert label is not None, f"Step {sid} should be visible"
 
-            progress_bar = screen.query_one("#progress-bar")
-            assert progress_bar is not None, "Progress bar should be visible"
-
-            _event.set()
+                progress_bar = screen.query_one("#progress-bar")
+                assert progress_bar is not None, "Progress bar should be visible"
+            finally:
+                _event.set()
 
 
 @pytest.mark.asyncio
@@ -62,10 +63,16 @@ async def test_progress_screen_shows_elapsed_time() -> None:
     from openreview_cli.tui.app import OpenReviewApp
     from openreview_cli.tui.screens.progress import ProgressScreen
 
+    _event = asyncio.Event()
+
+    async def _blocked_run(*args: object, **kwargs: object) -> list:
+        await _event.wait()
+        return []
+
     app = OpenReviewApp()
     async with app.run_test(size=(120, 40)) as pilot:
         with patch("openreview_cli.tui.domain.review.run_review_via_tui") as mock_run:
-            mock_run.return_value = []
+            mock_run.side_effect = _blocked_run
             app.push_screen(ProgressScreen(paths=[], mode="precheck"))
             await pilot.pause()
 
@@ -73,6 +80,8 @@ async def test_progress_screen_shows_elapsed_time() -> None:
 
             elapsed = screen.query_one("#elapsed-time")
             assert elapsed is not None, "Elapsed time label should be visible"
+
+            _event.set()
 
 
 @pytest.mark.asyncio
