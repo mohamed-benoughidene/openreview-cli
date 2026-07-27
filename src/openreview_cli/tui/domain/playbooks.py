@@ -14,7 +14,7 @@ from openreview_cli.review.playbook import (
     load_playbook,
     load_playbook_from_db,
 )
-from openreview_cli.storage.database import (
+from openreview_cli.storage.playbooks import (
     diff_playbook_versions,
     export_playbook_version,
     get_current_version,

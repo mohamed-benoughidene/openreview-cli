@@ -1,13 +1,15 @@
 import time
 from pathlib import Path
 
-from openreview_cli.storage.database import (
+from openreview_cli.storage.costs import (
     check_daily_limit,
     check_session_limit,
-    get_connection,
     get_session_cost,
-    init_database,
     log_cost,
+)
+from openreview_cli.storage.database import (
+    get_connection,
+    init_database,
     transaction,
 )
 
@@ -94,7 +96,7 @@ def test_log_cost_persists_data(tmp_path: Path) -> None:
 
 
 def test_record_comparison_creates_table(tmp_path: Path) -> None:
-    from openreview_cli.storage.database import record_comparison
+    from openreview_cli.storage.comparisons import record_comparison
 
     db_path = tmp_path / "test.db"
     entry = {
@@ -111,7 +113,7 @@ def test_record_comparison_creates_table(tmp_path: Path) -> None:
 
 
 def test_list_comparison_history(tmp_path: Path) -> None:
-    from openreview_cli.storage.database import list_comparison_history, record_comparison
+    from openreview_cli.storage.comparisons import list_comparison_history, record_comparison
 
     db_path = tmp_path / "test.db"
     record_comparison(
@@ -146,7 +148,7 @@ def test_list_comparison_history(tmp_path: Path) -> None:
 
 
 def test_list_comparison_history_limit(tmp_path: Path) -> None:
-    from openreview_cli.storage.database import list_comparison_history, record_comparison
+    from openreview_cli.storage.comparisons import list_comparison_history, record_comparison
 
     db_path = tmp_path / "test.db"
     for i in range(5):
@@ -167,7 +169,7 @@ def test_list_comparison_history_limit(tmp_path: Path) -> None:
 
 
 def test_list_comparison_history_empty(tmp_path: Path) -> None:
-    from openreview_cli.storage.database import list_comparison_history
+    from openreview_cli.storage.comparisons import list_comparison_history
 
     entries = list_comparison_history(tmp_path / "empty.db")
     assert entries == []
@@ -178,7 +180,7 @@ def test_list_comparison_history_empty(tmp_path: Path) -> None:
 
 def test_save_graph_creates_tables(tmp_path: Path) -> None:
     from openreview_cli.graph.models import ContractGraph, GraphNode
-    from openreview_cli.storage.database import save_graph
+    from openreview_cli.storage.graphs import save_graph
 
     db_path = tmp_path / "test.db"
     graph = ContractGraph(nodes={"n1": GraphNode(id="n1", label="Test", text="...", level=0)})
@@ -191,7 +193,7 @@ def test_save_graph_creates_tables(tmp_path: Path) -> None:
 
 def test_save_graph_idempotent(tmp_path: Path) -> None:
     from openreview_cli.graph.models import ContractGraph, GraphNode
-    from openreview_cli.storage.database import save_graph
+    from openreview_cli.storage.graphs import save_graph
 
     db_path = tmp_path / "test.db"
     graph = ContractGraph(nodes={"n1": GraphNode(id="n1", label="Test", text="...", level=0)})
@@ -204,7 +206,7 @@ def test_save_graph_idempotent(tmp_path: Path) -> None:
 
 
 def test_load_graph_returns_none_for_missing(tmp_path: Path) -> None:
-    from openreview_cli.storage.database import load_graph
+    from openreview_cli.storage.graphs import load_graph
 
     db_path = tmp_path / "test.db"
     init_database(db_path)
@@ -214,7 +216,7 @@ def test_load_graph_returns_none_for_missing(tmp_path: Path) -> None:
 
 def test_save_load_graph_round_trip(tmp_path: Path) -> None:
     from openreview_cli.graph.models import ContractGraph, EdgeType, GraphEdge, GraphNode
-    from openreview_cli.storage.database import load_graph, save_graph
+    from openreview_cli.storage.graphs import load_graph, save_graph
 
     db_path = tmp_path / "test.db"
     nodes: dict[str, GraphNode] = {
@@ -239,7 +241,7 @@ def test_save_load_graph_round_trip(tmp_path: Path) -> None:
 
 def test_save_load_recovery_state_round_trip(tmp_path: Path) -> None:
     from openreview_cli.recovery.models import RecoveryContext, RecoveryEvent, RecoveryOutcome
-    from openreview_cli.storage.database import (
+    from openreview_cli.storage.recovery import (
         load_recovery_state,
         save_recovery_state,
     )
@@ -278,7 +280,7 @@ def test_save_load_recovery_state_round_trip(tmp_path: Path) -> None:
 
 
 def test_load_recovery_state_missing(tmp_path: Path) -> None:
-    from openreview_cli.storage.database import load_recovery_state
+    from openreview_cli.storage.recovery import load_recovery_state
 
     result = load_recovery_state(tmp_path / "nonexistent.db", "no-such-pipeline")
     assert result is None
@@ -286,7 +288,7 @@ def test_load_recovery_state_missing(tmp_path: Path) -> None:
 
 def test_delete_recovery_state(tmp_path: Path) -> None:
     from openreview_cli.recovery.models import RecoveryContext
-    from openreview_cli.storage.database import (
+    from openreview_cli.storage.recovery import (
         delete_recovery_state,
         load_recovery_state,
         save_recovery_state,
@@ -302,7 +304,7 @@ def test_delete_recovery_state(tmp_path: Path) -> None:
 
 
 def test_delete_recovery_state_missing(tmp_path: Path) -> None:
-    from openreview_cli.storage.database import delete_recovery_state
+    from openreview_cli.storage.recovery import delete_recovery_state
 
     result = delete_recovery_state(tmp_path / "test.db", "no-such-pipeline")
     assert result is False

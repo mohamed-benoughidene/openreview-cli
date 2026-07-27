@@ -248,7 +248,7 @@ class TestPlaybookFlag:
         """T035: --playbook flag should trigger database loading.
         This is verified via integration tests; the unit test ensures
         the storage function exists and returns expected shape."""
-        from openreview_cli.storage.database import get_latest_playbook_version
+        from openreview_cli.storage.playbooks import get_latest_playbook_version
 
         result = get_latest_playbook_version.__doc__  # just verify it exists
 

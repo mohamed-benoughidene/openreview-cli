@@ -17,12 +17,14 @@ from pathlib import Path
 import pytest
 
 from openreview_cli.storage.database import (
+    get_connection,
+    init_database,
+)
+from openreview_cli.storage.playbooks import (
     delete_playbook,
     ensure_playbook_meta,
-    get_connection,
     get_current_version,
     get_playbook_history,
-    init_database,
     list_playbooks,
     list_playbooks_with_meta,
     set_current_version,

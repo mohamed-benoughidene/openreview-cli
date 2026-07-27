@@ -38,7 +38,7 @@ from openreview_cli.gateway.models import (
 from openreview_cli.gateway.redaction import RedactingFilter, redact_key
 from openreview_cli.gateway.registry import load_registry
 from openreview_cli.slots import VALID_SLOTS
-from openreview_cli.storage.database import check_daily_limit, check_session_limit
+from openreview_cli.storage.costs import check_daily_limit, check_session_limit
 
 logger = logging.getLogger(__name__)
 

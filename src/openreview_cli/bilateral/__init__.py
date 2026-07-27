@@ -262,7 +262,7 @@ def _record_comparison_history(
     import json
     from dataclasses import asdict
 
-    from openreview_cli.storage.database import record_comparison as _db_record
+    from openreview_cli.storage.comparisons import record_comparison as _db_record
 
     db_path = get_data_dir() / "openreview.db"
     try:

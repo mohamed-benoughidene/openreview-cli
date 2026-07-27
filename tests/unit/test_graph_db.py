@@ -3,7 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from openreview_cli.graph.models import ContractGraph, EdgeType, GraphEdge, GraphNode
-from openreview_cli.storage.database import init_database, load_graph, save_graph
+from openreview_cli.storage.database import init_database
+from openreview_cli.storage.graphs import load_graph, save_graph
 
 
 def _sample_graph() -> ContractGraph:

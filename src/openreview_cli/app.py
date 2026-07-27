@@ -15,10 +15,12 @@ from openreview_cli.config.auth import ensure_auth
 from openreview_cli.config.loader import get_config_value, load_config, set_config_value
 from openreview_cli.config.paths import get_config_dir, get_data_dir, get_log_dir
 from openreview_cli.errors import config_error
-from openreview_cli.storage.database import (
+from openreview_cli.storage.clients import (
     add_client,
     client_has_reviews,
     delete_client,
+)
+from openreview_cli.storage.database import (
     get_connection,
     init_database,
 )
@@ -537,7 +539,7 @@ def playbook_import(
 
     from openreview_cli.config.paths import get_data_dir
     from openreview_cli.review.playbook import load_playbook
-    from openreview_cli.storage.database import import_playbook_yaml
+    from openreview_cli.storage.playbooks import import_playbook_yaml
 
     path = Path(yaml_path)
     if not path.exists():
@@ -580,7 +582,7 @@ def playbook_list(
     from rich.table import Table
 
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import (
+    from openreview_cli.storage.playbooks import (
         get_current_version,
         get_playbook_version,
         list_playbooks_with_meta,
@@ -647,7 +649,7 @@ def playbook_show(
     import json as _json
 
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import get_playbook_version
+    from openreview_cli.storage.playbooks import get_playbook_version
 
     if version < 1:
         typer.echo("Error: Version must be a positive integer.", err=True)
@@ -662,7 +664,7 @@ def playbook_show(
 
     if content is None:
         # Check if playbook_id exists at all
-        from openreview_cli.storage.database import list_playbooks
+        from openreview_cli.storage.playbooks import list_playbooks
 
         all_pbs = list_playbooks(db_path)
         ids = {pb[0] for pb in all_pbs}
@@ -738,7 +740,7 @@ def playbook_export(
     import yaml
 
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import export_playbook_version, list_playbooks
+    from openreview_cli.storage.playbooks import export_playbook_version, list_playbooks
 
     db_path = get_data_dir() / "openreview.db"
 
@@ -842,7 +844,7 @@ def playbook_diff(
 
     from openreview_cli.config.paths import get_data_dir
     from openreview_cli.review.playbook import compute_playbook_diff
-    from openreview_cli.storage.database import diff_playbook_versions
+    from openreview_cli.storage.playbooks import diff_playbook_versions
 
     if v1 < 1 or v2 < 1:
         typer.echo("Error: Versions must be positive integers.", err=True)
@@ -922,7 +924,7 @@ def playbook_set_current(
     Re-activates a deleted playbook if it was soft-deleted.
     """
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import set_current_version
+    from openreview_cli.storage.playbooks import set_current_version
 
     if version < 1:
         typer.echo("Error: Version must be a positive integer.", err=True)
@@ -949,7 +951,7 @@ def playbook_delete(
     Removes from default list view. Restorable via set-current or undelete.
     """
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import delete_playbook, list_playbooks
+    from openreview_cli.storage.playbooks import delete_playbook, list_playbooks
 
     db_path = get_data_dir() / "openreview.db"
 
@@ -1001,7 +1003,7 @@ def playbook_undelete(
     Clears the deleted_at tombstone so the playbook reappears in listings.
     """
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import (
+    from openreview_cli.storage.playbooks import (
         get_current_version,
         list_playbooks_with_meta,
         set_current_version,
@@ -1040,7 +1042,7 @@ def playbook_history(
     Displays a Rich table with Version, Created, and Status columns.
     """
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import get_playbook_history
+    from openreview_cli.storage.playbooks import get_playbook_history
 
     db_path = get_data_dir() / "openreview.db"
     try:
@@ -1543,7 +1545,7 @@ def gateway_costs(
         )
     elif today:
         from openreview_cli.config.paths import get_data_dir
-        from openreview_cli.storage.database import check_daily_limit
+        from openreview_cli.storage.costs import check_daily_limit
 
         db_path = get_data_dir() / "openreview.db"
         under = check_daily_limit(db_path, 999999)
@@ -1836,7 +1838,7 @@ def _show_comparison_history() -> None:
     from rich.table import Table
 
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import list_comparison_history
+    from openreview_cli.storage.comparisons import list_comparison_history
 
     db_path = get_data_dir() / "openreview.db"
     entries = list_comparison_history(db_path)
@@ -2430,7 +2432,8 @@ def graph_build(
 
     if store:
         from openreview_cli.config.paths import get_config_dir
-        from openreview_cli.storage.database import init_database, save_graph
+        from openreview_cli.storage.database import init_database
+        from openreview_cli.storage.graphs import save_graph
 
         cid = contract_id if contract_id else path.stem
         db = Path(db_path) if db_path else get_config_dir() / "openreview.db"

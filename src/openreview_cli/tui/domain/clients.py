@@ -5,12 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 
 from openreview_cli.config.paths import get_data_dir
-from openreview_cli.storage.database import (
+from openreview_cli.storage.clients import (
     add_client,
     client_has_reviews,
     delete_client,
     get_client,
     list_clients,
+)
+from openreview_cli.storage.reviews import (
     list_reviews_for_client,
 )
 

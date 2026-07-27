@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING
 
 from litellm import completion_cost
 
-from openreview_cli.storage.database import get_session_cost as db_get_session_cost
-from openreview_cli.storage.database import log_cost as db_log_cost
+from openreview_cli.storage.costs import get_session_cost as db_get_session_cost
+from openreview_cli.storage.costs import log_cost as db_log_cost
 
 if TYPE_CHECKING:
     from pathlib import Path

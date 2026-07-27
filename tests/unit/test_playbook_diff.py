@@ -14,9 +14,11 @@ import pytest
 
 from openreview_cli.review.playbook import compute_playbook_diff
 from openreview_cli.storage.database import (
-    diff_playbook_versions,
     get_connection,
     init_database,
+)
+from openreview_cli.storage.playbooks import (
+    diff_playbook_versions,
 )
 
 # ---------------------------------------------------------------------------
