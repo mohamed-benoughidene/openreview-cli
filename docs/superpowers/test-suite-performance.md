@@ -112,6 +112,18 @@ Ordered by leverage. Each item is independently shippable.
    memory < 5 min, tui < 35 min) and fail on regression >20 %. Cheap: one
    `time` wrapper per job + a stored baseline.
 
+8. **Test-suite repo pollution — FIXED (P2.5).**
+   One full integration run left 565+ untracked YAML files in repo root and
+   mutated 5 tracked ``nda_corpus/pairs/`` fixture files. Root cause:
+   (a) ``test_bulk_export_no_output`` called ``playbook export --all``
+   without ``--output`` → all accumulated DB fixtures dumped to CWD;
+   (b) ``tests/integration/test_nda_corpus.py`` module-scoped fixture called
+   ``generate_corpus()`` which wrote directly to the tracked
+   ``tests/fixtures/nda_corpus/pairs/`` directory.
+   Fixed by adding ``--output tmp_path`` flag and monkeypatching ``PAIRS_DIR``
+   to a ``tmp_path_factory`` temp dir. Verified: two consecutive full-suite
+   runs left zero YAMLs and zero git-dirty tracked files.
+
 ## Why this matters (motivation)
 
 A 1-import + 1-line refactor (Task 5 of the fence fix) could not be verified

@@ -198,7 +198,9 @@ class TestBulkExportCLI:
         pb1 = _unique_id("bulk-export-no-out")
         _import_yaml(tmp_path, _make_yaml_v1(pb1))
 
-        result = runner.invoke(app, ["playbook", "export", "--all"])
+        result = runner.invoke(
+            app, ["playbook", "export", "--all", "--output", str(tmp_path / "bulk_export")]
+        )
         assert result.exit_code == 0
         assert "Exported" in result.output
 

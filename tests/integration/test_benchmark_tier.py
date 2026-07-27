@@ -25,7 +25,7 @@ def test_benchmark_tier_maximum_runs() -> None:
         ],
         capture_output=True,
         text=True,
-        timeout=30,
+        timeout=90,
     )
     assert result.returncode == 0 or "Error" not in result.stderr
     # Should produce valid JSON
@@ -52,7 +52,7 @@ def test_benchmark_tier_balanced_runs() -> None:
         ],
         capture_output=True,
         text=True,
-        timeout=30,
+        timeout=90,
     )
     assert result.returncode == 0 or "Error" not in result.stderr
 
@@ -75,7 +75,7 @@ def test_benchmark_tier_performance_runs() -> None:
         ],
         capture_output=True,
         text=True,
-        timeout=30,
+        timeout=90,
     )
     assert result.returncode == 0 or "Error" not in result.stderr
 
@@ -142,7 +142,7 @@ def test_benchmark_tier_table_output_maximum() -> None:
         ],
         capture_output=True,
         text=True,
-        timeout=30,
+        timeout=90,
     )
     # Should mention the tier in output
     tier_mentioned = "maximum" in result.stdout.lower() or "maximum" in result.stderr.lower()

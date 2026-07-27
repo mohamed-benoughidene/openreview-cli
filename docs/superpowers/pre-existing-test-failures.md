@@ -81,9 +81,13 @@ Evidence gathered per-test; fix directions are one-line starting points, not pla
 - **Impact:** dirty tree after every verification run; risk of committing artifacts; fixture mutation can leak across tests (ordering-dependent behavior).
 - **Fix:** sweep the offending tests to use `tmp_path`/isolated cwd (`CliRunner`'s `isolated_filesystem` or `monkeypatch.chdir`), and assert tree cleanliness in CI.
 
-### 9. `test_pii_accuracy.py::TestPiiAccuracy::test_finds_pii_on_real_contracts` — ordering-dependent failure
-- Failed inside the full integration run; passed isolated on identical code (104s). Not network-related (no socket use).
-- **Hypothesis:** shared session-scoped PII engine state or fixture pollution (#8) interaction. Needs investigation alongside #6.
+### 9. `test_pii_accuracy.py::TestPiiAccuracy::test_finds_pii_on_real_contracts` — ordering-dependent failure — **INVESTIGATED, UNRESOLVED**
+- Failed inside the full integration run; passed isolated on identical code (104s).
+- **Confirmed NOT caused by** #8 pollution (YAML/nada_corpus mutations fixed in P2.5 — still fails).
+- **Confirmed NOT caused by** `memory`-marked tests (they are excluded from `-m "not slow and not memory"` full suite; failures persist without them).
+- **Tracemalloc analysis:** memory tests manipulate `tracemalloc.start()/stop()` and do interact badly with spacy tok2vec under `--disable-socket` (produces `SocketBlockedError`). A conftest sandbox fixture was added to restore tracemalloc state after memory-marked tests, but this doesn't address the full-suite failure.
+- **Root cause (remaining):** some non-memory integration test (among ~588) corrupts session-scoped spacy model state in PiiEngine. Succeeds in separate pytest process (new interpreter). Needs bisection across non-memory integration tests.
+- **Workaround added (conftest):** `_tracemalloc_state_isolation` autouse fixture restores tracemalloc on/off state after memory-marked tests — fixes failures when memory + pii tests run together. Does not fix the non-memory corruptor path.
 
 ### 10. `test_benchmark_tier.py::test_benchmark_tier_all_runs` — borderline 30s subprocess timeout — **FIXED** (branch `fix/test-network-hermeticity`)
 - `--benchmark-tier all` runs 3 tiers sequentially in one subprocess; 29.78s observed on main vs 30s limit. Raised to 90s with comment.
