@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from openreview_cli.llm_json import fence_safe
+
 if TYPE_CHECKING:
     from openreview_cli.review.models import Category, ClauseAssessment
 
@@ -92,9 +94,9 @@ def build_comparison_messages(
     user = (
         f"{category_context}"
         f"## Party A's Clause\n"
-        f"```\n{clause_a_text}\n```\n\n"
+        f"```\n{fence_safe(clause_a_text)}\n```\n\n"
         f"## Party B's Clause\n"
-        f"```\n{clause_b_text}\n```\n\n"
+        f"```\n{fence_safe(clause_b_text)}\n```\n\n"
         f"## Party A's Assessment\n"
         f"- Position: {assessment_a.position.value}\n"
         f"- Confidence: {assessment_a.confidence}\n"

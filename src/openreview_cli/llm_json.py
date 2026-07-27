@@ -12,6 +12,11 @@ See specs/retro-markdown-fence-bug.md.
 from __future__ import annotations
 
 
+def fence_safe(text: str) -> str:
+    """Break triple-backtick runs so embedded text cannot escape prompt code fences."""
+    return text.replace("```", "` ` `")
+
+
 def strip_fences(text: str) -> str:
     """Strip a markdown code fence wrapping the whole payload.
 
