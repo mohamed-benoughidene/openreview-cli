@@ -3269,7 +3269,7 @@ The skeletons would have included:
 ### What would need to change to unblock
 
 1. Create the `scripts/benchmarks/` directory
-2. For each of the 17 modes (not just the original 6): create 5+ labelled test
+2. For each of the 22 modes (not just the original 6): create 5+ labelled test
    documents with known ground-truth assessments
 3. Create the accuracy benchmark skeleton scripts per mode
 4. Create the PII benchmark notes per mode
@@ -3418,7 +3418,7 @@ Items 4 and 6 (benchmark whitelist + accuracy run) were explicitly split from th
 
 ### What would need to change to unblock
 
-1. For each of the 17 modes, determine which labelled datasets apply (some modes like LoanCheck or GuaranteeCheck may not map well to existing datasets)
+1. For each of the 22 modes, determine which labelled datasets apply (some modes like LoanCheck or GuaranteeCheck may not map well to existing datasets)
 2. Add a `whitelist` section to the benchmark configuration mapping mode names to dataset IDs
 3. Update the benchmark runner to accept a `--mode` filter and only run against whitelisted datasets
 4. Document the mapping in the benchmark configuration so users understand coverage gaps
@@ -3456,7 +3456,7 @@ Spec 030 implemented the accuracy validation in two tracks:
 
 ### What was needed to resolve
 
-1. Multi-mode iteration loop over 17 modes × 3 datasets in `benchmark_run()`
+1. Multi-mode iteration loop over 22 modes × 3 datasets in `benchmark_run()`
 2. `_build_gateway_pipeline()` for real provider calls (routes through AI Gateway)
 3. Per-mode report breakdown via `{dataset}::{mode}` naming convention
 4. Manual baseline workflow documented in spec 030 quickstart.md
@@ -3468,7 +3468,7 @@ Spec 030 spec.md §4 FR-4, FR-5, FR-7. Spec 010 benchmark harness. The mock base
 
 ### Description
 
-Once the benchmark whitelist (D-75) is populated for all 17 modes, the accuracy benchmark must actually be run against CUAD, MAUD, and ContractNLI datasets. Each mode would produce precision, recall, and F1 scores against the applicable labelled data.
+Once the benchmark whitelist (D-75) is populated for all 22 modes, the accuracy benchmark must actually be run against CUAD, MAUD, and ContractNLI datasets. Each mode would produce precision, recall, and F1 scores against the applicable labelled data.
 
 This is the measurement that validates whether the 17 playbooks and extraction prompts produce accurate clause assessments. Without it, there is no empirical basis for claiming any mode is accurate — only that it produces structured output.
 
@@ -3482,7 +3482,7 @@ The accuracy run includes:
 ### What would need to change to unblock
 
 1. Populate the benchmark whitelist (D-75)
-2. Ensure all 17 modes have fixture documents or dataset mappings in the benchmark corpus
+2. Ensure all 22 modes have fixture documents or dataset mappings in the benchmark corpus
 3. Run the benchmark harness against each mode's whitelisted datasets
 4. Record baseline accuracy numbers in project documentation
 5. If any mode underperforms (F1 below acceptable threshold), flag the playbook or prompt for revision
@@ -3566,11 +3566,11 @@ Spec 029 spec.md §Clarifications Session 2026-07-08: "CLI routing test only —
 
 Visible from spec 029 but not built:
 
-- **Benchmark whitelist + accuracy runs for all 17 modes**: CUAD, MAUD, and ContractNLI accuracy validation to establish empirical baselines (D-75 + D-76). The playbooks and prompts exist but their accuracy is unmeasured beyond the 5 new modes' smoke tests.
+- **Benchmark whitelist + accuracy runs for all 22 modes**: CUAD, MAUD, and ContractNLI accuracy validation to establish empirical baselines (D-75 + D-76). The playbooks and prompts exist but their accuracy is unmeasured beyond the 5 new modes' smoke tests.
 
 - **End-to-end pipeline tests for orphan modes**: D-77 above. 9 orphan modes have CLI routing but no fixture-document integration tests. Their playbooks (created in specs 027/028) have never been exercised against a real document through the full pipeline.
 
-- **Per-mode confidence threshold tuning**: All 17 modes share the same Green/Amber/Red thresholds. Finance-heavy modes (LoanCheck, GuaranteeCheck) may benefit from stricter thresholds given the higher cost of false positives in lending documents.
+- **Per-mode confidence threshold tuning**: All 22 modes share the same Green/Amber/Red thresholds. Finance-heavy modes (LoanCheck, GuaranteeCheck) may benefit from stricter thresholds given the higher cost of false positives in lending documents.
 
 - **Multi-party bilateral comparison for Batch 2 modes**: The 14 modes from Batch 1 (specs 027/028) and Batch 2 (spec 029) all support single-party review only. Bilateral comparison (spec 014) exists as a separate pipeline and has not been integrated with any of these modes.
 
@@ -3614,7 +3614,7 @@ The actual one-shot run was **not executed** as part of spec 030. Running it req
 
 1. A configured AI gateway provider (Ollama local is preferred — free, no API key)
 2. Network access (or local model loaded)
-3. ~30-60 minutes of wall-clock time (17 modes × 3 datasets × inference time per sample)
+3. ~30-60 minutes of wall-clock time (22 modes × 3 datasets × inference time per sample)
 4. A developer to commit the resulting JSON to `docs/benchmarks/`
 
 ### What would need to change to unblock
@@ -3658,7 +3658,7 @@ in the spec:
 
 ### Future features (not deferred — natural next steps visible from spec 030)
 
-- **Per-mode confidence threshold tuning**: All 17 modes share the same Green/Amber/Red
+- **Per-mode confidence threshold tuning**: All 22 modes share the same Green/Amber/Red
   thresholds. Finance-heavy modes (LoanCheck, GuaranteeCheck) may benefit from stricter
   thresholds given the higher cost of false positives in lending documents. See D-69
   (Mode-Specific Confidence Thresholds) for the pre-existing deferred item on this topic.

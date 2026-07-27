@@ -62,7 +62,7 @@ uv run pre-commit run --all-files       # before every commit
 
 Pytest markers (pyproject.toml): `fast`, `slow`, `integration`, `e2e`, `memory`, `benchmark`, `accuracy`, `network`, `live`.
 
-**CI** (`ci.yml`, push to main + PRs): 5 parallel jobs — `lint`, `types`, `test` (unit only), `memory` (installs spaCy model), `benchmark` (main only, `|| true`). Uses `actions/checkout@v7` + `astral-sh/setup-uv@v8.2.0`.
+**CI** (`ci.yml`, push to main + PRs): 6 parallel jobs — `lint`, `types`, `test` (unit only), `memory` (installs spaCy model), `tui`, `benchmark` (main only, `|| true`). Uses `actions/checkout@v7` + `astral-sh/setup-uv@v8.2.0`.
 
 **Pre-commit**: hygiene hooks, `ruff --fix`, `ruff-format`, `mypy` (`uv run mypy src/ tests/`), `pytest-fast` (collect-only). `uv run pre-commit install` once per clone; sub-agents in fresh shells must verify `.git/hooks/pre-commit` exists or run `uv run pre-commit run --all-files` before `git add` and stage reformats.
 
