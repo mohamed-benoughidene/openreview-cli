@@ -106,4 +106,4 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
       - run: uv sync --frozen --no-dev
-      - run: uv run openreview benchmark --all --ci --compare HEAD~1 || true
+      - run: uv run openreview benchmark run --all --ci --compare HEAD~1 || true  # informational until baseline infra lands (D-78/D-80)
