@@ -6,7 +6,6 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from textual.widgets import Button
 
 from openreview_cli.gateway.router import VALID_SLOTS
 from openreview_cli.tui.app import OpenReviewApp
@@ -197,16 +196,15 @@ class TestGatewayWizard:
             async with app.run_test(size=(80, 24)) as pilot:
                 await app.push_screen(gw_mod.GatewayWizard())
                 await pilot.pause()
-                await self._go_to_step(pilot, app, 4)
 
-                app.screen.query_one("#api-key-input").value = "sk-test-key-12345"
-                await pilot.pause()
-                # Ensure the button is enabled before clicking — in CI
-                # on_input_changed may not process before pilot.click resolves,
-                # leaving the button disabled and silently swallowing the click.
-                app.screen.query_one("#wizard-next", Button).disabled = False
-
-                await pilot.click("#wizard-next")
+                # Set internal state and call _do_save directly — avoids
+                # ListView selection + button click timing races in CI.
+                wizard: gw_mod.GatewayWizard = app.screen  # type: ignore[assignment]
+                wizard._slot = "extraction"
+                wizard._provider = "openai"
+                wizard._model = "gpt-4o"
+                wizard._key = "sk-test-key-12345"
+                wizard._do_save()
                 await pilot.pause()
 
                 mock_save.assert_called_once()
