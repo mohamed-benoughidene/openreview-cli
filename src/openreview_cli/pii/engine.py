@@ -1,5 +1,6 @@
 """PII stripping engine — Presidio wrapper with page-sequential processing."""
 
+import logging
 import time
 from typing import Any
 
@@ -15,6 +16,8 @@ from openreview_cli.pii.placeholders import assign_placeholders
 from openreview_cli.pii.recognizers import get_custom_recognizers
 
 _TEMP_PH = "[TEMP_0]"  # ponytail: placeholder overwritten by assign_placeholders
+
+logger = logging.getLogger(__name__)
 
 
 class PiiEngine:
@@ -203,7 +206,8 @@ class PiiEngine:
             engine = self._ensure_analyzer()
             engine.analyze(text="test", language="en")
             self._is_available_cache = True
-        except Exception:
+        except Exception as exc:
+            logger.warning("PII engine unavailable: %s", exc)
             self._is_available_cache = False
         return self._is_available_cache
 

@@ -4,6 +4,9 @@ import time as time_mod
 from pathlib import Path
 from unittest.mock import patch
 
+from _pytest.logging import LogCaptureFixture
+from _pytest.monkeypatch import MonkeyPatch
+
 from openreview_cli.parsing.models import Clause, Document
 from openreview_cli.pii.engine import PiiEngine, strip_pii, strip_pii_clauses
 from openreview_cli.pii.models import PiiEntity
@@ -271,3 +274,20 @@ class _MockAnalyzer:
 
     def analyze(self, **_kw: object) -> list[object]:
         return []
+
+
+def test_is_available_logs_warning_on_failure(
+    pii_engine: PiiEngine,
+    monkeypatch: MonkeyPatch,
+    caplog: LogCaptureFixture,
+) -> None:
+    pii_engine._is_available_cache = None
+    monkeypatch.setattr(
+        pii_engine,
+        "_ensure_analyzer",
+        lambda: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+    with caplog.at_level("WARNING", logger="openreview_cli.pii.engine"):
+        assert pii_engine.is_available() is False
+    assert "boom" in caplog.text
+    pii_engine._is_available_cache = None

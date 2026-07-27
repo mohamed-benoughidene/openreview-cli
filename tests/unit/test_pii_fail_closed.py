@@ -34,7 +34,7 @@ def _flaky(engine: PiiEngine, monkeypatch: MonkeyPatch) -> None:
         is_non_english: bool = False,
         clause_heading: str | None = None,
     ) -> list[Any]:
-        if "clause 2" in text:
+        if clause_heading == "Clause 2":
             raise RuntimeError("presidio boom")
         return real_detect(
             text,
