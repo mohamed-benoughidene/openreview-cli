@@ -3059,138 +3059,121 @@ def _register_product_mode(
         )
 
 
-_register_product_mode(
-    app,
-    name="licensecheck",
-    help_text="Review a SaaS/software license agreement with LicenseCheck.",
-    path_help="Path to a SaaS/software license agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="leasecheck",
-    help_text="Review a commercial lease agreement with LeaseCheck.",
-    path_help="Path to a commercial lease agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="privacycheck",
-    help_text="Review a Data Processing Agreement with PrivacyCheck.",
-    path_help="Path to a Data Processing Agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="dealcheck",
-    help_text="Review a vendor/service agreement with DealCheck.",
-    path_help="Path to a vendor or service agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="hirecheck",
-    help_text="Review an employment agreement with HireCheck.",
-    path_help="Path to an employment agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="indemnitycheck",
-    help_text="Review an indemnification agreement with IndemnityCheck.",
-    path_help="Path to an indemnification agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="consultcheck",
-    help_text="Review a consulting services agreement with ConsultCheck.",
-    path_help="Path to a consulting services agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="workcheck",
-    help_text="Review an independent contractor/work-for-hire agreement with WorkCheck.",
-    path_help="Path to an independent contractor agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="loicheck",
-    help_text="Review a letter of intent or MOU with LOICheck.",
-    path_help="Path to a letter of intent or MOU (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="subcheck",
-    help_text="Review a subcontractor agreement with SubCheck.",
-    path_help="Path to a subcontractor agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="settlementcheck",
-    help_text="Review a settlement/release agreement with SettlementCheck.",
-    path_help="Path to a settlement or release agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="settlementcheck_v2",
-    help_text="Review a complex settlement/release agreement (v2) with SettlementCheck.",
-    path_help="Path to a complex settlement or release agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="assetcheck",
-    help_text="Review an asset transfer/assignment agreement with AssetCheck.",
-    path_help="Path to an asset transfer or assignment agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="buycheck",
-    help_text="Review an asset purchase/business acquisition agreement with BuyCheck.",
-    path_help="Path to an asset purchase or acquisition agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="engagecheck",
-    help_text="Review a professional services engagement letter with EngageCheck.",
-    path_help="Path to an engagement letter (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="guaranteecheck",
-    help_text="Review a personal guarantee/suretyship agreement with GuaranteeCheck.",
-    path_help="Path to a personal guarantee or suretyship agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="loancheck",
-    help_text="Review a loan agreement/promissory note with LoanCheck.",
-    path_help="Path to a loan agreement or promissory note (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="franchisecheck",
-    help_text="Review a franchise agreement or franchise disclosure document.",
-    path_help="Path to a franchise agreement or FDD (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="opcheck",
-    help_text="Review an Operating Agreement (LLC governance document).",
-    path_help="Path to an operating agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="partnercheck",
-    help_text="Review a general or limited partnership agreement.",
-    path_help="Path to a partnership agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="sponsorcheck",
-    help_text="Review a sponsorship agreement.",
-    path_help="Path to a sponsorship agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="distrocheck",
-    help_text="Review a distribution or reseller agreement.",
-    path_help="Path to a distribution agreement (PDF or DOCX).",
-)
+_PRODUCT_MODES: list[tuple[str, str, str]] = [
+    (
+        "licensecheck",
+        "Review a SaaS/software license agreement with LicenseCheck.",
+        "Path to a SaaS/software license agreement (PDF or DOCX).",
+    ),
+    (
+        "leasecheck",
+        "Review a commercial lease agreement with LeaseCheck.",
+        "Path to a commercial lease agreement (PDF or DOCX).",
+    ),
+    (
+        "privacycheck",
+        "Review a Data Processing Agreement with PrivacyCheck.",
+        "Path to a Data Processing Agreement (PDF or DOCX).",
+    ),
+    (
+        "dealcheck",
+        "Review a vendor/service agreement with DealCheck.",
+        "Path to a vendor or service agreement (PDF or DOCX).",
+    ),
+    (
+        "hirecheck",
+        "Review an employment agreement with HireCheck.",
+        "Path to an employment agreement (PDF or DOCX).",
+    ),
+    (
+        "indemnitycheck",
+        "Review an indemnification agreement with IndemnityCheck.",
+        "Path to an indemnification agreement (PDF or DOCX).",
+    ),
+    (
+        "consultcheck",
+        "Review a consulting services agreement with ConsultCheck.",
+        "Path to a consulting services agreement (PDF or DOCX).",
+    ),
+    (
+        "workcheck",
+        "Review an independent contractor/work-for-hire agreement with WorkCheck.",
+        "Path to an independent contractor agreement (PDF or DOCX).",
+    ),
+    (
+        "loicheck",
+        "Review a letter of intent or MOU with LOICheck.",
+        "Path to a letter of intent or MOU (PDF or DOCX).",
+    ),
+    (
+        "subcheck",
+        "Review a subcontractor agreement with SubCheck.",
+        "Path to a subcontractor agreement (PDF or DOCX).",
+    ),
+    (
+        "settlementcheck",
+        "Review a settlement/release agreement with SettlementCheck.",
+        "Path to a settlement or release agreement (PDF or DOCX).",
+    ),
+    (
+        "settlementcheck_v2",
+        "Review a complex settlement/release agreement (v2) with SettlementCheck.",
+        "Path to a complex settlement or release agreement (PDF or DOCX).",
+    ),
+    (
+        "assetcheck",
+        "Review an asset transfer/assignment agreement with AssetCheck.",
+        "Path to an asset transfer or assignment agreement (PDF or DOCX).",
+    ),
+    (
+        "buycheck",
+        "Review an asset purchase/business acquisition agreement with BuyCheck.",
+        "Path to an asset purchase or acquisition agreement (PDF or DOCX).",
+    ),
+    (
+        "engagecheck",
+        "Review a professional services engagement letter with EngageCheck.",
+        "Path to an engagement letter (PDF or DOCX).",
+    ),
+    (
+        "guaranteecheck",
+        "Review a personal guarantee/suretyship agreement with GuaranteeCheck.",
+        "Path to a personal guarantee or suretyship agreement (PDF or DOCX).",
+    ),
+    (
+        "loancheck",
+        "Review a loan agreement/promissory note with LoanCheck.",
+        "Path to a loan agreement or promissory note (PDF or DOCX).",
+    ),
+    (
+        "franchisecheck",
+        "Review a franchise agreement or franchise disclosure document.",
+        "Path to a franchise agreement or FDD (PDF or DOCX).",
+    ),
+    (
+        "opcheck",
+        "Review an Operating Agreement (LLC governance document).",
+        "Path to an operating agreement (PDF or DOCX).",
+    ),
+    (
+        "partnercheck",
+        "Review a general or limited partnership agreement.",
+        "Path to a partnership agreement (PDF or DOCX).",
+    ),
+    (
+        "sponsorcheck",
+        "Review a sponsorship agreement.",
+        "Path to a sponsorship agreement (PDF or DOCX).",
+    ),
+    (
+        "distrocheck",
+        "Review a distribution or reseller agreement.",
+        "Path to a distribution agreement (PDF or DOCX).",
+    ),
+]
+
+for _mode_name, _mode_help, _mode_path_help in _PRODUCT_MODES:
+    _register_product_mode(app, name=_mode_name, help_text=_mode_help, path_help=_mode_path_help)
 
 
 # ── Shared product review logic ─────────────────────────────────────────────
