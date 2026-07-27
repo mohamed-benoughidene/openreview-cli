@@ -92,10 +92,10 @@ class TestRunReviewPublicAPI:
                 [],
             )
 
-        monkeypatch.setattr("openreview_cli.review._run_review_doc_pipeline", mock_pipeline)
+        monkeypatch.setattr("openreview_cli.review.runner._run_review_doc_pipeline", mock_pipeline)
 
         # Patch load_bundled
-        monkeypatch.setattr("openreview_cli.review.load_bundled", _make_playbook)
+        monkeypatch.setattr("openreview_cli.review.runner.load_bundled", _make_playbook)
 
         # Mock Path.exists so "test.docx" is treated as existing
         monkeypatch.setattr("pathlib.Path.exists", lambda self: True)
@@ -128,9 +128,9 @@ class TestPipelineAdoption:
             async def run(self, ctx: dict[str, Any]) -> PipelineReport:
                 return PipelineReport()
 
-        monkeypatch.setattr("openreview_cli.review.Pipeline", MockPipeline)
+        monkeypatch.setattr("openreview_cli.review.runner.Pipeline", MockPipeline)
 
-        from openreview_cli.review import _run_review_doc_pipeline
+        from openreview_cli.review.runner import _run_review_doc_pipeline
 
         _run_review_doc_pipeline(
             doc_path="test.docx",
@@ -164,9 +164,9 @@ class TestPipelineAdoption:
             async def run(self, ctx: dict[str, Any]) -> PipelineReport:
                 return PipelineReport()
 
-        monkeypatch.setattr("openreview_cli.review.Pipeline", MockPipeline)
+        monkeypatch.setattr("openreview_cli.review.runner.Pipeline", MockPipeline)
 
-        from openreview_cli.review import _run_review_doc_pipeline
+        from openreview_cli.review.runner import _run_review_doc_pipeline
 
         _run_review_doc_pipeline(
             doc_path="test.docx",
@@ -206,9 +206,9 @@ class TestPipelineAdoption:
                 _ = await stage.run(ctx)
                 return PipelineReport()
 
-        monkeypatch.setattr("openreview_cli.review.Pipeline", MockPipeline)
+        monkeypatch.setattr("openreview_cli.review.runner.Pipeline", MockPipeline)
 
-        from openreview_cli.review import _run_review_doc_pipeline
+        from openreview_cli.review.runner import _run_review_doc_pipeline
 
         _run_review_doc_pipeline(
             doc_path="test.docx",
