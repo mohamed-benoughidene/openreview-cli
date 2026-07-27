@@ -6,10 +6,13 @@ from openreview_cli.parsing.models import Clause
 _NUPUNKT: Any = None
 
 
-def _count_paragraphs(text: str) -> int:
+def count_paragraphs(text: str) -> int:
     if not text.strip():
         return 1
     return max(1, len([p for p in text.split("\n\n") if p.strip()]))
+
+
+_count_paragraphs = count_paragraphs  # ponytail: compat alias, remove after callers migrate
 
 
 def _get_nupunkt() -> Any:
@@ -105,7 +108,7 @@ def build_hierarchy(
                             source_page=page_num,
                             source_paragraph=None,
                             source_span=(start, end),
-                            paragraph_count=_count_paragraphs(text),
+                            paragraph_count=count_paragraphs(text),
                         )
                     )
                     counter += 1
@@ -126,7 +129,7 @@ def build_hierarchy(
                     source_page=page_num,
                     source_paragraph=None,
                     source_span=(start_pos, end_pos),
-                    paragraph_count=_count_paragraphs(text),
+                    paragraph_count=count_paragraphs(text),
                 )
             )
             counter += 1
