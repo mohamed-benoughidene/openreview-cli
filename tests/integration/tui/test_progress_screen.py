@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -30,31 +29,24 @@ async def test_progress_screen_lists_pipeline_steps() -> None:
     from openreview_cli.tui.app import OpenReviewApp
     from openreview_cli.tui.screens.progress import ProgressScreen
 
-    _event = asyncio.Event()
-
-    async def _blocked_run(*args: object, **kwargs: object) -> list:
-        await _event.wait()
-        return []
-
     app = OpenReviewApp()
     async with app.run_test(size=(120, 40)) as pilot:
         with patch("openreview_cli.tui.domain.review.run_review_via_tui") as mock_run:
-            mock_run.side_effect = _blocked_run
+            mock_run.return_value = []
+            # Block ResultScreen push so ProgressScreen stays on stack
+            app.call_later = lambda _cb: None  # type: ignore[method-assign]
             app.push_screen(ProgressScreen(paths=[], mode="precheck"))
             await pilot.pause()
 
             screen = _get_progress_screen_checked(app)
 
             step_ids = ["step-parse", "step-pii", "step-extract", "step-qa", "step-report"]
-            try:
-                for sid in step_ids:
-                    label = screen.query_one(f"#{sid}")
-                    assert label is not None, f"Step {sid} should be visible"
+            for sid in step_ids:
+                label = screen.query_one(f"#{sid}")
+                assert label is not None, f"Step {sid} should be visible"
 
-                progress_bar = screen.query_one("#progress-bar")
-                assert progress_bar is not None, "Progress bar should be visible"
-            finally:
-                _event.set()
+            progress_bar = screen.query_one("#progress-bar")
+            assert progress_bar is not None, "Progress bar should be visible"
 
 
 @pytest.mark.asyncio
@@ -63,16 +55,11 @@ async def test_progress_screen_shows_elapsed_time() -> None:
     from openreview_cli.tui.app import OpenReviewApp
     from openreview_cli.tui.screens.progress import ProgressScreen
 
-    _event = asyncio.Event()
-
-    async def _blocked_run(*args: object, **kwargs: object) -> list:
-        await _event.wait()
-        return []
-
     app = OpenReviewApp()
     async with app.run_test(size=(120, 40)) as pilot:
         with patch("openreview_cli.tui.domain.review.run_review_via_tui") as mock_run:
-            mock_run.side_effect = _blocked_run
+            mock_run.return_value = []
+            app.call_later = lambda _cb: None  # type: ignore[method-assign]
             app.push_screen(ProgressScreen(paths=[], mode="precheck"))
             await pilot.pause()
 
@@ -80,8 +67,6 @@ async def test_progress_screen_shows_elapsed_time() -> None:
 
             elapsed = screen.query_one("#elapsed-time")
             assert elapsed is not None, "Elapsed time label should be visible"
-
-            _event.set()
 
 
 @pytest.mark.asyncio
@@ -95,29 +80,23 @@ async def test_progress_screen_cancel_opens_confirm() -> None:
     async with app.run_test(size=(120, 40)) as pilot:
         with patch("openreview_cli.tui.domain.review.run_review_via_tui") as mock_run:
             mock_run.return_value = []
+            app.call_later = lambda _cb: None  # type: ignore[method-assign]
             app.push_screen(ProgressScreen(paths=[], mode="precheck"))
             await pilot.pause()
 
             screen = _get_progress_screen_checked(app)
 
-            # Click cancel button
             cancel_btn = screen.query_one("#btn-cancel")
             await pilot.click(cancel_btn)
             await pilot.pause()
             await pilot.pause()
-
-            # ConfirmModal should be on the screen stack
-            # (if the review task finishes before cancel, ResultScreen may appear instead)
-            from openreview_cli.tui.screens.result import ResultScreen
 
             confirm = None
             for s in app._screen_stack:
                 if isinstance(s, ConfirmModal):
                     confirm = s
                     break
-            has_confirm = confirm is not None
-            has_result = any(isinstance(s, ResultScreen) for s in app._screen_stack)
-            assert has_confirm or has_result, "Cancel or result screen should appear"
+            assert confirm is not None, "ConfirmModal should be on screen stack"
 
 
 @pytest.mark.asyncio
@@ -162,7 +141,6 @@ async def test_progress_screen_completes_to_result() -> None:
             await pilot.pause()
             await pilot.pause()
 
-            # ResultScreen should be on screen stack
             from openreview_cli.tui.screens.result import ResultScreen
 
             result_screen = None
