@@ -20,6 +20,7 @@ class RedactingFilter(logging.Filter):
         msg = record.getMessage()
         for pat in self._patterns:
             if pat and isinstance(pat, str) and pat in msg:
-                idx = msg.index(pat)
-                record.msg = msg[: idx + len(pat)] + "****"
+                msg = msg.replace(pat, redact_key(pat))
+        record.msg = msg
+        record.args = ()
         return True

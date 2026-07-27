@@ -28,7 +28,8 @@ class TestRedactingFilter:
             "test", logging.INFO, "", 0, "Using OPENAI_API_KEY=sk-abc123", (), None
         )
         assert filt.filter(record)
-        assert record.msg == "Using OPENAI_API_KEY****"
+        assert "OPENAI_API_KEY" not in record.msg
+        assert record.msg == "Using OPEN**********=sk-abc123"
 
     def test_passes_through_clean_messages(self) -> None:
         filt = RedactingFilter(["OPENAI_API_KEY"])
@@ -44,4 +45,24 @@ class TestRedactingFilter:
 
         record = logging.LogRecord("test", logging.INFO, "", 0, "key: sk-abc with OPENAI", (), None)
         assert filt.filter(record)
-        assert "sk-****" in record.msg or "OPENAI****" in record.msg
+        assert "sk-" not in record.msg
+        assert "OPENAI" not in record.msg
+
+    def test_redaction_preserves_surrounding_text(self) -> None:
+        import logging
+
+        from openreview_cli.gateway.redaction import RedactingFilter
+
+        f = RedactingFilter(patterns=["sk-secret123"])
+        record = logging.LogRecord(
+            "test",
+            logging.INFO,
+            __file__,
+            1,
+            "Using sk-secret123 for slot reasoning",
+            (),
+            None,
+        )
+        f.filter(record)
+        assert "sk-secret123" not in record.getMessage()
+        assert "for slot reasoning" in record.getMessage()
