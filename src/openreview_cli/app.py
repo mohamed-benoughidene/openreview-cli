@@ -44,7 +44,6 @@ app = typer.Typer(
 
 def _version_callback(value: bool) -> None:
     if value:
-        _init()
         typer.echo(f"openreview {__version__}")
         raise typer.Exit()
 
@@ -65,8 +64,6 @@ def _validate_enum(value: str, options: tuple[str, ...], name: str) -> None:
 
 def _privacy_footer() -> str:
     """Build the privacy-tier footer for terminal reports."""
-    from openreview_cli.config.loader import load_config
-    from openreview_cli.config.paths import get_config_dir
     from openreview_cli.gateway.models import PrivacyTierReport
     from openreview_cli.gateway.tier_config import TierConfig
     from openreview_cli.gateway.tier_tracker import TierTracker

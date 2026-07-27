@@ -144,7 +144,7 @@ def run_review(  # noqa: PLR0912
                 allow_partial_pii=allow_partial_pii,
             )
         except Exception as exc:
-            logger.warning("Failed to process %s: %s", doc_path, exc)
+            logger.error("Failed to process %s: %s", doc_path, exc, exc_info=True)
             if verbose:
                 print(f"  Error: {exc}", file=sys.stderr)
             continue

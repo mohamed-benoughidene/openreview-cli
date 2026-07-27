@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from openreview_cli.pipeline.base import Stage
 from openreview_cli.pipeline.errors import StageError
+from openreview_cli.pipeline.progress import ProgressEvent
 
 if TYPE_CHECKING:
     from openreview_cli.pipeline.base import PipelineContext
@@ -44,9 +45,23 @@ class StripStage(Stage):
         from openreview_cli.pii.models import PartialProcessingError
 
         try:
+            # Map PII progress (desc, done, total) to pipeline ProgressEvent
+            def _pii_cb(desc: str, done: int, total: int) -> None:
+                ProgressEvent(
+                    stage_index=0,
+                    total_stages=1,
+                    stage_name="strip",
+                    status="running",
+                    message=desc,
+                )
+
             # ponytail: synchronous call wrapped in thread pool
             stripped, _pii_result = await asyncio.to_thread(
-                strip_pii_clauses, clauses, document, allow_partial=self.allow_partial
+                strip_pii_clauses,
+                clauses,
+                document,
+                allow_partial=self.allow_partial,
+                progress_callback=_pii_cb,
             )
         except PartialProcessingError as exc:
             from openreview_cli.pipeline.errors import CriticalStageError
