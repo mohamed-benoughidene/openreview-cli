@@ -142,6 +142,10 @@ class OpenReviewApp(App[None]):
         signal.signal(signal.SIGTERM, self._orig_sigterm)
         signal.signal(signal.SIGINT, self._orig_sigint)
         self._gateway_timer.stop()
+        # Prevent API key leakage to crash-dump / subprocess after TUI exits.
+        from openreview_cli.gateway.router import clear_seeded_env_vars
+
+        clear_seeded_env_vars()
 
     def _register_signal_handlers(self) -> None:
         """Register handlers for SIGTERM and SIGINT (Edge case 6).
