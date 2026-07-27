@@ -8,9 +8,19 @@ on:
     branches: [main]
   pull_request:
 
+# ── Duration budgets ───────────────────────────────────────────
+# Each job has a timeout-minutes ceiling.  Budgets are set ~30 %
+# above the running median observed in CI so that a >20 % wall-clock
+# regression triggers a hard failure (timed-out job).  Adjust the
+# budget when median shifts, not when a one-off spike occurs.
+# Median baselines (2026-07, Ubuntu 24.04 GHA runner, 2 vCPU):
+#   lint ~0.3 min   ·  types ~0.8 min   ·  test ~5 min
+#   memory ~1.5 min  ·  tui ~25 min     ·  benchmark ~3 min
+
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@v7
         with:
@@ -25,6 +35,7 @@ jobs:
 
   types:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
         with:
@@ -38,6 +49,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
@@ -54,6 +66,7 @@ jobs:
 
   memory:
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v7
         with:
@@ -68,6 +81,7 @@ jobs:
 
   tui:
     runs-on: ubuntu-latest
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v7
         with:
@@ -82,6 +96,7 @@ jobs:
   benchmark:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
