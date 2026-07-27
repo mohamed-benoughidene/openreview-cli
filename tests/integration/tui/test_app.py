@@ -652,3 +652,30 @@ async def test_sigterm_mid_review_cancels_cleanly() -> None:
 
     # After clean exit: verify no persistence happened
     mock_save.assert_not_called()
+
+
+async def test_app_cleanup_restores_signal_handlers() -> None:
+    """Verify on_unmount restores signal handlers and stops gateway timer."""
+    from openreview_cli.tui.app import OpenReviewApp
+
+    def dummy_handler(_signum: int, _frame: object) -> None:
+        pass
+
+    old = signal.signal(signal.SIGTERM, dummy_handler)
+    try:
+        app = OpenReviewApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            # on_mount has run by now — app should have replaced handler
+            handler_after_mount = signal.getsignal(signal.SIGTERM)
+            assert handler_after_mount is not dummy_handler, "App should replace handler"
+
+        # After shutdown, handler should be restored to dummy
+        restored = signal.getsignal(signal.SIGTERM)
+        assert restored is dummy_handler, f"Signal handler not restored: {restored}"
+
+        # Timer should be stopped after unmount
+        assert hasattr(app, "_gateway_timer"), "App should have _gateway_timer"
+        assert app._gateway_timer._active.is_set(), "Timer should be stopped after unmount"
+    finally:
+        signal.signal(signal.SIGTERM, old)
