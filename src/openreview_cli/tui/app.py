@@ -162,9 +162,7 @@ class OpenReviewApp(App[None]):
                         self.pop_screen()
                     break
 
-            import sys
-
-            sys.exit(128 + signum)
+            self.exit()
 
         signal.signal(signal.SIGTERM, _on_signal)
         signal.signal(signal.SIGINT, _on_signal)
