@@ -112,7 +112,7 @@ async def test_second_ctrl_c_exits() -> None:
         # Second Ctrl-C exits; app.run_test should handle cleanly
         await pilot.press("ctrl+c")
     # If we reach here, the app exited without error
-    assert True
+    assert not app.is_running
 
 
 @pytest.mark.slow
