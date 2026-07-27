@@ -1,5 +1,7 @@
 import json
+import os
 import platform
+import stat
 from pathlib import Path
 
 import pytest
@@ -160,3 +162,23 @@ def test_provider_add_rejects_malformed_cred(
         ],
     )
     assert result.exit_code == 2
+
+
+def test_save_key_creates_0600_under_permissive_umask(tmp_path: Path) -> None:
+    old = os.umask(0o022)
+    try:
+        p = tmp_path / "auth.json"
+        save_key(p, "openai", "sk-test-123")
+        assert stat.S_IMODE(p.stat().st_mode) == 0o600
+    finally:
+        os.umask(old)
+
+
+def test_load_auth_corrupt_json_raises_clear_error(tmp_path: Path) -> None:
+    from openreview_cli.config.auth import AuthCorruptError, load_auth
+
+    p = tmp_path / "auth.json"
+    p.write_text("{not json")
+    with pytest.raises(AuthCorruptError) as exc_info:
+        load_auth(p)
+    assert str(p) in str(exc_info.value)

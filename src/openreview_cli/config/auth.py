@@ -7,6 +7,11 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
+class AuthCorruptError(ValueError):
+    """auth.json exists but is not valid JSON."""
+
+
 AUTH_FILENAME = "auth.json"
 
 
@@ -16,8 +21,7 @@ def ensure_auth(auth_dir: Path) -> Path:
         _check_permissions(path)
         return path
     auth_dir.mkdir(parents=True, exist_ok=True)
-    path.write_text("{}")
-    _set_secure_permissions(path)
+    write_auth(path, {})
     logger.info("auth.json created at %s", path)
     return path
 
@@ -33,7 +37,12 @@ def load_auth(path: Path) -> dict[str, Any]:
     """
     if not path.exists():
         return {}
-    data: dict[str, Any] = json.loads(path.read_text())
+    try:
+        data: dict[str, Any] = json.loads(path.read_text())
+    except json.JSONDecodeError as exc:
+        raise AuthCorruptError(
+            f"{path} is corrupt: {exc}. Fix or delete the file and rerun `openreview gateway setup`."
+        ) from exc
     for key, val in list(data.items()):
         if isinstance(val, str):
             env_val = os.environ.get(key_to_env(key))
@@ -52,6 +61,18 @@ def key_to_env(key: str) -> str:
         "google": "GOOGLE_API_KEY",
     }
     return mapping.get(key, f"{key.upper()}_API_KEY")
+
+
+def write_auth(path: Path, data: dict[str, Any]) -> None:
+    """Write auth.json with 0o600 from creation — no world-readable window.
+
+    os.open applies the mode at creation time; the follow-up chmod covers
+    pre-existing files with wrong permissions.
+    """
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(json.dumps(data, indent=2))
+    _set_secure_permissions(path)
 
 
 def _set_secure_permissions(path: Path) -> None:
@@ -75,8 +96,7 @@ def save_key(auth_path: Path, provider: str, key: str) -> None:
     ensure_auth(auth_path.parent)
     auth = json.loads(auth_path.read_text())
     auth[provider] = key
-    auth_path.write_text(json.dumps(auth, indent=2))
-    _set_secure_permissions(auth_path)
+    write_auth(auth_path, auth)
 
 
 def save_provider_credentials(auth_path: Path, provider: str, creds: dict[str, str]) -> None:
@@ -94,8 +114,7 @@ def save_provider_credentials(auth_path: Path, provider: str, creds: dict[str, s
         auth[provider] = existing
     else:
         auth[provider] = dict(creds)
-    auth_path.write_text(json.dumps(auth, indent=2))
-    _set_secure_permissions(auth_path)
+    write_auth(auth_path, auth)
 
 
 def _check_permissions(path: Path) -> None:
