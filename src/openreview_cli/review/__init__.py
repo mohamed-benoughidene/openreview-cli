@@ -85,6 +85,7 @@ def run_review(  # noqa: PLR0912
     mode: str = "precheck",
     dual_path: bool = False,
     session_id: str | None = None,
+    allow_partial_pii: bool = False,
 ) -> list[ReviewReport]:
     """Run the PAKTON 3-agent review pipeline on one or more documents.
 
@@ -188,6 +189,7 @@ def run_review(  # noqa: PLR0912
                 mode_threshold_overrides=mode_threshold_overrides,
                 mode=mode,
                 session_id=doc_session_id,
+                allow_partial_pii=allow_partial_pii,
             )
         except Exception as exc:
             logger.warning("Failed to process %s: %s", doc_path, exc)
@@ -246,6 +248,7 @@ def _run_review_doc_pipeline(
     mode_threshold_overrides: dict[str, float] | None = None,
     mode: str = "precheck",
     session_id: str | None = None,
+    allow_partial_pii: bool = False,
 ) -> tuple[ReviewReport, list[Any]] | None:
     """Run a pipeline for a single document using the pipeline framework.
 
@@ -279,7 +282,7 @@ def _run_review_doc_pipeline(
 
     stages: list[Any] = [ParseStage()]
     if not no_pii:
-        stages.append(StripStage())
+        stages.append(StripStage(no_pii=False, allow_partial=allow_partial_pii))
     stages.append(review_stage)
 
     def _progress(event: ProgressEvent) -> None:

@@ -1199,6 +1199,11 @@ def review(
     qa_model: str | None = typer.Option(
         None, "--qa-model", help="Model slot for the QA verification agent."
     ),
+    allow_partial_pii: bool = typer.Option(
+        False,
+        "--allow-partial-pii",
+        help="Continue review even if some pages fail PII detection (those pages' text is sent as-is).",
+    ),
     no_pii: bool = typer.Option(False, "--no-pii", help="Skip PII stripping."),
     verbose: bool = typer.Option(False, "--verbose", help="Show per-clause progress."),
     grounding_mode: str | None = typer.Option(
@@ -1256,6 +1261,7 @@ def review(
             confidence_threshold=confidence_threshold,
             mode="precheck",
             dual_path=dual_path,
+            allow_partial_pii=allow_partial_pii,
         )
     except FileNotFoundError as e:
         typer.echo(f"Error: {e}", err=True)
@@ -2996,6 +3002,11 @@ def _register_product_mode(
     @app.command(name=name, help=help_text)
     def _cmd(
         path: str = typer.Argument(..., help=path_help),
+        allow_partial_pii: bool = typer.Option(
+            False,
+            "--allow-partial-pii",
+            help="Continue review even if some pages fail PII detection (those pages' text is sent as-is).",
+        ),
         no_pii: bool = typer.Option(False, "--no-pii", help="Skip PII stripping."),
         playbook_path: str | None = typer.Option(
             None, "--playbook", help="Path to a custom YAML playbook override."
@@ -3033,6 +3044,7 @@ def _register_product_mode(
             mode=name,
             path=path,
             no_pii=no_pii,
+            allow_partial_pii=allow_partial_pii,
             playbook_path=playbook_path,
             format=format,
             output=output,
@@ -3185,15 +3197,26 @@ def _run_product_review(
     mode: str,
     path: str,
     no_pii: bool,
-    playbook_path: str | None,
-    format: str,
-    output: str | None,
-    memo_format: list[str],
-    output_dir: str | None,
-    verbose: bool,
-    confidence_threshold: float,
+    allow_partial_pii: bool = False,
+    playbook_path: str | None = None,
+    format: str = "text",
+    output: str | None = None,
+    memo_format: list[str] | None = None,
+    output_dir: str | None = None,
+    verbose: bool = False,
+    confidence_threshold: float = 0.7,
     mode_threshold: list[str] | None = None,
 ) -> None:
+    """Run a review using a mode-specific bundled playbook.
+
+    Shared implementation for licensecheck, leasecheck, and privacycheck.
+    """
+    if memo_format is None:
+        memo_format = []
+    """Run a review using a mode-specific bundled playbook.
+
+    Shared implementation for licensecheck, leasecheck, and privacycheck.
+    """
     """Run a review using a mode-specific bundled playbook.
 
     Shared implementation for licensecheck, leasecheck, and privacycheck.
@@ -3246,6 +3269,7 @@ def _run_product_review(
             confidence_threshold=confidence_threshold,
             mode_threshold_overrides=mode_threshold_overrides,
             mode=mode,
+            allow_partial_pii=allow_partial_pii,
         )
     except FileNotFoundError as e:
         typer.echo(f"Error: {e}", err=True)

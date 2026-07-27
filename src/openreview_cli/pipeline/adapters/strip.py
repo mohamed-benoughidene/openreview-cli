@@ -29,8 +29,9 @@ class StripStage(Stage):
     name = "strip"
     critical = False
 
-    def __init__(self, no_pii: bool = False) -> None:
+    def __init__(self, no_pii: bool = False, allow_partial: bool = False) -> None:
         self.no_pii = no_pii
+        self.allow_partial = allow_partial
 
     async def run(self, ctx: PipelineContext) -> dict[str, Any]:
         clauses = ctx["clauses"]
@@ -40,10 +41,21 @@ class StripStage(Stage):
             return {"stripped_clauses": list(clauses)}
 
         from openreview_cli.pii import strip_pii_clauses
+        from openreview_cli.pii.models import PartialProcessingError
 
         try:
             # ponytail: synchronous call wrapped in thread pool
-            stripped, _pii_result = await asyncio.to_thread(strip_pii_clauses, clauses, document)
+            stripped, _pii_result = await asyncio.to_thread(
+                strip_pii_clauses, clauses, document, allow_partial=self.allow_partial
+            )
+        except PartialProcessingError as exc:
+            from openreview_cli.pipeline.errors import CriticalStageError
+
+            raise CriticalStageError(
+                f"PII detection failed on {len(exc.failed_pages)} page(s); "
+                "aborting before any external API call. Fix the document, "
+                "or rerun with --allow-partial-pii or --no-pii."
+            ) from exc
         except Exception as exc:
             raise StageError(f"StripStage failed: {exc}") from exc
 

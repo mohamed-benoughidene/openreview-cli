@@ -98,7 +98,11 @@ class PiiEngine:
         return entities
 
     def detect_all_pages(
-        self, clauses: list[Any], threshold: float | None = None, page_count: int | None = None
+        self,
+        clauses: list[Any],
+        threshold: float | None = None,
+        page_count: int | None = None,
+        allow_partial: bool = False,
     ) -> tuple[list[Any], list[Any], list[int], dict[int, str]]:
         threshold = threshold if threshold is not None else self._threshold
         all_entities: list[Any] = []
@@ -175,6 +179,15 @@ class PiiEngine:
                     )
                     progress.advance(task)
 
+        if failed_pages and not allow_partial:
+            from openreview_cli.pii.models import PartialProcessingError
+
+            raise PartialProcessingError(
+                failed_pages=sorted(set(failed_pages)),
+                successful_pages=successful_pages,
+                error_messages=error_messages,
+            )
+
         return all_entities, warnings, sorted(set(failed_pages)), error_messages
 
     def is_available(self) -> bool:
@@ -244,6 +257,7 @@ def strip_pii(
     strip_pii_enabled: bool = True,
     strip_metadata: bool = True,
     engine: PiiEngine | None = None,
+    allow_partial: bool = False,
 ) -> PiiResult:
     """Strip PII from a list of clauses.
 
@@ -274,7 +288,10 @@ def strip_pii(
         # Page-sequential detection
         assert engine is not None
         all_entities, warnings, failed_pages, _error_msgs = engine.detect_all_pages(
-            clauses, threshold=threshold, page_count=getattr(document, "page_count", None)
+            clauses,
+            threshold=threshold,
+            page_count=getattr(document, "page_count", None),
+            allow_partial=allow_partial,
         )
         if failed_pages:
             warnings.append(f"PII processing partial: {len(failed_pages)} page(s) failed")
@@ -372,6 +389,7 @@ def strip_pii_clauses(
     strip_pii_enabled: bool = True,
     strip_metadata: bool = True,
     engine: PiiEngine | None = None,
+    allow_partial: bool = False,
 ) -> tuple[list[Any], PiiResult]:
     """Strip PII from each clause's text individually while preserving metadata.
 
@@ -402,7 +420,10 @@ def strip_pii_clauses(
 
         assert engine is not None
         all_entities, warnings, failed_pages, _error_msgs = engine.detect_all_pages(
-            clauses, threshold=threshold, page_count=getattr(document, "page_count", None)
+            clauses,
+            threshold=threshold,
+            page_count=getattr(document, "page_count", None),
+            allow_partial=allow_partial,
         )
         if failed_pages:
             warnings.append(f"PII processing partial: {len(failed_pages)} page(s) failed")
