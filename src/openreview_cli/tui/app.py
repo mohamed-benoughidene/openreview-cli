@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import signal
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal
@@ -33,6 +33,8 @@ class OpenReviewApp(App[None]):
     def __init__(self) -> None:
         super().__init__()
         self._ctrl_c_warned = False
+        self._orig_sigterm: Any = signal.SIG_DFL
+        self._orig_sigint: Any = signal.SIG_DFL
 
     def compose(self) -> ComposeResult:
         from openreview_cli.tui.tabs.clients import ClientsTab
@@ -131,9 +133,15 @@ class OpenReviewApp(App[None]):
             pass
 
         self._refresh_gateway_status()
-        self.set_interval(5.0, self._refresh_gateway_status)
+        self._gateway_timer = self.set_interval(5.0, self._refresh_gateway_status)
 
         self._register_signal_handlers()
+
+    def on_unmount(self) -> None:
+        """Clean up process-global resources installed by on_mount."""
+        signal.signal(signal.SIGTERM, self._orig_sigterm)
+        signal.signal(signal.SIGINT, self._orig_sigint)
+        self._gateway_timer.stop()
 
     def _register_signal_handlers(self) -> None:
         """Register handlers for SIGTERM and SIGINT (Edge case 6).
@@ -164,5 +172,5 @@ class OpenReviewApp(App[None]):
 
             self.exit()
 
-        signal.signal(signal.SIGTERM, _on_signal)
-        signal.signal(signal.SIGINT, _on_signal)
+        self._orig_sigterm = signal.signal(signal.SIGTERM, _on_signal)
+        self._orig_sigint = signal.signal(signal.SIGINT, _on_signal)
