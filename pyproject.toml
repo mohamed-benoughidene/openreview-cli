@@ -149,6 +149,7 @@ testpaths = ["tests"]
 addopts = "-v --tb=short --disable-socket --allow-unix-socket"
 asyncio_mode = "auto"
 markers = [
+    "fast: quick tests (<1s each, core dev feedback loop)",
     "slow: marks tests as slow (skip with '-m not slow')",
     "integration: marks integration tests (mocked APIs)",
     "e2e: marks end-to-end tests (CLI invocation)",
@@ -156,5 +157,7 @@ markers = [
     "benchmark: marks benchmark tests",
     "accuracy: marks clause boundary accuracy tests",
     "network: marks tests requiring HuggingFace hub network access (legal-bert model download)",
+    "live: tests requiring live network (run with '-m live')",
 ]
 filterwarnings = ["ignore::DeprecationWarning"]
+timeout = 60

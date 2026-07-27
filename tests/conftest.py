@@ -13,10 +13,53 @@ from openreview_cli.pii.engine import PiiEngine
 from openreview_cli.pipeline.base import Stage
 
 
-def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Auto-mark speed category, enforce taxonomy, auto-timeout.
+
+    Root hook runs before child conftest hooks (e.g. TUI's).  The
+    path-based logic below correctly identifies TUI tests and marks them
+    ``slow``, so the TUI conftest's own ``slow`` marking is a no-op
+    overlay — no race.  ``-m`` expression filtering runs after this hook
+    returns, so auto-assigned markers are visible to marker expressions.
+    """
     for item in items:
-        if item.get_closest_marker("network"):
+        markers = {m.name for m in item.iter_markers()}
+
+        # Auto-enable socket for network/live-marked tests
+        if ("network" in markers or "live" in markers) and "enable_socket" not in markers:
             item.add_marker(pytest.mark.enable_socket)
+
+        # Auto-assign speed marker if missing
+        if not (markers & {"fast", "slow", "memory", "live"}):
+            path = item.path.as_posix()
+            if "network" in markers:
+                item.add_marker(pytest.mark.live)
+            elif "memory" in markers:
+                pass
+            elif "tests/unit/" in path:
+                item.add_marker(pytest.mark.fast)
+            elif "tests/integration/tui/" in path:
+                item.add_marker(pytest.mark.slow)
+            else:
+                item.add_marker(pytest.mark.fast)
+
+    # Enforce: every test MUST have a speed marker
+    for item in items:
+        if not ({m.name for m in item.iter_markers()} & {"fast", "slow", "memory", "live"}):
+            pytest.fail(
+                f"Test {item.nodeid} has no speed/resource marker. "
+                f"Add one of: @pytest.mark.fast, @pytest.mark.slow, @pytest.mark.memory, @pytest.mark.live"
+            )
+
+    # Auto-timeout based on speed marker
+    for item in items:
+        markers = {m.name for m in item.iter_markers()}
+        if any(m.name == "timeout" for m in item.iter_markers()):
+            continue
+        if "memory" in markers or "live" in markers:
+            item.add_marker(pytest.mark.timeout(300))
+        elif "slow" in markers:
+            item.add_marker(pytest.mark.timeout(120))
 
 
 # Silence transformers advisory/info warnings during pytest runs.

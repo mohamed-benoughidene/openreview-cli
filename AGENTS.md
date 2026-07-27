@@ -50,16 +50,17 @@ uv sync                       # runtime + dev deps into .venv
 
 ```bash
 uv run openreview --help
-uv run pytest -m "not slow" -q          # fast feedback — skips TUI + memory
-uv run pytest -m slow                   # ~105 TUI tests (Textual run_test startup cost)
-uv run pytest -m memory -q --timeout=300  # ALWAYS run solo, never in full suite (see Gotchas)
+uv run pytest -m "fast" -q              # fast feedback (<1s tests, core dev loop)
+uv run pytest -m "fast or slow" -q      # all offline tests except memory (safe for pre-commit)
+uv run pytest -m slow                   # TUI tests only (~105, Textual run_test startup cost)
+uv run pytest -m memory -q              # memory tests ALWAYS run solo (see Gotchas)
 uv run pytest tests/unit/test_x.py::test_y  # single test
 uv run ruff check . && uv run ruff format .
 uv run mypy src/ tests/                 # strict
 uv run pre-commit run --all-files       # before every commit
 ```
 
-Pytest markers (pyproject.toml): `slow`, `integration`, `e2e`, `memory`, `benchmark`, `accuracy`, `network`.
+Pytest markers (pyproject.toml): `fast`, `slow`, `integration`, `e2e`, `memory`, `benchmark`, `accuracy`, `network`, `live`.
 
 **CI** (`ci.yml`, push to main + PRs): 5 parallel jobs — `lint`, `types`, `test` (unit only), `memory` (installs spaCy model), `benchmark` (main only, `|| true`). Uses `actions/checkout@v7` + `astral-sh/setup-uv@v8.2.0`.
 
