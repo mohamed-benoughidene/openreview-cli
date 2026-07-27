@@ -10,6 +10,7 @@ all modules are pre-imported, so code-loading costs are excluded.
 
 from __future__ import annotations
 
+import gc
 import tracemalloc
 
 import pytest
@@ -59,6 +60,7 @@ async def test_tui_memory_under_30mb() -> None:
       higher — this test tracks only Python-object memory.
     """
     tracemalloc.start()
+    gc.collect()  # reduce cross-test noise from preceding memory-marked tests
     start_snapshot = tracemalloc.take_snapshot()
 
     app = OpenReviewApp()
