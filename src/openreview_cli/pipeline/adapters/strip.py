@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from openreview_cli.pipeline.base import Stage
@@ -30,9 +31,17 @@ class StripStage(Stage):
     name = "strip"
     critical = False
 
-    def __init__(self, no_pii: bool = False, allow_partial: bool = False) -> None:
+    def __init__(
+        self,
+        no_pii: bool = False,
+        allow_partial: bool = False,
+        emit_callback: Callable[[ProgressEvent], None] | None = None,
+    ) -> None:
         self.no_pii = no_pii
         self.allow_partial = allow_partial
+        self._emit_callback = emit_callback
+        self._stage_index: int | None = None
+        self._total_stages: int = 0
 
     async def run(self, ctx: PipelineContext) -> dict[str, Any]:
         clauses = ctx["clauses"]
@@ -47,13 +56,16 @@ class StripStage(Stage):
         try:
             # Map PII progress (desc, done, total) to pipeline ProgressEvent
             def _pii_cb(desc: str, done: int, total: int) -> None:
-                ProgressEvent(
-                    stage_index=0,
-                    total_stages=1,
-                    stage_name="strip",
-                    status="running",
-                    message=desc,
-                )
+                if self._emit_callback is not None and self._stage_index is not None:
+                    self._emit_callback(
+                        ProgressEvent(
+                            stage_index=self._stage_index,
+                            total_stages=self._total_stages,
+                            stage_name="strip",
+                            status="running",
+                            message=desc,
+                        )
+                    )
 
             # ponytail: synchronous call wrapped in thread pool
             stripped, _pii_result = await asyncio.to_thread(
