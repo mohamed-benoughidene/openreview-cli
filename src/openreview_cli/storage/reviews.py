@@ -70,7 +70,7 @@ def list_recent_reviews(db_path: Path, limit: int = 5) -> list[dict[str, Any]]:
     with transaction(db_path) as conn:
         rows = conn.execute(
             "SELECT id, filename, mode, green_count, amber_count, red_count, created_at "
-            "FROM review_reports ORDER BY created_at DESC LIMIT ?",
+            "FROM review_reports ORDER BY created_at DESC, id DESC LIMIT ?",
             (limit,),
         ).fetchall()
     return [dict(r) for r in rows]
