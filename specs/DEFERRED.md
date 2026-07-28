@@ -3470,7 +3470,7 @@ Spec 030 spec.md §4 FR-4, FR-5, FR-7. Spec 010 benchmark harness. The mock base
 
 Once the benchmark whitelist (D-75) is populated for all 22 modes, the accuracy benchmark must actually be run against CUAD, MAUD, and ContractNLI datasets. Each mode would produce precision, recall, and F1 scores against the applicable labelled data.
 
-This is the measurement that validates whether the 17 playbooks and extraction prompts produce accurate clause assessments. Without it, there is no empirical basis for claiming any mode is accurate — only that it produces structured output.
+This is the measurement that validates whether the 24 playbooks and extraction prompts produce accurate clause assessments. Without it, there is no empirical basis for claiming any mode is accurate — only that it produces structured output.
 
 The accuracy run includes:
 - Per-mode precision, recall, F1 against each applicable dataset

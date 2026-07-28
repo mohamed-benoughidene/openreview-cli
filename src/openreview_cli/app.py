@@ -3007,7 +3007,9 @@ def _register_product_mode(
             "--allow-partial-pii",
             help="Continue review even if some pages fail PII detection (those pages' text is sent as-is).",
         ),
-        no_pii: bool = typer.Option(False, "--no-pii", help="Skip PII stripping."),
+        no_pii: bool = typer.Option(
+            False, "--no-pii", help="Skip PII stripping (no-op: negotiate runs locally)."
+        ),
         playbook_path: str | None = typer.Option(
             None, "--playbook", help="Path to a custom YAML playbook override."
         ),

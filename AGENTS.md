@@ -60,7 +60,7 @@ uv run mypy src/ tests/                 # strict
 uv run pre-commit run --all-files       # before every commit
 ```
 
-Pytest markers (pyproject.toml): `fast`, `slow`, `integration`, `e2e`, `memory`, `benchmark`, `accuracy`, `network`, `live`.
+Pytest markers (pyproject.toml): `fast`, `slow`, `integration`, `e2e`, `memory`, `no_memory`, `benchmark`, `accuracy`, `network`, `live`.
 
 **CI** (`ci.yml`, push to main + PRs): 6 parallel jobs — `lint`, `types`, `test` (unit only), `memory` (installs spaCy model), `tui`, `benchmark` (main only, `|| true`). Uses `actions/checkout@v7` + `astral-sh/setup-uv@v8.2.0`.
 

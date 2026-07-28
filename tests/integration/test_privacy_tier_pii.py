@@ -35,7 +35,7 @@ class _MockGateway:
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         self._config = config or {"gateway": {"models": {}}}
         self._cost_tracker = _MockCostTracker()
-        self._data_path = Path("/tmp/test.db")
+        self._data_path = Path("/tmp/test.db")  # ponytail: path never touched on disk
         self.chat_calls: list[Any] = []
         self.embed_calls: list[Any] = []
 

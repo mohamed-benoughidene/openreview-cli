@@ -43,7 +43,7 @@ class _MockGateway:
         self.chat_calls: list[tuple[str, list[dict[str, str]], dict[str, Any]]] = []
         self.embed_calls: list[tuple[str, list[str], dict[str, Any]]] = []
         self._cost_tracker = _MockCostTracker()
-        self._data_path = Path("/tmp/test.db")
+        self._data_path = Path("/tmp/test.db")  # ponytail: path never touched on disk
 
     def chat(
         self,
