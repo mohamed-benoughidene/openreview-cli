@@ -605,7 +605,7 @@ async def test_sigterm_mid_review_cancels_cleanly() -> None:
 
         mock_review.side_effect = slow_review
 
-        with patch("openreview_cli.storage.database.save_review_report") as mock_save:
+        with patch("openreview_cli.storage.reviews.save_review_report") as mock_save:
             # Safety SIGTERM handler so a failed test doesn't kill the process.
             # The real handler is installed inside on_mount and overwrites this.
             old_sigterm = signal.signal(signal.SIGTERM, lambda *a: None)
