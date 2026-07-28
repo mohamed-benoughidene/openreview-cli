@@ -262,9 +262,9 @@ class TestPlaybookFlag:
 
         pb_mock = MagicMock()
         with (
-            patch("openreview_cli.review.load_playbook_from_db", return_value=(pb_mock, 1)),
-            patch("openreview_cli.review.load_playbook"),
-            patch("openreview_cli.review.load_bundled"),
+            patch("openreview_cli.review.runner.load_playbook_from_db", return_value=(pb_mock, 1)),
+            patch("openreview_cli.review.runner.load_playbook"),
+            patch("openreview_cli.review.runner.load_bundled"),
             patch("openreview_cli.review.ReviewCommand"),
             warnings.catch_warnings(record=True) as w,
         ):
