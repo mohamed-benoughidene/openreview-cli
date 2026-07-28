@@ -25,6 +25,7 @@ class ReviewTab(Container):
     def compose(self) -> ComposeResult:
         yield Static("Review a document", id="review-welcome")
         yield Button("New review", id="btn-new-review-tab", variant="primary")
+        yield Button("New negotiation", id="btn-new-negotiation", variant="default")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Open the review wizard on button press."""
@@ -32,3 +33,9 @@ class ReviewTab(Container):
             from openreview_cli.tui.screens.review_wizard import ReviewWizard
 
             self.app.push_screen(ReviewWizard())
+        elif event.button.id == "btn-new-negotiation":
+            from openreview_cli.tui.screens.negotiation_wizard import (
+                NegotiationWizard,
+            )
+
+            self.app.push_screen(NegotiationWizard())
