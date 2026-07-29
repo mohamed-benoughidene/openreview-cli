@@ -26,22 +26,10 @@ def _clause(n: int) -> Clause:
 
 
 def _flaky(engine: PiiEngine, monkeypatch: MonkeyPatch) -> None:
-    real_detect = engine.detect_on_page
-
-    def flaky_detect(
-        text: str,
-        threshold: float | None = None,
-        is_non_english: bool = False,
-        clause_heading: str | None = None,
-    ) -> list[Any]:
-        if clause_heading == "Clause 2":
+    def flaky_detect(text: str, **kwargs: Any) -> list[Any]:
+        if kwargs.get("clause_heading") == "Clause 2":
             raise RuntimeError("presidio boom")
-        return real_detect(
-            text,
-            threshold=threshold,
-            is_non_english=is_non_english,
-            clause_heading=clause_heading,
-        )
+        return []  # deterministic — no real analyzer, no environment dependence
 
     monkeypatch.setattr(engine, "detect_on_page", flaky_detect)
 
