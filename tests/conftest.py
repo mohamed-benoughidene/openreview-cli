@@ -1,18 +1,11 @@
 import asyncio
 import functools
 import logging
-import os
 import threading
 import tracemalloc
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
-
-# Cold-cache CI environments must never attempt HF hub calls (pytest-socket blocks them).
-# Set BEFORE any library that might import transformers/torch internally (Presidio, spaCy).
-os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
-os.environ.setdefault("HF_HUB_OFFLINE", "1")
-os.environ.setdefault("HF_DATASETS_OFFLINE", "1")
 
 import pytest
 
@@ -78,6 +71,10 @@ logging.getLogger("transformers.tokenization_utils_base").setLevel(logging.ERROR
 logging.getLogger("transformers.configuration_utils").setLevel(logging.ERROR)
 logging.getLogger("transformers.integrations.tensor_parallel").setLevel(logging.ERROR)
 logging.getLogger("transformers.integrations.tensor_parallel").setLevel(logging.ERROR)
+
+# Presidio logs into pytest-captured streams that close during teardown.
+logging.getLogger("presidio_analyzer").addHandler(logging.NullHandler())
+logging.getLogger("presidio_analyzer").propagate = False
 
 PEAK_MEMORY_FLOOR_BYTES = 110 * 1024 * 1024
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"

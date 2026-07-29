@@ -293,7 +293,10 @@ def test_is_available_logs_warning_on_failure(
     pii_engine._is_available_cache = None
 
 
-def test_detect_all_pages_emits_progress_via_callback(pii_engine: PiiEngine) -> None:
+def test_detect_all_pages_emits_progress_via_callback(
+    pii_engine: PiiEngine, monkeypatch: MonkeyPatch
+) -> None:
+    monkeypatch.setattr(pii_engine, "detect_on_page", lambda text, **kwargs: [])
     events: list[tuple[str, int, int]] = []
     from openreview_cli.parsing.models import Clause
 
