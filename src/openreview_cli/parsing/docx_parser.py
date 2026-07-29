@@ -97,7 +97,7 @@ class DocxParser:
             ) from None
 
         from openreview_cli.parsing.clause_detector import (
-            _count_paragraphs,
+            count_paragraphs,
             detect_clause_starts,
             nupunkt_detect_boundaries,
         )
@@ -126,7 +126,7 @@ class DocxParser:
 
             if not clause_starts and not heading_boundaries:
                 for start_offset, text, para_idx in para_offsets:
-                    pc = _count_paragraphs(text)
+                    pc = count_paragraphs(text)
                     yield Clause(
                         id=f"clause-{para_idx}",
                         title=None,
@@ -159,7 +159,7 @@ class DocxParser:
                 matching_paras = [(o, t, pi) for (o, t, pi) in para_offsets if o >= cut and o < end]
                 first_para_idx = matching_paras[0][2] if matching_paras else 0
 
-                pc = _count_paragraphs(span_text)
+                pc = count_paragraphs(span_text)
                 yield Clause(
                     id=f"clause-{i}",
                     title=title,

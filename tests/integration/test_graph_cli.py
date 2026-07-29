@@ -7,7 +7,8 @@ from typer.testing import CliRunner
 
 from openreview_cli.app import app
 from openreview_cli.graph.models import ContractGraph, EdgeType, GraphEdge, GraphNode
-from openreview_cli.storage.database import init_database, save_graph
+from openreview_cli.storage.database import init_database
+from openreview_cli.storage.graphs import save_graph
 
 runner = CliRunner()
 
@@ -132,7 +133,7 @@ class TestGraphStoreCli:
         )
         assert result.exit_code == 0
 
-        from openreview_cli.storage.database import load_graph as _load_graph
+        from openreview_cli.storage.graphs import load_graph as _load_graph
 
         loaded = _load_graph(db_path, "test-contract")
         assert loaded is not None
@@ -157,7 +158,7 @@ class TestGraphStoreCli:
         )
         assert result.exit_code == 0
 
-        from openreview_cli.storage.database import load_graph as _load_graph
+        from openreview_cli.storage.graphs import load_graph as _load_graph
 
         loaded = _load_graph(db_path, "simple-contract")
         assert loaded is not None

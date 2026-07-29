@@ -161,7 +161,7 @@ class TestRecoveryCoordinatorPersistence:
 
     @pytest.mark.asyncio
     async def test_build_report_deletes_on_success(self, tmp_path: Path) -> None:
-        from openreview_cli.storage.database import load_recovery_state
+        from openreview_cli.storage.recovery import load_recovery_state
 
         coordinator = RecoveryCoordinator(db_path=str(tmp_path / "recovery.db"))
         ctx = RecoveryContext()
@@ -176,7 +176,7 @@ class TestRecoveryCoordinatorPersistence:
 
     @pytest.mark.asyncio
     async def test_build_report_keeps_on_unrecoverable(self, tmp_path: Path) -> None:
-        from openreview_cli.storage.database import load_recovery_state
+        from openreview_cli.storage.recovery import load_recovery_state
 
         coordinator = RecoveryCoordinator(db_path=str(tmp_path / "recovery.db"))
         ctx = RecoveryContext()
@@ -201,7 +201,7 @@ class TestRecoveryCoordinatorPersistence:
 
     @pytest.mark.asyncio
     async def test_resume_context_restores_external_state(self, tmp_path: Path) -> None:
-        from openreview_cli.storage.database import save_recovery_state
+        from openreview_cli.storage.recovery import save_recovery_state
 
         db_path = tmp_path / "recovery.db"
         coordinator = RecoveryCoordinator(db_path=str(db_path))

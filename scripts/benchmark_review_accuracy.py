@@ -12,7 +12,7 @@ Usage:
     uv run python scripts/benchmark_review_accuracy.py [--corpus PATH]
 
 NOTE: This benchmark requires configured AI Gateway model slots (extraction
-and QA) to produce real results. Run ``openreview wizard`` to configure at
+and QA) to produce real results. Run ``openreview gateway setup`` to configure at
 least one local model slot before running with ``--corpus``. Without
 ``--corpus``, the script performs a structural validation check only (no
 model calls).

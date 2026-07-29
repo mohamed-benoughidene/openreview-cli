@@ -15,10 +15,12 @@ from openreview_cli.config.auth import ensure_auth
 from openreview_cli.config.loader import get_config_value, load_config, set_config_value
 from openreview_cli.config.paths import get_config_dir, get_data_dir, get_log_dir
 from openreview_cli.errors import config_error
-from openreview_cli.storage.database import (
+from openreview_cli.storage.clients import (
     add_client,
     client_has_reviews,
     delete_client,
+)
+from openreview_cli.storage.database import (
     get_connection,
     init_database,
 )
@@ -42,7 +44,6 @@ app = typer.Typer(
 
 def _version_callback(value: bool) -> None:
     if value:
-        _init()
         typer.echo(f"openreview {__version__}")
         raise typer.Exit()
 
@@ -63,8 +64,6 @@ def _validate_enum(value: str, options: tuple[str, ...], name: str) -> None:
 
 def _privacy_footer() -> str:
     """Build the privacy-tier footer for terminal reports."""
-    from openreview_cli.config.loader import load_config
-    from openreview_cli.config.paths import get_config_dir
     from openreview_cli.gateway.models import PrivacyTierReport
     from openreview_cli.gateway.tier_config import TierConfig
     from openreview_cli.gateway.tier_tracker import TierTracker
@@ -537,7 +536,7 @@ def playbook_import(
 
     from openreview_cli.config.paths import get_data_dir
     from openreview_cli.review.playbook import load_playbook
-    from openreview_cli.storage.database import import_playbook_yaml
+    from openreview_cli.storage.playbooks import import_playbook_yaml
 
     path = Path(yaml_path)
     if not path.exists():
@@ -580,7 +579,7 @@ def playbook_list(
     from rich.table import Table
 
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import (
+    from openreview_cli.storage.playbooks import (
         get_current_version,
         get_playbook_version,
         list_playbooks_with_meta,
@@ -647,7 +646,7 @@ def playbook_show(
     import json as _json
 
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import get_playbook_version
+    from openreview_cli.storage.playbooks import get_playbook_version
 
     if version < 1:
         typer.echo("Error: Version must be a positive integer.", err=True)
@@ -662,7 +661,7 @@ def playbook_show(
 
     if content is None:
         # Check if playbook_id exists at all
-        from openreview_cli.storage.database import list_playbooks
+        from openreview_cli.storage.playbooks import list_playbooks
 
         all_pbs = list_playbooks(db_path)
         ids = {pb[0] for pb in all_pbs}
@@ -738,7 +737,7 @@ def playbook_export(
     import yaml
 
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import export_playbook_version, list_playbooks
+    from openreview_cli.storage.playbooks import export_playbook_version, list_playbooks
 
     db_path = get_data_dir() / "openreview.db"
 
@@ -842,7 +841,7 @@ def playbook_diff(
 
     from openreview_cli.config.paths import get_data_dir
     from openreview_cli.review.playbook import compute_playbook_diff
-    from openreview_cli.storage.database import diff_playbook_versions
+    from openreview_cli.storage.playbooks import diff_playbook_versions
 
     if v1 < 1 or v2 < 1:
         typer.echo("Error: Versions must be positive integers.", err=True)
@@ -922,7 +921,7 @@ def playbook_set_current(
     Re-activates a deleted playbook if it was soft-deleted.
     """
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import set_current_version
+    from openreview_cli.storage.playbooks import set_current_version
 
     if version < 1:
         typer.echo("Error: Version must be a positive integer.", err=True)
@@ -949,7 +948,7 @@ def playbook_delete(
     Removes from default list view. Restorable via set-current or undelete.
     """
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import delete_playbook, list_playbooks
+    from openreview_cli.storage.playbooks import delete_playbook, list_playbooks
 
     db_path = get_data_dir() / "openreview.db"
 
@@ -1001,7 +1000,7 @@ def playbook_undelete(
     Clears the deleted_at tombstone so the playbook reappears in listings.
     """
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import (
+    from openreview_cli.storage.playbooks import (
         get_current_version,
         list_playbooks_with_meta,
         set_current_version,
@@ -1040,7 +1039,7 @@ def playbook_history(
     Displays a Rich table with Version, Created, and Status columns.
     """
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import get_playbook_history
+    from openreview_cli.storage.playbooks import get_playbook_history
 
     db_path = get_data_dir() / "openreview.db"
     try:
@@ -1199,6 +1198,11 @@ def review(
     qa_model: str | None = typer.Option(
         None, "--qa-model", help="Model slot for the QA verification agent."
     ),
+    allow_partial_pii: bool = typer.Option(
+        False,
+        "--allow-partial-pii",
+        help="Continue review even if some pages fail PII detection (those pages' text is sent as-is).",
+    ),
     no_pii: bool = typer.Option(False, "--no-pii", help="Skip PII stripping."),
     verbose: bool = typer.Option(False, "--verbose", help="Show per-clause progress."),
     grounding_mode: str | None = typer.Option(
@@ -1256,6 +1260,7 @@ def review(
             confidence_threshold=confidence_threshold,
             mode="precheck",
             dual_path=dual_path,
+            allow_partial_pii=allow_partial_pii,
         )
     except FileNotFoundError as e:
         typer.echo(f"Error: {e}", err=True)
@@ -1537,7 +1542,7 @@ def gateway_costs(
         )
     elif today:
         from openreview_cli.config.paths import get_data_dir
-        from openreview_cli.storage.database import check_daily_limit
+        from openreview_cli.storage.costs import check_daily_limit
 
         db_path = get_data_dir() / "openreview.db"
         under = check_daily_limit(db_path, 999999)
@@ -1830,7 +1835,7 @@ def _show_comparison_history() -> None:
     from rich.table import Table
 
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import list_comparison_history
+    from openreview_cli.storage.comparisons import list_comparison_history
 
     db_path = get_data_dir() / "openreview.db"
     entries = list_comparison_history(db_path)
@@ -2424,7 +2429,8 @@ def graph_build(
 
     if store:
         from openreview_cli.config.paths import get_config_dir
-        from openreview_cli.storage.database import init_database, save_graph
+        from openreview_cli.storage.database import init_database
+        from openreview_cli.storage.graphs import save_graph
 
         cid = contract_id if contract_id else path.stem
         db = Path(db_path) if db_path else get_config_dir() / "openreview.db"
@@ -2996,7 +3002,14 @@ def _register_product_mode(
     @app.command(name=name, help=help_text)
     def _cmd(
         path: str = typer.Argument(..., help=path_help),
-        no_pii: bool = typer.Option(False, "--no-pii", help="Skip PII stripping."),
+        allow_partial_pii: bool = typer.Option(
+            False,
+            "--allow-partial-pii",
+            help="Continue review even if some pages fail PII detection (those pages' text is sent as-is).",
+        ),
+        no_pii: bool = typer.Option(
+            False, "--no-pii", help="Skip PII stripping (no-op: negotiate runs locally)."
+        ),
         playbook_path: str | None = typer.Option(
             None, "--playbook", help="Path to a custom YAML playbook override."
         ),
@@ -3033,6 +3046,7 @@ def _register_product_mode(
             mode=name,
             path=path,
             no_pii=no_pii,
+            allow_partial_pii=allow_partial_pii,
             playbook_path=playbook_path,
             format=format,
             output=output,
@@ -3044,138 +3058,121 @@ def _register_product_mode(
         )
 
 
-_register_product_mode(
-    app,
-    name="licensecheck",
-    help_text="Review a SaaS/software license agreement with LicenseCheck.",
-    path_help="Path to a SaaS/software license agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="leasecheck",
-    help_text="Review a commercial lease agreement with LeaseCheck.",
-    path_help="Path to a commercial lease agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="privacycheck",
-    help_text="Review a Data Processing Agreement with PrivacyCheck.",
-    path_help="Path to a Data Processing Agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="dealcheck",
-    help_text="Review a vendor/service agreement with DealCheck.",
-    path_help="Path to a vendor or service agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="hirecheck",
-    help_text="Review an employment agreement with HireCheck.",
-    path_help="Path to an employment agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="indemnitycheck",
-    help_text="Review an indemnification agreement with IndemnityCheck.",
-    path_help="Path to an indemnification agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="consultcheck",
-    help_text="Review a consulting services agreement with ConsultCheck.",
-    path_help="Path to a consulting services agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="workcheck",
-    help_text="Review an independent contractor/work-for-hire agreement with WorkCheck.",
-    path_help="Path to an independent contractor agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="loicheck",
-    help_text="Review a letter of intent or MOU with LOICheck.",
-    path_help="Path to a letter of intent or MOU (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="subcheck",
-    help_text="Review a subcontractor agreement with SubCheck.",
-    path_help="Path to a subcontractor agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="settlementcheck",
-    help_text="Review a settlement/release agreement with SettlementCheck.",
-    path_help="Path to a settlement or release agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="settlementcheck_v2",
-    help_text="Review a complex settlement/release agreement (v2) with SettlementCheck.",
-    path_help="Path to a complex settlement or release agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="assetcheck",
-    help_text="Review an asset transfer/assignment agreement with AssetCheck.",
-    path_help="Path to an asset transfer or assignment agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="buycheck",
-    help_text="Review an asset purchase/business acquisition agreement with BuyCheck.",
-    path_help="Path to an asset purchase or acquisition agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="engagecheck",
-    help_text="Review a professional services engagement letter with EngageCheck.",
-    path_help="Path to an engagement letter (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="guaranteecheck",
-    help_text="Review a personal guarantee/suretyship agreement with GuaranteeCheck.",
-    path_help="Path to a personal guarantee or suretyship agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="loancheck",
-    help_text="Review a loan agreement/promissory note with LoanCheck.",
-    path_help="Path to a loan agreement or promissory note (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="franchisecheck",
-    help_text="Review a franchise agreement or franchise disclosure document.",
-    path_help="Path to a franchise agreement or FDD (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="opcheck",
-    help_text="Review an Operating Agreement (LLC governance document).",
-    path_help="Path to an operating agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="partnercheck",
-    help_text="Review a general or limited partnership agreement.",
-    path_help="Path to a partnership agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="sponsorcheck",
-    help_text="Review a sponsorship agreement.",
-    path_help="Path to a sponsorship agreement (PDF or DOCX).",
-)
-_register_product_mode(
-    app,
-    name="distrocheck",
-    help_text="Review a distribution or reseller agreement.",
-    path_help="Path to a distribution agreement (PDF or DOCX).",
-)
+_PRODUCT_MODES: list[tuple[str, str, str]] = [
+    (
+        "licensecheck",
+        "Review a SaaS/software license agreement with LicenseCheck.",
+        "Path to a SaaS/software license agreement (PDF or DOCX).",
+    ),
+    (
+        "leasecheck",
+        "Review a commercial lease agreement with LeaseCheck.",
+        "Path to a commercial lease agreement (PDF or DOCX).",
+    ),
+    (
+        "privacycheck",
+        "Review a Data Processing Agreement with PrivacyCheck.",
+        "Path to a Data Processing Agreement (PDF or DOCX).",
+    ),
+    (
+        "dealcheck",
+        "Review a vendor/service agreement with DealCheck.",
+        "Path to a vendor or service agreement (PDF or DOCX).",
+    ),
+    (
+        "hirecheck",
+        "Review an employment agreement with HireCheck.",
+        "Path to an employment agreement (PDF or DOCX).",
+    ),
+    (
+        "indemnitycheck",
+        "Review an indemnification agreement with IndemnityCheck.",
+        "Path to an indemnification agreement (PDF or DOCX).",
+    ),
+    (
+        "consultcheck",
+        "Review a consulting services agreement with ConsultCheck.",
+        "Path to a consulting services agreement (PDF or DOCX).",
+    ),
+    (
+        "workcheck",
+        "Review an independent contractor/work-for-hire agreement with WorkCheck.",
+        "Path to an independent contractor agreement (PDF or DOCX).",
+    ),
+    (
+        "loicheck",
+        "Review a letter of intent or MOU with LOICheck.",
+        "Path to a letter of intent or MOU (PDF or DOCX).",
+    ),
+    (
+        "subcheck",
+        "Review a subcontractor agreement with SubCheck.",
+        "Path to a subcontractor agreement (PDF or DOCX).",
+    ),
+    (
+        "settlementcheck",
+        "Review a settlement/release agreement with SettlementCheck.",
+        "Path to a settlement or release agreement (PDF or DOCX).",
+    ),
+    (
+        "settlementcheck_v2",
+        "Review a complex settlement/release agreement (v2) with SettlementCheck.",
+        "Path to a complex settlement or release agreement (PDF or DOCX).",
+    ),
+    (
+        "assetcheck",
+        "Review an asset transfer/assignment agreement with AssetCheck.",
+        "Path to an asset transfer or assignment agreement (PDF or DOCX).",
+    ),
+    (
+        "buycheck",
+        "Review an asset purchase/business acquisition agreement with BuyCheck.",
+        "Path to an asset purchase or acquisition agreement (PDF or DOCX).",
+    ),
+    (
+        "engagecheck",
+        "Review a professional services engagement letter with EngageCheck.",
+        "Path to an engagement letter (PDF or DOCX).",
+    ),
+    (
+        "guaranteecheck",
+        "Review a personal guarantee/suretyship agreement with GuaranteeCheck.",
+        "Path to a personal guarantee or suretyship agreement (PDF or DOCX).",
+    ),
+    (
+        "loancheck",
+        "Review a loan agreement/promissory note with LoanCheck.",
+        "Path to a loan agreement or promissory note (PDF or DOCX).",
+    ),
+    (
+        "franchisecheck",
+        "Review a franchise agreement or franchise disclosure document.",
+        "Path to a franchise agreement or FDD (PDF or DOCX).",
+    ),
+    (
+        "opcheck",
+        "Review an Operating Agreement (LLC governance document).",
+        "Path to an operating agreement (PDF or DOCX).",
+    ),
+    (
+        "partnercheck",
+        "Review a general or limited partnership agreement.",
+        "Path to a partnership agreement (PDF or DOCX).",
+    ),
+    (
+        "sponsorcheck",
+        "Review a sponsorship agreement.",
+        "Path to a sponsorship agreement (PDF or DOCX).",
+    ),
+    (
+        "distrocheck",
+        "Review a distribution or reseller agreement.",
+        "Path to a distribution agreement (PDF or DOCX).",
+    ),
+]
+
+for _mode_name, _mode_help, _mode_path_help in _PRODUCT_MODES:
+    _register_product_mode(app, name=_mode_name, help_text=_mode_help, path_help=_mode_path_help)
 
 
 # ── Shared product review logic ─────────────────────────────────────────────
@@ -3185,15 +3182,26 @@ def _run_product_review(
     mode: str,
     path: str,
     no_pii: bool,
-    playbook_path: str | None,
-    format: str,
-    output: str | None,
-    memo_format: list[str],
-    output_dir: str | None,
-    verbose: bool,
-    confidence_threshold: float,
+    allow_partial_pii: bool = False,
+    playbook_path: str | None = None,
+    format: str = "text",
+    output: str | None = None,
+    memo_format: list[str] | None = None,
+    output_dir: str | None = None,
+    verbose: bool = False,
+    confidence_threshold: float = 0.7,
     mode_threshold: list[str] | None = None,
 ) -> None:
+    """Run a review using a mode-specific bundled playbook.
+
+    Shared implementation for licensecheck, leasecheck, and privacycheck.
+    """
+    if memo_format is None:
+        memo_format = []
+    """Run a review using a mode-specific bundled playbook.
+
+    Shared implementation for licensecheck, leasecheck, and privacycheck.
+    """
     """Run a review using a mode-specific bundled playbook.
 
     Shared implementation for licensecheck, leasecheck, and privacycheck.
@@ -3246,6 +3254,7 @@ def _run_product_review(
             confidence_threshold=confidence_threshold,
             mode_threshold_overrides=mode_threshold_overrides,
             mode=mode,
+            allow_partial_pii=allow_partial_pii,
         )
     except FileNotFoundError as e:
         typer.echo(f"Error: {e}", err=True)

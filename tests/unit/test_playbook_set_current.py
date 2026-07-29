@@ -7,9 +7,11 @@ from pathlib import Path
 import pytest
 
 from openreview_cli.storage.database import (
+    init_database,
+)
+from openreview_cli.storage.playbooks import (
     delete_playbook,
     import_playbook_yaml,
-    init_database,
     set_current_version,
 )
 

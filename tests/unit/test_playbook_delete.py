@@ -7,9 +7,11 @@ from pathlib import Path
 import pytest
 
 from openreview_cli.storage.database import (
+    init_database,
+)
+from openreview_cli.storage.playbooks import (
     delete_playbook,
     import_playbook_yaml,
-    init_database,
 )
 
 
@@ -66,7 +68,7 @@ class TestDeletePlaybook:
 
         delete_playbook(db, "pb1")
 
-        from openreview_cli.storage.database import get_playbook_version
+        from openreview_cli.storage.playbooks import get_playbook_version
 
         v1 = get_playbook_version(db, "pb1", 1)
         v2 = get_playbook_version(db, "pb1", 2)

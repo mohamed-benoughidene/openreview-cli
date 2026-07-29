@@ -1,6 +1,8 @@
 """PII stripping engine — Presidio wrapper with page-sequential processing."""
 
+import logging
 import time
+from collections.abc import Callable
 from typing import Any
 
 from openreview_cli.parsing.models import Clause
@@ -15,6 +17,8 @@ from openreview_cli.pii.placeholders import assign_placeholders
 from openreview_cli.pii.recognizers import get_custom_recognizers
 
 _TEMP_PH = "[TEMP_0]"  # ponytail: placeholder overwritten by assign_placeholders
+
+logger = logging.getLogger(__name__)
 
 
 class PiiEngine:
@@ -98,7 +102,12 @@ class PiiEngine:
         return entities
 
     def detect_all_pages(
-        self, clauses: list[Any], threshold: float | None = None, page_count: int | None = None
+        self,
+        clauses: list[Any],
+        threshold: float | None = None,
+        page_count: int | None = None,
+        allow_partial: bool = False,
+        progress_callback: Callable[[str, int, int], None] | None = None,
     ) -> tuple[list[Any], list[Any], list[int], dict[int, str]]:
         threshold = threshold if threshold is not None else self._threshold
         all_entities: list[Any] = []
@@ -106,8 +115,6 @@ class PiiEngine:
         failed_pages: list[int] = []
         error_messages: dict[int, str] = {}
         successful_pages: list[int] = []
-
-        from rich.progress import BarColumn, Progress, TextColumn
 
         sorted_clauses = sorted(
             clauses,
@@ -124,56 +131,57 @@ class PiiEngine:
         total_pages = page_count or max((c.source_page or 1 for c in sorted_clauses), default=1)
 
         overlap_buffer = ""
-        with Progress(
-            TextColumn("[bold]{task.description}"),
-            BarColumn(),
-            TextColumn("{task.completed}/{task.total} pages"),
-            transient=True,
-        ) as progress:
-            task = progress.add_task("Stripping PII...", total=total_pages)
+        current_page = 0
+        for idx, clause in enumerate(sorted_clauses):
+            combined = overlap_buffer + clause.text
+            is_non_english = getattr(clause, "is_non_english", False)
+            clause_page = clause.source_page or (idx + 1)
 
-            current_page = 0
-            for idx, clause in enumerate(sorted_clauses):
-                combined = overlap_buffer + clause.text
-                is_non_english = getattr(clause, "is_non_english", False)
-                clause_page = clause.source_page or (idx + 1)
+            if is_non_english:
+                warnings.append(
+                    "Non-English text detected in clause '{}' — structured PII stripped, but named entities may remain.".format(
+                        clause.title or "untitled"
+                    )
+                )
 
-                if is_non_english:
-                    warnings.append(
-                        "Non-English text detected in clause '{}' — structured PII stripped, but named entities may remain.".format(
-                            clause.title or "untitled"
-                        )
+            try:
+                entities = self.detect_on_page(
+                    combined,
+                    threshold=threshold,
+                    is_non_english=is_non_english,
+                    clause_heading=clause.title or "untitled",
+                )
+
+                for entity in entities:
+                    if entity.start >= len(overlap_buffer):
+                        entity.start -= len(overlap_buffer)
+                        entity.end -= len(overlap_buffer)
+                        all_entities.append(entity)
+
+                successful_pages.append(clause_page)
+            except Exception as exc:
+                failed_pages.append(clause_page)
+                error_messages[clause_page] = str(exc)
+
+            overlap_buffer = clause.text[-50:] if len(clause.text) >= 50 else clause.text
+
+            if clause_page > current_page:
+                current_page = clause_page
+                if progress_callback is not None:
+                    progress_callback(
+                        f"Stripping PII... page {current_page}/{total_pages}",
+                        current_page,
+                        total_pages,
                     )
 
-                try:
-                    entities = self.detect_on_page(
-                        combined,
-                        threshold=threshold,
-                        is_non_english=is_non_english,
-                        clause_heading=clause.title or "untitled",
-                    )
+        if failed_pages and not allow_partial:
+            from openreview_cli.pii.models import PartialProcessingError
 
-                    for entity in entities:
-                        if entity.start >= len(overlap_buffer):
-                            entity.start -= len(overlap_buffer)
-                            entity.end -= len(overlap_buffer)
-                            all_entities.append(entity)
-
-                    successful_pages.append(clause_page)
-                except Exception as exc:
-                    failed_pages.append(clause_page)
-                    error_messages[clause_page] = str(exc)
-
-                overlap_buffer = clause.text[-50:] if len(clause.text) >= 50 else clause.text
-
-                if clause_page > current_page:
-                    current_page = clause_page
-                    progress.update(task, completed=current_page - 1)
-                    progress.update(
-                        task,
-                        description=f"Stripping PII... page {current_page}/{total_pages}",
-                    )
-                    progress.advance(task)
+            raise PartialProcessingError(
+                failed_pages=sorted(set(failed_pages)),
+                successful_pages=successful_pages,
+                error_messages=error_messages,
+            )
 
         return all_entities, warnings, sorted(set(failed_pages)), error_messages
 
@@ -190,7 +198,8 @@ class PiiEngine:
             engine = self._ensure_analyzer()
             engine.analyze(text="test", language="en")
             self._is_available_cache = True
-        except Exception:
+        except Exception as exc:
+            logger.warning("PII engine unavailable: %s", exc)
             self._is_available_cache = False
         return self._is_available_cache
 
@@ -244,6 +253,8 @@ def strip_pii(
     strip_pii_enabled: bool = True,
     strip_metadata: bool = True,
     engine: PiiEngine | None = None,
+    allow_partial: bool = False,
+    progress_callback: Callable[[str, int, int], None] | None = None,
 ) -> PiiResult:
     """Strip PII from a list of clauses.
 
@@ -274,7 +285,11 @@ def strip_pii(
         # Page-sequential detection
         assert engine is not None
         all_entities, warnings, failed_pages, _error_msgs = engine.detect_all_pages(
-            clauses, threshold=threshold, page_count=getattr(document, "page_count", None)
+            clauses,
+            threshold=threshold,
+            page_count=getattr(document, "page_count", None),
+            allow_partial=allow_partial,
+            progress_callback=progress_callback,
         )
         if failed_pages:
             warnings.append(f"PII processing partial: {len(failed_pages)} page(s) failed")
@@ -372,6 +387,8 @@ def strip_pii_clauses(
     strip_pii_enabled: bool = True,
     strip_metadata: bool = True,
     engine: PiiEngine | None = None,
+    allow_partial: bool = False,
+    progress_callback: Callable[[str, int, int], None] | None = None,
 ) -> tuple[list[Any], PiiResult]:
     """Strip PII from each clause's text individually while preserving metadata.
 
@@ -402,7 +419,11 @@ def strip_pii_clauses(
 
         assert engine is not None
         all_entities, warnings, failed_pages, _error_msgs = engine.detect_all_pages(
-            clauses, threshold=threshold, page_count=getattr(document, "page_count", None)
+            clauses,
+            threshold=threshold,
+            page_count=getattr(document, "page_count", None),
+            allow_partial=allow_partial,
+            progress_callback=progress_callback,
         )
         if failed_pages:
             warnings.append(f"PII processing partial: {len(failed_pages)} page(s) failed")

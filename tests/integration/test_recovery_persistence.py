@@ -10,7 +10,7 @@ from openreview_cli.recovery.models import (
     RecoveryEvent,
     RecoveryOutcome,
 )
-from openreview_cli.storage.database import load_recovery_state, save_recovery_state
+from openreview_cli.storage.recovery import load_recovery_state, save_recovery_state
 
 
 class TestRecoveryPersistenceIntegration:

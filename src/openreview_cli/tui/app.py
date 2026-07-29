@@ -142,6 +142,10 @@ class OpenReviewApp(App[None]):
         signal.signal(signal.SIGTERM, self._orig_sigterm)
         signal.signal(signal.SIGINT, self._orig_sigint)
         self._gateway_timer.stop()
+        # Prevent API key leakage to crash-dump / subprocess after TUI exits.
+        from openreview_cli.gateway.router import clear_seeded_env_vars
+
+        clear_seeded_env_vars()
 
     def _register_signal_handlers(self) -> None:
         """Register handlers for SIGTERM and SIGINT (Edge case 6).
@@ -154,15 +158,20 @@ class OpenReviewApp(App[None]):
         """
 
         def _on_signal(signum: int, _frame: object) -> None:
+            import openreview_cli.tui.domain.negotiation as _neg_mod
             import openreview_cli.tui.domain.review as _review_mod
+            from openreview_cli.tui.screens.negotiation_progress import (
+                NegotiationProgressScreen,
+            )
             from openreview_cli.tui.screens.progress import ProgressScreen
 
             # Toggle the module-level flag so run_review_via_tui skips DB
             # persistence even if it is currently mid-execution.
             _review_mod._tui_cancel_requested = True
+            _neg_mod._tui_cancel_requested = True
 
             for screen in list(self._screen_stack):
-                if isinstance(screen, ProgressScreen):
+                if isinstance(screen, (ProgressScreen, NegotiationProgressScreen)):
                     screen._cancelled = True
                     if screen._review_task and not screen._review_task.done():
                         screen._review_task.cancel()

@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from openreview_cli.grounding.models import CGMetrics, GroundingResult
     from openreview_cli.parsing.models import Clause, Document
 
-from openreview_cli.parsing.clause_detector import _count_paragraphs
+from openreview_cli.parsing.clause_detector import count_paragraphs
 
 
 def _compute_cp(
@@ -112,7 +112,7 @@ def compute_cg_metrics(
         clause_exists = {c.id for c in source_clauses}
         clause_text_map = {c.id: c.text for c in source_clauses}
         clause_paragraph_count = {
-            c.id: c.paragraph_count if c.paragraph_count is not None else _count_paragraphs(c.text)
+            c.id: c.paragraph_count if c.paragraph_count is not None else count_paragraphs(c.text)
             for c in source_clauses
         }
 

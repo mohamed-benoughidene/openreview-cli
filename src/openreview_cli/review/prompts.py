@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from openreview_cli.llm_json import strip_fences
+from openreview_cli.llm_json import fence_safe, strip_fences
 
 
 def _parse_json(raw: str, fallback: dict[str, Any]) -> dict[str, Any]:
@@ -58,7 +58,7 @@ def build_qa_messages(
         f"- Confidence: {confidence}\n"
         f'- Citation: "{citation}"\n'
         f"- Category: {category_id}\n\n"
-        f"## Clause text\n```\n{clause_text}\n```\n\n"
+        f"## Clause text\n```\n{fence_safe(clause_text)}\n```\n\n"
         "Verify each check:\n"
         "1. Citation check: does the cited text appear verbatim in the clause?\n"
         "2. Position check: does the clause text support the assigned position?\n"
@@ -77,76 +77,6 @@ def build_qa_messages(
     )
 
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
-
-
-def parse_extraction_response(raw: str) -> dict[str, Any]:
-    """Parse the extraction agent's JSON response.
-
-    Returns a dict with keys: position, confidence, citation, category_match.
-    On parse failure, returns a default uncertain response.
-    """
-    fallback: dict[str, Any] = {
-        "position": "no-match",
-        "confidence": 0.0,
-        "citation": "",
-        "category_match": False,
-    }
-    data = _parse_json(raw, fallback)
-    if data is fallback:
-        return fallback
-
-    for key in ("position", "confidence", "citation"):
-        if key not in data:
-            return fallback
-
-    return {
-        "position": str(data["position"]),
-        "confidence": float(data["confidence"]),
-        "citation": str(data["citation"]),
-        "category_match": bool(data.get("category_match", False)),
-    }
-
-
-def parse_qa_response(raw: str) -> dict[str, Any]:
-    """Parse the QA agent's JSON response.
-
-    Returns a dict with keys: verdict, revised_position, rationale,
-    citation_valid, position_valid, category_valid, confidence_valid.
-    On parse failure, returns an uncertain/default response.
-    """
-    fallback: dict[str, Any] = {
-        "verdict": "uncertain",
-        "revised_position": None,
-        "rationale": "Could not parse QA response",
-        "citation_valid": False,
-        "position_valid": False,
-        "category_valid": False,
-        "confidence_valid": False,
-    }
-    data = _parse_json(raw, fallback)
-    if data is fallback:
-        return fallback
-
-    if "verdict" not in data:
-        return {
-            "verdict": "uncertain",
-            "revised_position": None,
-            "rationale": "Missing verdict in QA response",
-            "citation_valid": False,
-            "position_valid": False,
-            "category_valid": False,
-            "confidence_valid": False,
-        }
-
-    return {
-        "verdict": str(data.get("verdict", "uncertain")),
-        "revised_position": data.get("revised_position"),
-        "rationale": str(data.get("rationale", "")),
-        "citation_valid": bool(data.get("citation_valid", False)),
-        "position_valid": bool(data.get("position_valid", False)),
-        "category_valid": bool(data.get("category_valid", False)),
-        "confidence_valid": bool(data.get("confidence_valid", False)),
-    }
 
 
 # ── System Prompts ──────────────────────────────────────────────────────────
@@ -435,7 +365,7 @@ def _build_extraction_messages_common(
         f"### Default position (if no specific indicators match)\n"
         f"{default_position}\n\n"
         f"## Clause to classify\n"
-        f"```\n{clause_text}\n```\n\n"
+        f"```\n{fence_safe(clause_text)}\n```\n\n"
         "Return JSON:\n"
         "{\n"
         '  "position": "preferred" | "acceptable" | "walkaway" | "no-match",\n'

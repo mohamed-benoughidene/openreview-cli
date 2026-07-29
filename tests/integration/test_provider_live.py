@@ -35,6 +35,7 @@ requires_aws = pytest.mark.skipif(
 )
 
 
+@pytest.mark.live
 @requires_aws
 def test_bedrock_live_chat_returns_nonempty(tmp_path) -> None:  # type: ignore[no-untyped-def]
     """Real Bedrock call through Gateway.chat: a simple prompt must return a

@@ -249,7 +249,7 @@ class TestRerankerValidate:
             "index_status": "indexed",
             "db_size_bytes": 4096,
         }
-        mock_storage.db_path = "/tmp/test.db"  # Doesn't need to exist for validate
+        mock_storage.db_path = "/tmp/test.db"  # ponytail: path never touched on disk
 
         reranker = Reranker(mock_gateway, model_id="test-cross-encoder")
         result = reranker.validate(mock_storage)

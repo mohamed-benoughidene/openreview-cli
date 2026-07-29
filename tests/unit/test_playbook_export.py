@@ -12,9 +12,11 @@ from pathlib import Path
 import pytest
 
 from openreview_cli.storage.database import (
-    export_playbook_version,
     get_connection,
     init_database,
+)
+from openreview_cli.storage.playbooks import (
+    export_playbook_version,
 )
 
 # ---------------------------------------------------------------------------

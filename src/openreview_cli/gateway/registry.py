@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+import platformdirs
 import yaml
 
 from openreview_cli.config.loader import add_custom_provider as _loader_add_custom_provider
@@ -16,13 +17,9 @@ from openreview_cli.gateway.errors import (
 )
 from openreview_cli.gateway.models import Capability, ModelEntry, ProviderInfo
 
-try:
-    import platformdirs
 
-    def _config_dir() -> Path:
-        return Path(platformdirs.user_config_dir("openreview"))
-except Exception:  # pragma: no cover - platformdirs is a hard dependency
-    from openreview_cli.config.paths import get_config_dir as _config_dir
+def _config_dir() -> Path:
+    return Path(platformdirs.user_config_dir("openreview"))
 
 
 def _build_provider(name: str, info: dict[str, Any]) -> ProviderInfo:
@@ -143,6 +140,7 @@ def add_custom_provider(
     )
 
 
+# ponytail: partial-fields loader, wizard-only; unify with load_registry() if touched again
 class ModelRegistry:
     def __init__(self, registry_path: Path) -> None:
         self._path = registry_path

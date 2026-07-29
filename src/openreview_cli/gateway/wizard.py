@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 from typing import Any
 
 import questionary
 
-from openreview_cli.config.auth import _set_secure_permissions, load_auth
+from openreview_cli.config.auth import load_auth
 from openreview_cli.config.paths import get_config_dir
 from openreview_cli.gateway.models import CredentialField
 from openreview_cli.gateway.registry import ModelRegistry
@@ -26,8 +25,9 @@ PROVIDER_CHOICES = [
 
 
 def _write_auth(path: Path, data: dict[str, Any]) -> None:
-    path.write_text(json.dumps(data, indent=2))
-    _set_secure_permissions(path)
+    from openreview_cli.config.auth import write_auth
+
+    write_auth(path, data)
 
 
 def _collect_provider_credentials(creds: list[CredentialField]) -> dict[str, str] | None:

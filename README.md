@@ -16,7 +16,7 @@ a custom playbook, and produces a structured memo of findings.
 Pre-alpha. Foundation shipped: document parsing (PDF/DOCX, clause detection),
 PII stripping (Presidio, 16 entity types, encrypted mapping), chunking strategy
 (RCTS, clause-boundary-aware, 512-token default, streaming), PII-to-chunk bridge
-(`strip_pii_clauses()` per-clause replacement), AI provider gateway (33 models,
+(`strip_pii_clauses()` per-clause replacement), AI provider gateway (17 models,
 8 providers, routing + cost tracking + health check), SLM provider-specific
 pass-through params (`extra_params` in config.yml), prompt management
 (versioned SQLite-backed storage, model-to-prompt binding, variable substitution,
@@ -40,15 +40,15 @@ will change.
 
 | Metric                      | Value                     |
 |-----------------------------|---------------------------|
-| Unit + integration tests    | 2,007                    |
+| Unit + integration tests    | ~2,700                    |
 | CLI commands                | 77                        |
 | SQLite tables               | 13                        |
 | Migrations                  | 7                         |
-| CI jobs                     | 5 (lint, types, test, memory, benchmark) |
+| CI jobs                     | 6 (lint, types, test, memory, tui, benchmark) |
 | Memory budget (processing)  | < 100 MB (NLP model exempt) |
 | Startup (warm)              | < 0.3 s                   |
 | PII entity types detected   | 16                        |
-| AI provider models          | 33 (across 8 providers)   |
+| AI provider models          | 17 (across 8 providers)   |
 
 ### Parsing performance (real-world benchmark)
 

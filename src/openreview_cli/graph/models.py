@@ -129,14 +129,14 @@ class ContractGraph:
 
     def save_to_db(self, db_path: str | Path, contract_id: str) -> None:
         """Persist this graph to SQLite."""
-        from openreview_cli.storage.database import save_graph as _save_graph
+        from openreview_cli.storage.graphs import save_graph as _save_graph
 
         _save_graph(Path(db_path), contract_id, self)
 
     @classmethod
     def load_from_db(cls, db_path: str | Path, contract_id: str) -> ContractGraph | None:
         """Load a graph from SQLite. Returns None if contract_id not found."""
-        from openreview_cli.storage.database import load_graph as _load_graph
+        from openreview_cli.storage.graphs import load_graph as _load_graph
 
         return _load_graph(Path(db_path), contract_id)
 

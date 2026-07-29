@@ -188,7 +188,7 @@ def load_playbook_from_db(playbook_id: str) -> tuple[Playbook, int]:
     import json
 
     from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import get_latest_playbook_version
+    from openreview_cli.storage.playbooks import get_latest_playbook_version
 
     db_path = get_data_dir() / "openreview.db"
     result = get_latest_playbook_version(db_path, playbook_id)

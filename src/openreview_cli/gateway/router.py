@@ -38,9 +38,20 @@ from openreview_cli.gateway.models import (
 from openreview_cli.gateway.redaction import RedactingFilter, redact_key
 from openreview_cli.gateway.registry import load_registry
 from openreview_cli.slots import VALID_SLOTS
-from openreview_cli.storage.database import check_daily_limit, check_session_limit
+from openreview_cli.storage.costs import check_daily_limit, check_session_limit
 
 logger = logging.getLogger(__name__)
+
+# Track env vars seeded across all Gateway instances so long-lived
+# processes (TUI) can clean them up without holding a Gateway reference.
+_env_vars_seeded: set[str] = set()
+
+
+def clear_seeded_env_vars() -> None:
+    """Remove env vars seeded by any Gateway instance. User-owned vars untouched."""
+    for name in list(_env_vars_seeded):
+        os.environ.pop(name, None)
+    _env_vars_seeded.clear()
 
 
 def classify_provider(model: ProviderInfo) -> str:
@@ -119,6 +130,8 @@ class Gateway:
         _filter = RedactingFilter(_REDACT_PATTERNS)
         logging.getLogger().addFilter(_filter)
 
+        # Track env vars seeded by this instance so user-owned vars survive cleanup.
+        self._env_seeded: list[str] = []
         self._set_env_vars()
 
     def validate_capability(self, model: ProviderInfo, req: CapabilityRequirement) -> None:
@@ -137,18 +150,26 @@ class Gateway:
             raise CapabilityMismatchError(model.name, "requires tool_call support")
 
     def _set_env_vars(self) -> None:
-        from openreview_cli.config.auth import key_to_env
-
         for provider, creds in self._auth.items():
             if isinstance(creds, str):
                 env_name = key_to_env(provider)
-                if env_name and creds:
-                    os.environ.setdefault(env_name, creds)
+                if env_name and creds and env_name not in os.environ:
+                    os.environ[env_name] = creds
+                    self._env_seeded.append(env_name)
+                    _env_vars_seeded.add(env_name)
                     logger.debug("Set %s to %s", env_name, redact_key(creds))
             elif isinstance(creds, dict):
                 for env_key, val in creds.items():
-                    if env_key and val:
-                        os.environ.setdefault(env_key, val)
+                    if env_key and val and env_key not in os.environ:
+                        os.environ[env_key] = val
+                        self._env_seeded.append(env_key)
+                        _env_vars_seeded.add(env_key)
+
+    def clear_env_vars(self) -> None:
+        """Remove only the env vars this instance seeded. User-owned vars untouched."""
+        for name in self._env_seeded:
+            os.environ.pop(name, None)
+        self._env_seeded.clear()
 
     def _get_slot_config(self, slot: str) -> dict[str, Any]:
         models = self._config.get("gateway", {}).get("models", {})

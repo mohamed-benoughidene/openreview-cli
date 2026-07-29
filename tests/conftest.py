@@ -72,6 +72,10 @@ logging.getLogger("transformers.configuration_utils").setLevel(logging.ERROR)
 logging.getLogger("transformers.integrations.tensor_parallel").setLevel(logging.ERROR)
 logging.getLogger("transformers.integrations.tensor_parallel").setLevel(logging.ERROR)
 
+# Presidio logs into pytest-captured streams that close during teardown.
+logging.getLogger("presidio_analyzer").addHandler(logging.NullHandler())
+logging.getLogger("presidio_analyzer").propagate = False
+
 PEAK_MEMORY_FLOOR_BYTES = 110 * 1024 * 1024
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 

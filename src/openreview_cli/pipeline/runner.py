@@ -240,6 +240,11 @@ class Pipeline:
         Returns a ``_StageOutcome`` with the recorded ``StageResult`` and a
         ``critical`` flag.
         """
+        # Wire sub-stage progress callback for stages that support it
+        stage._emit_callback = self._emit  # type: ignore[attr-defined]
+        stage._stage_index = index  # type: ignore[attr-defined]
+        stage._total_stages = len(self._stages)  # type: ignore[attr-defined]
+
         self._emit(
             ProgressEvent(
                 stage_index=index,

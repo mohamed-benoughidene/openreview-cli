@@ -41,9 +41,9 @@ def _make_mock_review_command(playbook: MagicMock) -> MagicMock:
 class TestPlaybookPrecedenceWarning:
     """UserWarning emitted when both ``playbook_id`` and ``playbook_path`` are given."""
 
-    @patch("openreview_cli.review.load_playbook_from_db")
-    @patch("openreview_cli.review.load_playbook")
-    @patch("openreview_cli.review.load_bundled")
+    @patch("openreview_cli.review.runner.load_playbook_from_db")
+    @patch("openreview_cli.review.runner.load_playbook")
+    @patch("openreview_cli.review.runner.load_bundled")
     @patch("openreview_cli.review.ReviewCommand")
     def test_warning_emitted_when_both_provided(
         self,
@@ -69,9 +69,9 @@ class TestPlaybookPrecedenceWarning:
         user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
         assert len(user_warnings) >= 1, "Expected at least one UserWarning"
 
-    @patch("openreview_cli.review.load_playbook_from_db")
-    @patch("openreview_cli.review.load_playbook")
-    @patch("openreview_cli.review.load_bundled")
+    @patch("openreview_cli.review.runner.load_playbook_from_db")
+    @patch("openreview_cli.review.runner.load_playbook")
+    @patch("openreview_cli.review.runner.load_bundled")
     @patch("openreview_cli.review.ReviewCommand")
     def test_warning_message_content(
         self,
@@ -98,9 +98,9 @@ class TestPlaybookPrecedenceWarning:
             f"Warning message should mention --playbook and precedence; got {messages}"
         )
 
-    @patch("openreview_cli.review.load_playbook_from_db")
-    @patch("openreview_cli.review.load_playbook")
-    @patch("openreview_cli.review.load_bundled")
+    @patch("openreview_cli.review.runner.load_playbook_from_db")
+    @patch("openreview_cli.review.runner.load_playbook")
+    @patch("openreview_cli.review.runner.load_bundled")
     @patch("openreview_cli.review.ReviewCommand")
     def test_no_warning_when_only_playbook_id(
         self,
@@ -127,9 +127,9 @@ class TestPlaybookPrecedenceWarning:
             f"Expected no UserWarning when only playbook_id given; got {len(user_warnings)}"
         )
 
-    @patch("openreview_cli.review.load_playbook_from_db")
-    @patch("openreview_cli.review.load_playbook")
-    @patch("openreview_cli.review.load_bundled")
+    @patch("openreview_cli.review.runner.load_playbook_from_db")
+    @patch("openreview_cli.review.runner.load_playbook")
+    @patch("openreview_cli.review.runner.load_bundled")
     @patch("openreview_cli.review.ReviewCommand")
     def test_no_warning_when_only_playbook_path(
         self,
@@ -156,9 +156,9 @@ class TestPlaybookPrecedenceWarning:
             f"Expected no UserWarning when only playbook_path given; got {len(user_warnings)}"
         )
 
-    @patch("openreview_cli.review.load_playbook_from_db")
-    @patch("openreview_cli.review.load_playbook")
-    @patch("openreview_cli.review.load_bundled")
+    @patch("openreview_cli.review.runner.load_playbook_from_db")
+    @patch("openreview_cli.review.runner.load_playbook")
+    @patch("openreview_cli.review.runner.load_bundled")
     @patch("openreview_cli.review.ReviewCommand")
     def test_no_warning_when_neither_provided(
         self,
@@ -194,9 +194,9 @@ class TestPlaybookPrecedenceWarning:
 class TestPlaybookPrecedenceBehavior:
     """When both flags are given the DB loader is called and the file loader is not."""
 
-    @patch("openreview_cli.review.load_playbook_from_db")
-    @patch("openreview_cli.review.load_playbook")
-    @patch("openreview_cli.review.load_bundled")
+    @patch("openreview_cli.review.runner.load_playbook_from_db")
+    @patch("openreview_cli.review.runner.load_playbook")
+    @patch("openreview_cli.review.runner.load_bundled")
     @patch("openreview_cli.review.ReviewCommand")
     def test_db_playbook_takes_precedence_over_path(
         self,
@@ -222,9 +222,9 @@ class TestPlaybookPrecedenceBehavior:
         mock_load.assert_not_called()
         mock_bundled.assert_not_called()
 
-    @patch("openreview_cli.review.load_playbook_from_db")
-    @patch("openreview_cli.review.load_playbook")
-    @patch("openreview_cli.review.load_bundled")
+    @patch("openreview_cli.review.runner.load_playbook_from_db")
+    @patch("openreview_cli.review.runner.load_playbook")
+    @patch("openreview_cli.review.runner.load_bundled")
     @patch("openreview_cli.review.ReviewCommand")
     def test_only_path_calls_file_loader(
         self,
@@ -254,9 +254,9 @@ class TestPlaybookPrecedenceBehavior:
         mock_db.assert_not_called()
         mock_bundled.assert_not_called()
 
-    @patch("openreview_cli.review.load_playbook_from_db")
-    @patch("openreview_cli.review.load_playbook")
-    @patch("openreview_cli.review.load_bundled")
+    @patch("openreview_cli.review.runner.load_playbook_from_db")
+    @patch("openreview_cli.review.runner.load_playbook")
+    @patch("openreview_cli.review.runner.load_bundled")
     @patch("openreview_cli.review.ReviewCommand")
     def test_only_id_calls_db_loader(
         self,
@@ -282,9 +282,9 @@ class TestPlaybookPrecedenceBehavior:
         mock_load.assert_not_called()
         mock_bundled.assert_not_called()
 
-    @patch("openreview_cli.review.load_playbook_from_db")
-    @patch("openreview_cli.review.load_playbook")
-    @patch("openreview_cli.review.load_bundled")
+    @patch("openreview_cli.review.runner.load_playbook_from_db")
+    @patch("openreview_cli.review.runner.load_playbook")
+    @patch("openreview_cli.review.runner.load_bundled")
     @patch("openreview_cli.review.ReviewCommand")
     def test_neither_calls_bundled_loader(
         self,

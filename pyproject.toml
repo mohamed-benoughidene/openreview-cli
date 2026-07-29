@@ -159,6 +159,7 @@ markers = [
     "accuracy: marks clause boundary accuracy tests",
     "network: marks tests requiring HuggingFace hub network access (legal-bert model download)",
     "live: tests requiring live network (run with '-m live')",
+    "no_memory: marks tests excluded from memory-tracked runs",
 ]
 filterwarnings = ["ignore::DeprecationWarning"]
 timeout = 60

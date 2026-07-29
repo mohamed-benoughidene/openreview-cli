@@ -248,7 +248,7 @@ class TestPlaybookFlag:
         """T035: --playbook flag should trigger database loading.
         This is verified via integration tests; the unit test ensures
         the storage function exists and returns expected shape."""
-        from openreview_cli.storage.database import get_latest_playbook_version
+        from openreview_cli.storage.playbooks import get_latest_playbook_version
 
         result = get_latest_playbook_version.__doc__  # just verify it exists
 
@@ -262,9 +262,9 @@ class TestPlaybookFlag:
 
         pb_mock = MagicMock()
         with (
-            patch("openreview_cli.review.load_playbook_from_db", return_value=(pb_mock, 1)),
-            patch("openreview_cli.review.load_playbook"),
-            patch("openreview_cli.review.load_bundled"),
+            patch("openreview_cli.review.runner.load_playbook_from_db", return_value=(pb_mock, 1)),
+            patch("openreview_cli.review.runner.load_playbook"),
+            patch("openreview_cli.review.runner.load_bundled"),
             patch("openreview_cli.review.ReviewCommand"),
             warnings.catch_warnings(record=True) as w,
         ):

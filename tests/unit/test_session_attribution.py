@@ -444,7 +444,8 @@ class TestSessionCostAttribution:
         """Test 10: CostTracker.log_call writes rows queryable via get_session_cost."""
         self._stub_completion_cost(monkeypatch)
         from openreview_cli.gateway.cost import CostTracker
-        from openreview_cli.storage.database import get_session_cost, init_database
+        from openreview_cli.storage.costs import get_session_cost
+        from openreview_cli.storage.database import init_database
 
         db_path = tmp_path / "costs.db"
         init_database(db_path)
@@ -463,7 +464,8 @@ class TestSessionCostAttribution:
     ) -> None:
         """Test 11: get_session_cost for unused session returns zero."""
         self._stub_completion_cost(monkeypatch)
-        from openreview_cli.storage.database import get_session_cost, init_database
+        from openreview_cli.storage.costs import get_session_cost
+        from openreview_cli.storage.database import init_database
 
         db_path = tmp_path / "costs.db"
         init_database(db_path)
@@ -475,9 +477,11 @@ class TestSessionCostAttribution:
         """Test 12: check_session_limit reflects logged rows under session ID."""
         self._stub_completion_cost(monkeypatch)
         from openreview_cli.gateway.cost import CostTracker
-        from openreview_cli.storage.database import (
+        from openreview_cli.storage.costs import (
             check_session_limit,
             get_session_cost,
+        )
+        from openreview_cli.storage.database import (
             init_database,
         )
 

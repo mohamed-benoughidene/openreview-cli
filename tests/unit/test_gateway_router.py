@@ -1141,3 +1141,23 @@ class TestCustomProviderRouting:
         result = gw.health_check()
 
         assert result["extraction"]["status"] == "missing_api_key"
+
+
+def test_clear_env_vars_removes_only_seeded_keys(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pre-existing user-owned env var survives; seeded var is removed."""
+    import os
+
+    monkeypatch.setenv("OPENAI_API_KEY", "user-owned")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)  # isolate from prior test
+    gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
+
+    # Gateway seeds ANTHROPIC_API_KEY (not in env) but not OPENAI_API_KEY (user-owned).
+    assert os.environ["OPENAI_API_KEY"] == "user-owned"
+    assert os.environ.get("ANTHROPIC_API_KEY") == "sk-ant-test"
+
+    gw.clear_env_vars()
+
+    assert "ANTHROPIC_API_KEY" not in os.environ
+    assert os.environ["OPENAI_API_KEY"] == "user-owned"

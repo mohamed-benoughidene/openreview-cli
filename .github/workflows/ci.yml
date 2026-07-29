@@ -50,6 +50,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      TRANSFORMERS_OFFLINE: "1"
+      HF_HUB_OFFLINE: "1"
+      HF_DATASETS_OFFLINE: "1"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -67,6 +71,10 @@ jobs:
   memory:
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    env:
+      TRANSFORMERS_OFFLINE: "1"
+      HF_HUB_OFFLINE: "1"
+      HF_DATASETS_OFFLINE: "1"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -106,4 +114,4 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
       - run: uv sync --frozen --no-dev
-      - run: uv run openreview benchmark --all --ci --compare HEAD~1 || true
+      - run: uv run openreview benchmark run --all --ci --compare HEAD~1 || true  # informational until baseline infra lands (D-78/D-80)

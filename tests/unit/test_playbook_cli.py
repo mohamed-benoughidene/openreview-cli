@@ -11,9 +11,11 @@ from pathlib import Path
 import pytest
 
 from openreview_cli.storage.database import (
+    init_database,
+)
+from openreview_cli.storage.playbooks import (
     delete_playbook,
     import_playbook_yaml,
-    init_database,
     list_playbooks,
     list_playbooks_with_meta,
     set_current_version,
@@ -138,7 +140,7 @@ class TestBulkExport:
     """D-48: Bulk export iterates all playbooks."""
 
     def test_export_all_playbooks(self, tmp_path: Path) -> None:
-        from openreview_cli.storage.database import export_playbook_version
+        from openreview_cli.storage.playbooks import export_playbook_version
 
         db = tmp_path / "test.db"
         _seed_playbook(db, "pb-x1")

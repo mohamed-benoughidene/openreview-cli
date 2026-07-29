@@ -59,7 +59,7 @@ def run_review_via_tui(
     # cancelled review never appears in recent-reviews (Edge case 6).
     from dataclasses import asdict as _asdict
 
-    from openreview_cli.storage.database import (
+    from openreview_cli.storage.reviews import (
         save_review_report as _save_review_report,
     )
 
@@ -95,7 +95,7 @@ def list_recent_reviews_via_tui(limit: int = 5) -> list[dict[str, object]]:
     Each dict has keys: id, filename, mode, green_count, amber_count,
     red_count, created_at.
     """
-    from openreview_cli.storage.database import (
+    from openreview_cli.storage.reviews import (
         list_recent_reviews as _list_recent_reviews,
     )
 
@@ -108,7 +108,7 @@ def load_review_report_via_tui(report_id: str) -> ReviewReport | None:
     Returns None if the report is not found.
     """
     from openreview_cli.review.models import ReviewReport as _ReviewReport
-    from openreview_cli.storage.database import (
+    from openreview_cli.storage.reviews import (
         load_review_report as _load_review_report,
     )
 

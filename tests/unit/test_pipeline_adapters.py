@@ -21,6 +21,7 @@ from openreview_cli.pipeline.adapters import (
 )
 from openreview_cli.pipeline.base import Stage
 from openreview_cli.pipeline.errors import StageError
+from openreview_cli.pipeline.progress import ProgressEvent
 
 # ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -157,6 +158,38 @@ class TestStripStage:
             ctx = {"clauses": [_make_mock_clause("1")], "document": _make_mock_document()}
             with pytest.raises(StageError, match="StripStage failed"):
                 asyncio.run(stage.run(ctx))
+
+    def test_emit_callback_receives_progress(self) -> None:
+        """PII progress events are forwarded via emit_callback."""
+        clauses = [_make_mock_clause("1")]
+        document = _make_mock_document()
+        captured: list[ProgressEvent] = []
+
+        def _mock_strip(*args: Any, **kwargs: Any) -> Any:
+            cb = kwargs.get("progress_callback")
+            if cb:
+                cb("Stripping PII... page 1/1", 1, 1)
+            return (clauses, Mock())
+
+        with patch(
+            "openreview_cli.pii.strip_pii_clauses",
+            side_effect=_mock_strip,
+        ):
+            stage = StripStage(emit_callback=captured.append)
+            # Set stage_index+total_stages as the runner does in _execute_single_stage
+            stage._stage_index = 2
+            stage._total_stages = 5
+            ctx = {"clauses": clauses, "document": document}
+            result = asyncio.run(stage.run(ctx))
+
+        assert "stripped_clauses" in result
+        assert len(captured) == 1
+        event = captured[0]
+        assert event.stage_index == 2
+        assert event.total_stages == 5
+        assert event.stage_name == "strip"
+        assert event.status == "running"
+        assert event.message == "Stripping PII... page 1/1"
 
 
 # ── ChunkStage ──────────────────────────────────────────────────────────

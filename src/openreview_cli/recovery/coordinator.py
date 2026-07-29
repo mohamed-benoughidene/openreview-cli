@@ -303,7 +303,7 @@ class RecoveryCoordinator:
         """Persist current context to DB when db_path is configured."""
         if self._db_path is None:
             return
-        from openreview_cli.storage.database import save_recovery_state
+        from openreview_cli.storage.recovery import save_recovery_state
 
         save_recovery_state(Path(self._db_path), self._pipeline_id, stage_name, ctx)
 
@@ -313,7 +313,7 @@ class RecoveryCoordinator:
             return
         self._persist_context("final", ctx)
         if final_status != "unrecoverable":
-            from openreview_cli.storage.database import delete_recovery_state
+            from openreview_cli.storage.recovery import delete_recovery_state
 
             delete_recovery_state(Path(self._db_path), self._pipeline_id)
 
@@ -324,7 +324,7 @@ class RecoveryCoordinator:
         """
         if self._db_path is None:
             return None
-        from openreview_cli.storage.database import load_recovery_state
+        from openreview_cli.storage.recovery import load_recovery_state
 
         return load_recovery_state(Path(self._db_path), pipeline_id)
 
