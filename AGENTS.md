@@ -68,6 +68,135 @@ Pytest markers (pyproject.toml): `fast`, `slow`, `integration`, `e2e`, `memory`,
 
 **Release** (`release.yml`): tag `v*.*.*` → build → GitHub release → PyPI (`UV_PUBLISH_TOKEN`). Do not push release tags casually — tag protection restricts them to the owner anyway.
 
+## Benchmarks & measurements
+
+Quick sanity checks and accuracy benchmarks. All are runnable locally (some need configured gateway or downloaded corpus).
+
+### Quick profiling
+
+```bash
+# CLI startup latency + RSS
+/usr/bin/time -v uv run openreview --help
+
+# Parse latency (in-process, bypasses CLI overhead + registry-refresh stall)
+uv run python -c "
+import time; t=time.time()
+from openreview_cli.parsing.stream import parse_document; doc, clauses = parse_document('tests/fixtures/nda_with_pii.pdf')
+print(f'{time.time()-t:.3f}s, {len(clauses)} clauses')
+"
+
+# Test suite size + accuracy-test pass/fail
+uv run pytest --collect-only -m 'fast or slow' 2>/dev/null | tail -1
+uv run pytest -k 'accuracy' -v
+```
+
+### Gateway health
+
+```bash
+openreview gateway status           # slot/provider config
+openreview gateway test             # connectivity check per slot
+openreview gateway costs --today    # cost ledger
+```
+
+### CUAD clause identification (public benchmark)
+
+```bash
+# Corpus at data/legalbenchrag/ (gitignored, 88 MB, 462 CUAD + 95 ContractNLI)
+# Download: scripts/benchmark_legalbenchrag.py -> /tmp/opencode/legalbenchrag_data/
+#          or directly from atticusprojectai.org/cuad (CC BY 4.0)
+uv run python -c "
+from openreview_cli.parsing.clause_detector import _get_nupunkt
+import json, time
+with open('data/legalbenchrag/benchmarks/cuad.json') as f: data = json.load(f)
+# … sentence-boundary recall loop (see BENCHMARKS.md § CUAD)
+"
+```
+
+### PII accuracy (seeded corpus)
+
+```bash
+# Uses BenchmarkRunner.run_pii() with real PiiEngine
+# Corpus: tests/fixtures/pii/seeded_contracts/ + ground_truth.json (50 contracts)
+uv run python -c "
+from pathlib import Path
+from openreview_cli.benchmark.models import BenchmarkConfig
+from openreview_cli.benchmark.runner import BenchmarkRunner
+from openreview_cli.pii.engine import PiiEngine
+
+engine = PiiEngine(threshold=0.7)
+runner = BenchmarkRunner(config=BenchmarkConfig(datasets=['pii']), fixtures_root=Path('tests/fixtures'))
+def detect_fn(text): return [{'value': e.original_value, 'type': e.entity_type} for e in engine.detect_on_page(text)]
+result = runner.run_pii(detect_fn)
+for k, v in result.metrics.items():
+    print(f'{k}: {v.value:.4f}')
+"
+```
+
+### PII throughput (corpus + stress)
+
+```bash
+# WARNING: scripts/benchmark_pii_stripping.py has a stale detect_all_pages unpacking.
+# detect_all_pages returns 4-tuple (entities, warnings, failed_pages, error_messages).
+# The script unpacks 2 values → fix the 4 call sites before running:
+#   sed -i 's/entities, warnings = engine.detect_all_pages(\[clause\]/entities, warnings, _, _ = engine.detect_all_pages([clause]/' scripts/benchmark_pii_stripping.py
+# (repeat for the 3 other call sites at lines 96, 129, 132, 169)
+uv run python scripts/benchmark_pii_stripping.py
+```
+
+### Review accuracy (real LLM, needs gateway)
+
+```bash
+# Needs: gateway configured (openreview gateway setup), OpenRouter key in auth.json
+# Labeled NDA corpus: tests/fixtures/review/nda-corpus-v1/nda-corpus-v1.json (12 clauses)
+# This session used: openrouter/anthropic/claude-sonnet-4.6 for extraction + reasoning,
+#                    voyage/voyage-3.5 for embedding, voyage/rerank-2.5 for reranking
+# scripts/benchmark_review_accuracy.py is STRUCTURAL ONLY — it reads predicted_position
+# from the corpus JSON, does NOT call real LLMs. For real accuracy, use inline:
+uv run python -c "
+import json, time
+from pathlib import Path
+from openreview_cli.review.extraction import extract_clause
+from openreview_cli.review.qa import verify_assessment
+from openreview_cli.review.playbook import load_bundled
+
+corpus = json.loads(Path('tests/fixtures/review/nda-corpus-v1/nda-corpus-v1.json').read_text())
+playbook = load_bundled()
+categories = {c.id: c for c in playbook.categories}
+tp = fp = fn = 0
+for c in corpus['clauses']:
+    cat = categories.get(c['expected_category'])
+    if not cat: continue
+    assessment = extract_clause(c['text'], c['id'], cat, 'extraction', mode='precheck')
+    assessment = verify_assessment(assessment, cat, 'reasoning')
+    pred = assessment.position.value if assessment.position else 'uncertain'
+    if pred == c['expected_position']: tp += 1
+    else: fp += 1
+total = tp + fp
+print(f'F1={(2*tp/(2*tp+fp)).:.2%}' if total else 'no clauses matched')
+"
+```
+
+### Product-mode pipeline wiring (mocked, deterministic)
+
+```bash
+# Generates synthetic PDFs to tests/fixtures/benchmark/ (git-clean: check in or .gitignore)
+# No network, no API keys — mocks the AI Gateway entirely
+uv run python scripts/benchmark_product_modes.py
+```
+
+### Known script issues
+
+- `scripts/benchmark_pii_stripping.py` — stale 2-tuple unpacking of `detect_all_pages` (now 4-tuple). Fix: `_, _, _ =` pattern at 4 call sites.
+- `scripts/benchmark_review_accuracy.py` — structural only. Reads `predicted_position` from corpus JSON (line 97). Does not call real LLMs — see Review accuracy section above for inline version.
+- `openreview benchmark run --all --ci` — uses mock pipeline for CUAD/MAUD/ContractNLI. Only PII dataset uses real `PiiEngine`.
+
+### End-to-end smoke test
+
+```bash
+# Full pipeline: parse → PII strip → extract → QA on a fixture PDF
+uv run openreview precheck review tests/fixtures/nda_with_pii.pdf --memo-format json --output /tmp/opencode/review.json
+```
+
 ## Hard constraints
 
 - **Python 3.12** pinned. **uv** only — no pip/poetry/pipx. New deps via `uv add <pkg>`, never hand-edited, and only when the feature needing them lands.
