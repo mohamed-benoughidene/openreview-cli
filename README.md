@@ -1,3 +1,4 @@
+![openreview-cli](assets/ChatGPT%20Image%20Aug%203,%202026,%2007_05_28%20PM.png)
 # openreview-cli
 
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue)](.) [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE) [![status: pre-alpha](https://img.shields.io/badge/status-pre--alpha-orange)](.)
