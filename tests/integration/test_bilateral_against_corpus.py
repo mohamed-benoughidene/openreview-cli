@@ -18,7 +18,7 @@ from tests.fixtures.nda_corpus.loader import GroundTruthDiff, load_corpus_pairs
 
 CORPUS_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "nda_corpus"
 F1_THRESHOLD = 0.6  # loose v1 threshold
-TEST_SAMPLE_SIZE = 10  # number of pairs to test
+TEST_SAMPLE_SIZE = 3  # number of pairs to test (matches tracked sample corpus)
 
 
 def _word_positions(words: list[str], text: str) -> list[int]:

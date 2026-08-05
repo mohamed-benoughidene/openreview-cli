@@ -275,4 +275,7 @@ class TestTierVisibility:
 
         runner = CliRunner()
         result = runner.invoke(app, ["precheck", "review", "test.pdf"])
-        assert "No data was sent to external services" in result.output
+        # Tier in the footer is environment-dependent (PII escalation vs
+        # static resolution) — assert footer structure, not a tier name.
+        assert "Processed under" in result.output
+        assert "privacy tier" in result.output

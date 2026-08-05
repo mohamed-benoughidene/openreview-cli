@@ -8,6 +8,7 @@ from typing import Any, ClassVar
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal
+from textual.css.query import NoMatches
 from textual.widgets import Button, Footer, Header, Static, TabbedContent, TabPane
 
 from openreview_cli.slots import VALID_SLOTS
@@ -78,15 +79,21 @@ class OpenReviewApp(App[None]):
 
     def _refresh_gateway_status(self) -> None:
         """Refresh gateway status label per FR-007."""
+        # The 5s interval timer can fire before the status bar is mounted or
+        # while it is being torn down (under event-loop load); nothing to
+        # update then — skip instead of raising NoMatches.
+        try:
+            btn = self.query_one("#status-gateway", Button)
+        except NoMatches:
+            return
+
         configs = get_slot_configs()
         health = gateway_health_check()
 
         configured = {s for s in VALID_SLOTS if configs.get(s, {}).get("configured")}
 
         if not configured:
-            self.query_one(
-                "#status-gateway", Button
-            ).label = "Gateway: \u26a0 No providers configured"
+            btn.label = "Gateway: ⚠ No providers configured"
             return
 
         failing: list[tuple[str, str]] = []
@@ -95,18 +102,17 @@ class OpenReviewApp(App[None]):
                 provider = configs.get(slot, {}).get("provider", "")
                 failing.append((slot, provider))
 
-        btn = self.query_one("#status-gateway", Button)
         if not failing:
-            btn.label = "Gateway: \u2713 All healthy"
+            btn.label = "Gateway: ✓ All healthy"
         elif len(failing) == 1:
             slot, provider = failing[0]
             error = health.get(slot, {}).get("error", "unknown error")
-            btn.label = f"Gateway: \u26a0 {slot} ({provider}): {error}"
+            btn.label = f"Gateway: ⚠ {slot} ({provider}): {error}"
         elif len(failing) == len(VALID_SLOTS):
-            btn.label = "Gateway: \u2717 All slots unreachable"
+            btn.label = "Gateway: ✗ All slots unreachable"
         else:
             names = ", ".join(s for s, _ in failing)
-            btn.label = f"Gateway: \u26a0 {len(failing)}/6 slots: {names}"
+            btn.label = f"Gateway: ⚠ {len(failing)}/6 slots: {names}"
 
     def action_open_search(self) -> None:
         """Open global search overlay (FR-040)."""
