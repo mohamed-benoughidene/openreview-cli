@@ -96,6 +96,11 @@ def test_config_operation_latency(monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
     config_file = _setup_config(monkeypatch, tmp_path)
     config_file.write_text("version: 1\nprivacy:\n  tier: balanced\n")
 
+    # Warm-up: the first invoke pays one-time cold-start (auth.json creation,
+    # 12 DB migrations on a fresh tmp db) which is environment setup, not
+    # config-get latency. Time the second, warm invoke.
+    runner.invoke(app, ["config", "get", "privacy.tier"])
+
     start = time.perf_counter()
     result = runner.invoke(app, ["config", "get", "privacy.tier"])
     elapsed = time.perf_counter() - start
