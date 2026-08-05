@@ -181,9 +181,20 @@ def _init(debug: bool = False) -> None:
     _fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
     root = logging.getLogger()
     root.setLevel(_level)
-    root.addHandler(logging.FileHandler(log_file, encoding="utf-8"))
+    # CliRunner-based tests invoke repeatedly in one process. Replace our
+    # handlers instead of stacking them: a stale FileHandler points at a
+    # deleted tmp dir and logging prints '--- Logging error ---' tracebacks
+    # into captured CLI output.
+    for _h in root.handlers[:]:
+        if getattr(_h, "_openreview_owned", False):
+            root.removeHandler(_h)
+            _h.close()
+    _fh = logging.FileHandler(log_file, encoding="utf-8")
+    _fh._openreview_owned = True  # type: ignore[attr-defined]
+    root.addHandler(_fh)
     _sh = logging.StreamHandler(sys.stderr)
     _sh.setFormatter(_fmt)
+    _sh._openreview_owned = True  # type: ignore[attr-defined]
     root.addHandler(_sh)
 
     config_dir = get_config_dir()

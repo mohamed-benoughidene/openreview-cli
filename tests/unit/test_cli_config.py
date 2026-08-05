@@ -1,3 +1,4 @@
+import logging
 import time
 from pathlib import Path
 
@@ -101,3 +102,24 @@ def test_config_operation_latency(monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
 
     assert result.exit_code == 0
     assert elapsed < 1.0, f"config get took {elapsed:.3f}s (limit: 1.0s)"
+
+
+def test_repeated_invokes_do_not_accumulate_file_handlers(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Each CLI invoke must replace, not stack, _init's root handlers.
+
+    Stacked FileHandlers keep deleted tmp-dir log files open; logging then
+    prints '--- Logging error ---' into CliRunner output, polluting every
+    output-asserting CLI test (see docs/test-FAILURES.md failure 1).
+    """
+    config_file = _setup_config(monkeypatch, tmp_path)
+    config_file.write_text("version: 1\nprivacy:\n  tier: balanced\n")
+
+    root = logging.getLogger()
+    before = sum(isinstance(h, logging.FileHandler) for h in root.handlers)
+    runner.invoke(app, ["config", "get", "privacy.tier"])
+    runner.invoke(app, ["config", "get", "privacy.tier"])
+    after = sum(isinstance(h, logging.FileHandler) for h in root.handlers)
+
+    assert after - before <= 1
