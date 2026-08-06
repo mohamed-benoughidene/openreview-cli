@@ -1,7 +1,7 @@
 ![openreview-cli](assets/ChatGPT%20Image%20Aug%203,%202026,%2007_05_28%20PM.png)
 # openreview-cli
 
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue)](.) [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE) [![status: pre-alpha](https://img.shields.io/badge/status-pre--alpha-orange)](.)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue)](https://github.com/mohamed-benoughidene/openreview-cli) [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/LICENSE) [![status: pre-alpha](https://img.shields.io/badge/status-pre--alpha-orange)](https://github.com/mohamed-benoughidene/openreview-cli)
 
 Privacy-first contract review automation CLI. Local-first, multi-agent AI that strips PII before any cloud call. Parse, review, and negotiate contracts through an AI Gateway spanning 17 providers all from the command line.
 
@@ -20,7 +20,19 @@ openreview-cli is a local-first, privacy-first contract review automation tool t
 
 ## Quickstart
 
-Not yet on PyPI. Requires Python ≥ 3.12 and uv.
+Install from PyPI (Python ≥ 3.12):
+
+```bash
+pip install openreview-cli
+
+# One-time: configure the AI Gateway (local Ollama by default)
+openreview gateway setup
+
+# Review a contract
+openreview precheck review contract.pdf
+```
+
+### From source (contributors)
 
 ```bash
 git clone https://github.com/mohamed-benoughidene/openreview-cli.git
@@ -39,7 +51,7 @@ uv run openreview precheck review contract.pdf
 
 | Area | Value |
 |---|---|
-| Version | 0.1.0 (pre-alpha) |
+| Version | 0.1.1 (pre-alpha) |
 | Tests | 2,725 collected (10 markers) |
 | Gateway | 17 providers, 27 models |
 | Contract modes | 21 |
@@ -48,11 +60,28 @@ uv run openreview precheck review contract.pdf
 | CUAD clause identification | 100% sentence boundary recall (462 contracts, 4,034 queries) |
 | PII detection | 52.8% recall on 50 seeded contracts (spaCy `en_core_web_lg`) |
 
-Full methodology + raw numbers + measured-vs-unmeasured: [BENCHMARKS.md](BENCHMARKS.md).
+Full methodology + raw numbers + measured-vs-unmeasured: [BENCHMARKS.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/BENCHMARKS.md).
+
+### What was measured
+
+- **Review accuracy**: 90.9% F1 on 12 labeled NDA clauses (Claude Sonnet 4.6 via OpenRouter)
+- **Clause detection**: 100% sentence boundary recall on CUAD v1 (462 real commercial contracts, 4,034 queries)
+- **PII detection**: 52.8% recall on 50 seeded contracts (spaCy en_core_web_lg)
+- **Startup**: 0.68 s median, ~43 MB RSS
+- **Honest gaps documented**: what is NOT measured (e.g. retrieval on raw PDFs, end-to-end pipeline accuracy) is called out explicitly in [BENCHMARKS.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/BENCHMARKS.md)
 
 ## How it works
 
-An async pipeline splits a contract into clauses, strips PII behind a fail-closed gate, and runs each clause through keyword match (no LLM), an extraction agent, a QA verification agent, and a citation-grounding discriminator before emitting a memo. The AI Gateway abstracts 17 providers through litellm with fallback, cost tracking, privacy tier routing, and API-key redaction. State lives in a single SQLite database, with per-document retrieval indexes alongside. → [ARCHITECTURE.md](ARCHITECTURE.md)
+An async pipeline splits a contract into clauses, strips PII behind a fail-closed gate, and runs each clause through keyword match (no LLM), an extraction agent, a QA verification agent, and a citation-grounding discriminator before emitting a memo. The AI Gateway abstracts 17 providers through litellm with fallback, cost tracking, privacy tier routing, and API-key redaction. State lives in a single SQLite database, with per-document retrieval indexes alongside. → [ARCHITECTURE.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/ARCHITECTURE.md)
+
+### Architecture at a glance
+
+- **Pipeline**: parse → PII strip (fail-closed) → clause split → per-clause multi-agent review (keyword match, extraction agent, QA verification, citation grounding) → structured memo
+- **AI Gateway**: one litellm abstraction (chat / embed / rerank) across 17 providers, 27 bundled models, local Ollama by default
+- **Storage**: single SQLite DB (reviews, cost logs, PII cache, playbooks, benchmarks) + per-document FTS5 retrieval indexes with RRF fusion
+- **Privacy**: three tiers (Maximum / Balanced / Performance); nothing leaves the machine unless you opt in
+
+Full architecture: [ARCHITECTURE.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/ARCHITECTURE.md)
 
 ## Features by capability
 
@@ -146,7 +175,7 @@ Yes. The default gateway configuration points at local Ollama models (`qwen3:8b`
 
 **How accurate is it?**
 
-Measured against public benchmarks: 90.9% F1 on contract clause review (12 labeled NDA clauses through Claude Sonnet 4.6), 100% sentence boundary recall on CUAD v1 (462 real commercial contracts), 52.8% PII recall on 50 seeded contracts. All numbers, methodology, and unmeasured gaps in [BENCHMARKS.md](BENCHMARKS.md).
+Measured against public benchmarks: 90.9% F1 on contract clause review (12 labeled NDA clauses through Claude Sonnet 4.6), 100% sentence boundary recall on CUAD v1 (462 real commercial contracts), 52.8% PII recall on 50 seeded contracts. All numbers, methodology, and unmeasured gaps in [BENCHMARKS.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/BENCHMARKS.md).
 
 **What can AI agents do with it?**
 
@@ -158,14 +187,14 @@ PDF (PyMuPDF, page-by-page streaming, password-protected, corrupt/empty detectio
 
 **Is openreview-cli free?**
 
-Open source under AGPL-3.0 ([LICENSE](LICENSE)). A commercial license option is available ([COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md)).
+Open source under AGPL-3.0 ([LICENSE](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/LICENSE)). A commercial license option is available ([COMMERCIAL_LICENSE.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/COMMERCIAL_LICENSE.md)).
 
 ## Tech stack / Licenses / Status
 
 Python 3.12 · Typer CLI · Textual TUI · Presidio (PII) · litellm (gateway) · PyMuPDF / python-docx (parsing) · SQLite + FTS5 (storage, BM25) · numpy / scikit-learn (embeddings, solvers) · torch / transformers (CPU-only) · nupunkt · pydantic · cryptography · rich · jinja2 · httpx · pyyaml. Dev: pytest, mypy (strict), ruff.
 
-AGPL-3.0-only, with a commercial license option (see [LICENSE](LICENSE) and [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md)).
+AGPL-3.0-only, with a commercial license option (see [LICENSE](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/LICENSE) and [COMMERCIAL_LICENSE.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/COMMERCIAL_LICENSE.md)).
 
-Pre-alpha. Measured performance, accuracy, and methodology in [BENCHMARKS.md](BENCHMARKS.md).
+Pre-alpha. Measured performance, accuracy, and methodology in [BENCHMARKS.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/BENCHMARKS.md).
 
-[Architecture](ARCHITECTURE.md) · [Benchmarks](BENCHMARKS.md) · [Issues](https://github.com/mohamed-benoughidene/openreview-cli/issues) · [Discussions](https://github.com/mohamed-benoughidene/openreview-cli/discussions)
+[Architecture](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/ARCHITECTURE.md) · [Benchmarks](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/BENCHMARKS.md) · [Issues](https://github.com/mohamed-benoughidene/openreview-cli/issues) · [Discussions](https://github.com/mohamed-benoughidene/openreview-cli/discussions)

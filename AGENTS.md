@@ -37,7 +37,7 @@ specs/                       # spec-kit specs 001–034 + DEFERRED.md
 .github/workflows/{ci,release}.yml
 ```
 
-Version is hardcoded in **two** places: `pyproject.toml` and `src/openreview_cli/__init__.py` (`__version__`). Bump both.
+Version is hardcoded in **two** places: `pyproject.toml` and `src/openreview_cli/__init__.py` (`__version__`). Bump both. A third site, `uv.lock` (editable package entry), is rewritten automatically by the mypy pre-commit hook's reinstall — commit it alongside (the hook will fail/rollback once if you don't stage it).
 
 ## Setup
 
@@ -66,7 +66,7 @@ Pytest markers (pyproject.toml): `fast`, `slow`, `integration`, `e2e`, `memory`,
 
 **Pre-commit**: hygiene hooks, `ruff --fix`, `ruff-format`, `mypy` (`uv run mypy src/ tests/`), `pytest-fast` (collect-only). `uv run pre-commit install` once per clone; sub-agents in fresh shells must verify `.git/hooks/pre-commit` exists or run `uv run pre-commit run --all-files` before `git add` and stage reformats.
 
-**Release** (`release.yml`): tag `v*.*.*` → build → GitHub release → PyPI (`UV_PUBLISH_TOKEN`). Do not push release tags casually — tag protection restricts them to the owner anyway.
+**Release** (`release.yml`): tag `v*.*.*` → build → GitHub release → PyPI via **OIDC trusted publishing** (no API token; `environment: release` + required-reviewer approval gate). Publishing waits in "Review" until a human approves. Do not push release tags casually — tag protection restricts them to the owner anyway. Release chain: bump both version files (+ commit `uv.lock`) → commit → `git tag vX.Y.Z` → push tag → approve in Actions → verify on PyPI.
 
 ## Benchmarks & measurements
 
