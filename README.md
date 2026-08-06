@@ -12,7 +12,7 @@ openreview-cli is a local-first, privacy-first contract review automation tool t
 ## Why it matters
 
 - **PII stripped locally before cloud:** the pipeline is fail-closed if page-level detection fails, the review halts rather than leak.
-- **Local-first by default:** every slot defaults to local Ollama (`qwen3` reasoning, `nomic-embed-text` embeddings). Sub in any local model per slot — `openreview config set gateway.reasoning.primary ollama/<model>` — or opt a slot into the cloud. Cloud providers are opt-in per slot.
+- **Local-first by default:** every slot defaults to local Ollama (`qwen3` reasoning, `nomic-embed-text` embeddings). Sub in any local model per slot  `openreview config set gateway.reasoning.primary ollama/<model>`  or opt a slot into the cloud. Cloud providers are opt-in per slot.
 - **Multi-agent review pipeline:** extraction → QA verification → citation grounding, not one monolithic prompt.
 - **21 contract-type modes** with bundled 3-position playbooks (Preferred / Acceptable / Walkaway).
 - **Dual human/agent interface:** Typer CLI + Textual TUI for humans; Python API + JSON output for agents.
