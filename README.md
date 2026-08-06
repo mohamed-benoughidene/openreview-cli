@@ -30,6 +30,9 @@ openreview gateway setup
 
 # Review a contract
 openreview precheck review contract.pdf
+
+# Browse everything in the terminal UI (no args = launches the Textual TUI)
+openreview
 ```
 
 ### From source (contributors)
@@ -43,6 +46,9 @@ uv run openreview gateway setup
 
 # Review a contract
 uv run openreview precheck review contract.pdf
+
+# Browse everything in the terminal UI
+uv run openreview
 
 # Memo written to review_results/ (Markdown, JSON, or DOCX)
 ```
@@ -111,6 +117,10 @@ Per-clause pipeline: keyword category match (no LLM) → extraction agent (LLM, 
 
 Single SQLite database (20 tables: reviews, cost_logs, PII cache, playbooks, benchmarks, graph data, recovery state). Per-document retrieval indexes in separate SQLite files with FTS5 (BM25 unicode61, prefix 2–3) + dense embeddings (brute-force cosine scan, no vector DB honest limitation) + RRF fusion (k=60). Reranker present but disabled by default (degrades legal text); opt-in with `--rerank`.
 
+### Terminal UI
+
+A full Textual app (`src/openreview_cli/tui/`) for humans who prefer browsing over flags: review documents, inspect the AI Gateway, and configure the tool — without typing subcommands. Launch with a bare `openreview`. The CLI and the TUI share the same pipeline, so a review started in one is identical in the other.
+
 ## Contract-type modes
 
 | Mode | What it reviews |
@@ -153,6 +163,7 @@ Configure with `openreview config set privacy.tier maximum|balanced|performance`
 ## Essential commands
 
 ```
+openreview      → launch the Textual terminal UI (browse, review, configure)
 parse          → inspect clauses in a PDF/DOCX
 precheck review → run full review (parse → PII strip → extract → QA → memo)
 gateway setup  → configure AI providers (one-time)
