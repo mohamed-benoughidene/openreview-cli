@@ -12,7 +12,7 @@ openreview-cli is a local-first, privacy-first contract review automation tool t
 ## Why it matters
 
 - **PII stripped locally before cloud:** the pipeline is fail-closed if page-level detection fails, the review halts rather than leak.
-- **Local-first by default:** Ollama (`qwen3` reasoning, `nomic-embed-text` embeddings) out of the box; cloud providers are opt-in per slot.
+- **Local-first by default:** every slot defaults to local Ollama (`qwen3` reasoning, `nomic-embed-text` embeddings). Sub in any local model per slot — `openreview config set gateway.reasoning.primary ollama/<model>` — or opt a slot into the cloud. Cloud providers are opt-in per slot.
 - **Multi-agent review pipeline:** extraction → QA verification → citation grounding, not one monolithic prompt.
 - **21 contract-type modes** with bundled 3-position playbooks (Preferred / Acceptable / Walkaway).
 - **Dual human/agent interface:** Typer CLI + Textual TUI for humans; Python API + JSON output for agents.
@@ -101,7 +101,7 @@ Presidio PII engine with spaCy `en_core_web_lg` plus 4 custom regex recognizers 
 
 ### AI Gateway
 
-A single litellm abstraction: `chat → completion`, `embed → embedding`, `rerank → rerank`. 17 providers (openai, anthropic, google, openrouter, cohere, huggingface, deepseek, qwen, minimax, voyage, moonshot, mistral, zai, bedrock, azure, vertex, ollama). 27 bundled models with default config pointing at local Ollama (`qwen3:8b`, `qwen3:4b`, `nomic-embed-text`). Per-slot fallback (2 retries, 60 s timeout), cost tracking to SQLite `cost_logs` (cents via `litellm.completion_cost`, non-fatal on error), configurable per-review/per-day limits (100¢/1,000¢ defaults, warn-only). API-key pattern redaction on all log output. Streaming with 15 s connect / 45 s idle timeouts.
+A single litellm abstraction: `chat → completion`, `embed → embedding`, `rerank → rerank`. 17 providers (openai, anthropic, google, openrouter, cohere, huggingface, deepseek, qwen, minimax, voyage, moonshot, mistral, zai, bedrock, azure, vertex, ollama). 27 bundled models; its default config points at local Ollama (`qwen3:8b`, `qwen3:4b`, `nomic-embed-text`) — bundled defaults, swappable for any local model. Per-slot fallback (2 retries, 60 s timeout), cost tracking to SQLite `cost_logs` (cents via `litellm.completion_cost`, non-fatal on error), configurable per-review/per-day limits (100¢/1,000¢ defaults, warn-only). API-key pattern redaction on all log output. Streaming with 15 s connect / 45 s idle timeouts.
 
 ### Multi-agent review
 
