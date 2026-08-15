@@ -1956,11 +1956,21 @@ def ingest(
     db_dir_resolved = _ensure_db_dir(db_dir)
     db_path = db_dir_resolved / f"{doc_id[:32]}.db"
 
-    # Check if already indexed
+    # Check if already indexed (by status, not mere file existence —
+    # an interrupted ingest leaves a .db with status 'ingesting')
     existing = get_index_for_document(doc_id[:32], db_dir_resolved)
     if existing is not None:
-        typer.echo("Document already indexed (up to date). Use --force to re-index.")
-        return
+        from openreview_cli.retrieval.storage import RetrievalStorage
+
+        try:
+            with RetrievalStorage(existing) as storage:
+                meta = storage.get_index_meta()
+            if meta is not None and meta.get("index_status") == "indexed":
+                typer.echo("Document already indexed (up to date).")
+                return
+        except Exception:
+            # Corrupt/unreadable DB — fall through and rebuild
+            logger.debug("Existing index unreadable; rebuilding", exc_info=True)
 
     gateway: Gateway | None = None
     with contextlib.suppress(Exception):

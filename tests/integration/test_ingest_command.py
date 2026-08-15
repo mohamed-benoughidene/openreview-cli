@@ -226,3 +226,36 @@ class TestIngestCommand:
         assert stored_id != "unknown"
         # DB filename stem is the first 32 chars of the stored document_id
         assert stored_id[:32] == db_files[0].stem
+
+    def test_ingest_recovers_interrupted_index(self, runner: CliRunner, tmp_path: Path) -> None:
+        """If index_meta.status is 'ingesting', ingest must rebuild, not refuse."""
+        import sqlite3 as sql
+
+        # First ingest creates a valid index
+        first = runner.invoke(
+            app,
+            ["ingest", str(FIXTURE_PATH), "--method", "sparse", "--db-dir", str(tmp_path)],
+        )
+        assert first.exit_code == 0
+
+        # Simulate an interrupted build: set index_status back to 'ingesting'
+        doc_id = json.loads(Path(FIXTURE_PATH).read_text())[0].get("document_id", "unknown")[:32]
+        db_path = tmp_path / f"{doc_id}.db"
+        conn = sql.connect(str(db_path))
+        conn.execute("UPDATE index_meta SET index_status = 'ingesting'")
+        conn.commit()
+        conn.close()
+
+        # Re-ingest must NOT say "already indexed"; it must rebuild
+        second = runner.invoke(
+            app,
+            ["ingest", str(FIXTURE_PATH), "--method", "sparse", "--db-dir", str(tmp_path)],
+        )
+        assert second.exit_code == 0
+        assert "already indexed" not in second.output.lower()
+        assert "Indexed" in second.output
+
+        conn = sql.connect(str(db_path))
+        status = conn.execute("SELECT index_status FROM index_meta").fetchone()[0]
+        conn.close()
+        assert status == "indexed"
