@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
 
@@ -173,3 +174,88 @@ class TestIngestCommand:
             ],
         )
         assert result.exit_code == 1
+
+    def test_ingest_chunk_output_shape_end_to_end(self, runner: CliRunner, tmp_path: Path) -> None:
+        """ingest CLI accepts a file with chunk-output schema keys.
+
+        The chunk-output shape has no per-chunk document_id, so the app must
+        resolve one (SHA-256 fallback) and store it in index_meta — otherwise
+        retrieve's "last indexed document" fallback breaks.
+        """
+        ndax_path = tmp_path / "chunk_output.ndax"
+        ndax_path.write_text(
+            json.dumps(
+                [
+                    {
+                        "id": "c0",
+                        "text": "Confidentiality obligations apply.",
+                        "token_count": 12,
+                        "source_clause_id": "clause-0",
+                        "source_clause_title": "Article 3",
+                        "source_clause_level": 0,
+                        "chunk_index_within_clause": 0,
+                        "char_offset_start": 0,
+                        "char_offset_end": 50,
+                        "parent_chunk_id": None,
+                        "structural_location": "Article 3",
+                    }
+                ]
+            )
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "ingest",
+                str(ndax_path),
+                "--method",
+                "sparse",
+                "--db-dir",
+                str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 0
+        assert "Indexed 1 chunks" in result.output
+
+        # The resolved document_id must be stored, not 'unknown'
+        db_files = list(tmp_path.glob("*.db"))
+        assert len(db_files) == 1
+        conn = sqlite3.connect(str(db_files[0]))
+        stored_id = conn.execute("SELECT document_id FROM index_meta").fetchone()[0]
+        conn.close()
+        assert stored_id != "unknown"
+        # DB filename stem is the first 32 chars of the stored document_id
+        assert stored_id[:32] == db_files[0].stem
+
+    def test_ingest_recovers_interrupted_index(self, runner: CliRunner, tmp_path: Path) -> None:
+        """If index_meta.status is 'ingesting', ingest must rebuild, not refuse."""
+        import sqlite3 as sql
+
+        # First ingest creates a valid index
+        first = runner.invoke(
+            app,
+            ["ingest", str(FIXTURE_PATH), "--method", "sparse", "--db-dir", str(tmp_path)],
+        )
+        assert first.exit_code == 0
+
+        # Simulate an interrupted build: set index_status back to 'ingesting'
+        doc_id = json.loads(Path(FIXTURE_PATH).read_text())[0].get("document_id", "unknown")[:32]
+        db_path = tmp_path / f"{doc_id}.db"
+        conn = sql.connect(str(db_path))
+        conn.execute("UPDATE index_meta SET index_status = 'ingesting'")
+        conn.commit()
+        conn.close()
+
+        # Re-ingest must NOT say "already indexed"; it must rebuild
+        second = runner.invoke(
+            app,
+            ["ingest", str(FIXTURE_PATH), "--method", "sparse", "--db-dir", str(tmp_path)],
+        )
+        assert second.exit_code == 0
+        assert "already indexed" not in second.output.lower()
+        assert "Indexed" in second.output
+
+        conn = sql.connect(str(db_path))
+        status = conn.execute("SELECT index_status FROM index_meta").fetchone()[0]
+        conn.close()
+        assert status == "indexed"
