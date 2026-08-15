@@ -1980,6 +1980,7 @@ def ingest(
             method=method,
             model_id=model,
             progress_callback=_progress,
+            document_id=doc_id,
         )
         elapsed = time.time() - start
 

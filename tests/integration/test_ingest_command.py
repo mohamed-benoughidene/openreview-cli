@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
 
@@ -173,3 +174,55 @@ class TestIngestCommand:
             ],
         )
         assert result.exit_code == 1
+
+    def test_ingest_chunk_output_shape_end_to_end(self, runner: CliRunner, tmp_path: Path) -> None:
+        """ingest CLI accepts a file with chunk-output schema keys.
+
+        The chunk-output shape has no per-chunk document_id, so the app must
+        resolve one (SHA-256 fallback) and store it in index_meta — otherwise
+        retrieve's "last indexed document" fallback breaks.
+        """
+        ndax_path = tmp_path / "chunk_output.ndax"
+        ndax_path.write_text(
+            json.dumps(
+                [
+                    {
+                        "id": "c0",
+                        "text": "Confidentiality obligations apply.",
+                        "token_count": 12,
+                        "source_clause_id": "clause-0",
+                        "source_clause_title": "Article 3",
+                        "source_clause_level": 0,
+                        "chunk_index_within_clause": 0,
+                        "char_offset_start": 0,
+                        "char_offset_end": 50,
+                        "parent_chunk_id": None,
+                        "structural_location": "Article 3",
+                    }
+                ]
+            )
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "ingest",
+                str(ndax_path),
+                "--method",
+                "sparse",
+                "--db-dir",
+                str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 0
+        assert "Indexed 1 chunks" in result.output
+
+        # The resolved document_id must be stored, not 'unknown'
+        db_files = list(tmp_path.glob("*.db"))
+        assert len(db_files) == 1
+        conn = sqlite3.connect(str(db_files[0]))
+        stored_id = conn.execute("SELECT document_id FROM index_meta").fetchone()[0]
+        conn.close()
+        assert stored_id != "unknown"
+        # DB filename stem is the first 32 chars of the stored document_id
+        assert stored_id[:32] == db_files[0].stem
