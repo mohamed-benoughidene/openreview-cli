@@ -1631,7 +1631,7 @@ app.add_typer(gateway_app)
 
 @app.command()
 def chunk(
-    path: str = typer.Argument(..., help="Path to a parsed contract JSON file."),
+    path: str = typer.Argument(..., help="Path to a PDF or DOCX contract file."),
     format: str = typer.Option("text", "--format", help="Output format: text, json"),
     summary: bool = typer.Option(False, "--summary", help="Show one-line summary only"),
 ) -> None:
