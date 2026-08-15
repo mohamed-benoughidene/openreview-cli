@@ -11,8 +11,8 @@ wheels/
 
 # Local agent/tooling state (regenerable, may contain secrets)
 .drafts
-
-
+.opencode/
+.commandcode/
 # Working drafts (not part of the public product)
 products/
 Papers/
@@ -29,3 +29,7 @@ draft/
 Thumbs.db
 review_results/
 .benchmark-reports/
+
+# graphify knowledge graph (regenerable via `graphify src`)
+graphify-out/
+src/graphify-out/
