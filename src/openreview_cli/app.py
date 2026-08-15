@@ -1928,7 +1928,7 @@ def ingest(
     model: str | None = typer.Option(None, "--model", help="Embedding model override"),
     db_dir: str | None = typer.Option(None, "--db-dir", help="Index database directory"),
 ) -> None:
-    """Parse, chunk, and index a document for retrieval."""
+    """Index a pre-chunked .ndax JSON file for retrieval."""
     from openreview_cli.gateway.router import Gateway
     from openreview_cli.retrieval.errors import EmbeddingError
     from openreview_cli.retrieval.ingest import (
