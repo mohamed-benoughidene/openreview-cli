@@ -24,7 +24,9 @@ from openreview_cli.review.models import ClauseAssessment, DocMeta, Position, QA
 # ---------------------------------------------------------------------------
 
 
-def make_clause(clause_id: str = "c1", title: str = "Test", text: str = "Test clause") -> Clause:
+def make_clause(
+    clause_id: str = "c1", title: str | None = "Test", text: str = "Test clause"
+) -> Clause:
     return Clause(
         id=clause_id,
         title=title,
@@ -225,6 +227,22 @@ class TestFormatTerminal:
         assert "green" in output.lower() or "OK" in output
         assert "red" in output.lower() or "RED" in output
         assert "amber" in output.lower() or "AMBER" in output
+
+    def test_format_with_none_title_does_not_crash(self) -> None:
+        from openreview_cli.bilateral.report import format_comparison_terminal
+
+        # BOTH clause titles are None — render must fall back to a placeholder,
+        # never access the stale clause_heading attribute.
+        clause_a = make_clause("a1", title=None, text="Party A clause")
+        clause_b = make_clause("b1", title=None, text="Party B clause")
+        pair = make_alignment_pair(clause_a=clause_a, clause_b=clause_b)
+        pa = make_paired_assessment("pair-001")
+        pa.alignment = pair
+        report = make_report([pa])
+
+        output = format_comparison_terminal(report)
+        assert isinstance(output, str)
+        assert "—" in output
 
 
 class TestFormatTerminalVerbose:

@@ -148,7 +148,7 @@ def _print_pairs_table(console: Any, report: Any, verbose: bool) -> None:  # noq
         table.add_column("Status", width=8)
 
     for i, pa in enumerate(report.assessments, 1):
-        heading = pa.alignment.clause_a.title or pa.clause_heading
+        heading = pa.alignment.clause_a.title or pa.alignment.clause_b.title or "—"
         heading_display = heading[: min(len(heading), 28)]
 
         a_pos = _position_badge(pa.party_a_assessment)
