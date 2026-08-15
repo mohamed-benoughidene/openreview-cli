@@ -182,3 +182,47 @@ class TestExportCliBatch:
         for f in files:
             content = f.read_text(encoding="utf-8")
             assert "CUSTOM:" not in content
+
+    def test_batch_dir_memo_json(self, tmp_path: Path) -> None:
+        from openreview_cli.review.memo.formats import render_json
+        from openreview_cli.review.memo.models import MemoClause, MemoReport, MemoSummary
+
+        d = tmp_path / "memo_reports"
+        d.mkdir()
+        out = tmp_path / "out"
+        memo = MemoReport(
+            memo_version="1.0",
+            mode="precheck",
+            document_name="saved_memo.pdf",
+            playbook_name="precheck-nda-v1",
+            playbook_version="1",
+            review_date="2026-08-03T12:25:23+00:00",
+            overall=MemoSummary(
+                recommendation="revise",
+                clauses_checked=1,
+                matches=0,
+                differences=1,
+                confidence_avg=0.5,
+            ),
+            clauses=[
+                MemoClause(
+                    id="c1",
+                    title="confidentiality",
+                    playbook_requirement="walkaway",
+                    contract_text="text",
+                    assessment="difference",
+                    color="red",
+                    confidence=0.5,
+                )
+            ],
+            disclaimer="test",
+        )
+        (d / "precheck-saved_memo.json").write_text(render_json(memo), encoding="utf-8")
+
+        result = runner.invoke(
+            app,
+            ["export", "--batch-dir", str(d), "--format", "md", "--output-dir", str(out)],
+        )
+        assert result.exit_code == 0
+        assert "Exported 1 memo" in result.stdout
+        assert len(list(out.glob("*.md"))) == 1

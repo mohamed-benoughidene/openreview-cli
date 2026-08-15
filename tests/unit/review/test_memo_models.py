@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from openreview_cli.review.memo.models import (
     MemoCitation,
     MemoClause,
@@ -308,3 +310,47 @@ class TestMemoReport:
             disclaimer="Test",
         )
         assert report.mode == "dealcheck"
+
+    def test_from_dict_roundtrip(self) -> None:
+        from openreview_cli.review.memo.formats import render_json
+
+        memo = MemoReport(
+            memo_version="1.0",
+            mode="precheck",
+            document_name="nda.pdf",
+            playbook_name="precheck-nda-v1",
+            playbook_version="1",
+            review_date="2026-08-03T12:00:00+00:00",
+            overall=MemoSummary(
+                recommendation="revise",
+                clauses_checked=1,
+                matches=0,
+                differences=1,
+                confidence_avg=0.5,
+                citation_relevance=0.8,
+                citation_locality=0.9,
+            ),
+            clauses=[
+                MemoClause(
+                    id="c1",
+                    title="confidentiality",
+                    playbook_requirement="walkaway",
+                    contract_text="text",
+                    assessment="difference",
+                    color="red",
+                    confidence=0.5,
+                    citation=MemoCitation(clause_id="§1", paragraph_index=0),
+                )
+            ],
+            disclaimer="test",
+            tier_info=MemoTierInfo(privacy_tier="balanced", pii_stripped=True, entities_redacted=2),
+        )
+        restored = MemoReport.from_dict(json.loads(render_json(memo)))
+        assert restored.document_name == "nda.pdf"
+        assert restored.overall.clauses_checked == 1
+        citation = restored.clauses[0].citation
+        assert citation is not None
+        assert citation.clause_id == "§1"
+        tier_info = restored.tier_info
+        assert tier_info is not None
+        assert tier_info.privacy_tier == "balanced"

@@ -162,3 +162,86 @@ class TestBatchExportReports:
         assert len(written) == 2
         for w in written:
             assert w.parent == out
+
+    def test_memo_json_shape_md(self, tmp_path: Path) -> None:
+        from openreview_cli.review.memo.formats import render_json
+        from openreview_cli.review.memo.models import MemoClause, MemoReport, MemoSummary
+
+        memo = MemoReport(
+            memo_version="1.0",
+            mode="precheck",
+            document_name="memo_doc.pdf",
+            playbook_name="precheck-nda-v1",
+            playbook_version="1",
+            review_date="2026-08-03T12:00:00+00:00",
+            overall=MemoSummary(
+                recommendation="revise",
+                clauses_checked=1,
+                matches=0,
+                differences=1,
+                confidence_avg=0.5,
+            ),
+            clauses=[
+                MemoClause(
+                    id="c1",
+                    title="confidentiality",
+                    playbook_requirement="walkaway",
+                    contract_text="text",
+                    assessment="difference",
+                    color="red",
+                    confidence=0.5,
+                )
+            ],
+            disclaimer="test",
+        )
+        src = tmp_path / "reports"
+        src.mkdir()
+        out = tmp_path / "out"
+        p = src / "memo.json"
+        p.write_text(render_json(memo), encoding="utf-8")
+
+        written = batch_export_reports([p], "md", out)
+        assert len(written) == 1
+        assert written[0].suffix == ".md"
+
+    def test_memo_json_shape_with_template_skipped(self, tmp_path: Path) -> None:
+        from openreview_cli.review.memo.formats import render_json
+        from openreview_cli.review.memo.models import MemoClause, MemoReport, MemoSummary
+
+        memo = MemoReport(
+            memo_version="1.0",
+            mode="precheck",
+            document_name="memo_doc.pdf",
+            playbook_name="precheck-nda-v1",
+            playbook_version="1",
+            review_date="2026-08-03T12:00:00+00:00",
+            overall=MemoSummary(
+                recommendation="revise",
+                clauses_checked=1,
+                matches=0,
+                differences=1,
+                confidence_avg=0.5,
+            ),
+            clauses=[
+                MemoClause(
+                    id="c1",
+                    title="confidentiality",
+                    playbook_requirement="walkaway",
+                    contract_text="text",
+                    assessment="difference",
+                    color="red",
+                    confidence=0.5,
+                )
+            ],
+            disclaimer="test",
+        )
+        src = tmp_path / "reports"
+        src.mkdir()
+        out = tmp_path / "out"
+        p = src / "memo.json"
+        p.write_text(render_json(memo), encoding="utf-8")
+        tpl = tmp_path / "custom.md.j2"
+        tpl.write_text("{{ memo.document_name }}", encoding="utf-8")
+
+        written = batch_export_reports([p], "md", out, template_path=tpl)
+        assert len(written) == 0

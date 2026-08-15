@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Any
 
 
 class MemoFormat(StrEnum):
@@ -74,3 +75,67 @@ class MemoReport:
     clauses: list[MemoClause]
     disclaimer: str
     tier_info: MemoTierInfo | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> MemoReport:
+        """Reconstruct a MemoReport from memo-JSON produced by render_json()."""
+        doc = dict(data.get("document") or {})
+        playbook = dict(data.get("playbook") or {})
+
+        overall_raw = dict(data.get("overall") or {})
+        overall = MemoSummary(
+            recommendation=str(overall_raw.get("recommendation", "")),
+            clauses_checked=int(overall_raw.get("clauses_checked", 0)),
+            matches=int(overall_raw.get("matches", 0)),
+            differences=int(overall_raw.get("differences", 0)),
+            confidence_avg=float(overall_raw.get("confidence_avg") or 0.0),
+            citation_relevance=overall_raw.get("citation_relevance"),
+            citation_locality=overall_raw.get("citation_locality"),
+        )
+
+        clauses: list[MemoClause] = []
+        for c_raw in data.get("clauses", []):
+            c = dict(c_raw)
+            citation_raw = c.get("citation")
+            citation = None
+            if isinstance(citation_raw, dict):
+                citation = MemoCitation(
+                    clause_id=str(citation_raw.get("clause_id", "")),
+                    paragraph_index=int(citation_raw.get("paragraph_index", 0)),
+                )
+            clauses.append(
+                MemoClause(
+                    id=str(c.get("id", "")),
+                    title=str(c.get("title", "")),
+                    playbook_requirement=str(c.get("playbook_requirement", "")),
+                    contract_text=str(c.get("contract_text", "")),
+                    assessment=str(c.get("assessment", "")),
+                    color=str(c.get("color", "")),
+                    confidence=float(c.get("confidence") or 0.0),
+                    citation=citation,
+                    severity=c.get("severity"),
+                    source_filename=c.get("source_filename"),
+                )
+            )
+
+        tier_raw = data.get("tier_info")
+        tier_info = None
+        if isinstance(tier_raw, dict):
+            tier_info = MemoTierInfo(
+                privacy_tier=str(tier_raw.get("privacy_tier", "")),
+                pii_stripped=bool(tier_raw.get("pii_stripped", False)),
+                entities_redacted=int(tier_raw.get("entities_redacted", 0)),
+            )
+
+        return cls(
+            memo_version=str(data.get("memo_version", "1.0")),
+            mode=str(data.get("mode", "precheck")),
+            document_name=str(doc.get("name", "")),
+            playbook_name=str(playbook.get("name", "")),
+            playbook_version=str(playbook.get("version", "")),
+            review_date=str(data.get("review_date", "")),
+            overall=overall,
+            clauses=clauses,
+            disclaimer=str(data.get("disclaimer", "")),
+            tier_info=tier_info,
+        )

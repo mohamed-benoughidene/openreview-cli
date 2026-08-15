@@ -274,7 +274,56 @@ def _report_to_dict(report: ReviewReport) -> dict[str, Any]:
     return data
 
 
-def batch_export_reports(
+def _detect_report_shape(data: dict[str, Any]) -> str:
+    """Classify a JSON object as 'report', 'memo', or 'unknown'.
+
+    Report JSON (from format_json) has ``assessments`` + ``summary``.
+    Memo JSON (from review/memo/formats.py render_json) has ``clauses`` + ``overall``.
+    """
+    if "assessments" in data and "summary" in data:
+        return "report"
+    if "clauses" in data and "overall" in data:
+        return "memo"
+    return "unknown"
+
+
+def _export_memo_file(
+    data: dict[str, Any],
+    fmt: Any,
+    output_dir: Path,
+    mode: str,
+) -> list[Path]:
+    """Re-export a memo-JSON object in the requested format.
+
+    ``output_dir`` is assumed to already exist; ``batch_export_reports``
+    creates it before the per-file loop.
+    """
+    from openreview_cli.review.memo.filename import (
+        deduplicate,
+        generate_filename,
+    )
+    from openreview_cli.review.memo.formats import (
+        render_docx,
+        render_json,
+        render_markdown,
+    )
+    from openreview_cli.review.memo.models import MemoFormat, MemoReport
+
+    memo = MemoReport.from_dict(data)
+    stem = Path(memo.document_name).stem or "document"
+    filename = generate_filename(mode, stem, fmt)
+    fpath = deduplicate(output_dir / filename)
+
+    if fmt == MemoFormat.MARKDOWN:
+        fpath.write_text(render_markdown(memo), encoding="utf-8")
+    elif fmt == MemoFormat.JSON:
+        fpath.write_text(render_json(memo), encoding="utf-8")
+    else:
+        render_docx(memo).save(str(fpath))
+    return [fpath]
+
+
+def batch_export_reports(  # noqa: PLR0915  # ponytail: shape-aware loading keeps re-export logic together
     report_paths: list[Path],
     export_format: str,
     output_dir: Path,
@@ -342,6 +391,22 @@ def batch_export_reports(
 
         if data is None:
             logger.warning("Skipping %s: expected a JSON object at top level", path)
+            continue
+
+        shape = _detect_report_shape(data)
+
+        if shape == "memo":
+            if template is not None and export_format == "md":
+                logger.warning("Skipping %s: --template requires report-JSON files", path)
+                continue
+            try:
+                written.extend(_export_memo_file(data, fmt, output_dir, mode))
+            except Exception as exc:
+                logger.warning("Skipping %s: failed to export memo: %s", path, exc)
+            continue
+
+        if shape != "report":
+            logger.warning("Skipping %s: unknown JSON report shape", path)
             continue
 
         try:
