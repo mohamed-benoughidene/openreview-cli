@@ -327,3 +327,29 @@ class TestLastIndexedDoc:
         result = get_last_indexed_doc(tmp_path)
         assert result is not None
         assert "my_doc.ndax" in result
+
+    def test_get_last_indexed_doc_id_returns_hash(self, tmp_path: Path) -> None:
+        from openreview_cli.retrieval.ingest import get_last_indexed_doc_id
+
+        (tmp_path / "last_indexed.json").write_text(
+            json.dumps(
+                {
+                    "document_path": str(tmp_path / "old.db"),
+                    "document_hash": "abc123fullhash",
+                }
+            )
+        )
+        assert get_last_indexed_doc_id(tmp_path) == "abc123fullhash"
+
+    def test_get_last_indexed_doc_id_legacy_fallback(self, tmp_path: Path) -> None:
+        from openreview_cli.retrieval.ingest import get_last_indexed_doc_id
+
+        (tmp_path / "last_indexed.json").write_text(
+            json.dumps({"document_path": str(tmp_path / "abc123.db")})
+        )
+        assert get_last_indexed_doc_id(tmp_path) == "abc123"
+
+    def test_get_last_indexed_doc_id_none_when_missing(self, tmp_path: Path) -> None:
+        from openreview_cli.retrieval.ingest import get_last_indexed_doc_id
+
+        assert get_last_indexed_doc_id(tmp_path) is None

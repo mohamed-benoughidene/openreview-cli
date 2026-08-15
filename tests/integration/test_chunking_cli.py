@@ -43,3 +43,11 @@ def test_pii_safe_chunking() -> None:
     for chunk in chunks:
         for original in result.mapping.values():
             assert original not in chunk.text, f"Raw PII '{original}' found in chunk '{chunk.id}'"
+
+
+def test_chunk_help_text_describes_pdf_or_docx() -> None:
+    """chunk --help must describe a PDF/DOCX input, not parsed contract JSON."""
+    result = runner.invoke(app, ["chunk", "--help"])
+    assert result.exit_code == 0
+    assert "Path to a PDF or DOCX contract file." in result.output
+    assert "parsed contract JSON" not in result.output
