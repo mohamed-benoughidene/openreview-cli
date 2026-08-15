@@ -211,6 +211,25 @@ class TestRetrieveCommand:
         )
         assert result.exit_code == 1
 
+    def test_retrieve_without_file_uses_last_indexed(
+        self, runner: CliRunner, indexed_db: Path
+    ) -> None:
+        result = runner.invoke(
+            app,
+            [
+                "retrieve",
+                "confidentiality",
+                "--method",
+                "sparse",
+                "--top-k",
+                "5",
+                "--db-dir",
+                str(indexed_db.parent),
+            ],
+        )
+        assert result.exit_code == 0, f"Exit {result.exit_code}: {result.output}"
+        assert "Retrieval Results" in result.output
+
     # ── T028: Method switching ──
 
     def test_retrieve_method_sparse_json_schema(self, runner: CliRunner, indexed_db: Path) -> None:

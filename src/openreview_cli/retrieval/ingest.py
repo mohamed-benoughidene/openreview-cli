@@ -94,6 +94,29 @@ def get_last_indexed_doc(db_dir: str | Path) -> str | None:
     return None
 
 
+def get_last_indexed_doc_id(db_dir: str | Path) -> str | None:
+    """Return the document_id of the most recently indexed document.
+
+    Reads the ``document_hash`` field from ``last_indexed.json``. Falls back
+    to the ``document_path`` DB filename stem for legacy files that predate
+    this helper.
+    """
+    path = Path(db_dir) / _LAST_INDEXED_FILE
+    if not path.exists():
+        return None
+    try:
+        data: dict[str, object] = json.loads(path.read_text())
+        doc_id = data.get("document_hash")
+        if isinstance(doc_id, str) and doc_id:
+            return doc_id
+        doc_path = data.get("document_path")
+        if isinstance(doc_path, str):
+            return Path(doc_path).stem
+    except (json.JSONDecodeError, OSError):
+        logger.debug("Could not read last_indexed.json", exc_info=True)
+    return None
+
+
 def _save_last_indexed(db_dir: str | Path, doc_path: str, doc_hash: str) -> None:
     """Record the document as the most recently indexed."""
     path = Path(db_dir) / _LAST_INDEXED_FILE

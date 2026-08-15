@@ -2028,23 +2028,31 @@ def retrieve(
     from openreview_cli.gateway.router import Gateway
     from openreview_cli.retrieval.engine import RetrievalEngine
     from openreview_cli.retrieval.errors import IndexCorruptError, IndexNotFoundError
-    from openreview_cli.retrieval.ingest import _ensure_db_dir, get_last_indexed_doc
+    from openreview_cli.retrieval.ingest import (
+        _ensure_db_dir,
+        get_index_for_document,
+        get_last_indexed_doc_id,
+    )
     from openreview_cli.retrieval.models import RetrievalQuery
 
     db_dir_resolved = _ensure_db_dir(db_dir)
 
     # Resolve db_path
-    doc_id = ""
+    doc_id: str | None = ""
+    db_path: Path | None = None
     if file:
         file_path = Path(file)
         if not file_path.exists():
             typer.echo(f"Error: File not found: {file}", err=True)
             raise typer.Exit(code=1)
         doc_id = _resolve_doc_id(file_path)
+        db_path = get_index_for_document(doc_id[:32], db_dir_resolved)
     else:
-        # T062: Fallback to most recently indexed document
-        last_doc = get_last_indexed_doc(db_dir_resolved)
-        if last_doc is None:
+        # T062: Fall back to the most recently indexed document by its
+        # document_id, not by reopening the path recorded in last_indexed.json
+        # (which is the SQLite index database, not JSON).
+        doc_id = get_last_indexed_doc_id(db_dir_resolved)
+        if not doc_id:
             typer.echo(
                 "Error: No document specified and no previously indexed document found.\n"
                 'Run `openreview retrieve "<query>" <file>` with a document, '
@@ -2052,15 +2060,13 @@ def retrieve(
                 err=True,
             )
             raise typer.Exit(code=2)
-        doc_id = _resolve_doc_id(Path(last_doc))
+        db_path = get_index_for_document(doc_id[:32], db_dir_resolved)
 
     if not doc_id:
         typer.echo("Error: Could not determine document ID.", err=True)
         raise typer.Exit(code=1)
 
-    db_path = db_dir_resolved / f"{doc_id[:32]}.db"
-
-    if not db_path.exists():
+    if db_path is None:
         typer.echo(
             "Document not indexed. Run `openreview ingest <file>` first.",
             err=True,
