@@ -353,3 +353,83 @@ class TestLastIndexedDoc:
         from openreview_cli.retrieval.ingest import get_last_indexed_doc_id
 
         assert get_last_indexed_doc_id(tmp_path) is None
+
+
+class TestChunkSchemaNormalization:
+    """ingest_document must accept chunk-output schema (id/source_* keys)."""
+
+    def test_ingest_accepts_chunk_output_shape(self, tmp_path: Path) -> None:
+        # Real chunk --format json output shape (11 keys, no chunk_id)
+        chunk_output = [
+            {
+                "id": "c0",
+                "text": "Article I: Definitions",
+                "token_count": 42,
+                "source_clause_id": "clause-0",
+                "source_clause_title": "Article I — Definitions",
+                "source_clause_level": 0,
+                "chunk_index_within_clause": 0,
+                "char_offset_start": 0,
+                "char_offset_end": 128,
+                "parent_chunk_id": None,
+                "structural_location": "Article I — Definitions",
+            },
+        ]
+
+        db_path = tmp_path / "chunk_output.db"
+        meta = ingest_document(
+            chunk_output,
+            str(db_path),
+            method="sparse",
+            document_id="test-chunk-output",
+        )
+
+        assert meta["index_status"] == "indexed"
+        assert meta["document_id"] == "test-chunk-output"
+        assert meta["chunk_count"] == 1
+
+        conn = sqlite3.connect(str(db_path))
+        row = conn.execute(
+            "SELECT chunk_id, clause_heading, clause_level, char_start, char_end FROM chunks"
+        ).fetchone()
+        conn.close()
+        assert row == ("c0", "Article I — Definitions", 0, 0, 128)
+
+    def test_ingest_accepts_existing_fixture_shape(
+        self, tmp_path: Path, sample_chunks: list[dict[str, Any]]
+    ) -> None:
+        """Already-normalized chunks (fixture shape) must pass through unchanged."""
+        db_path = tmp_path / "fixture_shape.db"
+        meta = ingest_document(sample_chunks, str(db_path), method="sparse")
+        assert meta["chunk_count"] == 3
+        conn = sqlite3.connect(str(db_path))
+        row = conn.execute("SELECT clause_heading FROM chunks WHERE chunk_id = 'c1'").fetchone()
+        conn.close()
+        assert row[0] == "Article 3 — Confidentiality"
+
+    def test_normalize_chunk_maps_all_keys(self) -> None:
+        from openreview_cli.retrieval.ingest import _normalize_chunk
+
+        chunk_output = {
+            "id": "c5",
+            "text": "Governing law",
+            "token_count": 10,
+            "source_clause_id": "clause-3",
+            "source_clause_title": "Article 7 — Governing Law",
+            "source_clause_level": 1,
+            "chunk_index_within_clause": 0,
+            "char_offset_start": 400,
+            "char_offset_end": 450,
+            "parent_chunk_id": "c4",
+            "structural_location": "Article 7 > Section 7.2",
+        }
+
+        normalized = _normalize_chunk(chunk_output, "doc-1")
+        assert normalized["chunk_id"] == "c5"
+        assert normalized["document_id"] == "doc-1"
+        assert normalized["clause_heading"] == "Article 7 — Governing Law"
+        assert normalized["clause_level"] == 1
+        assert normalized["char_start"] == 400
+        assert normalized["char_end"] == 450
+        assert normalized["parent_chunk_id"] == "c4"
+        assert normalized["heading_chain"] == ["Article 7 > Section 7.2"]

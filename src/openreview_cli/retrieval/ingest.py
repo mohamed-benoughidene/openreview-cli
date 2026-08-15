@@ -134,6 +134,33 @@ def _save_last_indexed(db_dir: str | Path, doc_path: str, doc_hash: str) -> None
         logger.debug("Could not write last_indexed.json", exc_info=True)
 
 
+def _normalize_chunk(chunk: dict[str, Any], document_id: str) -> dict[str, Any]:
+    """Normalize a chunk dict to the retrieval storage schema.
+
+    Accepts both the chunk-output shape (``id``, ``source_clause_title``,
+    ``char_offset_start``, ...) and the already-normalized fixture shape
+    (``chunk_id``, ``clause_heading``, ``char_start``, ...).
+
+    Returns a new dict — never mutates the input.
+    """
+    if "chunk_id" in chunk:
+        normalized = dict(chunk)
+    else:
+        structural = chunk.get("structural_location") or chunk.get("source_clause_title") or ""
+        normalized = {
+            "chunk_id": chunk["id"],
+            "text": chunk["text"],
+            "clause_heading": chunk.get("source_clause_title") or "",
+            "clause_level": chunk.get("source_clause_level", 0),
+            "parent_chunk_id": chunk.get("parent_chunk_id"),
+            "heading_chain": [structural] if structural else [],
+            "char_start": chunk.get("char_offset_start", 0),
+            "char_end": chunk.get("char_offset_end", 0),
+        }
+    normalized["document_id"] = document_id
+    return normalized
+
+
 def ingest_document(
     chunks: list[dict[str, Any]] | Iterator[dict[str, Any]],
     db_path: str | Path,
@@ -141,6 +168,7 @@ def ingest_document(
     method: str = "hybrid",
     model_id: str | None = None,
     progress_callback: Callable[[int, int], None] | None = None,
+    document_id: str | None = None,
 ) -> dict[str, Any]:
     """Ingest parsed chunks into a retrieval index.
 
@@ -180,6 +208,11 @@ def ingest_document(
         chunk_list = list(chunks) if not isinstance(chunks, list) else chunks
         total = len(chunk_list)
 
+        # Normalize both chunk-output schema (id/source_*) and already-
+        # normalized fixture schema (chunk_id/clause_heading) to storage keys.
+        resolved_doc_id = document_id or chunk_list[0].get("document_id", "unknown")
+        chunk_list = [_normalize_chunk(c, resolved_doc_id) for c in chunk_list]
+
         # T064: Large document warning
         if total > 5000:
             logger.warning(
@@ -193,7 +226,7 @@ def ingest_document(
             "embedding_model, embedding_dim, db_size_bytes, index_timestamp) "
             "VALUES (?, ?, 1, 'ingesting', ?, ?, ?, NULL, 0, ?)",
             (
-                chunk_list[0].get("document_id", "unknown"),
+                resolved_doc_id,
                 str(db_path),
                 total,
                 method,
@@ -272,13 +305,13 @@ def ingest_document(
         storage.conn.commit()
 
         # T062: Record as most recently indexed document
-        doc_id = chunk_list[0].get("document_id", "unknown")
+        doc_id = resolved_doc_id
         _save_last_indexed(db_path.parent, str(db_path), doc_id)
 
         meta = storage.get_index_meta()
         if meta is None:
             return {
-                "document_id": chunk_list[0].get("document_id", "unknown"),
+                "document_id": resolved_doc_id,
                 "document_path": str(db_path),
                 "chunk_count": total,
                 "method": final_method,
@@ -299,6 +332,7 @@ def ingest_from_file(
     method: str = "hybrid",
     model_id: str | None = None,
     progress_callback: Callable[[int, int], None] | None = None,
+    document_id: str | None = None,
 ) -> dict[str, Any]:
     """Load chunks from an ndax/JSON file and ingest them.
 
@@ -309,6 +343,7 @@ def ingest_from_file(
         method: "sparse" or "hybrid".
         model_id: Embedding model override.
         progress_callback: Progress callback.
+        document_id: Override document id (defaults to per-chunk value).
 
     Returns:
         dict with index metadata.
@@ -324,4 +359,5 @@ def ingest_from_file(
         method=method,
         model_id=model_id,
         progress_callback=progress_callback,
+        document_id=document_id,
     )
