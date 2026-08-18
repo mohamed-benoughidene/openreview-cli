@@ -11,7 +11,7 @@ from openreview_cli.config.paths import get_config_dir
 from openreview_cli.gateway.models import CredentialField
 from openreview_cli.gateway.registry import ModelRegistry
 
-SLOT_NAMES = ["reasoning", "extraction", "embedding", "reranking", "graph"]
+SLOT_NAMES = ["reasoning", "extraction", "embedding", "reranking", "graph", "grounding"]
 PROVIDER_CHOICES = [
     "ollama",
     "openai",

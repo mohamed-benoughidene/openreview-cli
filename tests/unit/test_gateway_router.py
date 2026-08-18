@@ -538,6 +538,36 @@ gateway:
             assert "status" in result[slot]
         assert result["reasoning"]["status"] == "missing_api_key"
 
+    def test_ollama_keyless_reports_configured(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Local/keyless providers (ollama) must report configured without any key."""
+        config = """\
+gateway:
+  models:
+    extraction:
+      primary: ollama/qwen3:8b
+"""
+        gw = _gateway(tmp_path, monkeypatch, config, "{}")
+        monkeypatch.delenv("OLLAMA_API_KEY", raising=False)
+        result = gw.health_check()
+        assert result["extraction"]["status"] == "configured"
+
+    def test_unknown_provider_still_requires_key(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A provider absent from the registry with no key anywhere must still report missing_api_key."""
+        config = """\
+gateway:
+  models:
+    extraction:
+      primary: unknownprovider/some-model
+"""
+        gw = _gateway(tmp_path, monkeypatch, config, "{}")
+        monkeypatch.delenv("UNKNOWNPROVIDER_API_KEY", raising=False)
+        result = gw.health_check()
+        assert result["extraction"]["status"] == "missing_api_key"
+
     def test_includes_extra_params_count_when_configured(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -1141,6 +1171,43 @@ class TestCustomProviderRouting:
         result = gw.health_check()
 
         assert result["extraction"]["status"] == "missing_api_key"
+
+
+def test_rerank_capability_passes_for_bundled_reranker_providers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """B3: ollama/cohere/voyage declare rerank capability; a chat-only provider must fail."""
+    from openreview_cli.gateway.registry import load_registry
+
+    registry = load_registry()
+    gw = Gateway.__new__(Gateway)
+    req = CapabilityRequirement(capability="rerank")
+
+    for name in ("ollama", "cohere", "voyage"):
+        info = registry.get(name)
+        assert info is not None, f"{name} missing from registry"
+        # Should not raise
+        gw.validate_capability(info, req)
+
+    # A provider that genuinely lacks rerank must still be rejected.
+    info = registry.get("anthropic")
+    assert info is not None
+    with pytest.raises(CapabilityMismatchError):
+        gw.validate_capability(info, req)
+
+
+def test_registry_reranker_models_use_reranking_slot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """B3: all reranker models must be tagged with the 'reranking' slot (not 'rerank')."""
+    from openreview_cli.gateway.registry import load_registry
+
+    registry = load_registry()
+    for name, info in registry.items():
+        for model_id, model in info.models.items():
+            assert "rerank" not in model.slots, (
+                f"{name}/{model_id} uses singular 'rerank' slot; should be 'reranking'"
+            )
 
 
 def test_clear_env_vars_removes_only_seeded_keys(

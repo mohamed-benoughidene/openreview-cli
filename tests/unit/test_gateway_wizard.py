@@ -60,9 +60,10 @@ class TestGatewayWizard:
 
         gateway_setup()
 
-        assert len(calls) == 5
+        assert len(calls) == 6
         assert any("reasoning" in c for c in calls)
         assert any("graph" in c for c in calls)
+        assert any("grounding" in c for c in calls)
 
     def test_wizard_aborts_on_none(
         self,

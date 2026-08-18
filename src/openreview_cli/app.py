@@ -1715,6 +1715,11 @@ def compare(
         False, "--verbose", help="Show full RCBSF classification and rationale."
     ),
     no_pii: bool = typer.Option(False, "--no-pii", help="Skip PII stripping on both documents."),
+    allow_partial_pii: bool = typer.Option(
+        False,
+        "--allow-partial-pii",
+        help="Continue review even if some pages fail PII detection (those pages' text is sent as-is).",
+    ),
     conservative: bool = typer.Option(
         False,
         "--conservative",
@@ -1786,6 +1791,7 @@ def compare(
             raise typer.Exit(code=1)
 
     from openreview_cli.bilateral import run_comparison
+    from openreview_cli.pii.models import PartialProcessingError
 
     try:
         report = run_comparison(
@@ -1795,6 +1801,7 @@ def compare(
             extraction_model=extraction_model or "extraction",
             qa_model=qa_model or extraction_model,
             no_pii=no_pii,
+            allow_partial_pii=allow_partial_pii,
             verbose=verbose,
             confidence_threshold=resolved_threshold,
             align_only=align_only,
@@ -1806,6 +1813,9 @@ def compare(
     except FileNotFoundError as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1) from None
+    except PartialProcessingError as e:
+        typer.echo(f"Partial PII processing: {e}", err=True)
+        raise typer.Exit(code=2) from None
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=2) from None
@@ -2008,6 +2018,23 @@ def ingest(
         raise typer.Exit(code=1) from None
 
 
+def _should_warn_reranker_degradation(val: dict[str, object] | None, force_rerank: bool) -> bool:
+    """Return True when a stored validation shows reranker degradation and the
+    user has not suppressed the warning with --force-rerank.
+
+    degradation_pp = (precision_with_reranker - precision_without) * 100,
+    so degradation is degradation_pp <= 0 (reranker does not improve or hurts).
+    """
+    if force_rerank:
+        return False
+    if not val:
+        return False
+    deg = val.get("degradation_pp")
+    if not isinstance(deg, (int, float)):
+        return False
+    return deg <= 0
+
+
 @app.command()
 def retrieve(
     query: str = typer.Argument(..., help="Natural-language query (wrap in quotes)."),
@@ -2132,21 +2159,22 @@ def retrieve(
             results = reranker.rerank(query, candidates, top_k)
 
             # Check reranker validation warning
-            if not force_rerank:
-                with RetrievalStorage(db_path) as store:
-                    val = store.get_rerank_validation(
-                        model_id=reranker.model_id,
-                        document_type="legal-nda",
-                    )
-                if val and val.get("degradation_pp", 0) is not None:
-                    deg = val["degradation_pp"]
-                    if isinstance(deg, (int, float)) and deg >= 0:
-                        warning = (
-                            "⚠ Reranker validation shows reranker does not improve "
-                            f"retrieval quality (degradation: {deg:.1f}pp). "
-                            "Use --force-rerank to override."
-                        )
-                        typer.echo(warning, err=True)
+            with RetrievalStorage(db_path) as store:
+                val = store.get_rerank_validation(
+                    model_id=reranker.model_id,
+                    document_type="legal-nda",
+                )
+            if _should_warn_reranker_degradation(val, force_rerank):
+                # mypy can't narrow `val` through the helper; cast is safe here
+                # because the helper only returns True for a non-None dict with
+                # a numeric degradation_pp.
+                deg = float(val["degradation_pp"])  # type: ignore[index, arg-type]
+                warning = (
+                    "⚠ Reranker validation shows reranker does not improve "
+                    f"retrieval quality (degradation: {deg:.1f}pp). "
+                    "Use --force-rerank to override."
+                )
+                typer.echo(warning, err=True)
 
         except Exception as exc:
             logger.warning("Reranker integration failed (%s); returning raw results.", exc)
@@ -2787,7 +2815,6 @@ def negotiate(
         "-ct",
         help="Confidence threshold for Amber flagging (0.0-1.0).",
     ),
-    no_pii: bool = typer.Option(False, "--no-pii", help="Skip PII stripping."),
     verbose: bool = typer.Option(False, "--verbose", help="Show per-clause progress."),
     output: str | None = typer.Option(
         None, "--output", help="Write output to file instead of stdout."
@@ -3035,9 +3062,7 @@ def _register_product_mode(
             "--allow-partial-pii",
             help="Continue review even if some pages fail PII detection (those pages' text is sent as-is).",
         ),
-        no_pii: bool = typer.Option(
-            False, "--no-pii", help="Skip PII stripping (no-op: negotiate runs locally)."
-        ),
+        no_pii: bool = typer.Option(False, "--no-pii", help="Skip PII stripping."),
         playbook_path: str | None = typer.Option(
             None, "--playbook", help="Path to a custom YAML playbook override."
         ),

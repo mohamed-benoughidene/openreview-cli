@@ -5,6 +5,7 @@ from __future__ import annotations
 import json as json_lib
 from pathlib import Path
 from typing import Any, cast
+from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
@@ -160,3 +161,102 @@ class TestRetrieveRerankFlag:
         data = _extract_json_from_output(result.output)
         for r in data["results"]:
             assert r["rerank_score"] is None
+
+
+class TestRerankerDegradationWarning:
+    """retrieve --rerank respects the stored degradation record."""
+
+    @patch("openreview_cli.gateway.router.Gateway")
+    def test_retrieve_warns_when_stored_degraded(
+        self,
+        mock_gateway_class: MagicMock,
+        runner: CliRunner,
+        indexed_db: Path,
+    ) -> None:
+        """With a stored degradation_pp <= 0 record and no --force-rerank, warn."""
+        mock_gw = MagicMock()
+        mock_gw.rerank.return_value = [
+            {"chunk_id": "c1", "score": 0.95, "text": "test"},
+            {"chunk_id": "c2", "score": 0.90, "text": "test"},
+            {"chunk_id": "c3", "score": 0.85, "text": "test"},
+        ]
+        mock_gateway_class.return_value = mock_gw
+
+        # Seed a degraded record for the default Reranker model id
+        with RetrievalStorage(str(indexed_db)) as store:
+            store.insert_rerank_validation(
+                model_id="qwen3-reranker-0.6b",
+                document_type="legal-nda",
+                precision_with=0.2,
+                precision_without=0.8,
+                degradation_pp=-60.0,
+            )
+
+        result = runner.invoke(
+            app,
+            [
+                "retrieve",
+                "confidentiality",
+                str(FIXTURE_PATH),
+                "--method",
+                "sparse",
+                "--rerank",
+                "--top-k",
+                "3",
+                "--format",
+                "json",
+                "--db-dir",
+                str(indexed_db.parent),
+            ],
+        )
+        assert result.exit_code == 0, f"exit {result.exit_code}"
+        assert "does not improve" in result.stderr
+        data = _extract_json_from_output(result.output)
+        # reranking still ran (warning is advisory, not a hard disable)
+        assert any(r["rerank_score"] is not None for r in data["results"])
+
+    @patch("openreview_cli.gateway.router.Gateway")
+    def test_retrieve_force_rerank_suppresses_warning(
+        self,
+        mock_gateway_class: MagicMock,
+        runner: CliRunner,
+        indexed_db: Path,
+    ) -> None:
+        """--force-rerank suppresses the degradation warning."""
+        mock_gw = MagicMock()
+        mock_gw.rerank.return_value = [
+            {"chunk_id": "c1", "score": 0.95, "text": "test"},
+            {"chunk_id": "c2", "score": 0.90, "text": "test"},
+            {"chunk_id": "c3", "score": 0.85, "text": "test"},
+        ]
+        mock_gateway_class.return_value = mock_gw
+
+        with RetrievalStorage(str(indexed_db)) as store:
+            store.insert_rerank_validation(
+                model_id="qwen3-reranker-0.6b",
+                document_type="legal-nda",
+                precision_with=0.2,
+                precision_without=0.8,
+                degradation_pp=-60.0,
+            )
+
+        result = runner.invoke(
+            app,
+            [
+                "retrieve",
+                "confidentiality",
+                str(FIXTURE_PATH),
+                "--method",
+                "sparse",
+                "--rerank",
+                "--force-rerank",
+                "--top-k",
+                "3",
+                "--format",
+                "json",
+                "--db-dir",
+                str(indexed_db.parent),
+            ],
+        )
+        assert result.exit_code == 0, f"exit {result.exit_code}"
+        assert "does not improve" not in result.stderr

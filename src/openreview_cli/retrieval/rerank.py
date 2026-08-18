@@ -12,6 +12,10 @@ from openreview_cli.gateway.models import CapabilityRequirement
 
 logger = logging.getLogger(__name__)
 
+# AI Gateway slot that serves cross-encoder reranking. The gateway resolves the
+# actual provider/model from this slot's config (see Gateway.rerank).
+RERANK_SLOT = "reranking"
+
 
 class Reranker:
     """Cross-encoder reranker wrapper via AI Gateway.
@@ -27,13 +31,14 @@ class Reranker:
     def __init__(
         self,
         gateway: Any | None,
-        model_id: str = "lightrag-cross-encoder",
+        model_id: str = "qwen3-reranker-0.6b",
     ) -> None:
         """Initialize the reranker.
 
         Args:
             gateway: AI Gateway instance. If None, rerank() returns candidates unchanged.
-            model_id: Cross-encoder model identifier (default: lightrag-cross-encoder).
+            model_id: Cross-encoder model identifier used for validation bookkeeping
+                (default: a bundled reranker model id).
         """
         self.gateway = gateway
         self.model_id = model_id
@@ -68,7 +73,7 @@ class Reranker:
             # Prepare query-chunk pairs for the cross-encoder
             texts = [c.text for c in candidates]
             scores = self.gateway.rerank(
-                self.model_id,
+                RERANK_SLOT,
                 query,
                 texts,
                 top_n=top_k,
@@ -189,7 +194,8 @@ class Reranker:
         degraded = consecutive >= 3
         if degraded:
             logger.warning(
-                "Reranker degraded for %d consecutive runs — auto-disabling.",
+                "Reranker degraded for %d consecutive runs — marked degraded. "
+                "The retrieve path warns about it; --force-rerank overrides.",
                 consecutive,
             )
 

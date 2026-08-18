@@ -625,11 +625,15 @@ class Gateway:
             env_key = key_to_env(provider)
             info = self._resolve_provider_info(slot_name)
             custom_env = info.env_key if info is not None else None
-            has_key = bool(
-                self._auth.get(provider)
-                or (env_key and os.environ.get(env_key))
-                or (custom_env and os.environ.get(custom_env))
-            )
+            if info is not None and (info.is_local or not info.auth_required):
+                # Local/keyless providers (e.g. ollama) do not need an API key.
+                has_key = True
+            else:
+                has_key = bool(
+                    self._auth.get(provider)
+                    or (env_key and os.environ.get(env_key))
+                    or (custom_env and os.environ.get(custom_env))
+                )
             if not has_key:
                 result[slot_name] = {"status": "missing_api_key", "provider": provider}
             else:

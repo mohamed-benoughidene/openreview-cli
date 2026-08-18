@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
+import pytest
+
 from openreview_cli.retrieval.models import RetrievalResult
 from openreview_cli.retrieval.rerank import Reranker
 
@@ -22,7 +24,7 @@ class TestRerankerInit:
     def test_init_default_model(self) -> None:
         mock_gateway = MagicMock()
         reranker = Reranker(mock_gateway)
-        assert reranker.model_id == "lightrag-cross-encoder"
+        assert reranker.model_id == "qwen3-reranker-0.6b"
 
     def test_init_without_gateway(self) -> None:
         reranker = Reranker(None)
@@ -84,6 +86,45 @@ class TestRerankerRerank:
         assert results[0].rerank_score >= results[1].rerank_score
         # Method should indicate reranker was used
         assert all(r.method == "hybrid+rerank" for r in results)
+
+    def test_rerank_uses_reranking_slot(self) -> None:
+        """The gateway must be called with the 'reranking' slot, not the model id (B3)."""
+        mock_gateway = MagicMock()
+        mock_gateway.rerank.return_value = [
+            {"score": 0.9, "index": 0},
+            {"score": 0.7, "index": 1},
+        ]
+
+        reranker = Reranker(mock_gateway, model_id="test-cross-encoder")
+        candidates = [
+            RetrievalResult(
+                chunk_id="c1",
+                text="text one",
+                clause_heading="H1",
+                clause_level=0,
+                hierarchy_chain=["H1"],
+                parent_chunk_id=None,
+                score=0.3,
+                method="hybrid",
+            ),
+            RetrievalResult(
+                chunk_id="c2",
+                text="text two",
+                clause_heading="H2",
+                clause_level=0,
+                hierarchy_chain=["H2"],
+                parent_chunk_id=None,
+                score=0.6,
+                method="hybrid",
+            ),
+        ]
+
+        reranker.rerank("test query", candidates, top_k=2)
+
+        mock_gateway.rerank.assert_called_once()
+        args = mock_gateway.rerank.call_args[0]
+        assert args[0] == "reranking"
+        assert args[0] != "test-cross-encoder"
 
     def test_rerank_empty_candidates(self) -> None:
         mock_gateway = MagicMock()
@@ -384,3 +425,57 @@ class TestConsecutiveDegradation:
 
         assert result["degraded"] is True
         assert result["consecutive_degradations"] >= 3
+
+    def test_validate_logs_degraded_without_claiming_disable(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """validate() logs the degraded flag truthfully (reports, does not disable)."""
+        from unittest.mock import MagicMock
+
+        from openreview_cli.retrieval.rerank import Reranker
+
+        db_path = tmp_path / "test_degraded_log.db"
+        from openreview_cli.retrieval.storage import RetrievalStorage
+
+        storage = RetrievalStorage(db_path)
+        storage.create_schema()
+
+        storage.conn.execute(
+            "INSERT INTO index_meta (document_id, document_path, chunk_count, method) "
+            "VALUES ('test-doc', '/tmp/test.ndax', 2, 'sparse')"
+        )
+        storage.conn.execute(
+            "INSERT INTO chunks (chunk_id, document_id, text, clause_heading, "
+            "clause_level, heading_chain, char_start, char_end) "
+            "VALUES ('c1', 'test-doc', 'confidential information text', "
+            "'Confidentiality', 0, '[\"Confidentiality\"]', 0, 30)"
+        )
+        storage.conn.execute(
+            "INSERT INTO chunks (chunk_id, document_id, text, clause_heading, "
+            "clause_level, heading_chain, char_start, char_end) "
+            "VALUES ('c2', 'test-doc', 'indemnification liability text', "
+            "'Indemnification', 0, '[\"Indemnification\"]', 31, 70)"
+        )
+        storage.conn.commit()
+
+        mock_gateway = MagicMock()
+        mock_gateway.rerank.return_value = [
+            {"score": 0.1, "index": 0},
+            {"score": 0.05, "index": 1},
+        ]
+        mock_storage = MagicMock(wraps=storage)
+        mock_storage.search_fts.return_value = [
+            ("c1", -2.0),
+            ("c2", -1.5),
+        ]
+        mock_storage.load_chunk.side_effect = storage.load_chunk
+
+        reranker = Reranker(mock_gateway, model_id="test-cross-encoder")
+        with caplog.at_level("WARNING", logger="openreview_cli.retrieval.rerank"):
+            for _i in range(3):
+                reranker.validate(mock_storage)
+
+        # The log must not claim an action (auto-disable) the method doesn't take.
+        assert any("auto-disabling" in rec.message for rec in caplog.records) is False
+        # It must state the flag truthfully instead.
+        assert any("marked degraded" in rec.message for rec in caplog.records) is True

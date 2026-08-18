@@ -102,7 +102,8 @@
                 "embedding": true,
                 "reasoning": true,
                 "context_window": 32768,
-                "tool_call": true
+                "tool_call": true,
+                "rerank": true
             },
             "models": {
                 "qwen3:8b": {
@@ -188,7 +189,8 @@
                 "embedding": true,
                 "reasoning": true,
                 "context_window": 128000,
-                "tool_call": true
+                "tool_call": true,
+                "rerank": true
             },
             "models": {
                 "command-r-plus": {
@@ -326,7 +328,7 @@
                     "recommended": true,
                     "status": "active"
                 },
-                "rerank-2.5": {"slots": ["rerank"], "recommended": true, "status": "active"}
+                "rerank-2.5": {"slots": ["reranking"], "recommended": true, "status": "active"}
             }
         },
         "moonshot": {

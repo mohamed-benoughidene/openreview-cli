@@ -97,6 +97,7 @@ def run_comparison(
     extraction_model: str = "extraction",
     qa_model: str | None = None,
     no_pii: bool = False,
+    allow_partial_pii: bool = False,
     verbose: bool = False,
     confidence_threshold: float = 0.7,
     align_only: bool = False,
@@ -163,6 +164,7 @@ def run_comparison(
         extraction_model,
         qa_model,
         no_pii=no_pii,
+        allow_partial_pii=allow_partial_pii,
         verbose=verbose,
         align_only=align_only,
         grounding_mode=grounding_mode,
@@ -177,6 +179,7 @@ def run_comparison(
         extraction_model,
         qa_model,
         no_pii=no_pii,
+        allow_partial_pii=allow_partial_pii,
         verbose=verbose,
         align_only=align_only,
         grounding_mode=grounding_mode,
@@ -290,6 +293,7 @@ def _process_document(
     extraction_model: str,
     qa_model: str,
     no_pii: bool = False,
+    allow_partial_pii: bool = False,
     verbose: bool = False,
     align_only: bool = False,
     grounding_mode: str | None = None,
@@ -301,6 +305,13 @@ def _process_document(
     doc_path_obj = Path(doc_path)
     doc, clauses = _parse_document(doc_path)
 
+    # Strip PII before any LLM call (Privacy First). align_only makes no LLM
+    # calls, so no strip is needed there. --no-pii opts out explicitly.
+    if not no_pii and not align_only:
+        from openreview_cli.pii import strip_pii_clauses
+
+        clauses, _ = strip_pii_clauses(clauses, doc, allow_partial=allow_partial_pii)
+
     assessments: list[ClauseAssessment] = []
 
     if align_only:
@@ -309,7 +320,7 @@ def _process_document(
             filename=doc_path_obj.name,
             page_count=getattr(doc, "page_count", 0) or 0,
             clause_count=len(clauses),
-            pii_stripped=not no_pii,
+            pii_stripped=False,  # align-only performs no strip and no LLM egress
             parsed_at=datetime.now(UTC),
         )
         return doc_meta, clauses, assessments

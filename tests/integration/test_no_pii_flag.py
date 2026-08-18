@@ -295,7 +295,12 @@ class TestReviewSubcommandPii:
 
 
 class TestCompareSubcommandPii:
-    """T064: --no-pii behavior in compare subcommand."""
+    """T064: --no-pii behavior in compare subcommand (CLI wiring).
+
+    The strip-called/not-called assertions live at the unit level
+    (tests/unit/test_bilateral_pii_strip.py). Here we only verify the
+    flag reaches run_comparison and the command exits cleanly.
+    """
 
     @patch("openreview_cli.bilateral.run_comparison")
     def test_compare_runs_without_no_pii(
@@ -315,7 +320,7 @@ class TestCompareSubcommandPii:
         self,
         mock_run: MagicMock,
     ) -> None:
-        """compare subcommand runs with --no-pii."""
+        """compare subcommand runs with --no-pii; flag is forwarded."""
         mock_run.return_value = _make_comparison_report(pii_stripped=False)
         result = runner.invoke(
             app,
@@ -329,5 +334,26 @@ class TestCompareSubcommandPii:
         )
         assert result.exit_code == 0
         mock_run.assert_called_once()
-        # Bilateral does not strip PII; flag only affects metadata
+        # --no-pii is forwarded to run_comparison, which skips stripping.
         assert mock_run.call_args[1].get("no_pii") is True
+
+    @patch("openreview_cli.bilateral.run_comparison")
+    def test_compare_with_allow_partial_pii_forwards_flag(
+        self,
+        mock_run: MagicMock,
+    ) -> None:
+        """--allow-partial-pii is forwarded to run_comparison."""
+        mock_run.return_value = _make_comparison_report(pii_stripped=True)
+        result = runner.invoke(
+            app,
+            [
+                "precheck",
+                "compare",
+                "--allow-partial-pii",
+                SIMPLE_CONTRACT,
+                SIMPLE_CONTRACT,
+            ],
+        )
+        assert result.exit_code == 0
+        mock_run.assert_called_once()
+        assert mock_run.call_args[1].get("allow_partial_pii") is True
