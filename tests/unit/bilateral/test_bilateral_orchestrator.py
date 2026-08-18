@@ -58,6 +58,20 @@ def make_clause(
 class TestRunComparison:
     """Tests for the run_comparison orchestrator."""
 
+    @pytest.fixture(autouse=True)
+    def _neutralize_pii(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Pass clauses through unchanged so orchestration tests skip real PII.
+
+        _process_document now strips PII before inference; these tests mock
+        _parse_document with a bare object() lacking source_path and are about
+        pipeline ordering, not stripping. strip_pii_clauses behavior is covered
+        by tests/unit/test_bilateral_pii_strip.py.
+        """
+        monkeypatch.setattr(
+            "openreview_cli.pii.strip_pii_clauses",
+            lambda clauses, doc, **kwargs: (clauses, object()),
+        )
+
     def test_full_pipeline_returns_comparison_report(
         self, monkeypatch: pytest.MonkeyPatch, sample_playbook: Playbook
     ) -> None:
