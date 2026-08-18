@@ -15,8 +15,14 @@ openreview-cli is a local-first, privacy-first contract review automation tool t
 - **Local-first by default:** every slot defaults to local Ollama (`qwen3` reasoning, `nomic-embed-text` embeddings). Sub in any local model per slot  `openreview config set gateway.reasoning.primary ollama/<model>`  or opt a slot into the cloud. Cloud providers are opt-in per slot.
 - **Multi-agent review pipeline:** extraction → QA verification → citation grounding, not one monolithic prompt.
 - **21 contract-type modes** with bundled 3-position playbooks (Preferred / Acceptable / Walkaway).
-- **Dual human/agent interface:** Typer CLI + Textual TUI for humans; Python API + JSON output for agents.
+- **Dual human/agent interface:** Typer CLI + Textual TUI for humans; Python API + JSON output for agents; plus an agent routing skill (`skill/SKILL.md`) for intent-to-command mapping.
 - **Spec-driven development:** 33 specs, all tracked in `specs/`.
+
+## Agent skill
+
+A project-local agent skill (`skill/SKILL.md`) maps an AI agent's intent to the right `openreview` command: review memos, bilateral comparison, retrieval over indexed chunks, negotiation analysis, gateway/playbook/PII management, privacy-tier config, and report export. It is a routing layer with 10 capabilities and 12 command-selection rules, and it disambiguates from the unrelated openreview.net academic platform.
+
+Full routing rules and worked examples: [skill/SKILL.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/skill/SKILL.md).
 
 ## Quickstart
 
@@ -190,7 +196,7 @@ Measured against public benchmarks: 90.9% F1 on contract clause review (12 label
 
 **What can AI agents do with it?**
 
-Every module is independently importable as a Python library (`from openreview_cli.parsing.stream import parse_document`, `from openreview_cli.review.extraction import extract_clause`). The CLI supports `--format json` and `--output` for structured output. The benchmark runner (`BenchmarkRunner`) and pipeline (`run_review`) are Python-callable with typed return values.
+Every module is independently importable as a Python library (`from openreview_cli.parsing.stream import parse_document`, `from openreview_cli.review.extraction import extract_clause`). The CLI supports `--format json` and `--output` for structured output. The benchmark runner (`BenchmarkRunner`) and pipeline (`run_review`) are Python-callable with typed return values. For intent-to-command routing (not raw library calls), use the agent skill at [skill/SKILL.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/skill/SKILL.md).
 
 **What file formats are supported?**
 
