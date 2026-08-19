@@ -35,7 +35,6 @@ def run_review(  # noqa: PLR0912
     confidence_threshold: float = 0.7,
     mode_threshold_overrides: dict[str, float] | None = None,
     mode: str = "precheck",
-    dual_path: bool = False,
     session_id: str | None = None,
     allow_partial_pii: bool = False,
 ) -> list[ReviewReport]:
@@ -71,9 +70,6 @@ def run_review(  # noqa: PLR0912
         Per-mode confidence threshold overrides, e.g. ``{"leasecheck": 0.85}``.
         When the current mode has an override, it takes precedence over
         *confidence_threshold*.
-    dual_path : bool
-        When ``True``, use dual-path execution: call providers in parallel
-        and return first success.  Default ``False`` (sequential).
     session_id : str | None
         Optional caller-provided session identifier for cost attribution.
         When a single document is processed, this ID is used directly.
@@ -188,6 +184,26 @@ def run_review(  # noqa: PLR0912
     return reports
 
 
+def _configured_providers(*slots: str) -> list[str]:
+    """Return the ordered primary provider strings for the given model slots.
+
+    Providers are the bare ``provider/model`` strings configured as each slot's
+    primary in ``config.yml``, de-duplicated preserving order. Empty list when
+    no config is present (recovery then reports "No providers configured").
+    """
+    from openreview_cli.config.loader import load_config
+    from openreview_cli.config.paths import get_config_dir
+
+    config = load_config(get_config_dir() / "config.yml")
+    models = config.get("gateway", {}).get("models", {})
+    providers: list[str] = []
+    for slot in slots:
+        primary = models.get(slot, {}).get("primary")
+        if primary and primary not in providers:
+            providers.append(primary)
+    return providers
+
+
 def _run_review_doc_pipeline(
     doc_path: str | Path,
     playbook: Any,
@@ -220,6 +236,11 @@ def _run_review_doc_pipeline(
     """
     from openreview_cli.review.pipeline import ReviewStage
 
+    provider_list = _configured_providers(extraction_model, qa_model)
+    from openreview_cli.recovery.coordinator import RecoveryCoordinator
+
+    coordinator = RecoveryCoordinator(provider_list=provider_list)
+
     review_stage = ReviewStage(
         playbook=playbook,
         extraction_model=extraction_model,
@@ -230,6 +251,8 @@ def _run_review_doc_pipeline(
         verbose=verbose,
         mode=mode,
         session_id=session_id,
+        recovery_coordinator=coordinator,
+        provider_list=provider_list,
     )
 
     stages: list[Any] = [ParseStage()]
@@ -247,7 +270,11 @@ def _run_review_doc_pipeline(
                 file=sys.stderr,
             )
 
-    pipeline = Pipeline(stages=stages, progress_callback=_progress)
+    pipeline = Pipeline(
+        stages=stages,
+        progress_callback=_progress,
+        recovery_coordinator=coordinator,
+    )
 
     pipeline_ctx: dict[str, Any] = {"document_path": str(doc_path)}
     try:

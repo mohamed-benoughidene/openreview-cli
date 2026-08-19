@@ -311,6 +311,13 @@ def _process_document(
         from openreview_cli.pii import strip_pii_clauses
 
         clauses, _ = strip_pii_clauses(clauses, doc, allow_partial=allow_partial_pii)
+        from openreview_cli.gateway.router import mark_pii_available
+
+        mark_pii_available()
+    else:
+        from openreview_cli.gateway.router import reset_pii_available
+
+        reset_pii_available()
 
     assessments: list[ClauseAssessment] = []
 

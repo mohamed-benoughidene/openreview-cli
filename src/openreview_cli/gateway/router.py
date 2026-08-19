@@ -26,6 +26,8 @@ from openreview_cli.gateway.errors import (
     ConnectionError,
     EmptyMessagesError,
     ModelNotFoundError,
+    NoMatchingProviderError,
+    PIIUnavailableError,
     RateLimitError,
     SlotNotConfiguredError,
 )
@@ -37,6 +39,7 @@ from openreview_cli.gateway.models import (
 )
 from openreview_cli.gateway.redaction import RedactingFilter, redact_key
 from openreview_cli.gateway.registry import load_registry
+from openreview_cli.gateway.tier_config import TierConfig
 from openreview_cli.slots import VALID_SLOTS
 from openreview_cli.storage.costs import check_daily_limit, check_session_limit
 
@@ -52,6 +55,45 @@ def clear_seeded_env_vars() -> None:
     for name in list(_env_vars_seeded):
         os.environ.pop(name, None)
     _env_vars_seeded.clear()
+
+
+# D-10: process-wide count of cloud provider calls actually dispatched, so the
+# privacy footer can report truthfully (maximum blocks cloud by enforcement).
+_total_cloud_calls = 0
+
+
+def get_total_cloud_calls() -> int:
+    """Return the number of cloud provider calls dispatched in this process."""
+    return _total_cloud_calls
+
+
+def reset_total_cloud_calls() -> None:
+    """Reset the process-wide cloud call counter (test isolation)."""
+    global _total_cloud_calls  # noqa: PLW0603 — module-level counter by design
+    _total_cloud_calls = 0
+
+
+# PII-before-egress gate (spec 020 FR-03/FR-04): a process-wide flag set after a
+# successful PII strip and read by _enforce_tier. It is per-operation evidence,
+# not an "ever stripped" cache — callers reset it at operation start.
+_pii_available = False
+
+
+def mark_pii_available() -> None:
+    """Record that a PII strip succeeded in this process (cloud egress allowed)."""
+    global _pii_available  # noqa: PLW0603 — module-level flag by design
+    _pii_available = True
+
+
+def reset_pii_available() -> None:
+    """Clear the PII-availability flag (operation start / no-pii / test isolation)."""
+    global _pii_available  # noqa: PLW0603 — module-level flag by design
+    _pii_available = False
+
+
+def pii_available() -> bool:
+    """Return whether a PII strip succeeded in this process."""
+    return _pii_available
 
 
 def classify_provider(model: ProviderInfo) -> str:
@@ -126,6 +168,7 @@ class Gateway:
         self._auth = load_auth(self._auth_path)
         self._cost_tracker = CostTracker(self._data_path)
         self._cloud_calls_made = 0
+        self._tier_config = TierConfig.from_config(self._config)
 
         _filter = RedactingFilter(_REDACT_PATTERNS)
         logging.getLogger().addFilter(_filter)
@@ -186,6 +229,56 @@ class Gateway:
         provider = cfg["primary"].split("/")[0]
         registry = load_registry()  # new registry source, not ModelRegistry.load()
         return registry.get(provider)
+
+    def _enforce_tier(self, slot: str, call_type: str) -> None:
+        """Block cloud dispatch that the configured privacy tier forbids.
+
+        ``call_type`` is one of "llm" (chat/chat_stream), "embedding" (embed),
+        or "reranking" (rerank). Local providers are always allowed; cloud
+        providers are gated by the tier's local-only rules before any network.
+        """
+        tier_config = getattr(self, "_tier_config", None)
+        if tier_config is None:
+            return
+        info = self._resolve_provider_info(slot)
+        if info is None:
+            return
+        try:
+            klass = classify_provider(info)
+        except ValueError:
+            # Unclassifiable non-local provider (e.g. bedrock/vertex with
+            # base_url=None). Fail closed: if the tier requires a local
+            # provider, block it rather than allowing a possible cloud call.
+            klass = "cloud"
+        if klass != "cloud":
+            return
+
+        if call_type in ("embedding", "reranking"):
+            local_only = tier_config.embeddings_local_only
+        elif call_type == "llm":
+            local_only = tier_config.llm_local_only
+        else:
+            return
+
+        if local_only:
+            tier = tier_config.tier.upper()
+            raise NoMatchingProviderError(
+                f"{tier} privacy tier requires a local provider for {call_type}. "
+                f"No local provider configured for slot '{slot}'. Install Ollama and "
+                "configure a local model, or change privacy tier to 'balanced' or "
+                "'performance'."
+            )
+
+        # PII-before-egress gate (spec 020 FR-03/FR-04/SC-02/SC-03): a cloud
+        # call that would otherwise proceed under balanced/performance requires
+        # a successful PII strip in this process. Fail closed before any network.
+        if tier_config.pii_required_before_cloud and not _pii_available:
+            raise PIIUnavailableError(
+                f"{tier_config.tier.title()} privacy tier requires PII stripping "
+                "before cloud calls. No successful strip was recorded for this "
+                "operation. Run without --no-pii / --allow-partial-pii, or use a "
+                "local provider."
+            )
 
     def _apply_provider_credentials(self, info: ProviderInfo, kwargs: dict[str, Any]) -> None:
         """Map each declared CredentialField to its litellm kwarg.
@@ -415,6 +508,9 @@ class Gateway:
         requirement: CapabilityRequirement | None = None,
         **kwargs: Any,
     ) -> str:
+        if slot not in VALID_SLOTS:
+            raise SlotNotConfiguredError(f"Invalid slot '{slot}'")
+        self._enforce_tier(slot, "llm")
         messages, provider_prefix = self._prepare_chat(slot, messages, session_id, requirement)
         call_kwargs = self._get_litellm_kwargs(slot)
         call_kwargs["messages"] = messages
@@ -442,6 +538,9 @@ class Gateway:
         **kwargs: Any,
     ) -> Iterator[StreamingOutputEvent]:
         """FR-6: streaming chat with dual timeouts (15s connect, 45s idle)."""
+        if slot not in VALID_SLOTS:
+            raise SlotNotConfiguredError(f"Invalid slot '{slot}'")
+        self._enforce_tier(slot, "llm")
         cleaned_messages, provider_prefix = self._prepare_chat(
             slot, messages, session_id, requirement
         )
@@ -512,6 +611,7 @@ class Gateway:
     ) -> list[list[float]]:
         if slot not in VALID_SLOTS:
             raise SlotNotConfiguredError(f"Invalid slot '{slot}'")
+        self._enforce_tier(slot, "embedding")
         if requirement is not None:
             info = self._resolve_provider_info(slot)
             if info is not None:
@@ -550,6 +650,7 @@ class Gateway:
     ) -> list[dict[str, Any]]:
         if slot not in VALID_SLOTS:
             raise SlotNotConfiguredError(f"Invalid slot '{slot}'")
+        self._enforce_tier(slot, "reranking")
         if requirement is not None:
             info = self._resolve_provider_info(slot)
             if info is not None:
@@ -606,9 +707,13 @@ class Gateway:
             return
         if klass == "cloud":
             self._cloud_calls_made += 1
+            global _total_cloud_calls  # noqa: PLW0603 — module-level counter by design
+            _total_cloud_calls += 1
 
     def privacy_report(self) -> PrivacyTierReport:
-        return PrivacyTierReport(cloud_calls_made=self._cloud_calls_made)
+        tier_config = getattr(self, "_tier_config", None)
+        tier = tier_config.tier if tier_config is not None else "maximum"
+        return PrivacyTierReport(tier=tier, cloud_calls_made=self._cloud_calls_made)
 
     def get_cost(self, session_id: str) -> dict[str, Any]:
         return dict(self._cost_tracker.get_session_cost(session_id))

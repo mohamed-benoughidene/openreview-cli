@@ -328,3 +328,33 @@ def test_detect_all_pages_emits_progress_via_callback(
     )
     assert events, "callback never invoked"
     assert events[-1][1] <= events[-1][2]
+
+
+class TestDetectOnPageAllowlist:
+    """detect_on_page restricts analysis to the 11 ground-truth entity types."""
+
+    def test_analyze_called_with_entities_allowlist(self, monkeypatch: MonkeyPatch) -> None:
+        engine = PiiEngine(threshold=0.7)
+        captured: dict[str, object] = {}
+
+        class _RecordingAnalyzer:
+            def analyze(self, **kwargs: object) -> list[object]:
+                captured.update(kwargs)
+                return []
+
+        monkeypatch.setattr(engine, "_ensure_analyzer", _RecordingAnalyzer)
+        engine.detect_on_page("Some contract text with $5,000.")
+
+        assert captured["entities"] == [
+            "PERSON",
+            "ORGANIZATION",
+            "LOCATION",
+            "DATE_TIME",
+            "EMAIL_ADDRESS",
+            "PHONE_NUMBER",
+            "AMOUNT",
+            "TAX_ID",
+            "ACCT",
+            "ID_DOCUMENT",
+            "REG_NUMBER",
+        ]

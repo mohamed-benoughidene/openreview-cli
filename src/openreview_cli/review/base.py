@@ -76,6 +76,9 @@ class ReviewCommand:
                 threshold=threshold,
                 encryption_key=self._get_encryption_key(),
             )
+            from openreview_cli.gateway.router import mark_pii_available
+
+            mark_pii_available()
             result_path.write_text(pii_result.stripped_text)
 
             cache.put(
@@ -97,6 +100,9 @@ class ReviewCommand:
         else:
             clauses, document = self._parse_document()
             raw_text = " ".join(c.text for c in clauses)
+            from openreview_cli.gateway.router import reset_pii_available
+
+            reset_pii_available()
             result_path.write_text(raw_text)
             logger.warning("PII stripping disabled. Raw text processed.")
             return {
@@ -111,6 +117,7 @@ class ReviewCommand:
 
     def _build_privacy_report(self) -> PrivacyTierReport:
         """Build a PrivacyTierReport from config for tier visibility."""
+        from openreview_cli.gateway.router import get_total_cloud_calls
         from openreview_cli.gateway.tier_config import TierConfig
         from openreview_cli.gateway.tier_tracker import TierTracker
 
@@ -122,7 +129,7 @@ class ReviewCommand:
         if msg:
             logger.info(msg)
 
-        return PrivacyTierReport(tier=tier_cfg.tier)
+        return PrivacyTierReport(tier=tier_cfg.tier, cloud_calls_made=get_total_cloud_calls())
 
     def _compute_hash(self) -> str:
         return hashlib.sha256(self._document_path.read_bytes()).hexdigest()

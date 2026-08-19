@@ -59,7 +59,7 @@ class PdfParser:
             password = os.environ.get("OPENREVIEW_PDF_PASSWORD")
             if password:
                 try:
-                    doc.authenticate(password)
+                    authed = doc.authenticate(password)
                 except Exception:
                     doc.close()
                     raise ParseError(
@@ -68,12 +68,20 @@ class PdfParser:
                         message="This contract is password-protected.",
                         action="The password in OPENREVIEW_PDF_PASSWORD was incorrect. Set the correct password or provide an unlocked copy.",
                     ) from None
+                if not authed:
+                    doc.close()
+                    raise ParseError(
+                        exit_code=8,
+                        category="password_protected",
+                        message="This contract is password-protected.",
+                        action="The password in OPENREVIEW_PDF_PASSWORD was incorrect. Set the correct password or provide an unlocked copy.",
+                    )
             elif sys.stdin.isatty():
                 import getpass
 
                 try:
                     password = getpass.getpass("PDF password: ")
-                    doc.authenticate(password)
+                    authed = doc.authenticate(password)
                 except Exception:
                     doc.close()
                     raise ParseError(
@@ -82,6 +90,14 @@ class PdfParser:
                         message="This contract is password-protected.",
                         action="Incorrect password. Try again or provide an unlocked copy.",
                     ) from None
+                if not authed:
+                    doc.close()
+                    raise ParseError(
+                        exit_code=8,
+                        category="password_protected",
+                        message="This contract is password-protected.",
+                        action="Incorrect password. Try again or provide an unlocked copy.",
+                    )
             else:
                 doc.close()
                 raise ParseError(

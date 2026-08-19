@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import logging
 from collections.abc import Callable
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from openreview_cli.pipeline.base import Stage
@@ -12,6 +15,8 @@ from openreview_cli.pipeline.progress import ProgressEvent
 
 if TYPE_CHECKING:
     from openreview_cli.pipeline.base import PipelineContext
+
+logger = logging.getLogger(__name__)
 
 
 class StripStage(Stage):
@@ -47,7 +52,10 @@ class StripStage(Stage):
         clauses = ctx["clauses"]
         document = ctx.get("document")  # optional; may be None
 
+        from openreview_cli.gateway.router import reset_pii_available
+
         if self.no_pii:
+            reset_pii_available()
             return {"stripped_clauses": list(clauses)}
 
         from openreview_cli.pii import strip_pii_clauses
@@ -68,13 +76,18 @@ class StripStage(Stage):
                     )
 
             # ponytail: synchronous call wrapped in thread pool
-            stripped, _pii_result = await asyncio.to_thread(
+            stripped, pii_result = await asyncio.to_thread(
                 strip_pii_clauses,
                 clauses,
                 document,
                 allow_partial=self.allow_partial,
                 progress_callback=_pii_cb,
             )
+
+            from openreview_cli.gateway.router import mark_pii_available
+
+            mark_pii_available()
+            self._persist_pii(pii_result, ctx)
         except PartialProcessingError as exc:
             from openreview_cli.pipeline.errors import CriticalStageError
 
@@ -87,3 +100,47 @@ class StripStage(Stage):
             raise StageError(f"StripStage failed: {exc}") from exc
 
         return {"stripped_clauses": stripped}
+
+    def _persist_pii(self, pii_result: Any, ctx: PipelineContext) -> None:
+        """Persist a PII result to the governance lifecycle (cache + audit trail).
+
+        Mirrors the legacy ``ReviewCommand.run`` persistence but also writes the
+        ``pii_audit_trail`` row that ``pii list`` reads for ``entity_count``.
+        Persistence failures are non-fatal: PII stripping must not be blocked
+        by governance write errors.
+        """
+        try:
+            from openreview_cli.config.loader import load_config
+            from openreview_cli.config.paths import get_config_dir, get_data_dir
+            from openreview_cli.pii.config_hash import compute_config_hash
+            from openreview_cli.pii.mapping import ensure_encryption_key
+            from openreview_cli.pii.persist import persist_pii_result
+
+            document_path = ctx.get("document_path")
+            if not document_path:
+                return
+
+            doc_path = Path(document_path)
+            if not doc_path.exists():
+                return
+
+            document_hash = hashlib.sha256(doc_path.read_bytes()).hexdigest()
+
+            config_path = get_config_dir() / "config.yml"
+            config = load_config(config_path)
+            config_hash = compute_config_hash(config.get("privacy", {}))
+            encryption_key = ensure_encryption_key(config, config_path)
+
+            review_dir = get_data_dir() / "reviews" / document_hash[:12]
+            db_path = get_data_dir() / "openreview.db"
+
+            persist_pii_result(
+                db_path,
+                document_hash=document_hash,
+                config_hash=config_hash,
+                pii_result=pii_result,
+                review_dir=review_dir,
+                encryption_key=encryption_key,
+            )
+        except Exception as exc:
+            logger.warning("PII persistence failed (non-fatal): %s", exc)

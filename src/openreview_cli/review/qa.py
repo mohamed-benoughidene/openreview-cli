@@ -24,6 +24,9 @@ def verify_assessment(
     category: Category,
     qa_model: str,
     session_id: str | None = None,
+    coordinator: Any = None,
+    recovery_ctx: Any = None,
+    provider_list: list[str] | None = None,
 ) -> ClauseAssessment:
     """Run QA verification on a single clause assessment.
 
@@ -38,6 +41,12 @@ def verify_assessment(
         The playbook category used for extraction.
     qa_model : str
         Model slot name for QA verification.
+    coordinator:
+        Optional recovery coordinator for the gateway recovery seam.
+    recovery_ctx:
+        Optional recovery context for the gateway recovery seam.
+    provider_list:
+        Optional ordered provider list for provider fallback.
 
     Returns
     -------
@@ -65,6 +74,9 @@ def verify_assessment(
             messages,
             requirement=CapabilityRequirement(capability="reasoning"),
             session_id=session_id,
+            coordinator=coordinator,
+            recovery_ctx=recovery_ctx,
+            provider_list=provider_list,
         )
         parsed = _parse_qa_response(raw_response)
     except Exception as exc:

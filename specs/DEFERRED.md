@@ -1523,14 +1523,14 @@ boundary that persistent state would cross.
 
 ---
 
-## D-32: Full-dual-path / Multi-provider Parallel Execution ✅ RESOLVED
+## D-32: Full-dual-path / Multi-provider Parallel Execution ⛔ NON-GOAL
 
 | Field | Value |
 |-------|-------|
 | **Deferred from** | spec 019, §5 Non-Goals |
 | **Deferred at** | 2026-07-05 |
 | **Trigger** | Explicitly out of scope — fallback is sequential |
-| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
+| **Status** | ⛔ **Non-goal — closed as out of scope** (spec 019 §5). The earlier "RESOLVED" claim was incorrect: a partial parallel-first-success artifact (`--dual-path` flag + `provider_fallback_dual`) was built but never wired into production and is removed as of 2026-08-19. Parallel execution remains a spec 019 non-goal. |
 
 ### Description
 
@@ -1549,6 +1549,14 @@ would:
 This is speculative — the current pipeline has no comparison-of-outputs
 requirement, and the latency/bandwidth cost of parallel calls on a 2-core
 machine may outweigh the benefit.
+
+The status previously claimed this was resolved, but the implemented
+artifact was only parallel-first-success (`provider_fallback_dual`), not
+the compare-results/winner-selection semantics described above. That
+partial artifact never ran in production, contradicts spec 019 §5
+("Fallback is sequential: one provider at a time, in user-specified
+order"), and is removed. A future full-dual-path design (parallel +
+result comparison) would require a spec 019 amendment first.
 
 ### What would need to change to unblock
 

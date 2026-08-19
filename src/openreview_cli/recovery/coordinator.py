@@ -63,22 +63,29 @@ class RecoveryCoordinator:
         config: RecoveryConfig | None = None,
         memory_budget_bytes: int = 104_857_600,
         db_path: str | None = None,
+        provider_list: list[str] | None = None,
     ) -> None:
         self._config = config or RecoveryConfig()
         self._memory_budget_bytes = memory_budget_bytes
         self._db_path = db_path
+        self._provider_list = provider_list
         self._pipeline_id = uuid.uuid4().hex
 
     # -- Public API called by pipeline runner --
 
     def create_context(self, provider_list: list[str] | None = None) -> RecoveryContext:
-        """Create a RecoveryContext with the coordinator's config injected."""
+        """Create a RecoveryContext with the coordinator's config injected.
+
+        The effective provider list is ``provider_list`` if given, else the
+        coordinator-level ``provider_list`` configured at construction time
+        (else an empty list).
+        """
         return RecoveryContext(
             memory_budget_bytes=self._memory_budget_bytes,
             memory_threshold_bytes=int(
                 self._memory_budget_bytes * self._config.memory_threshold_pct / 100.0
             ),
-            provider_list=provider_list or [],
+            provider_list=list(provider_list or self._provider_list or []),
             saved_results={},
         )
 

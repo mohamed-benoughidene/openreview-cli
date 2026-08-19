@@ -1,12 +1,16 @@
 """PII accuracy integration test (T010).
 
-Runs seeded corpus via benchmark runner, asserts recall ≥ 0.95
-and precision ≥ 0.85.
+Runs seeded corpus via benchmark runner, asserts the authoritative
+targets from specs/004-complete-pii-stripping FR-008/FR-009:
+recall ≥ 0.95 and precision ≥ 0.95.
+
+NOTE (R8 / D-8-accuracy): this gate is EXPECTED to fail against the
+current baseline (measured ~52.8% recall / ~56.3% precision). It is the
+regression gate that exposes the spec-gap; detection remediation or a
+spec amendment is required to make it pass.
 """
 
 from pathlib import Path
-
-import pytest
 
 from openreview_cli.benchmark.models import BenchmarkConfig
 from openreview_cli.benchmark.runner import BenchmarkRunner
@@ -24,12 +28,11 @@ def _mock_pii_engine(text: str) -> list[dict[str, str]]:
     return known_entities
 
 
-@pytest.mark.skip(reason="Requires spacy en_core_web_lg model. Run manually.")
 class TestPiiAccuracyIntegration:
     """Integration tests for PII accuracy benchmark.
 
-    These tests require the spacy model to be installed.
-    Run with: UV_PROXY_ENABLED=false uv run pytest -x tests/integration/test_benchmark_pii_accuracy.py
+    These tests require the spacy model to be installed (it is available
+    in this repo's dev environment).
     """
 
     def test_pii_recall_above_threshold(self, fixtures_dir: Path) -> None:
@@ -52,8 +55,8 @@ class TestPiiAccuracyIntegration:
             for ent in entities:
                 results.append(
                     {
-                        "value": ent.text if hasattr(ent, "text") else str(ent),
-                        "type": ent.label if hasattr(ent, "label") else "UNKNOWN",
+                        "value": ent.original_value,
+                        "type": ent.entity_type,
                     }
                 )
             return results
@@ -62,12 +65,12 @@ class TestPiiAccuracyIntegration:
         recall = result.metrics.get("pii_recall")
         precision = result.metrics.get("pii_precision")
 
-        # These assertions match the benchmark script findings
-        # (1,730 entities detected across 30+ documents with 0 false positives)
+        # Authoritative target: specs/004 FR-008 (recall ≥95%) / FR-009
+        # (precision ≥95%). Expected to FAIL at the current baseline.
         assert recall is not None, "pii_recall metric not computed"
         assert precision is not None, "pii_precision metric not computed"
         assert recall.value >= 0.95, f"PII recall {recall.value:.4f} < 0.95"
-        assert precision.value >= 0.85, f"PII precision {precision.value:.4f} < 0.85"
+        assert precision.value >= 0.95, f"PII precision {precision.value:.4f} < 0.95"
 
     def test_pii_returns_per_type_breakdown(self, fixtures_dir: Path) -> None:
         """Assert per-entity-type breakdown is reported."""
@@ -83,8 +86,8 @@ class TestPiiAccuracyIntegration:
             for ent in entities:
                 results.append(
                     {
-                        "value": ent.text if hasattr(ent, "text") else str(ent),
-                        "type": ent.label if hasattr(ent, "label") else "UNKNOWN",
+                        "value": ent.original_value,
+                        "type": ent.entity_type,
                     }
                 )
             return results

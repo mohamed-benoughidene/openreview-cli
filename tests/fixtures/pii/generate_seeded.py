@@ -12,7 +12,7 @@ MANUAL_DIR.mkdir(parents=True, exist_ok=True)
 TEMPLATES = [
     "This Services Agreement is entered into by {party_a} and {party_b}. Representative {name_1} can be reached at {email_1} or {phone_1}. The address is {address_1}. Effective date of birth is {dob_1}. The amount is {amount_1}. Tax ID is {tax_id_1}. Bank account is {acct_1}. Passport ID is {id_1}. Registration number is {reg_1}.",
     "Employment Contract between {party_a} and employee {name_1}. Employee lives at {address_1}. Email: {email_1}, Phone: {phone_1}. Born on {dob_1}. Base salary of {amount_1}. EIN of company: {tax_id_1}. Bank account details: {acct_1}. Driver's License: {id_1}. Company registration: {reg_1}.",
-    "NDAs are signed by {party_a} represented by {name_1} ({email_1}, {phone_1}). The primary office is {address_1}. The contract value is {amount_1}. Registered under {reg_1} with Tax ID {tax_id_1}.",
+    "This Non-Disclosure Agreement is entered into by {party_a} and {party_b}. It is signed by {name_1}, reachable at {email_1} or {phone_1}, whose primary office is {address_1}. Date of birth of the signatory: {dob_1}. The covered transaction has a value of {amount_1}. The disclosing party's tax ID is {tax_id_1}, its bank account is {acct_1}, and the signatory's passport ID is {id_1}. Registration number {reg_1}.",
 ]
 
 

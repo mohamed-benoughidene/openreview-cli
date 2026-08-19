@@ -69,6 +69,19 @@ class PiiEngine:
             results = analyzer.analyze(
                 text=text,
                 language="en",
+                entities=[
+                    "PERSON",
+                    "ORGANIZATION",
+                    "LOCATION",
+                    "DATE_TIME",
+                    "EMAIL_ADDRESS",
+                    "PHONE_NUMBER",
+                    "AMOUNT",
+                    "TAX_ID",
+                    "ACCT",
+                    "ID_DOCUMENT",
+                    "REG_NUMBER",
+                ],
                 score_threshold=threshold,
             )
 

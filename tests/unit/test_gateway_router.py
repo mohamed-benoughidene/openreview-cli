@@ -21,6 +21,15 @@ from openreview_cli.gateway.models import Capability, CapabilityRequirement, Pro
 from openreview_cli.gateway.router import Gateway, classify_provider
 
 
+@pytest.fixture(autouse=True)
+def _mark_pii_available() -> None:
+    """Router tests exercise cloud dispatch under performance tier; the PII
+    gate (spec 020) is tested separately in test_gateway_tier_enforcement."""
+    from openreview_cli.gateway.router import mark_pii_available
+
+    mark_pii_available()
+
+
 class _MockMessage:
     def __init__(self, content: str) -> None:
         self.content = content
@@ -73,6 +82,8 @@ def _gateway(
 
 
 COMMON_CONFIG = """\
+privacy:
+  tier: performance
 gateway:
   models:
     reasoning:

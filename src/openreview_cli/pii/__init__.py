@@ -24,6 +24,7 @@ from openreview_cli.pii.models import (
     PiiError,
     PiiResult,
 )
+from openreview_cli.pii.persist import persist_pii_result, write_audit_trail_row
 from openreview_cli.pii.retention import cleanup_expired, delete_pii_data
 
 __all__ = [
@@ -45,10 +46,12 @@ __all__ = [
     "derive_key",
     "encrypt_pii_mapping",
     "ensure_encryption_key",
+    "persist_pii_result",
     "read_pii_mapping",
     "strip_and_persist",
     "strip_pii",
     "strip_pii_clauses",
+    "write_audit_trail_row",
     "write_pii_audit",
     "write_pii_mapping",
 ]
