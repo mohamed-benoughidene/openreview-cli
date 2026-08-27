@@ -52,6 +52,26 @@ PRIVACY_TIER_STRICT = "strict"
 PRIVACY_TIER_STANDARD = "standard"
 PRIVACY_TIER_NONE = "none"
 
+# Product privacy tier vocabulary (spec 020) → recovery fallback-guard tier.
+_PRODUCT_TO_RECOVERY_TIER: dict[str, str] = {
+    "maximum": PRIVACY_TIER_STRICT,
+    "balanced": PRIVACY_TIER_STANDARD,
+    "performance": PRIVACY_TIER_NONE,
+}
+
+
+def privacy_tier_from_product(tier: str | None) -> str:
+    """Translate a product privacy tier into the recovery fallback-guard tier.
+
+    ``maximum → strict``, ``balanced → standard``, ``performance → none``.
+    Unknown/absent values fail closed to ``strict``, mirroring the product
+    config contract (``PrivacyTier.parse`` coerces invalid/absent values to
+    ``maximum``).
+    """
+    if tier is None:
+        return PRIVACY_TIER_STRICT
+    return _PRODUCT_TO_RECOVERY_TIER.get(tier.strip().lower(), PRIVACY_TIER_STRICT)
+
 
 @dataclass
 class RecoveryEvent:

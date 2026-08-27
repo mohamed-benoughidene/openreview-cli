@@ -12,6 +12,7 @@ from openreview_cli.recovery.models import (
     RecoveryOutcome,
     RecoveryReport,
     classify_error,
+    privacy_tier_from_product,
 )
 
 
@@ -46,6 +47,28 @@ class TestPrivacyTierConstants:
         assert PRIVACY_TIER_STRICT == "strict"
         assert PRIVACY_TIER_STANDARD == "standard"
         assert PRIVACY_TIER_NONE == "none"
+
+
+class TestPrivacyTierTranslation:
+    def test_maximum_to_strict(self) -> None:
+        assert privacy_tier_from_product("maximum") == PRIVACY_TIER_STRICT
+
+    def test_balanced_to_standard(self) -> None:
+        assert privacy_tier_from_product("balanced") == PRIVACY_TIER_STANDARD
+
+    def test_performance_to_none(self) -> None:
+        assert privacy_tier_from_product("performance") == PRIVACY_TIER_NONE
+
+    def test_case_insensitive(self) -> None:
+        assert privacy_tier_from_product("MAXIMUM") == PRIVACY_TIER_STRICT
+        assert privacy_tier_from_product("Balanced") == PRIVACY_TIER_STANDARD
+
+    def test_unknown_product_tier_falls_back_to_strict(self) -> None:
+        # The product config contract (PrivacyTier.parse) coerces invalid/absent
+        # values to "maximum"; this helper mirrors that fail-closed default.
+        assert privacy_tier_from_product("garbage") == PRIVACY_TIER_STRICT
+        assert privacy_tier_from_product("") == PRIVACY_TIER_STRICT
+        assert privacy_tier_from_product(None) == PRIVACY_TIER_STRICT
 
 
 class TestRecoveryEvent:

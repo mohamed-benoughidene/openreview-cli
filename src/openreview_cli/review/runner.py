@@ -237,9 +237,18 @@ def _run_review_doc_pipeline(
     from openreview_cli.review.pipeline import ReviewStage
 
     provider_list = _configured_providers(extraction_model, qa_model)
+
+    from openreview_cli.config.loader import load_config
+    from openreview_cli.config.paths import get_config_dir
+    from openreview_cli.gateway.tier_config import TierConfig
     from openreview_cli.recovery.coordinator import RecoveryCoordinator
 
-    coordinator = RecoveryCoordinator(provider_list=provider_list)
+    tier_config = TierConfig.from_config(load_config(get_config_dir() / "config.yml"))
+
+    coordinator = RecoveryCoordinator(
+        provider_list=provider_list,
+        user_privacy_tier=tier_config.tier,
+    )
 
     review_stage = ReviewStage(
         playbook=playbook,

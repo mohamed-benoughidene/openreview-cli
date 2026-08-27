@@ -6,6 +6,9 @@ import pytest
 
 from openreview_cli.recovery.coordinator import RecoveryCoordinator
 from openreview_cli.recovery.models import (
+    PRIVACY_TIER_NONE,
+    PRIVACY_TIER_STANDARD,
+    PRIVACY_TIER_STRICT,
     RecoveryContext,
     RecoveryEvent,
     RecoveryOutcome,
@@ -18,6 +21,25 @@ def coordinator() -> RecoveryCoordinator:
 
 
 class TestRecoveryCoordinator:
+    def test_create_context_injects_product_tier_translated_to_recovery_tier(self) -> None:
+        """create_context must derive user_privacy_tier from the product tier."""
+        coord = RecoveryCoordinator(user_privacy_tier="maximum")
+        assert coord.create_context().user_privacy_tier == PRIVACY_TIER_STRICT
+
+    def test_create_context_balanced_to_standard(self) -> None:
+        coord = RecoveryCoordinator(user_privacy_tier="balanced")
+        assert coord.create_context().user_privacy_tier == PRIVACY_TIER_STANDARD
+
+    def test_create_context_performance_to_none(self) -> None:
+        coord = RecoveryCoordinator(user_privacy_tier="performance")
+        assert coord.create_context().user_privacy_tier == PRIVACY_TIER_NONE
+
+    def test_create_context_default_is_strict(self) -> None:
+        """No product tier supplied → recovery default (strict), never leaking a
+        non-strict tier."""
+        coord = RecoveryCoordinator()
+        assert coord.create_context().user_privacy_tier == PRIVACY_TIER_STRICT
+
     @pytest.mark.asyncio
     async def test_strategy_selection_transient_to_provider_fallback(
         self, coordinator: RecoveryCoordinator

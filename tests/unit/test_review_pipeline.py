@@ -106,6 +106,136 @@ class TestRunReviewPublicAPI:
         assert isinstance(reports[0], ReviewReport)
 
 
+class TestPrivacyTierThreading:
+    """The product tier must reach RecoveryContext via the runner → coordinator seam."""
+
+    def test_runner_threads_balanced_tier_into_coordinator(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from openreview_cli.pipeline.runner import PipelineReport
+
+        playbook = _make_playbook("tier-test")
+        captured_coordinator: list[Any] = []
+
+        class MockPipeline:
+            def __init__(self, stages: list[Any], **kwargs: Any) -> None:
+                captured_coordinator.append(kwargs["recovery_coordinator"])
+
+            async def run(self, ctx: dict[str, Any]) -> PipelineReport:
+                return PipelineReport()
+
+        monkeypatch.setattr("openreview_cli.review.runner.Pipeline", MockPipeline)
+        monkeypatch.setattr(
+            "openreview_cli.review.runner._configured_providers",
+            lambda *slots: ["openai/gpt-4"],
+        )
+        monkeypatch.setattr(
+            "openreview_cli.config.loader.load_config",
+            lambda path: {"privacy": {"tier": "balanced"}},
+        )
+
+        from openreview_cli.review.runner import _run_review_doc_pipeline
+
+        _run_review_doc_pipeline(
+            doc_path="test.docx",
+            playbook=playbook,
+            playbook_version=None,
+            extraction_model="extraction",
+            qa_model="extraction",
+            no_pii=False,
+            verbose=False,
+            confidence_threshold=0.7,
+        )
+
+        assert len(captured_coordinator) == 1
+        ctx = captured_coordinator[0].create_context()
+        assert ctx.user_privacy_tier == "standard"
+
+    def test_runner_threads_maximum_tier_into_coordinator(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from openreview_cli.pipeline.runner import PipelineReport
+
+        playbook = _make_playbook("tier-test-max")
+        captured_coordinator: list[Any] = []
+
+        class MockPipeline:
+            def __init__(self, stages: list[Any], **kwargs: Any) -> None:
+                captured_coordinator.append(kwargs["recovery_coordinator"])
+
+            async def run(self, ctx: dict[str, Any]) -> PipelineReport:
+                return PipelineReport()
+
+        monkeypatch.setattr("openreview_cli.review.runner.Pipeline", MockPipeline)
+        monkeypatch.setattr(
+            "openreview_cli.review.runner._configured_providers",
+            lambda *slots: ["openai/gpt-4"],
+        )
+        monkeypatch.setattr(
+            "openreview_cli.config.loader.load_config",
+            lambda path: {"privacy": {"tier": "maximum"}},
+        )
+
+        from openreview_cli.review.runner import _run_review_doc_pipeline
+
+        _run_review_doc_pipeline(
+            doc_path="test.docx",
+            playbook=playbook,
+            playbook_version=None,
+            extraction_model="extraction",
+            qa_model="extraction",
+            no_pii=False,
+            verbose=False,
+            confidence_threshold=0.7,
+        )
+
+        assert len(captured_coordinator) == 1
+        ctx = captured_coordinator[0].create_context()
+        assert ctx.user_privacy_tier == "strict"
+
+    def test_runner_threads_performance_tier_into_coordinator(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from openreview_cli.pipeline.runner import PipelineReport
+
+        playbook = _make_playbook("tier-test-perf")
+        captured_coordinator: list[Any] = []
+
+        class MockPipeline:
+            def __init__(self, stages: list[Any], **kwargs: Any) -> None:
+                captured_coordinator.append(kwargs["recovery_coordinator"])
+
+            async def run(self, ctx: dict[str, Any]) -> PipelineReport:
+                return PipelineReport()
+
+        monkeypatch.setattr("openreview_cli.review.runner.Pipeline", MockPipeline)
+        monkeypatch.setattr(
+            "openreview_cli.review.runner._configured_providers",
+            lambda *slots: ["openai/gpt-4"],
+        )
+        monkeypatch.setattr(
+            "openreview_cli.config.loader.load_config",
+            lambda path: {"privacy": {"tier": "performance"}},
+        )
+
+        from openreview_cli.review.runner import _run_review_doc_pipeline
+
+        _run_review_doc_pipeline(
+            doc_path="test.docx",
+            playbook=playbook,
+            playbook_version=None,
+            extraction_model="extraction",
+            qa_model="extraction",
+            no_pii=False,
+            verbose=False,
+            confidence_threshold=0.7,
+        )
+
+        assert len(captured_coordinator) == 1
+        ctx = captured_coordinator[0].create_context()
+        assert ctx.user_privacy_tier == "none"
+
+
 class TestPipelineAdoption:
     """Tests that verify the pipeline framework is adopted in the review flow."""
 
