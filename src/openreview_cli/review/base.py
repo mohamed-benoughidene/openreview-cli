@@ -40,6 +40,17 @@ class ReviewCommand:
         if not self._document_path.exists():
             raise FileNotFoundError(f"Document not found: {self._document_path}")
 
+        # PII-1: `_pii_available` is per-operation evidence, not persistent
+        # state from a previous operation. Reset at the top of every run so
+        # a stale True from a prior ReviewCommand.run() (or TUI/repl cycle)
+        # cannot silently authorize this operation's cloud calls.
+        from openreview_cli.gateway.router import (
+            mark_pii_available,
+            reset_pii_available,
+        )
+
+        reset_pii_available()
+
         # ponytail: PrivacyTierReport constructed from live config each run
         privacy_report = self._build_privacy_report()
         sys.stderr.write(privacy_report.progress_banner() + "\n")
@@ -58,6 +69,12 @@ class ReviewCommand:
             if not self._force_reprocess and cache.is_valid(doc_hash, config_hash):
                 cached = cache.get(doc_hash)
                 if cached and Path(cached["review_result_path"]).exists():
+                    # PII-1: a cache hit returns already-stripped text. The
+                    # cached artifact IS the evidence of a prior successful
+                    # strip; mark the flag without writing a new audit row
+                    # (the original strip is governed by its own row from
+                    # when it ran).
+                    mark_pii_available()
                     return {
                         "document_hash": doc_hash,
                         "review_dir": str(review_dir),
@@ -76,8 +93,6 @@ class ReviewCommand:
                 threshold=threshold,
                 encryption_key=self._get_encryption_key(),
             )
-            from openreview_cli.gateway.router import mark_pii_available
-
             mark_pii_available()
             result_path.write_text(pii_result.stripped_text)
 
@@ -100,8 +115,9 @@ class ReviewCommand:
         else:
             clauses, document = self._parse_document()
             raw_text = " ".join(c.text for c in clauses)
-            from openreview_cli.gateway.router import reset_pii_available
-
+            # --no-pii path: ensure the flag stays False. The reset at the
+            # top of run() already cleared any prior True; this is a
+            # defensive reset on the path that bypasses any strip call.
             reset_pii_available()
             result_path.write_text(raw_text)
             logger.warning("PII stripping disabled. Raw text processed.")
