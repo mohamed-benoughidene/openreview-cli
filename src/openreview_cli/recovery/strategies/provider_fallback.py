@@ -51,6 +51,14 @@ async def provider_fallback(
     """
     ctx.attempted_strategies.append(STRATEGY_NAME)
 
+    # R3-3: each independent gateway-failure episode begins the provider scan
+    # at index 0. Without this reset, a successful fallback at index i leaves
+    # ``current_provider_index`` at i, causing the next episode to skip the
+    # primary provider and every index <= i. Retries within the same episode
+    # are unaffected because the inner for-loop iterates forward from
+    # ``start_index + 1`` regardless of this reset.
+    ctx.current_provider_index = 0
+
     provider_list = ctx.provider_list
     start_index = ctx.current_provider_index
 

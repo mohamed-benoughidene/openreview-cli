@@ -30,6 +30,7 @@ from openreview_cli.gateway.errors import (
     PIIUnavailableError,
     RateLimitError,
     SlotNotConfiguredError,
+    UnclassifiedProviderError,
 )
 from openreview_cli.gateway.models import (
     CapabilityRequirement,
@@ -230,26 +231,80 @@ class Gateway:
         registry = load_registry()  # new registry source, not ModelRegistry.load()
         return registry.get(provider)
 
-    def _enforce_tier(self, slot: str, call_type: str) -> None:
+    def _enforce_tier(  # noqa: PLR0912 — tier rules branch on override vs slot, registry presence, klass, call_type, local_only, and PII gate (R3-5)
+        self,
+        slot: str,
+        call_type: str,
+        provider_prefix: str | None = None,
+    ) -> None:
         """Block cloud dispatch that the configured privacy tier forbids.
 
         ``call_type`` is one of "llm" (chat/chat_stream), "embedding" (embed),
         or "reranking" (rerank). Local providers are always allowed; cloud
         providers are gated by the tier's local-only rules before any network.
+
+        ``provider_prefix`` is the ACTUAL provider being dispatched (e.g. the
+        prefix of a recovery-driven ``model=`` override). When supplied, tier
+        enforcement evaluates that provider rather than the slot primary.
+        R3-5: the tier must be enforced against the model that will actually
+        hit the network, not the slot's configured primary.
         """
         tier_config = getattr(self, "_tier_config", None)
         if tier_config is None:
             return
-        info = self._resolve_provider_info(slot)
-        if info is None:
-            return
-        try:
-            klass = classify_provider(info)
-        except ValueError:
-            # Unclassifiable non-local provider (e.g. bedrock/vertex with
-            # base_url=None). Fail closed: if the tier requires a local
-            # provider, block it rather than allowing a possible cloud call.
-            klass = "cloud"
+        if provider_prefix is not None:
+            registry = load_registry()
+            info = registry.get(provider_prefix)
+            if info is None:
+                # Override provider is not in the registry (custom or unknown).
+                # Fail closed for tier-restricted call types: block dispatch
+                # rather than allowing a possible cloud call. The slot primary
+                # is irrelevant — the caller supplied an override and the
+                # gateway must verify it.
+                if call_type in ("embedding", "reranking"):
+                    local_only = tier_config.embeddings_local_only
+                elif call_type == "llm":
+                    local_only = tier_config.llm_local_only
+                else:
+                    return
+                if local_only:
+                    tier = tier_config.tier.upper()
+                    raise NoMatchingProviderError(
+                        f"{tier} privacy tier requires a local provider for "
+                        f"{call_type}. Unknown provider '{provider_prefix}' "
+                        f"(not in registry) cannot be classified as local. "
+                        f"Install Ollama and configure a local model, or "
+                        f"change privacy tier to 'balanced' or 'performance'."
+                    )
+                # Under balanced/performance an unknown override still gets
+                # the PII gate.
+                if tier_config.pii_required_before_cloud and not _pii_available:
+                    raise PIIUnavailableError(
+                        f"{tier_config.tier.title()} privacy tier requires "
+                        "PII stripping before cloud calls. No successful "
+                        "strip was recorded for this operation. Run without "
+                        "--no-pii / --allow-partial-pii, or use a local provider."
+                    )
+                return
+            klass: str
+            try:
+                klass = classify_provider(info)
+            except ValueError:
+                # Unclassifiable non-local override (e.g. bedrock/vertex with
+                # base_url=None). Fail closed: if the tier requires a local
+                # provider, block it rather than allowing a possible cloud call.
+                klass = "cloud"
+        else:
+            info = self._resolve_provider_info(slot)
+            if info is None:
+                return
+            try:
+                klass = classify_provider(info)
+            except ValueError:
+                # Unclassifiable non-local provider (e.g. bedrock/vertex with
+                # base_url=None). Fail closed: if the tier requires a local
+                # provider, block it rather than allowing a possible cloud call.
+                klass = "cloud"
         if klass != "cloud":
             return
 
@@ -414,7 +469,10 @@ class Gateway:
             i in msg for i in ("connection refused", "connection reset", "connecterror")
         ):
             return ConnectionError(provider or "unknown", str(exc))
-        return AllProvidersFailedError(_prefix(str(exc)))
+        # R3-4: catch-all is UnclassifiedProviderError (recoverable, transient),
+        # NOT AllProvidersFailedError (which exclusively signals gateway-local
+        # exhaustion and remains terminal at the recovery layer).
+        return UnclassifiedProviderError(_prefix(str(exc)))
 
     def _call_with_fallback(
         self,
@@ -510,13 +568,20 @@ class Gateway:
     ) -> str:
         if slot not in VALID_SLOTS:
             raise SlotNotConfiguredError(f"Invalid slot '{slot}'")
-        self._enforce_tier(slot, "llm")
+        # R3-5: thread the actual dispatched model into tier enforcement so a
+        # recovery-driven ``model=`` override cannot bypass the privacy tier
+        # by masquerading as the slot primary.
+        override_model = kwargs.get("model")
+        override_prefix = override_model.split("/", 1)[0] if override_model else None
+        self._enforce_tier(slot, "llm", provider_prefix=override_prefix)
         messages, provider_prefix = self._prepare_chat(slot, messages, session_id, requirement)
         call_kwargs = self._get_litellm_kwargs(slot)
         call_kwargs["messages"] = messages
         call_kwargs.update(kwargs)
         response = self._call_with_fallback(slot, completion, call_kwargs)
-        self._record_cloud_call(slot)
+        # R3-5: cloud-call counter must reflect the actual dispatched
+        # provider, not the slot primary.
+        self._record_cloud_call(slot, provider_prefix=override_prefix)
         # Cost logging must never block the AI call (T030): a logging failure
         # (e.g. missing session FK for non-review flows like grounding) is
         # non-fatal — warn and return the model response regardless.
@@ -540,7 +605,10 @@ class Gateway:
         """FR-6: streaming chat with dual timeouts (15s connect, 45s idle)."""
         if slot not in VALID_SLOTS:
             raise SlotNotConfiguredError(f"Invalid slot '{slot}'")
-        self._enforce_tier(slot, "llm")
+        # R3-5: same tier-against-actual-model enforcement as chat().
+        override_model = kwargs.get("model")
+        override_prefix = override_model.split("/", 1)[0] if override_model else None
+        self._enforce_tier(slot, "llm", provider_prefix=override_prefix)
         cleaned_messages, provider_prefix = self._prepare_chat(
             slot, messages, session_id, requirement
         )
@@ -556,7 +624,8 @@ class Gateway:
         )
         call_kwargs.update(kwargs)
         response = completion(**call_kwargs)
-        self._record_cloud_call(slot)
+        # R3-5: same dispatch-aware counter as chat().
+        self._record_cloud_call(slot, provider_prefix=override_prefix)
         # ponytail: streaming `response` is a generator, so log_call sees no
         # `.usage` yet → cost recorded as 0. Capturing real cost needs the
         # final chunk; defer until a non-streaming cost path or stream-drain.
@@ -695,8 +764,27 @@ class Gateway:
             {"index": r["index"], "relevance_score": r["relevance_score"]} for r in response.results
         ]
 
-    def _record_cloud_call(self, slot: str) -> None:
-        info = self._resolve_provider_info(slot)
+    def _record_cloud_call(self, slot: str, provider_prefix: str | None = None) -> None:
+        """Increment the cloud-call counter for the actual dispatched provider.
+
+        R3-5: when ``provider_prefix`` is supplied (a recovery-driven
+        ``model=`` override), classify the override instead of the slot
+        primary. Otherwise the counter under-reports cloud egress and the
+        privacy footer misrepresents actual network activity.
+        """
+        global _total_cloud_calls  # noqa: PLW0603 — module-level counter by design
+        if provider_prefix is not None:
+            registry = load_registry()
+            info = registry.get(provider_prefix)
+            if info is None:
+                # Unknown override — treat as cloud (fail-closed for the
+                # privacy counter; the actual dispatch path is the concern of
+                # _enforce_tier, not this counter).
+                self._cloud_calls_made += 1
+                _total_cloud_calls += 1
+                return
+        else:
+            info = self._resolve_provider_info(slot)
         if info is None:
             return
         try:
@@ -707,7 +795,6 @@ class Gateway:
             return
         if klass == "cloud":
             self._cloud_calls_made += 1
-            global _total_cloud_calls  # noqa: PLW0603 — module-level counter by design
             _total_cloud_calls += 1
 
     def privacy_report(self) -> PrivacyTierReport:

@@ -15,6 +15,17 @@ from openreview_cli.recovery.models import (
 )
 
 
+def _http_status_for(exc: Exception) -> int | None:
+    """Mirror of review/_gateway.py._http_status_for — invoked in tests so
+    the seam's classification can be exercised without going through the
+    gateway helper module (keeps these tests as pure coordinator tests).
+    """
+    # Lazy import to mirror review/_gateway.py behaviour.
+    from openreview_cli.review._gateway import _http_status_for as _real
+
+    return _real(exc)
+
+
 @pytest.fixture
 def coordinator() -> RecoveryCoordinator:
     return RecoveryCoordinator()
@@ -174,3 +185,212 @@ class TestRecoveryCoordinator:
         report = coordinator.build_report(ctx)
         assert report.final_status == "degraded"
         assert len(report.degradation_notices) == 1
+
+
+class TestR34ErrorTaxonomySeam:
+    """R3-4 end-to-end seam tests for the gateway-error classification.
+
+    These tests drive ``coordinator.handle_gateway_failure`` with realistic
+    error metadata shaped like the production ``review/_gateway.py`` seam
+    would produce for each gateway error type. They verify the actual
+    recovery path: provider_fallback for transient, user_guided_recovery
+    for terminal.
+    """
+
+    @pytest.mark.asyncio
+    async def test_unclassified_provider_error_uses_provider_fallback(
+        self, coordinator: RecoveryCoordinator
+    ) -> None:
+        """R3-4 Test B — unclassified single-provider failure must reach
+        provider_fallback (transient path), not be classified as terminal."""
+        from openreview_cli.gateway.errors import UnclassifiedProviderError
+
+        exc = UnclassifiedProviderError("provider ollama raised RuntimeError('boom')")
+        ctx = RecoveryContext(
+            provider_list=["openai/gpt-4", "anthropic/claude"],
+            current_provider_index=0,
+            user_privacy_tier=PRIVACY_TIER_STANDARD,
+        )
+        with contextlib.suppress(Exception):
+            await coordinator.handle_gateway_failure(
+                "openai/gpt-4",
+                {
+                    "http_status": _http_status_for(exc),
+                    "error_type": type(exc).__name__,
+                    "last_error": str(exc),
+                },
+                ctx,
+                stage_name="generate",
+            )
+        provider_fallback_events = [e for e in ctx.events if e.strategy_name == "provider_fallback"]
+        assert len(provider_fallback_events) >= 1, (
+            "UnclassifiedProviderError must route to provider_fallback "
+            "(classified transient), not user_guided_recovery"
+        )
+
+    @pytest.mark.asyncio
+    async def test_connection_error_uses_provider_fallback(
+        self, coordinator: RecoveryCoordinator
+    ) -> None:
+        """R3-4 Test C — gateway ConnectionError must reach provider_fallback."""
+        from openreview_cli.gateway.errors import ConnectionError as GatewayConnectionError
+
+        exc = GatewayConnectionError("openai", "Connection refused")
+        ctx = RecoveryContext(
+            provider_list=["openai/gpt-4", "ollama/llama3.1"],
+            current_provider_index=0,
+            user_privacy_tier=PRIVACY_TIER_STANDARD,
+        )
+        with contextlib.suppress(Exception):
+            await coordinator.handle_gateway_failure(
+                "openai/gpt-4",
+                {
+                    "http_status": _http_status_for(exc),
+                    "error_type": type(exc).__name__,
+                    "last_error": str(exc),
+                },
+                ctx,
+                stage_name="generate",
+            )
+        provider_fallback_events = [e for e in ctx.events if e.strategy_name == "provider_fallback"]
+        assert len(provider_fallback_events) >= 1, (
+            "gateway ConnectionError must route to provider_fallback, "
+            "not user_guided_recovery (was mapped to None pre-fix)"
+        )
+
+    @pytest.mark.asyncio
+    async def test_all_providers_failed_remains_terminal(
+        self, coordinator: RecoveryCoordinator
+    ) -> None:
+        """R3-4 Test D — AllProvidersFailedError (genuine gateway-local
+        exhaustion) must NOT reach provider_fallback; it routes to
+        user_guided_recovery (terminal).
+        """
+        from openreview_cli.gateway.errors import AllProvidersFailedError
+
+        exc = AllProvidersFailedError("All providers failed")
+        ctx = RecoveryContext(
+            provider_list=["openai/gpt-4", "anthropic/claude"],
+            current_provider_index=0,
+            user_privacy_tier=PRIVACY_TIER_STANDARD,
+        )
+        with contextlib.suppress(Exception):
+            await coordinator.handle_gateway_failure(
+                "openai/gpt-4",
+                {
+                    "http_status": _http_status_for(exc),
+                    "error_type": type(exc).__name__,
+                    "last_error": str(exc),
+                },
+                ctx,
+                stage_name="generate",
+            )
+        provider_fallback_events = [e for e in ctx.events if e.strategy_name == "provider_fallback"]
+        assert len(provider_fallback_events) == 0, (
+            "AllProvidersFailedError must remain terminal (no provider_fallback)"
+        )
+
+    @pytest.mark.asyncio
+    async def test_no_matching_provider_remains_terminal(
+        self, coordinator: RecoveryCoordinator
+    ) -> None:
+        """NoMatchingProviderError must NOT reach provider_fallback."""
+        from openreview_cli.gateway.errors import NoMatchingProviderError
+
+        exc = NoMatchingProviderError("MAXIMUM tier requires a local provider")
+        ctx = RecoveryContext(
+            provider_list=["openai/gpt-4"],
+            current_provider_index=0,
+            user_privacy_tier=PRIVACY_TIER_STANDARD,
+        )
+        with contextlib.suppress(Exception):
+            await coordinator.handle_gateway_failure(
+                "openai/gpt-4",
+                {
+                    "http_status": _http_status_for(exc),
+                    "error_type": type(exc).__name__,
+                    "last_error": str(exc),
+                },
+                ctx,
+                stage_name="generate",
+            )
+        provider_fallback_events = [e for e in ctx.events if e.strategy_name == "provider_fallback"]
+        assert len(provider_fallback_events) == 0, (
+            "NoMatchingProviderError must remain terminal (no provider_fallback)"
+        )
+
+    @pytest.mark.asyncio
+    async def test_unclassified_error_with_empty_provider_list_terminates(
+        self, coordinator: RecoveryCoordinator
+    ) -> None:
+        """R3-4 Test E — unclassified failure with no recovery-layer
+        provider_list must terminate cleanly (no retry loop)."""
+        from openreview_cli.gateway.errors import UnclassifiedProviderError
+
+        exc = UnclassifiedProviderError("provider ollama raised RuntimeError('boom')")
+        ctx = RecoveryContext(
+            provider_list=[],
+            current_provider_index=0,
+            user_privacy_tier=PRIVACY_TIER_STANDARD,
+        )
+        # Should complete without infinite loop or unhandled exception.
+        result = await coordinator.handle_gateway_failure(
+            "openai/gpt-4",
+            {
+                "http_status": _http_status_for(exc),
+                "error_type": type(exc).__name__,
+                "last_error": str(exc),
+            },
+            ctx,
+            stage_name="generate",
+        )
+        assert result is None, "no providers available → terminal (returns None)"
+        provider_fallback_events = [e for e in ctx.events if e.strategy_name == "provider_fallback"]
+        # provider_fallback was attempted (with empty list) — it raised and
+        # the coordinator fell through to user_guided_recovery. This is one
+        # bounded attempt, not a loop.
+        assert len(provider_fallback_events) >= 1
+
+    @pytest.mark.asyncio
+    async def test_no_recovery_loop_with_unclassified_error(
+        self, coordinator: RecoveryCoordinator
+    ) -> None:
+        """R3-4 Test F — the new transient classification must not create an
+        infinite retry loop. The provider_fallback strategy must be invoked
+        exactly once (handle_gateway_failure calls it once per failure
+        episode and does not recurse); the function must terminate.
+        """
+        from openreview_cli.gateway.errors import UnclassifiedProviderError
+
+        exc = UnclassifiedProviderError("provider raised RuntimeError")
+        ctx = RecoveryContext(
+            provider_list=["openai/gpt-4", "anthropic/claude"],
+            current_provider_index=0,
+            user_privacy_tier=PRIVACY_TIER_STANDARD,
+        )
+        with contextlib.suppress(Exception):
+            await coordinator.handle_gateway_failure(
+                "openai/gpt-4",
+                {
+                    "http_status": _http_status_for(exc),
+                    "error_type": type(exc).__name__,
+                    "last_error": str(exc),
+                },
+                ctx,
+                stage_name="generate",
+            )
+        # Count distinct (by identity) provider_fallback invocations.
+        # (provider_fallback appends its own EXHAUSTED event before raising;
+        # the coordinator also appends exc.event on the RecoveryError catch —
+        # this is a pre-existing pattern that does not indicate a loop.)
+        provider_fallback_events = [e for e in ctx.events if e.strategy_name == "provider_fallback"]
+        assert len(provider_fallback_events) >= 1, (
+            "provider_fallback was never invoked — transient classification did not route"
+        )
+        # If the loop existed, we'd see >>2 events; the upper bound is the
+        # existing pre-fix pattern (provider_fallback appends one event + the
+        # coordinator appends exc.event again). 2 = exactly one invocation.
+        assert len(provider_fallback_events) <= 2, (
+            f"provider_fallback was invoked more than once "
+            f"(possible recovery loop): {len(provider_fallback_events)} events"
+        )

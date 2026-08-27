@@ -46,11 +46,16 @@ def _init_status_map() -> None:
         ModelNotFoundError,
         NoMatchingProviderError,
         RateLimitError,
+        UnclassifiedProviderError,
     )
 
     _register_status(RateLimitError, 429)
     _register_status(AuthError, 401)
-    _register_status(ConnectionError, None)
+    # R3-4: ConnectionError and UnclassifiedProviderError are transient →
+    # recovery-layer provider_fallback. AllProvidersFailedError and
+    # NoMatchingProviderError are terminal (None → unknown).
+    _register_status(ConnectionError, 503)
+    _register_status(UnclassifiedProviderError, 503)
     _register_status(ModelNotFoundError, 404)
     _register_status(AllProvidersFailedError, None)
     _register_status(NoMatchingProviderError, None)

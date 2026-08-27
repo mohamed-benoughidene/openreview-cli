@@ -16,6 +16,7 @@ from openreview_cli.gateway.errors import (
     ModelNotFoundError,
     RateLimitError,
     SlotNotConfiguredError,
+    UnclassifiedProviderError,
 )
 from openreview_cli.gateway.models import Capability, CapabilityRequirement, ProviderInfo
 from openreview_cli.gateway.router import Gateway, classify_provider
@@ -185,6 +186,10 @@ gateway:
     def test_raises_all_providers_failed(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """R3-4 Test A — the catch-all in Gateway._classify_error must produce
+        the new ``UnclassifiedProviderError``, NOT ``AllProvidersFailedError``
+        (which now exclusively signals gateway-local exhaustion).
+        """
         import openreview_cli.gateway.router as router_mod
 
         def always_fail(**kw: Any) -> Any:
@@ -192,8 +197,22 @@ gateway:
 
         monkeypatch.setattr(router_mod, "completion", always_fail)
         gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
-        with pytest.raises(AllProvidersFailedError):
+        with pytest.raises(UnclassifiedProviderError) as exc_info:
             gw.chat("reasoning", [{"role": "user", "content": "Hi"}])
+        # And it must NOT be the exhaustion type.
+        assert not isinstance(exc_info.value, AllProvidersFailedError), (
+            "R3-4: catch-all must not be AllProvidersFailedError (exhaustion signal)"
+        )
+
+    def test_classify_error_catch_all_is_unclassified(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """R3-4 Test A — direct _classify_error on an unhandled exception must
+        return UnclassifiedProviderError, not AllProvidersFailedError."""
+        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
+        result = gw._classify_error(RuntimeError("totally unknown"), provider="openai")
+        assert isinstance(result, UnclassifiedProviderError)
+        assert not isinstance(result, AllProvidersFailedError)
 
 
 class TestEmbed:
