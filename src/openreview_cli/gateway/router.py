@@ -18,6 +18,7 @@ from litellm import completion, embedding
 from openreview_cli.config.auth import key_to_env, load_auth
 from openreview_cli.config.loader import load_config
 from openreview_cli.config.paths import get_config_dir, get_data_dir
+from openreview_cli.errors import cost_limit_error
 from openreview_cli.gateway.cost import CostTracker
 from openreview_cli.gateway.errors import (
     AllProvidersFailedError,
@@ -394,26 +395,47 @@ class Gateway:
         return kwargs
 
     def _check_cost_limits(self, session_id: str | None) -> None:
-        limits = self._config.get("gateway", {}).get("cost_limits", {})
+        """Enforce cost limits per spec 001 US4/AC3-4 + spec 005
+        US5/AC2 + spec 033 FR-6.
+
+        On breach: call cost_limit_error (exit 6) with the
+        spec-mandated message. On check exception: log WARNING
+        and re-raise (FR-6 / R8). The previous
+        'would be exceeded' warning is replaced by the hard
+        exit; that signal now reaches the user via stderr.
+        """
+        limits = self._config.get("gateway", {}).get("cost_limits", {}) or {}
         daily_cents = limits.get("daily_cents")
         per_review_cents = limits.get("per_review_cents")
 
-        try:
-            if daily_cents is not None and not check_daily_limit(self._data_path, daily_cents):
-                logger.warning("Daily cost limit of %d¢ would be exceeded", daily_cents)
-        except Exception:
-            logger.warning("Failed to check daily cost limit", exc_info=True)
+        if daily_cents is not None:
+            try:
+                within = check_daily_limit(self._data_path, daily_cents)
+            except Exception:
+                logger.warning("Failed to check daily cost limit", exc_info=True)
+                raise
+            if not within:
+                cost_limit_error(
+                    f"Daily cost limit reached (${daily_cents / 100:.2f}). "
+                    "Reset at local midnight or increase limit in config.yml"
+                )
 
         if session_id and per_review_cents is not None:
             try:
-                if not check_session_limit(self._data_path, session_id, per_review_cents):
-                    logger.warning(
-                        "Session cost limit of %d¢ would be exceeded for session %s",
-                        per_review_cents,
-                        session_id,
-                    )
+                within = check_session_limit(self._data_path, session_id, per_review_cents)
             except Exception:
-                logger.warning("Failed to check session limit", exc_info=True)
+                logger.warning(
+                    "Failed to check session cost limit for session %s",
+                    session_id,
+                    exc_info=True,
+                )
+                raise
+            if not within:
+                cost_limit_error(
+                    f"Per-review cost limit reached "
+                    f"(${per_review_cents / 100:.2f}). "
+                    "Increase limit in config.yml or use a cheaper model"
+                )
 
     def _classify_error(self, exc: Exception, provider: str | None = None) -> Exception:
         msg = str(exc).lower()
