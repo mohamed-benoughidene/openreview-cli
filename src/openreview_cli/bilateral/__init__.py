@@ -305,18 +305,27 @@ def _process_document(
     doc_path_obj = Path(doc_path)
     doc, clauses = _parse_document(doc_path)
 
+    # PII-1: per-operation evidence. Reset the process-global flag at the
+    # top of every bilateral _process_document so doc B's run cannot
+    # inherit a True from doc A in the same bilateral session.
+    from openreview_cli.gateway.router import mark_pii_available, reset_pii_available
+
+    reset_pii_available()
+
     # Strip PII before any LLM call (Privacy First). align_only makes no LLM
     # calls, so no strip is needed there. --no-pii opts out explicitly.
     if not no_pii and not align_only:
         from openreview_cli.pii import strip_pii_clauses
+        from openreview_cli.pii.persist import persist_pii_for_document
 
-        clauses, _ = strip_pii_clauses(clauses, doc, allow_partial=allow_partial_pii)
-        from openreview_cli.gateway.router import mark_pii_available
-
+        clauses, pii_result = strip_pii_clauses(clauses, doc, allow_partial=allow_partial_pii)
+        # PII-2: write the governance triplet (encrypted mapping + pii_cache
+        # + pii_audit_trail) for this document. Clean documents (empty
+        # mapping) short-circuit inside persist_pii_for_document and write
+        # nothing.
+        persist_pii_for_document(doc_path, pii_result)
         mark_pii_available()
     else:
-        from openreview_cli.gateway.router import reset_pii_available
-
         reset_pii_available()
 
     assessments: list[ClauseAssessment] = []

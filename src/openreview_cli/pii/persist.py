@@ -12,14 +12,19 @@ mapping file and audit JSON file are handled by
 
 from __future__ import annotations
 
+import hashlib
 import json
+import logging
 import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
 
 from openreview_cli.pii.cache import PiiCache
-from openreview_cli.pii.mapping import write_pii_mapping
+from openreview_cli.pii.config_hash import compute_config_hash
+from openreview_cli.pii.mapping import ensure_encryption_key, write_pii_mapping
 from openreview_cli.pii.models import PiiResult
+
+logger = logging.getLogger(__name__)
 
 _VALID_STATUSES = ("success", "partial", "failed")
 
@@ -128,4 +133,61 @@ def persist_pii_result(
     )
 
 
-__all__ = ["persist_pii_result", "write_audit_trail_row"]
+__all__ = ["persist_pii_for_document", "persist_pii_result", "write_audit_trail_row"]
+
+
+def persist_pii_for_document(
+    document_path: str | Path,
+    pii_result: PiiResult,
+    *,
+    config_path: Path | None = None,
+) -> bool:
+    """Persist a PII stripping result to the governance lifecycle for one
+    document.
+
+    Used by callers that hold only the document path and a PiiResult (the
+    bilateral path; the legacy ReviewCommand path; the StripStage in the
+    new pipeline). Loads config + encryption key, computes the document
+    hash + config hash, and writes the same governance triplet as
+    :func:`persist_pii_result`:
+
+      * encrypted mapping file at ``<data>/reviews/<doc_hash[:12]>/pii_map.enc``
+      * one row in ``pii_cache``
+      * one row in ``pii_audit_trail`` (only when ``pii_result.mapping`` is
+        non-empty; clean documents write nothing, per the PII-2 invariant)
+
+    Persistence failures are non-fatal — a PII strip is the security
+    boundary, governance writes must not block it. The return value is
+    ``True`` if persistence actually wrote the triplet, ``False`` if it
+    short-circuited on an empty mapping, a missing file, or a swallowed
+    exception.
+    """
+    try:
+        doc_path = Path(document_path)
+        if not doc_path.exists():
+            return False
+
+        from openreview_cli.config.loader import load_config
+        from openreview_cli.config.paths import get_config_dir, get_data_dir
+
+        cfg_path = config_path if config_path is not None else get_config_dir() / "config.yml"
+        config = load_config(cfg_path)
+        config_hash = compute_config_hash(config.get("privacy", {}))
+        encryption_key = ensure_encryption_key(config, cfg_path)
+
+        document_hash = hashlib.sha256(doc_path.read_bytes()).hexdigest()
+        review_dir = get_data_dir() / "reviews" / document_hash[:12]
+        db_path = get_data_dir() / "openreview.db"
+
+        persist_pii_result(
+            db_path,
+            document_hash=document_hash,
+            config_hash=config_hash,
+            pii_result=pii_result,
+            review_dir=review_dir,
+            encryption_key=encryption_key,
+        )
+    except Exception as exc:
+        logger.warning("PII persistence failed (non-fatal): %s", exc)
+        return False
+    return bool(pii_result.mapping)
