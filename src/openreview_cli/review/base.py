@@ -11,6 +11,7 @@ from openreview_cli.pii.cache import PiiCache
 from openreview_cli.pii.config_hash import compute_config_hash
 from openreview_cli.pii.engine import strip_and_persist
 from openreview_cli.pii.mapping import ensure_encryption_key
+from openreview_cli.pii.persist import persist_pii_for_document
 
 logger = logging.getLogger(__name__)
 
@@ -96,12 +97,15 @@ class ReviewCommand:
             mark_pii_available()
             result_path.write_text(pii_result.stripped_text)
 
-            cache.put(
-                doc_hash,
-                config_hash,
-                str(result_path),
-                str(review_dir / "pii_map.enc"),
-            )
+            # PII-3: delegate governance persistence to the shared helper so
+            # the legacy path produces the same encrypted mapping + pii_cache
+            # + pii_audit_trail triplet that the bilateral / StripStage paths
+            # produce. Empty mapping short-circuits inside the helper (no
+            # negative cache/audit rows for clean documents). The helper also
+            # writes the cache row with the correct mapping_path (under
+            # <data>/reviews/<hash[:12]>/, not <output>/<hash[:12]>/), which
+            # is the latent base.py:103 inconsistency the previous code had.
+            persist_pii_for_document(self._document_path, pii_result)
 
             return {
                 "document_hash": doc_hash,

@@ -45,6 +45,7 @@ def _init_status_map() -> None:
         ConnectionError,
         ModelNotFoundError,
         NoMatchingProviderError,
+        PIIUnavailableError,
         RateLimitError,
         UnclassifiedProviderError,
     )
@@ -59,6 +60,14 @@ def _init_status_map() -> None:
     _register_status(ModelNotFoundError, 404)
     _register_status(AllProvidersFailedError, None)
     _register_status(NoMatchingProviderError, None)
+    # PII-3: PIIUnavailableError is terminal. Explicit registration
+    # (None → unknown → user_guided_recovery) pins the policy so future
+    # drift cannot accidentally re-route PII through provider_fallback,
+    # which would leak raw PII to a cloud LLM. The implicit fall-through
+    # already produces this classification, but the explicit registration
+    # makes the intent self-documenting and decoupled from the
+    # error-type-string lookup.
+    _register_status(PIIUnavailableError, None)
 
 
 def _http_status_for(exc: Exception) -> int | None:
