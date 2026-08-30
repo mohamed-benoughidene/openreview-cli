@@ -1,0 +1,92 @@
+# Custom playbook for construction contracts (no product mode exists)
+# Used to validate C-ε agent-routing: a request for "construction contract" review
+# has no registered product mode, so the agent must fall back to
+# `precheck review --playbook-path construction.yaml` rather than invent
+# `openreview constructioncheck`.
+
+id: "custom-construction-v1"
+mode: "precheck"
+metadata:
+  version: "0.1.0"
+  description: >
+    Minimal playbook for construction contracts. NOT a bundled playbook —
+    provided as an example for users reviewing contract types that have no
+    registered product mode (see C-ε in the Phase 7 P2 skill validation).
+  author: "openreview P2 test fixture"
+
+categories:
+  - id: "scope-of-work"
+    name: "Scope of Work"
+    description: >
+      Defines the construction work to be performed, including drawings,
+      specifications, and project deliverables.
+    preferred:
+      description: >
+        Clear, measurable scope with explicit deliverables and acceptance
+        criteria. Drawings and specifications attached as exhibits.
+      exemplars:
+        - "Contractor shall furnish all labor, materials, and equipment necessary to complete the Work as described in Exhibit A"
+        - "The Work shall be performed in accordance with the Contract Documents"
+    acceptable:
+      description: >
+        Scope references drawings/specifications without full inline detail,
+        or scope is broad but bounded by performance standards.
+      exemplars:
+        - "Work shall be performed in accordance with the plans and specifications prepared by the Architect"
+    walkaway:
+      description: >
+        Scope is undefined or contractor has unlimited discretion over
+        what constitutes "the Work."
+      exemplars:
+        - "Contractor shall perform such work as Owner may from time to time direct"
+    default_position: "acceptable"
+
+  - id: "payment-terms"
+    name: "Payment Terms"
+    description: >
+      Contract sum, schedule of values, retainage, progress payments,
+      and final payment terms.
+    preferred:
+      description: >
+        Fixed price or GMP with a clear schedule of values, monthly
+        progress payments, and standard 5-10% retainage.
+      exemplars:
+        - "Owner shall pay Contractor the Contract Sum of $[AMOUNT] in monthly progress payments"
+    acceptable:
+      description: >
+        Cost-plus or unit-price with standard retainage; payment terms
+        are industry-typical.
+      exemplars:
+        - "Owner shall pay the cost of the Work plus a fee as documented in the Schedule of Values"
+    walkaway:
+      description: >
+        Payment contingent on owner's sole discretion, or no retainage
+        provisions, or pay-when-paid clauses that violate state law.
+      exemplars:
+        - "Payment shall be made at Owner's sole discretion"
+    default_position: "acceptable"
+
+  - id: "change-orders"
+    name: "Change Orders"
+    description: >
+      Procedures for changes to the Work, including pricing, markup,
+      and time extensions.
+    preferred:
+      description: >
+        Written change orders required, with mutual agreement on price
+        and time impact before work proceeds.
+      exemplars:
+        - "No change in the Work shall be made without a written Change Order signed by both parties"
+    acceptable:
+      description: >
+        Oral changes permitted but must be confirmed in writing within
+        a reasonable time, with price/time adjustment process defined.
+      exemplars:
+        - "Change Orders shall be confirmed in writing within five (5) business days"
+    walkaway:
+      description: >
+        Owner can unilaterally change scope without price/time adjustment,
+        or no procedure for changes at all.
+      exemplars:
+        - "Owner may direct changes and Contractor's sole remedy is an equitable adjustment determined by Owner"
+    default_position: "acceptable"

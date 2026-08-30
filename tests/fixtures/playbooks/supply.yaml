@@ -1,0 +1,26 @@
+# Custom playbook for supply agreements (no product mode exists)
+# Used for C-ε walkthrough — no `supplycheck` command exists.
+
+id: "custom-supply-v1"
+mode: "precheck"
+metadata:
+  version: "0.1.0"
+  description: >
+    Minimal playbook for supply agreements. NOT bundled — example for
+    contract types without a registered product mode.
+  author: "openreview P2 test fixture"
+
+categories:
+  - id: "delivery-terms"
+    name: "Delivery Terms"
+    description: Defines delivery schedule, Incoterms, and risk of loss.
+    preferred:
+      description: Clear Incoterms, dated delivery schedule, risk-of-loss tied to delivery.
+      exemplars: ["DDP Buyer location, delivery within 30 days of PO"]
+    acceptable:
+      description: Standard delivery terms with reasonable variations.
+      exemplars: ["FOB Seller location, delivery within 45 days"]
+    walkaway:
+      description: Vague delivery terms or risk-on-buyer-without-insurance.
+      exemplars: ["Delivery at Seller's sole discretion"]
+    default_position: "acceptable"

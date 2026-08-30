@@ -109,6 +109,25 @@ Required: one or more PDF/DOCX paths.
 
 Key constraint: memo written to `review_results/` by default.
 
+#### PII cache behavior on re-runs
+
+PII caching differs by command path. The agent must distinguish them:
+
+- **Legacy `precheck -d` (uses `ReviewCommand` at `review/base.py:65-87`):** the PII cache is consulted on re-run. If a cached `PiiResult` exists for the document hash, the strip is short-circuited; **no new `pii_audit_trail` row is written**. Use `precheck -d <doc> --force-reprocess` to bypass the cache and force a fresh strip + new audit row.
+
+- **Modern `precheck review` / product modes (use the pipeline at `review/runner.py:267-270` with `ParseStage` → `StripStage` → `ReviewStage`):** the `StripStage` (`pipeline/adapters/strip.py:51-100`) **always** calls `strip_pii_clauses` and **always** calls `_persist_pii` → `persist_pii_result` → `write_audit_trail_row` (`pii/persist.py:127-133`). There is **no** cache check in the StripStage path. Every modern re-run re-strips the document and writes a new `pii_audit_trail` row. The PII cache only short-circuits the legacy `ReviewCommand` path.
+
+**A new `session_id` is written to `cost_logs` on every run** (both legacy and modern), so `gateway costs --today` shows additive cost regardless of the path.
+
+**There is no `--force-reprocess` flag on the modern `precheck review` command.** For modern, the only ways to skip the strip are: (a) `--no-pii` (with Rule 13 confirmation if tier ≠ maximum), which disables the strip stage entirely. (b) `--allow-partial-pii`, which lets individual pages fail without aborting the pipeline (the failed pages leak raw text to the LLM; see Privacy Tier vs PII Stripping). To force a fresh re-strip on the modern path, the existing audit row is `INSERT OR REPLACE`d, so the re-run naturally produces a new row; there is no flag to control this.
+
+#### PDF parse failure modes
+
+Two pre-LLM failure modes surface before the LLM call. The user-facing message and exit code differ between the standalone `parse` command and the modern `precheck review` / product-mode path:
+
+- **Password-protected PDF** (`pdf_parser.py:62-107`): `ParseError(category="password_protected")`. Standalone `parse` exits 8 with the message "This contract is password-protected." on stderr. `precheck review` and product modes exit 1 with "No documents processed." on stderr — the parse error is caught by the pipeline runner (`review/runner.py:289-293`) and the empty-reports list triggers the "No documents processed" exit (`app.py:167-169`). The original "password-protected" message is logged to `openreview.log` but does not surface on the terminal in the modern path. The user must remove the password (e.g. `qpdf --decrypt`) and rerun.
+- **Scanned-image PDF** (`pdf_parser.py:113-146`): `ParseError(category="no_text")`. Same dual-path behavior: standalone `parse` exits 8 with "This PDF contains no extractable text." on stderr; `precheck review` and product modes exit 1 with "No documents processed." on stderr. The user must re-export with an embedded text layer (e.g. OCR the source, or export from the original authoring tool as "searchable PDF"). **Note:** the product's error text suggests `openreview install ocr` (at `pdf_parser.py:144-145`), but that command does not exist. The remediation is to re-export, not to install anything.
+
 ### 2. Bilateral Comparison
 Clause-by-clause comparison of two documents.
 
@@ -119,6 +138,14 @@ CLI: `openreview precheck compare <doc_a> <doc_b>`
 Required: two PDF/DOCX paths.
 
 Key constraint: EXPERIMENTAL (≤64% F1) — disclose this to the user.
+
+#### `--show-redlines` flag (DOCX-only)
+
+The `--show-redlines` flag renders a per-clause redline block (insertions / deletions) for each matched clause pair. It is **DOCX-only** — the redline is derived from the `w:ins` / `w:del` markup that DOCX carries as tracked changes. PDF inputs do not have tracked-changes markup; passing a PDF (or any non-DOCX) for either side silently skips the redline block with no warning (`app.py:1922-1926` `continue`).
+
+- Use `--show-redlines` only when at least one of `doc_a` / `doc_b` is a DOCX with tracked changes.
+- Comparing two PDFs with `--show-redlines` produces zero redline output and exits 0 — this is the expected behavior, not a bug.
+- If the user expects redlines but the input is a PDF, route them to convert the source to DOCX (or use the underlying compare report without redlines).
 
 ### 3. Retrieval & Index Management
 Search indexed clause chunks; manage the local index.
@@ -161,6 +188,17 @@ Use when: user wants to set up/inspect LLM providers or costs.
 CLI: `openreview gateway setup` (interactive TTY wizard — a human runs this in their own terminal; the agent cannot drive it headless) | `status` | `providers` | `models <provider>` | `set <slot> <model>` | `refresh` | `test <slot>` | `costs [--today]`; custom provider (non-interactive): `openreview gateway provider add <name> --base-url <url> [--env-key VAR] [--cred k=v]...`.
 
 Key constraint: 6 slots — reasoning, extraction, graph, grounding, embedding, reranking. Agent-driven slot/provider config uses the non-interactive `gateway set <slot> <model>` and `gateway provider add`; only `gateway setup` is interactive. **`gateway setup` covers all 6 slots, including `grounding`.**
+
+#### Stale-model diagnostic (C-α)
+
+If `gateway test <slot>` returns a 4xx or "model not found" but the user is sure the model id is correct, the upstream model registry has likely been renamed or deprecated. The diagnostic chain:
+
+1. `openreview gateway refresh` — re-fetch `models.json` from the registry URL.
+2. `openreview gateway models <provider>` — list current valid ids for the provider.
+3. `openreview gateway set <slot> <new-model>` — e.g. `openreview gateway set extraction openrouter/anthropic/claude-sonnet-4.5`.
+4. `openreview gateway test <slot>` — verify the new model id is reachable.
+
+The registry (`models.json` at `app.py:230-253`) is a flat list with no deprecation map; there is no automatic "your model was renamed to X" warning. `gateway refresh` + `gateway models` is the only way to discover the new id. This diagnostic path is the same for any provider (OpenRouter, Ollama, custom); for Ollama, "not found" usually means the model is not pulled locally (use `ollama pull`, not `gateway refresh`).
 
 ## Model Slot Selection Guide
 
@@ -279,6 +317,25 @@ CLI: `openreview config get privacy.tier` | `openreview config set privacy.tier 
 
 Key constraint: persistent processing-policy setting (stored in config.yml). `maximum` = all-local (LLM + embeddings, Ollama only); `balanced` (default) = local PII strip + cloud LLM, local embeddings; `performance` = local PII strip + cloud LLM + cloud embeddings. **Distinct from PII stripping** — PII is always stripped before any cloud call (fail-closed) unless `--no-pii` (Rule 7). The tier controls *where inference runs*, not *whether PII is stripped*. Local processing does NOT mean nothing is stored — PII mappings, cost logs, review reports, and the retrieval index are stored locally; audit/delete stored mappings via Capability 8. Config commands beyond `privacy.tier` are operator-only and NOT routed (When NOT to Use).
 
+#### Privacy Tier vs PII Stripping (do not conflate)
+
+The privacy tier and PII stripping are **two independent axes**. Conflating them is the root cause of the P0 CRITICAL anti-pattern (Rule 13) and the live S-5 reproduction (Phase 7 P0 evidence). The two axes:
+
+- **Privacy tier** (this Capability): controls **where inference runs** — local Ollama vs cloud provider. Three tiers: `maximum` (all-local), `balanced` (default when `privacy.tier` is absent in config.yml; local PII strip + cloud LLM + local embeddings), `performance` (local PII strip + cloud LLM + cloud embeddings). The tier is set via `config set privacy.tier <tier>` and is a persistent config value (`src/openreview_cli/gateway/tier_config.py:13-15`).
+- **PII stripping**: controls **whether the LLM sees raw or redacted text**. Stripping is **automatic and fail-closed** under all tiers (`src/openreview_cli/pii/engine.py: run unless no_pii=True`, called from `review/runner.py:268-269`). The LLM never sees unredacted text unless `--no-pii` is passed (or `--allow-partial-pii` is passed and partial processing fails — see below).
+
+**`--no-pii` is a PII-skip path, not a tier override.** `--no-pii` disables the PII strip stage entirely. It does **not** change the privacy tier; under `balanced` / `performance` it sends **raw unredacted contract text to a cloud LLM**. This is the exfiltration path. The two acceptable resolutions are documented in Rule 13: (a) set the tier to `maximum` (keep `--no-pii`, all inference local) and re-run; or (b) remove `--no-pii` (PII stripping is automatic, fail-closed) and re-run. **There is no resolution that keeps `--no-pii` + a non-`maximum` tier; that combination is the anti-pattern.**
+
+**`--allow-partial-pii` is a different PII-skip path.** It allows the strip stage to fail for individual pages (`PartialProcessingError` is raised in `pii/engine.py:191-197` when individual pages fail PII detection; the catch-and-re-raise site is `pipeline/adapters/strip.py:91-98`, which re-raises as `CriticalStageError`) rather than aborting the whole pipeline. The failed pages' raw text is then sent to the LLM. Under a non-`maximum` tier, this is also an exfiltration path for the failed pages and falls under Rule 13's anti-pattern check.
+
+**Embeddings locality:** the embedding slot is local-only under both `maximum` and `balanced` (`tier_config.py:46-47`); it may use a cloud provider only under `performance`. The LLM slot is local-only under `maximum`; may use a cloud provider under `balanced` or `performance`. The reranking slot follows the LLM slot. Reasoning and graph slots follow the LLM slot.
+
+**Recovery interaction:** the recovery subsystem's `provider_fallback` strategy respects the product tier (`recovery/models.py:50-60`): a `maximum` user is never moved to a cloud fallback; a `balanced` or `performance` user may be. The product → recovery tier mapping is: `product.maximum → recovery.strict`, `product.balanced → recovery.standard`, `product.performance → recovery.none`. See the Recovery Subsystem subsection for details.
+
+**PII-unavailable is terminal.** If PII stripping fails for the whole document (engine not initialized, all pages fail under `--allow-partial-pii` without the flag), the pipeline raises `PIIUnavailableError` (`pii/engine.py`) which the router catches and refuses to send to a cloud provider even under `performance` (`router.py:331-337`, the per-process `_pii_available` flag). The agent must surface this as a hard error, not fall back to a cloud slot.
+
+**Cross-references:** Rule 13 (CRITICAL anti-pattern) is the enforcement gate for this section. The Cost-Limit Behavior (P1.a) and Recovery Subsystem (P1.b) subsections document the gateway-side and recovery-side interactions. The `--no-pii` flag is on `precheck review`, `precheck compare`, product modes, and legacy `precheck`; it is **not** on `negotiate` (Capability 5), which has no PII strip and no `--no-pii` flag.
+
 ## Optional Capabilities (enable on explicit request)
 
 ### Parse (standalone)
@@ -315,6 +372,7 @@ Key constraint: no CLI command writes `.ndax`. Save the chunk stdout to a file, 
    - "Extract the clauses (JSON, no review)" → `parse <path> --format json`.
    - "Chunk this document for indexing" → `chunk <path> --format json` → save → `ingest`.
    - "Show past reviews" → read `review_results/`; "export / convert to docx" → `export --batch-dir`.
+   - **When the user names a document type with no registered product mode** (e.g. "construction contract", "supply agreement", "joint venture", "trademark license", "shareholder agreement", "merger agreement"): (a) run `openreview --help` to enumerate the 22 registered product modes (licensecheck, leasecheck, privacycheck, dealcheck, hirecheck, indemnitycheck, consultcheck, workcheck, loicheck, subcheck, settlementcheck, settlementcheck_v2, assetcheck, buycheck, engagecheck, guaranteecheck, loancheck, franchisecheck, opcheck, partnercheck, sponsorcheck, distrocheck); (b) recognize the gap — no `constructioncheck` / `supplycheck` / `jvcheck` / etc. exists; (c) fall back to `openreview precheck review <pdf> --playbook-path <yaml>` (or `--playbook <id>`) with a custom playbook for the document type; (d) **NEVER invent a product-mode command** — the agent must not synthesize `openreview constructioncheck <pdf>` or any other unregistered mode. The 22 modes are the closed set; for anything else, route to `precheck review` with a custom playbook.
 
 3. **Output format.** `--format json` / `--memo-format json` when the agent will parse or compute over results. `--memo-format md` (or default text) when the user wants a directly readable artifact. Match the deliverable the user asked for. **`--format json` prints the report to stdout (or to a file with `--output <file>`); `--memo-format json` writes memo JSON files to `review_results/` (or `--output-dir`). `export --batch-dir` accepts BOTH shapes — report JSON (from `--format json --output`) and memo JSON (from `--memo-format json`). Only a run that wrote no JSON file at all leaves nothing to export.**
 
@@ -328,13 +386,15 @@ Key constraint: no CLI command writes `.ndax`. Save the chunk stdout to a file, 
 
 8. **`--allow-partial-pii` — last resort only.** May be surfaced on `precheck review`, `precheck compare`, or product modes, but only after informing the user that raw unredacted text will be sent to the LLM.
 
-9. **Legacy `openreview precheck -d <doc>` exists** (PII strip + memo.txt only, no extraction/QA; its `--format` flag is dead). Always prefer `precheck review` unless the user explicitly wants a quick no-AI memo.
+9. **Legacy `openreview precheck -d <doc>` exists** (PII strip + memo.txt only, no extraction/QA; its `--format` flag is dead). Always prefer `precheck review` unless the user explicitly wants a quick no-AI memo. The legacy path is the **only** command with a `--force-reprocess` flag: `precheck -d <doc> --force-reprocess` re-runs the PII strip and writes a new `pii_audit_trail` row. The modern `precheck review` has **no** `--force-reprocess` flag; the PII cache hit is not bypassable from the modern command (see Capability 1's PII-cache subsection for the four remediation paths on the modern command).
 
 10. **Never guess missing inputs.** If the target document/entity cannot be identified, stop and ask. If the request is outside openreview-cli's document-review domain, decline cleanly. If the request is internally contradictory ("compare two docs but analyze only one"), stop and ask. If the CLI returns no results, report that honestly — do not retry blindly. If a command can only run interactively (e.g. `gateway setup`), do not invoke it headless — tell the user to run it in their own terminal, or use the non-interactive equivalent (`gateway set`, `gateway provider add`). Destructive or consequential ops (`pii delete`, `pii cleanup`, `index-clear`) run only on explicit user request — never as a helpful add-on; prefer `pii cleanup --dry-run` first. Cost/network ops (`precheck review`, `precheck compare`, `gateway refresh`, `gateway test`) surface their cost/network effect before running.
 
 11. **Pre-flight is the CLI's job.** Do not pre-check file existence, PDF/DOCX validity, or PII risk before invoking — `precheck review` and product modes validate these and fail closed on PII errors before any cost-bearing LLM call. The agent decides intent and flags; the CLI owns input safety. **Exception:** the bootstrap/readiness checks in `## Before Using OpenReview` (CLI availability, `gateway status`, `gateway test`) run *before* the first cost-bearing workflow — those are environment checks, not document checks.
 
 12. **Privacy routing.** If the user expresses a privacy/locality/cloud constraint (local-only, on-device, avoid cloud), check `config get privacy.tier` before choosing the workflow and surface `config set privacy.tier maximum` when the requirement is "everything stays local". PII stripping is automatic and separate — `--no-pii` disables stripping (Rule 7), never use it to satisfy a locality requirement. Ambiguous privacy requests: report the trade-off (tier vs cost vs accuracy) and let the user choose — do not guess. **Exception:** `negotiate` does not strip PII and has no `--no-pii` flag (Capability 5).
+
+13. **CRITICAL anti-pattern: `--no-pii` on a non-`maximum` privacy tier exfiltrates raw contract text to the cloud.** Before any workflow that includes `--no-pii`, run `config get privacy.tier`. If the tier is `balanced` or `performance` (or any non-`maximum` cloud tier), the destination is a **cloud** provider; `--no-pii` disables the local PII strip, so the raw unredacted text is sent to that cloud provider. **Do not run.** Surface the warning, **name the destination provider** explicitly (e.g. "this would send raw contract text to `openrouter/anthropic/claude-sonnet-4.6`"), and require explicit user confirmation before proceeding. The two acceptable resolutions are: (a) `config set privacy.tier maximum` (keep `--no-pii`, all inference local) and re-run; or (b) remove `--no-pii` and re-run (PII stripping is automatic, fail-closed, see Capability 10 and the Privacy Tier vs PII Stripping subsection). **Exemption:** `negotiate` (Capability 5) has no `--no-pii` flag and is exempt. **Back-references:** this rule is the enforcement gate for Capability 10's "Privacy Tier vs PII Stripping" subsection; recovery (Recovery Subsystem) cannot save a request that has already exfiltrated raw text.
 
 ## Examples / Operational Guidance
 
@@ -508,6 +568,16 @@ Each example: **intent → workflow selection → commands → prerequisites →
 - **PII list:** documents with stored mappings. Next: relay; destructive follow-ups require explicit confirmation.
 - **Empty/no-results output from any command:** report honestly. Do not retry blindly, do not invent results (Rule 10).
 
+### All-Uncertain or All-Amber outcomes (C-β.1 vs C-β.2)
+
+When every clause in a review reports the same low-confidence position, the agent's interpretation depends on **why** the position is low. Two distinct failure modes share the surface "no Green / no Red" but require different agent responses:
+
+- **All-Uncertain (C-β.1)** — every clause has `Position.UNCERTAIN` (`extraction.py:94, 134`). Cause: the LLM output was unparseable (malformed JSON, schema-violating) or no playbook matched. The model did not actually produce a usable assessment. **Agent response:** report the position distribution verbatim, **refuse** to call the document "high-risk" or "low-risk" (the assessment is not a real assessment). Recommend retrying with a stronger extraction model, a different provider, or a matching playbook. Do not synthesize a risk verdict from the unparseable output.
+
+- **All-Amber (C-β.2)** — every clause is parseable but has confidence below `--confidence-threshold` (default 0.7; `app.py:1254-1265`). Cause: the model returned real output but with low confidence on every clause. The assessment is real, but the model is uncertain. **Agent response:** report the parseable-but-low-confidence outcome, **distinguish from C-β.1** (this is not a parse failure; it is a confidence failure). Treat the review with skepticism — the clauses are real but the verdicts are not strongly grounded. Recommend either a stronger extraction model (one with higher confidence on this document type) or a tighter playbook. Do not pretend the low-confidence verdicts are high-confidence.
+
+**Distinguishing the two:** check whether the extraction LLM output is parseable and matches the `Position` schema. If parsing failed → C-β.1. If parsing succeeded but every clause has confidence < threshold → C-β.2. Both share the surface symptom (no Green / no Red), but only C-β.1 is an "unusable output" failure mode; C-β.2 is a "usable but low-confidence" failure mode.
+
 ## 7. Common Mistakes and Recovery Rules
 
 | Condition | Likely cause | Correct agent action |
@@ -527,3 +597,91 @@ Each example: **intent → workflow selection → commands → prerequisites →
 | User names a benchmark/graph/config/prompt/client/TUI command | Out of scope | Decline cleanly (When NOT to Use) |
 | Raw PDF handed to `ingest` | Wrong input type | Explain `.ndax` pipeline (chunk → save → ingest); ingest takes JSON, not PDF |
 | CLI error after a correct command | Code/runtime issue | Report the error verbatim; do not mask or retry blindly (Rule 10) |
+| Review exits with code 6 / "Cost limit exceeded" | Daily or per-review cost limit reached | Do NOT retry. Report the message verbatim, suggest `config set gateway.cost_limits.daily_cents <new>` (or `per_review_cents`), or wait for the daily reset (UTC midnight — the CLI's "local midnight" wording is misleading; see Cost-Limit Behavior (P1.a)) |
+| `gateway test <slot>` fails — "model not found" / "not found" | Ollama model configured but not pulled | The configured model id is not present locally. Remediation: `ollama pull <model>` (or `ollama pull <tag>`); then re-run `gateway test <slot>`. Source: `gateway/router.py:440-497` raises `ModelNotFoundError` (from `gateway/errors.py:39-46`, message `model not found for <provider>: <orig>`) when the underlying litellm call returns 404 or contains "not found" / "model_not_found". For Ollama, litellm typically prefixes the message with "try pulling it first" — that text is from litellm, not the CLI's error class. The model-not-found message is the canonical signal; do not confuse it with a tier or key issue. **End-to-end evidence:** requires a running Ollama server with the model absent. Without a real Ollama, the CLI fails earlier with `connection refused` (see C-γ below), not `ModelNotFoundError`. |
+| `gateway test <slot>` fails — connection refused / cannot connect to Ollama | Ollama server not running on the configured host/port | Start the Ollama daemon (`ollama serve`, or launch the desktop service) and re-run `gateway test <slot>`. Source: `app.py:1524-1556`. Distinguish from model-not-pulled (above) by the error text: connection refused / cannot connect → server-down; "not found, try pulling" → model-not-pulled. For cloud slots, a connection error usually means a 401/403 (key bad) or a 4xx with a deprecated model id (use `gateway refresh`; see C-α below). |
+| `precheck compare --show-redlines` produces no redline output for one party | One side is non-DOCX (PDF or other) | `--show-redlines` works on tracked-changes DOCX only. If `doc_b` is a PDF (or any non-DOCX), the redline block is silently skipped with no warning (Source: `app.py:1922-1926` `continue`). Verify with `docx_parser.detect_tracked_changes` that the input is DOCX with `w:ins` / `w:del` markup; if not, route the user to convert or use a different comparison. Comparing two PDFs produces zero redline output with exit 0 — that is the expected behavior, not a bug. |
+| User requests `index-clear --all` | No confirmation prompt (asymmetric to `playbook delete --all`) | `index-clear --all` does NOT prompt before clearing every index database. It is destructive and silent; require explicit user confirmation before running, and prefer `index-clear <db_name>` for single-target clearing. Source: `app.py:2321-2341` (no `Confirm.ask` before the loop). This is asymmetric to `playbook delete --all`, which IS gated by a prompt. (`pii delete` / `pii cleanup` already require explicit request per the destructive-op row above.) |
+| `playbook delete --all` (interactive) or `--all --force` | Soft-delete lifecycle | `--all` prompts for confirmation (interactive only); `--all --force` skips the prompt. The deletion is **soft** (recoverable via `playbook undelete <id> <v>`) and the CLI says "cannot be undone" — that wording is misleading; soft-delete is reversible. A single `playbook delete <id> <v>` (no `--all`) is unprompted. Source: `app.py:981-1019`. |
+| `playbook list` does not show a playbook the user expected | Soft-deleted playbook is hidden by default | `playbook list` hides soft-deleted entries. Use `playbook list --include-deleted` to see them. Source: `app.py:607-612`. |
+| `playbook set-current <id> <v>` re-activates a soft-deleted playbook | Silent tombstone clearance | `set-current` on a soft-deleted playbook silently clears `deleted_at` (re-activates it). There is no warning. The playbook reappears in default `playbook list` output. Source: `app.py:955-979`; `playbooks.py:217-220`. If the user did not intend to re-activate, run `playbook undelete <id> <v>` is NOT the recovery path; the playbook is already active. Verify with `playbook show <id> <v>` before issuing `set-current` on a soft-deleted id. |
+| Stale configured model after upstream rename / deprecation | Models registry is a flat list; renames require explicit user action | If a configured model id was renamed upstream, `gateway test <slot>` returns a 4xx or "model not found" without telling the user the model was deprecated. Diagnostic: `gateway refresh` to re-fetch `models.json`, then `gateway status` to see the new ids, then `gateway set <slot> <new-model>` (e.g. `gateway set extraction openrouter/anthropic/claude-sonnet-4.5`) and re-verify with `gateway test <slot>`. The registry has no deprecation map; this is the only diagnostic path. Source: `app.py:230-253, 1513-1521`. |
+| Re-running a review | PII cache behavior differs by command path (legacy vs modern) | The legacy `precheck -d` path (`review/base.py:65-87`) consults a PII cache; a re-run short-circuits the strip and does **not** write a new `pii_audit_trail` row. The modern `precheck review` and product modes (`review/runner.py:267-270` → `pipeline/adapters/strip.py:51-100`) **do not** consult a cache; every re-run re-strips the document and writes a new `pii_audit_trail` row (`pii/persist.py:127-133`). In both paths, `cost_logs` accumulates a new `session_id` row, so `gateway costs --today` shows additive cost. The modern `precheck review` has **no** `--force-reprocess` flag; the legacy `precheck -d <doc> --force-reprocess` flag DOES bypass the legacy cache and force a fresh audit row. To force a fresh re-strip on the modern path, the existing audit row is `INSERT OR REPLACE`d, so the re-run naturally produces a new row; there is no flag. Source: `review/runner.py:118-125`; `review/base.py:65-87`; `pipeline/adapters/strip.py:51-100`; `pii/persist.py:127-133`; `storage/costs.py:23`. |
+| `--output` write failure (chmod 0o500 / read-only / disk-full) — modern commands | `_write_output_file` catches `OSError` | The modern `--output` path (`app.py:146-152`) catches `OSError` and returns a clean `Error: cannot write output file...` (exit 1). The user must fix the filesystem issue (chmod, mount, free space) and retry. This covers `precheck review --output`, `precheck compare --output`, `parse --output`, `retrieve --output`, etc. **Note:** the clean-error guarantee fires **only when `_write_output_file` is reached**. Earlier failures (parse error → "No documents processed." exit 1; SQLite init failure → raw `OperationalError` traceback exit 1) surface different messages. Source for `_write_output_file`: `app.py:146-152`. |
+| `--output-dir` write failure (memo export) | Inner `except Exception` catches → `logger.exception` prints raw traceback to stderr, exit 0 | The `--output-dir` path (memo export) routes through `_export_memo_reports` (`app.py:182`) → `MemoExporter.export` (`review/memo/exporter.py:81-94`) → `MemoExporter._write_memo` (`review/memo/exporter.py:188`) which calls `path.write_text(...)` **without** a `try/except`. The inner `except Exception:` at `review/memo/exporter.py:91-92` catches the `PermissionError` and calls `logger.exception("Failed to export %s format", fmt.value)` — this writes the full Python traceback to stderr (via the `[ERROR]` formatter at `app.py:193`). The outer `except Exception` at `app.py:134-135` (which would emit the clean "Warning: Memo export failed: {e}" message) is unreachable in this path because the inner exporter catch runs first. The user sees a raw Python traceback on stderr, the review **exits 0**, the text report is still printed to stdout/--output, and no memo file is written. The traceback is the signal; it is NOT a clean error message. Tell the user the export failed (the traceback shows the file path and `PermissionError: [Errno 13]`) and to check the directory permissions. |
+| `--output` write failure on `playbook export <id>` or `playbook export --all` | Un-`try`'d `out_path.write_text` | `playbook export` (`app.py:808, 868`) calls `out_path.write_text(...)` **without** a `try/except`, leaking a raw Python traceback to the user (no clean error message). Same filesystem root cause as the modern path above. Tell the user the traceback is from the write-failure on the output path; fix the filesystem issue and retry. `playbook import` has no `--output` flag and is NOT affected. |
+| Disk full mid-review | No pre-check; surfaces as `OperationalError` or `OSError(ENOSPC)` | The CLI does not pre-check free space. A full disk produces a SQLite `OperationalError("database or disk is full")` on the next `INSERT` (cost log) or an `OSError(ENOSPC)` on the output write path. The review exits non-zero with a partial state in the cost log. PII persistence failures on the modern `StripStage` path (`pii/persist.py:111-133`) are caught and logged as a warning but do NOT cause the review to exit non-zero — the strip itself succeeded, but no new `pii_cache`/`pii_audit_trail` row is written. Tell the user the disk is full; free space; rerun if the partial state is acceptable (cost will be additive). Source: `storage/costs.py:23`; `pii/persist.py:114-117, 165-186`; `pipeline/adapters/strip.py:145-146`; `app.py:146-152`. |
+| User names a document type with no registered product mode (e.g. "construction contract", "supply agreement", "joint venture", "trademark license", "shareholder agreement", "merger agreement") | The 22 product modes registered at `app.py:3075-3245` do not cover every contract type | (1) Run `openreview --help` to enumerate the registered product modes (licensecheck, leasecheck, privacycheck, dealcheck, hirecheck, indemnitycheck, consultcheck, workcheck, loicheck, subcheck, settlementcheck, settlementcheck_v2, assetcheck, buycheck, engagecheck, guaranteecheck, loancheck, franchisecheck, opcheck, partnercheck, sponsorcheck, distrocheck). (2) Recognize the gap — no `constructioncheck` / `supplycheck` / `jvcheck` / etc. exists. (3) Fall back to `openreview precheck review <pdf> --playbook-path <yaml>` (or `--playbook <id>`) with a custom playbook for the document type. (4) **NEVER invent a product-mode command** — the agent must not synthesize `openreview constructioncheck <pdf>`. Source: `_PRODUCT_MODES` at `app.py:3075-3245`. |
+
+The following subsections document the actual current behavior of the cost-limit (Phase 6 B3) and recovery subsystems, and the precise relationship between privacy tier and PII stripping. They are derived from `src/openreview_cli/gateway/router.py:397` (cost-limit check), `src/openreview_cli/recovery/coordinator.py` (recovery orchestrator), and `src/openreview_cli/gateway/tier_config.py:13-15` (tier enum). Use them as the authoritative reference when the user asks about limit breaches, provider failures, or tier vs stripping.
+
+### Cost-Limit Behavior (Phase 6 B3)
+
+The CLI enforces two cost limits via `config set gateway.cost_limits.<key>`, both checked by `Router._check_cost_limits` (`src/openreview_cli/gateway/router.py:397-438`) **before any LLM call**:
+
+- **Daily limit** (`gateway.cost_limits.daily_cents`, default 1000): cumulative spend for the calendar day as recorded by the cost-log table. **The reset is at UTC midnight, not local midnight** — the source uses `WHERE date(created_at) = date('now')` (`src/openreview_cli/storage/costs.py:41`), and SQLite's `date('now')` returns UTC. The user-facing error message (`router.py:420`) says "Reset at local midnight" but the SQL is UTC; the actual reset time depends on the user's timezone. A user at UTC-5 will see the limit reset 5 hours after the message claims. The skill reports the implementation truth; the in-CLI message is a known drift that the source `router.py:420` does not currently reconcile.
+- **Per-review (session) limit** (`gateway.cost_limits.per_review_cents`, default 100): cumulative spend for a single `precheck review` / `precheck compare` / product-mode invocation. Resets per `session_id` (`router.py:425` keys it on `session_id`, not on per-CLI-invocation; a single CLI process running two `precheck review` invocations shares the budget, but two CLI processes do not). **The per-review check only fires when the CLI passes a `session_id` to the router** (`router.py:423`: `if session_id and per_review_cents is not None:`). If a CLI path omits `session_id`, the per-review limit is silently not enforced for that call.
+
+When a limit is breached, the router raises `cost_limit_error` (`src/openreview_cli/errors.py:10-12`), which `sys.exit(6)`s the process with the message `Cost limit exceeded: <context> (limit=<key> cents=<current>/<max>). Reset at local midnight.` followed by `exit=6` on stderr. There is no JSON envelope, no exception trace, and no recovery hook — this is a hard pre-call exit, **not** a recoverable error.
+
+**Differences from an ordinary provider failure:**
+
+- Cost-limit is checked **before** any LLM call (the strip stage may run, but the LLM call never does). The cost check is in the gateway, so it fires before the LLM call.
+- Cost-limit does **not** flow through the recovery subsystem (the recovery coordinator only sees LLM-side failures, not the cost-limit pre-check).
+- A retry of the same command at the same limit hits the same limit immediately. **Do not** retry the same command. **Do not** loop recovery. **Do not** silently fall back to a cheaper model — the user is at their budget, not their model.
+- `--no-pii` does not bypass the cost-limit: even with raw text, the cost check runs first and exits 6 before the LLM call. The exfiltration path requires the LLM call to complete, which it won't under a cost-limit exit.
+
+**Agent action when exit 6 is observed:**
+
+1. Report the cost-limit message verbatim to the user — do not paraphrase, do not translate "exit 6" into "rate limit" or "quota" (the user may be tracking against a specific key).
+2. **Do not** retry the same command. **Do not** invoke the recovery subsystem for cost-limit.
+3. Offer the user two remediations: (a) raise the limit (`config set gateway.cost_limits.daily_cents <new_cents>` or `gateway.cost_limits.per_review_cents <new_cents>`), or (b) wait for the daily reset at UTC midnight (not "local midnight" as the in-CLI message says).
+4. Suggest `gateway costs --today` to show the current spend; the user may want to inspect before deciding.
+5. If the user is on a tight budget, surface a brief table of slot-level cost options (e.g. "the `extraction` slot costs X cents/clause; switching to the `balanced` model would drop that to Y") rather than letting them guess.
+
+### Recovery Subsystem
+
+The recovery subsystem (`src/openreview_cli/recovery/coordinator.py`) is invoked **after** the LLM call (or the gateway) returns a failure. It does not run for pre-call exits like cost-limit (P1.a) or for parse errors like PDF password (Capability 1). Recovery only sees LLM-side failures and gateway-side failures that survive the cost-limit pre-check.
+
+**The four strategies** (named in `coordinator.py:31-35` and selected in `coordinator.py:50-60`):
+
+- `auto_retry` — exponential backoff retry of the same call. Default 4 attempts, base interval 1.0s (`recovery/models.py:23-25`).
+- `provider_fallback` — switch the slot to a different configured provider/model. Respects the privacy tier (see below).
+- `stage_isolation` — re-run only the failed stage (extraction, QA, etc.) with the existing outputs from the other stages. Produces a partial result if the re-run fails again.
+- `graceful_degradation` — produce a partial result with the stages that succeeded. Memory-budget threshold at 80% of `RAG_CHUNK_RATIO` ceiling (`recovery/strategies/graceful.py:42`).
+
+**Dispatch logic — gateway-failure path vs stage-failure path** (the `transient` category is split because the two detection sites dispatch differently):
+
+- **Gateway-failure path** (`coordinator.py:220-239`, `handle_gateway_failure`): a `transient` gateway error (e.g. 5xx, connection reset) goes **straight to `provider_fallback`**; auto-retry is skipped (the gateway already retried). Permanent errors (4xx, auth) skip recovery and surface the error.
+- **Stage-failure path** (`coordinator.py:142-176`, `handle_stage_failure`): a `transient` stage error chains `auto_retry` → `stage_isolation`. Permanent errors chain `stage_isolation` → `graceful_degradation`. Schema/parse errors skip recovery.
+
+**Privacy-tier interaction (SC-04):** `provider_fallback` consults `RecoveryContext.user_privacy_tier` (`recovery/models.py:50-60`). If the tier is `strict` (the recovery-internal strict tier, mapped from product `maximum`) and the fallback provider is a cloud provider, the strategy is skipped (the recovery respects the tier — it will not move a `maximum` user off local). The product → recovery tier mapping (`recovery/models.py:55-60`) is: `product.maximum → recovery.strict`, `product.balanced → recovery.standard`, `product.performance → recovery.none`.
+
+**Cost-limit interaction:** cost-limit failures bypass recovery entirely (they happen in the gateway pre-check, not in the LLM call). See the Cost-Limit Behavior (P1.a) subsection above.
+
+**PII-before-egress gate (R3-1, R3-2):** in addition to the recovery-time tier check, the router has a per-process `_pii_available` flag (`router.py:331-337`). If PII stripping fails (engine not initialized, no PII available), the router refuses to call a cloud provider even under `performance`. This is a runtime protection that recovery does not provide: recovery can swap providers, but it cannot re-enable PII stripping mid-pipeline. The agent must surface a PII-unavailable failure to the user, not fall back to a cloud slot.
+
+**Strategy detail:**
+
+- `auto_retry` — exponential backoff. Default `max_retries=4`, `base_interval_s=1.0`, capped at 30s. After max retries, escalates to `provider_fallback`.
+- `provider_fallback` — picks the next configured provider for the slot, respecting the tier. If the slot has only one configured provider, the strategy aborts and escalates to `stage_isolation`.
+- `stage_isolation` — re-runs only the failed stage with the same inputs; other stages' outputs are preserved. The `RecoveryOutcome` enum values from `recovery/models.py` are returned (e.g. `RESOLVED` on success, `DEGRADED` on partial, `EXHAUSTED` if the re-run fails again and there are no more strategies).
+- `graceful_degradation` — produces a `RecoveryReport` with whatever stages succeeded. Memory budget: abort when `current_memory ≥ memory_budget_bytes` (default 100 MB; `memory_threshold_pct` defaults to 100, see `coordinator.py:88-89`). The agent's job is to surface the partial result honestly, not fill in missing stages.
+
+**Persistence — read this carefully:** the recovery state table and coordinator methods exist, but the user-facing pipeline at `review/runner.py:248-251` constructs the coordinator *without* `db_path`, so no row is ever saved in a real review run. The persistence path is test-only. If the user asks "where is my recovery report stored?", the answer is: there is no row; the `RecoveryReport` is returned in memory to the calling code and not persisted. Do not promise the user a row that does not exist.
+
+**Agent action when reading a `RecoveryReport`:**
+
+1. `resolved` — all strategies succeeded; continue as if no failure occurred.
+2. `degraded` — some strategy succeeded with reduced output; surface the notice ("the QA stage was re-run in isolation; the final assessment may be less confident") and continue.
+3. `unrecoverable` — all strategies exhausted; **stop** and surface the user-guided error verbatim. Do not retry the same command.
+4. `partial_results` — `graceful_degradation` produced a partial output; **stop** the workflow and offer to save the partial result (`--memo-format json --output <path>`) for the user to inspect.
+
+**When to stop and surface a user-guided error (the four user-intervention triggers):**
+
+1. The recovery coordinator returns `unrecoverable` after exhausting all strategies.
+2. The slot has no configured fallback provider (and the primary is down).
+3. The privacy tier blocks the only available fallback (e.g. `maximum` + the only Ollama model is not pulled).
+4. The recovery surfaces a PII-unavailable error (do not silently fall back to a cloud slot under `performance`).
+
+**No blind retry:** recovery itself exhausts strategies; the agent must not loop with the same command. If recovery returns `unrecoverable`, the agent stops and asks the user.
