@@ -1,10 +1,14 @@
 ---
 name: openreview-cli
-version: 0.10
+version: 0.1.2
 description: Use when a user wants to review, compare, search, or analyze legal/contract documents (PDF/DOCX) locally — produce review memos, compare two versions, search indexed clauses, run negotiation analysis, manage LLM gateway slots/playbooks, or audit/delete stored PII mappings. This is the local `openreview` CLI, NOT the openreview.net academic platform.
 ---
 
 # openreview-cli
+
+## Versioning
+
+The skill's frontmatter `version` field tracks the CLI's `__version__` (`src/openreview_cli/__init__.py`) and `pyproject.toml` `version` field. They are kept in lockstep: bumping any one is a P3+ (or release-time) edit that must update the others. If the user asks "what version is the skill for?" the answer is the same as `openreview --version`. If they disagree, the CLI is the source of truth and the skill is stale.
 
 ## Purpose
 
@@ -128,6 +132,15 @@ Two pre-LLM failure modes surface before the LLM call. The user-facing message a
 - **Password-protected PDF** (`pdf_parser.py:62-107`): `ParseError(category="password_protected")`. Standalone `parse` exits 8 with the message "This contract is password-protected." on stderr. `precheck review` and product modes exit 1 with "No documents processed." on stderr — the parse error is caught by the pipeline runner (`review/runner.py:289-293`) and the empty-reports list triggers the "No documents processed" exit (`app.py:167-169`). The original "password-protected" message is logged to `openreview.log` but does not surface on the terminal in the modern path. The user must remove the password (e.g. `qpdf --decrypt`) and rerun.
 - **Scanned-image PDF** (`pdf_parser.py:113-146`): `ParseError(category="no_text")`. Same dual-path behavior: standalone `parse` exits 8 with "This PDF contains no extractable text." on stderr; `precheck review` and product modes exit 1 with "No documents processed." on stderr. The user must re-export with an embedded text layer (e.g. OCR the source, or export from the original authoring tool as "searchable PDF"). **Note:** the product's error text suggests `openreview install ocr` (at `pdf_parser.py:144-145`), but that command does not exist. The remediation is to re-export, not to install anything.
 
+#### Product-mode `--mode-threshold` flag
+
+`precheck review` and product-mode commands accept a repeatable `--mode-threshold MODE=VALUE` flag (`app.py:3111-3116`) that overrides the default confidence threshold for a specific mode. The flag is repeatable: pass `--mode-threshold extraction=0.65 --mode-threshold reasoning=0.8` to set per-stage thresholds. Values must be in `[0.0, 1.0]`. The flag is useful for noisy domains (legal/medical) where the default 0.7 is too tight, or for high-volume triage where the default is too loose. This is distinct from the global `--confidence-threshold` (which applies to all stages). Source: `app.py:3111-3116`.
+
+#### Global `--debug` and `--no-tui` flags
+
+- `--debug` (global Typer option at `app.py:309-313`): enable verbose debug logging. This sets the root logger to DEBUG, writes stack traces on exceptions, and may slow the CLI significantly. The agent should not enable `--debug` by default — only on explicit user request when troubleshooting an unexpected failure.
+- `--no-tui` (parsed at `app.py:33-35` via `"--no-tui" in sys.argv`): suppress the Textual TUI and force the plain-text CLI. Use this when running in a non-interactive shell, when output is being captured/piped, or when the TUI's input loop is incompatible with the calling environment. The agent should default to `--no-tui` for any non-interactive invocation.
+
 ### 2. Bilateral Comparison
 Clause-by-clause comparison of two documents.
 
@@ -147,6 +160,10 @@ The `--show-redlines` flag renders a per-clause redline block (insertions / dele
 - Comparing two PDFs with `--show-redlines` produces zero redline output and exits 0 — this is the expected behavior, not a bug.
 - If the user expects redlines but the input is a PDF, route them to convert the source to DOCX (or use the underlying compare report without redlines).
 
+#### `--format` flag (text|json only)
+
+`precheck compare --format` accepts only two values: `text` (terminal, default) and `json`. The flag is enum-validated at `app.py:1782-1787` (`if format not in ("text", "json"): ... Error: --format must be 'text' or 'json', got '<value>'` then `typer.Exit(code=1)`). Anything else (e.g. `--format md`, `--format yaml`) fails with exit 1 and the error message above. There is no `--format docx` or `--format memo` on `precheck compare`; for memo-style output use `export` (Capability 7) on a saved compare JSON. Source: `app.py:1730` (declaration), `app.py:1782-1787` (validation).
+
 ### 3. Retrieval & Index Management
 Search indexed clause chunks; manage the local index.
 
@@ -157,6 +174,18 @@ CLI: `openreview ingest <file.ndax>` → `openreview retrieve "<query>" [file]`;
 Required: for `ingest`, a JSON file containing a list of chunk dicts (`.ndax` is a user-applied extension; any JSON list works). For `retrieve`, a query string; `file` falls back to last indexed document.
 
 Key constraint: no CLI command produces `.ndax`. To build one: `openreview chunk <doc> --format json` (stdout) → save to file → `ingest` (`chunk` is OPTIONAL — see Optional Capabilities). `precheck review` does NOT require chunking or indexing. **`ingest`/`retrieve` default to `hybrid`, which needs the `embedding` slot configured; without it the CLI silently falls back to BM25/sparse and prints a fallback notice. Surface that notice to the user, or use `--method sparse` deliberately to avoid the silent quality drop. `--rerank` is opt-in and routes to the configured `reranking` slot (e.g. `ollama/qwen3-reranker-0.6b`, `cohere/rerank-english-v3.0`, `voyage/rerank-2.5`); it needs that slot configured and reachable — check `gateway status` (slot `configured`) then `gateway test reranking` before relying on it.**
+
+#### `retrieve` and `ingest` flags
+
+These flags are part of the index-and-retrieve surface and are commonly needed but were not formally documented:
+
+- `retrieve --method <sparse|dense|hybrid>` (default `hybrid`): chooses the retrieval method. `hybrid` requires the `embedding` slot; without it the CLI falls back to BM25/sparse with a notice (see above). `dense` requires the `embedding` slot configured and reachable — verify with `gateway test embedding` before relying on it. `sparse` is BM25-only and needs no embedding model. Source: `app.py:2064-2066`.
+- `retrieve --top-k <int>`: number of top chunks to return. The default is implementation-defined; raise it for broader context, lower it for tight scoping. Source: `app.py:2067`.
+- `retrieve --rerank-depth <int>`: number of chunks to re-rank before truncating to `--top-k`. Requires the `reranking` slot configured. Larger values improve quality at the cost of latency. Source: `app.py:2071`.
+- `retrieve --no-header`: suppress the column header in text-format output (useful when piping into other tools). Source: `app.py:2078`.
+- `retrieve --db-dir <path>`: override the default DB directory. By default, the CLI uses `platformdirs.user_data_dir("openreview") / "openreview.db"` (Linux/macOS: `~/.local/share/openreview/openreview.db`); `--db-dir` lets the user point at a different index for isolation, testing, or multi-tenant setups. Source: `app.py:2078` (declaration; same parameter name used for `ingest`, `retrieve`, and other index commands).
+- `ingest --model <id>`: override the embedding model used to vectorize chunks at ingest time. Defaults to the configured `embedding` slot. If the model used at ingest differs from the one configured at retrieve time, dense retrieval will be incoherent; surface this to the user. Source: `app.py:1961`.
+- `ingest --db-dir <path>`: same semantics as `retrieve --db-dir` (above). The `--db-dir` passed at `ingest` must match the one passed at `retrieve` for results to be visible. Source: `app.py:1962`.
 
 ### 4. Query Saved Artifacts
 List previously-produced review outputs.
@@ -180,6 +209,15 @@ Required: one PDF/DOCX path.
 
 Key constraint: `negotiate` does NOT strip PII — it parses the document directly (no `PiiEngine`; there is no `--no-pii` flag on it). Never promise privacy for negotiation analysis; if redaction matters, use `precheck review` instead.
 
+#### `negotiate` flags
+
+These flags are commonly needed but were not formally documented:
+
+- `negotiate --playbook-path <yaml>`: use a custom YAML playbook for clause extraction (same playbook format as `precheck review --playbook-path`). Use this when the bundled negotiation playbook does not match the document type. Source: `app.py:2807`.
+- `negotiate --rationality <float>`: bounds the rationality coefficient in QRE/Level-k solvers (range 0.0–∞; values near 0 = uniform randomization, large = best-response). The default is solver-specific. Source: `app.py:2815`.
+- `negotiate --depth <int>`: recursion depth for Level-k (`--solver level_k`). Higher depth models deeper strategic reasoning at exponential cost. Source: `app.py:2820`.
+- `negotiate --weights <a,b,c>`: comma-separated weights for the negotiation objective (e.g. `payoff,risk,acceptance`). The order and meaning depend on the playbook; check the playbook YAML or `negotiate --help` for the current schema. Source: `app.py:2825`.
+
 ### 6. Gateway & Provider Management
 Configure LLM provider slots, check costs/connectivity, refresh model registry.
 
@@ -201,6 +239,14 @@ If `gateway test <slot>` returns a 4xx or "model not found" but the user is sure
 The registry (`models.json` at `app.py:230-253`) is a flat list with no deprecation map; there is no automatic "your model was renamed to X" warning. `gateway refresh` + `gateway models` is the only way to discover the new id. This diagnostic path is the same for any provider (OpenRouter, Ollama, custom); for Ollama, "not found" usually means the model is not pulled locally (use `ollama pull`, not `gateway refresh`).
 
 **End-to-end evidence (P2 S-P2-F):** a mock OpenAI-compatible server returning HTTP 404 with `{"error":{"message":"The model `stale-model-v1` does not exist or you do not have access to it.","type":"invalid_request_error","param":"model","code":"model_not_found"}}` for the stale model id, and HTTP 200 with a valid chat completion for the new model id, triggers: (1) `Error: model not found for mock-stale: litellm.NotFoundError: OpenAIException - The model \`stale-model-v1\` does not exist or you do not have access to it.` on the stale id, and (2) `Response: OK` (exit 0) after `gateway set <slot> <new-model>` switches to the valid id. The `model not found for <provider>:` prefix is the CLI's `ModelNotFoundError` class (`gateway/errors.py:39-46`); the router triggers it at `router.py:488` on status 404. See `draft/raports/phase7-p2-execution-report.md` S-P2-F for the full walkthrough.
+
+#### `gateway` query flags
+
+These flags are commonly needed for agent automation but were not formally documented:
+
+- `gateway providers --json`: emit the configured providers as JSON (one provider per object) instead of the human-readable table. Use this when scripting against the providers list. Source: `app.py:1383`.
+- `gateway models <provider> --json`: emit the registry models for `<provider>` as JSON. Without `--json`, the output is a numbered list. Source: `app.py:1431`.
+- `gateway costs --session <session_id>`: show the cost log for a specific review session (filtered to that `session_id`). Without `--session`, the default is "today" (or use `--today` explicitly). Use the `session_id` returned in a review's JSON output (`reports[].session_id`) to drill into a single review. Source: `app.py:1561-1573`.
 
 ## Model Slot Selection Guide
 
@@ -292,6 +338,16 @@ CLI: `openreview playbook import <yaml> | list | show <id> <version> | export | 
 
 Key constraint: 24 bundled playbooks. For `precheck review`: `--playbook <id>` selects a DB playbook, `--playbook-path <yaml>` supplies a custom file. For product modes: `--playbook` takes a YAML path only (no DB id).
 
+#### `playbook export` and `playbook diff` flags
+
+These flags are commonly needed but were not formally documented:
+
+- `playbook export <id> <version> --output <file>`: write a single playbook's YAML to `--output`. Source: `app.py:766-773`.
+- `playbook export --all --output <file>`: dump every active playbook to a single YAML file (for backup or migration). Source: `app.py:766-773`.
+- `playbook export --version <v>`: export a specific historical version (defaults to the active version when omitted). Source: `app.py:766-773`.
+- `playbook export --force`: overwrite an existing `--output` file without prompting. Without `--force`, the CLI refuses to overwrite and prints a clear error. Source: `app.py:766-773`. Note: `playbook export` writes via `out_path.write_text(...)` **without** a `try/except` (`app.py:808, 868`); on a permission error the user sees a raw Python traceback. This is the same write-failure class documented in Common Mistakes.
+- `playbook diff <id> <v1> <v2> --json`: emit a machine-readable JSON diff between two versions of a playbook. Without `--json`, the diff is human-readable text. Source: `app.py:877`.
+
 ### 8. PII Governance
 Audit/delete stored PII mappings at rest.
 
@@ -309,6 +365,13 @@ Use when: user wants to export or convert previously-saved reviews.
 CLI: `openreview export --batch-dir <dir> [--format md|json|docx] [--output-dir review_results]`.
 
 Required: `--batch-dir` pointing at a directory of saved review JSONs. If the user names one report, identify it (ask or locate) before export — export is batch-oriented but user language is often singular.
+
+#### `export` flags
+
+These flags are commonly needed for templated exports but were not formally documented:
+
+- `export --template <name>`: use a named memo template (e.g. `default`, `concise`, `legal-brief`). Templates are resolved from `~/.local/share/openreview/templates/` (Linux/macOS) or the platform equivalent; an unknown template name exits 1 with an error. Source: `app.py:3004-3010`.
+- `export --mode <mode>`: choose an export mode (`memo`, `summary`, `redline`, etc.). The available modes depend on the report shape; an unknown mode exits 1. Source: `app.py:3004-3010`.
 
 ### 10. Privacy Tier
 Control whether LLM/embedding processing runs local-only or may use cloud providers.
@@ -357,6 +420,8 @@ Break a document into retrieval-ready chunks (stdout).
 Use when: the user asks to chunk a document, usually to build a search index.
 
 CLI: `openreview chunk <path> --format json` (stdout only).
+
+`chunk --summary` is a useful flag that produces a one-line summary per chunk (length, leading sentence, first entity tag) instead of the full chunk text. Use `--summary` when you want a quick overview of how the document is structured without dumping every chunk body to the terminal. The default (no `--summary`) is full chunk text. Source: `app.py:1657`.
 
 Required: one PDF/DOCX path.
 
@@ -615,7 +680,11 @@ When every clause in a review reports the same low-confidence position, the agen
 | `--output-dir` write failure (memo export) | Inner `except Exception` catches → `logger.exception` prints raw traceback to stderr, exit 0 | The `--output-dir` path (memo export) routes through `_export_memo_reports` (`app.py:182`) → `MemoExporter.export` (`review/memo/exporter.py:81-94`) → `MemoExporter._write_memo` (`review/memo/exporter.py:188`) which calls `path.write_text(...)` **without** a `try/except`. The inner `except Exception:` at `review/memo/exporter.py:91-92` catches the `PermissionError` and calls `logger.exception("Failed to export %s format", fmt.value)` — this writes the full Python traceback to stderr (via the `[ERROR]` formatter at `app.py:193`). The outer `except Exception` at `app.py:134-135` (which would emit the clean "Warning: Memo export failed: {e}" message) is unreachable in this path because the inner exporter catch runs first. The user sees a raw Python traceback on stderr, the review **exits 0**, the text report is still printed to stdout/--output, and no memo file is written. The traceback is the signal; it is NOT a clean error message. Tell the user the export failed (the traceback shows the file path and `PermissionError: [Errno 13]`) and to check the directory permissions. |
 | `--output` write failure on `playbook export <id>` or `playbook export --all` | Un-`try`'d `out_path.write_text` | `playbook export` (`app.py:808, 868`) calls `out_path.write_text(...)` **without** a `try/except`, leaking a raw Python traceback to the user (no clean error message). Same filesystem root cause as the modern path above. Tell the user the traceback is from the write-failure on the output path; fix the filesystem issue and retry. `playbook import` has no `--output` flag and is NOT affected. |
 | Disk full mid-review | No pre-check; surfaces as `OperationalError` or `OSError(ENOSPC)` | The CLI does not pre-check free space. A full disk produces a SQLite `OperationalError("database or disk is full")` on the next `INSERT` (cost log) or an `OSError(ENOSPC)` on the output write path. The review exits non-zero with a partial state in the cost log. PII persistence failures on the modern `StripStage` path (`pii/persist.py:111-133`) are caught and logged as a warning but do NOT cause the review to exit non-zero — the strip itself succeeded, but no new `pii_cache`/`pii_audit_trail` row is written. Tell the user the disk is full; free space; rerun if the partial state is acceptable (cost will be additive). Source: `storage/costs.py:23`; `pii/persist.py:114-117, 165-186`; `pipeline/adapters/strip.py:145-146`; `app.py:146-152`. |
-| User names a document type with no registered product mode (e.g. "construction contract", "supply agreement", "joint venture", "trademark license", "shareholder agreement", "merger agreement") | The 22 product modes registered at `app.py:3075-3245` do not cover every contract type | (1) Run `openreview --help` to enumerate the registered product modes (licensecheck, leasecheck, privacycheck, dealcheck, hirecheck, indemnitycheck, consultcheck, workcheck, loicheck, subcheck, settlementcheck, settlementcheck_v2, assetcheck, buycheck, engagecheck, guaranteecheck, loancheck, franchisecheck, opcheck, partnercheck, sponsorcheck, distrocheck). (2) Recognize the gap — no `constructioncheck` / `supplycheck` / `jvcheck` / etc. exists. (3) Fall back to `openreview precheck review <pdf> --playbook-path <yaml>` (or `--playbook <id>`) with a custom playbook for the document type. (4) **NEVER invent a product-mode command** — the agent must not synthesize `openreview constructioncheck <pdf>`. Source: `_PRODUCT_MODES` at `app.py:3075-3245`. |
+| User names a document type with no registered product mode (e.g. "construction contract", "supply agreement", "joint venture", "trademark license", "shareholder agreement", "merger agreement") | The 22 product modes registered at `app.py:3075-3245` do not cover every contract type | (1) Run `openreview --help` to enumerate the registered product modes (licensecheck, leasecheck, privacycheck, dealcheck, hirecheck, indemnitycheck, consultcheck, workcheck, loicheck, subcheck, settlementcheck, settlementcheck_v2, assetcheck, buycheck, engagecheck, guaranteecheck, loancheck, franchisecheck, opcheck, partnercheck, sponsorcheck, distrocheck). (2) Recognize the gap — no `constructioncheck` / `supplycheck` / `jvcheck` / etc. exists. (3) Fall back to `openreview precheck review <pdf> --playbook-path <yaml>` (or `--playbook <id>`) with a custom playbook for the document type. (4) **NEVER invent a product-mode command** — the agent must not synthesize `openreview constructioncheck <pdf>`. Source: `_PRODUCT_MODES` at `app.py:3075-3245`.
+| Two reviews started in parallel hit the same DB | SQLite write contention (mitigated by WAL; the second writer may still error after a 5s wait) | The CLI's database layer uses `PRAGMA journal_mode=WAL` (`storage/database.py:13`), which allows one writer + many readers concurrently — the classic `OperationalError: database is locked` from default-rollback journal mode is much rarer. However, two writers can still contend briefly: the second `sqlite3.connect(...)` call (default timeout 5s) will wait, and if the first writer hasn't released by then, it raises `OperationalError: database is locked`. The second review exits non-zero with no memo, and the cost log row from the failed write may also be missing. **Do not** run two reviews in parallel against the same DB; serialize them. If parallel runs are unavoidable, point each at its own `--db-dir` (Capability 3 flags) so they use separate DB files. Source: `storage/database.py:13` (WAL pragma); `storage/costs.py:21, 39, 47, 56`; `config/paths.py:16-19` (`platformdirs.user_data_dir`). |
+| `precheck review` on a DOCX with no detectable clauses (clause detector returns 0) | DOCX body is prose-only OR has no paragraphs at all | The clause detector at `parsing/stream.py` may return 0 clauses for a DOCX whose body has no paragraphs (truly empty DOCX) or for some unusual prose shapes. **The modern `precheck review` / product-mode path TOLERATES this**: it runs the pipeline, the report lists "0 clauses", the CLI prints "No clauses to assess." (exit 0) — there is no error and no "No documents processed." message. The agent should expect exit 0 in this case and report "0 clauses detected; no review produced" to the user. This is **different** from password-protected / scanned PDF / empty-file cases, which raise `ParseError` and produce "No documents processed." (exit 1) via `app.py:167-169`. **End-to-end evidence (P3 B2):** `uv run openreview precheck review /tmp/truly_empty.docx --no-grounding --no-tui` against a DOCX with 0 paragraphs produces `Document: truly_empty.docx (1 pages, 0 clauses)` → "No clauses to assess." (exit 0). Source: `parsing/stream.py`; `review/report.py:72`. |
+| `precheck review` on an empty file (0 bytes) | `ParseError(category="empty")` with action "Provide a non-empty document file." | An empty file triggers `ParseError` at `parsing/stream.py:42-45` with `category="empty"`, the message "The file appears to be empty or unreadable.", and the action "Provide a non-empty document file.". The modern `precheck review` / product-mode path catches this and exits 1 with "No documents processed." on stderr (`app.py:167-169`); the original empty-file message and action are logged to `openreview.log` but do not surface on the terminal. Standalone `parse` exits 8 with the message on stderr. The user must supply a non-empty file. This is the same dual-path behavior as password-protected and scanned-image PDFs. **End-to-end evidence (P3 B3):** `uv run openreview precheck review /tmp/empty.pdf --no-grounding --no-tui` produces `ParseError category="empty"` → "The file appears to be empty or unreadable." (logged) → "No documents processed." on stderr (exit 1). Source: `parsing/stream.py:42-45`; `app.py:167-169`. |
+| User expects company names like "Beta LLC", "Acme Inc.", "Stark Industries" to be redacted as PII | The PII engine does NOT recognize company / organization names as personal data | Company / organization names are **not** PII under the current engine. The PII recognizers in `pii/recognizers.py` cover `AMOUNT`, `TAX_ID`, `ID_DOCUMENT`, `REG_NUMBER`, `PHONE_NUMBER`, `ACCT` — there is no `ORGANIZATION` or `COMPANY_NAME` recognizer. This is intentional: company names are not personal data under GDPR / CCPA scope, and stripping them would destroy the document's meaning. The agent must NOT promise company-name redaction. If the user needs entity-level redaction (e.g. competitor names for an NDA), use `--no-pii` is the wrong path; redact externally before ingest. Source: `pii/recognizers.py`; `pii/engine.py:74`. |
 
 The following subsections document the actual current behavior of the cost-limit (Phase 6 B3) and recovery subsystems, and the precise relationship between privacy tier and PII stripping. They are derived from `src/openreview_cli/gateway/router.py:397` (cost-limit check), `src/openreview_cli/recovery/coordinator.py` (recovery orchestrator), and `src/openreview_cli/gateway/tier_config.py:13-15` (tier enum). Use them as the authoritative reference when the user asks about limit breaches, provider failures, or tier vs stripping.
 
@@ -623,10 +692,10 @@ The following subsections document the actual current behavior of the cost-limit
 
 The CLI enforces two cost limits via `config set gateway.cost_limits.<key>`, both checked by `Router._check_cost_limits` (`src/openreview_cli/gateway/router.py:397-438`) **before any LLM call**:
 
-- **Daily limit** (`gateway.cost_limits.daily_cents`, default 1000): cumulative spend for the calendar day as recorded by the cost-log table. **The reset is at UTC midnight, not local midnight** — the source uses `WHERE date(created_at) = date('now')` (`src/openreview_cli/storage/costs.py:41`), and SQLite's `date('now')` returns UTC. The user-facing error message (`router.py:420`) says "Reset at local midnight" but the SQL is UTC; the actual reset time depends on the user's timezone. A user at UTC-5 will see the limit reset 5 hours after the message claims. The skill reports the implementation truth; the in-CLI message is a known drift that the source `router.py:420` does not currently reconcile.
+- **Daily limit** (`gateway.cost_limits.daily_cents`, default 1000): cumulative spend for the calendar day as recorded by the cost-log table. **The reset is at UTC midnight.** The source uses `WHERE date(created_at) = date('now')` (`src/openreview_cli/storage/costs.py:41`), and SQLite's `date('now')` returns UTC. The user-facing error message at `router.py:420` says "Reset at UTC midnight" (as of P3-C2); previously it said "Reset at local midnight" which was a misleading drift between the message and the SQL. The reset time depends on the user's timezone; a user at UTC-5 will see the limit reset 5 hours before their local midnight.
 - **Per-review (session) limit** (`gateway.cost_limits.per_review_cents`, default 100): cumulative spend for a single `precheck review` / `precheck compare` / product-mode invocation. Resets per `session_id` (`router.py:425` keys it on `session_id`, not on per-CLI-invocation; a single CLI process running two `precheck review` invocations shares the budget, but two CLI processes do not). **The per-review check only fires when the CLI passes a `session_id` to the router** (`router.py:423`: `if session_id and per_review_cents is not None:`). If a CLI path omits `session_id`, the per-review limit is silently not enforced for that call.
 
-When a limit is breached, the router raises `cost_limit_error` (`src/openreview_cli/errors.py:10-12`), which `sys.exit(6)`s the process with the message `Cost limit exceeded: <context> (limit=<key> cents=<current>/<max>). Reset at local midnight.` followed by `exit=6` on stderr. There is no JSON envelope, no exception trace, and no recovery hook — this is a hard pre-call exit, **not** a recoverable error.
+When a limit is breached, the router raises `cost_limit_error` (`src/openreview_cli/errors.py:10-12`), which `sys.exit(6)`s the process with the message `Cost limit exceeded: <context> (limit=<key> cents=<current>/<max>). Reset at UTC midnight.` (P3-C2: was "local midnight" before 2026-08-30) followed by `exit=6` on stderr. There is no JSON envelope, no exception trace, and no recovery hook — this is a hard pre-call exit, **not** a recoverable error.
 
 **Differences from an ordinary provider failure:**
 

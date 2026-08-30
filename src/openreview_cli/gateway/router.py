@@ -417,7 +417,7 @@ class Gateway:
             if not within:
                 cost_limit_error(
                     f"Daily cost limit reached (${daily_cents / 100:.2f}). "
-                    "Reset at local midnight or increase limit in config.yml"
+                    "Reset at UTC midnight or increase limit in config.yml"
                 )
 
         if session_id and per_review_cents is not None:

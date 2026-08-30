@@ -9,9 +9,40 @@ from __future__ import annotations
 
 import dataclasses
 import enum
+import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any
+
+logger = logging.getLogger(__name__)
+
+
+def _json_safe(value: Any) -> Any:
+    """Coerce ``value`` into a JSON-serializable form, best-effort.
+
+    Used by ``RecoveryContext.to_dict`` so that ``partial_data`` and
+    ``saved_results`` (which can contain arbitrary objects from the
+    pipeline — Document, custom dataclasses, etc.) can be persisted
+    without crashing the JSON dump. Non-serializable leaves are
+    converted to their ``repr()`` and a warning is logged.
+    """
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, (set, frozenset)):
+        return [_json_safe(v) for v in value]
+    # is_dataclass returns True for both instances and classes. We only
+    # want instances; check via `not isinstance(value, type)` to filter
+    # out class objects.
+    if dataclasses.is_dataclass(value) and not isinstance(value, type):
+        return _json_safe(dataclasses.asdict(value))
+    # Fallback: coerce to repr. Log at debug so production logs aren't
+    # noisy when this fallback is taken.
+    logger.debug("recovery: coercing non-JSON-serializable %s to repr", type(value).__name__)
+    return repr(value)
 
 
 class RecoveryOutcome(enum.StrEnum):
@@ -118,7 +149,10 @@ class RecoveryContext:
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-compatible dict.
 
-        Round-trip lossless via ``from_dict()``.
+        Round-trip lossless via ``from_dict()`` for primitive fields.
+        ``partial_data`` and ``saved_results`` are passed through
+        ``_json_safe`` so that arbitrary pipeline objects (Document,
+        etc.) do not crash the persistence layer.
         """
         return {
             "provider_list": self.provider_list,
@@ -127,13 +161,13 @@ class RecoveryContext:
             "retry_counts": self.retry_counts,
             "failed_stages": self.failed_stages,
             "completed_stages": self.completed_stages,
-            "partial_data": self.partial_data,
+            "partial_data": _json_safe(self.partial_data),
             "events": [dataclasses.asdict(e) for e in self.events],
             "degradation_action_index": self.degradation_action_index,
             "user_privacy_tier": self.user_privacy_tier,
             "memory_threshold_bytes": self.memory_threshold_bytes,
             "memory_budget_bytes": self.memory_budget_bytes,
-            "saved_results": self.saved_results,
+            "saved_results": _json_safe(self.saved_results),
         }
 
     @classmethod
