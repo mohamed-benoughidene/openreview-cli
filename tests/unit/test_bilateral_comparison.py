@@ -150,7 +150,6 @@ class TestCliRegistration:
             "--verbose",
             "--no-pii",
             "--grounding-mode",
-            "--playbook",
             "--output",
             "--no-grounding",
             "--extraction-model",
@@ -211,7 +210,6 @@ class TestFileExistence:
             compare(
                 doc_a="/nonexistent/a.pdf",
                 doc_b="/nonexistent/b.pdf",
-                playbook=None,
                 extraction_model=None,
                 qa_model=None,
                 confidence_threshold=None,
@@ -238,7 +236,6 @@ class TestFileExistence:
             compare(
                 doc_a="/nonexistent/a.pdf",
                 doc_b="/tmp/exists.pdf",
-                playbook=None,
                 extraction_model=None,
                 qa_model=None,
                 confidence_threshold=None,
@@ -278,7 +275,6 @@ class TestFileExistence:
         compare(
             doc_a=a,
             doc_b=b,
-            playbook=None,
             extraction_model=None,
             qa_model=None,
             confidence_threshold=None,
@@ -314,7 +310,6 @@ class TestMutualExclusion:
             compare(
                 doc_a=a,
                 doc_b=b,
-                playbook=None,
                 extraction_model=None,
                 qa_model=None,
                 confidence_threshold=0.8,
@@ -354,7 +349,6 @@ class TestMutualExclusion:
         compare(
             doc_a=a,
             doc_b=b,
-            playbook=None,
             extraction_model=None,
             qa_model=None,
             confidence_threshold=None,
@@ -393,7 +387,6 @@ class TestMutualExclusion:
         compare(
             doc_a=a,
             doc_b=b,
-            playbook=None,
             extraction_model=None,
             qa_model=None,
             confidence_threshold=0.6,
@@ -429,7 +422,6 @@ class TestFormatValidation:
             compare(
                 doc_a=a,
                 doc_b=b,
-                playbook=None,
                 extraction_model=None,
                 qa_model=None,
                 confidence_threshold=None,
@@ -469,7 +461,6 @@ class TestFormatValidation:
         compare(
             doc_a=a,
             doc_b=b,
-            playbook=None,
             extraction_model=None,
             qa_model=None,
             confidence_threshold=None,
@@ -508,7 +499,6 @@ class TestFormatValidation:
         compare(
             doc_a=a,
             doc_b=b,
-            playbook=None,
             extraction_model=None,
             qa_model=None,
             confidence_threshold=None,
@@ -544,7 +534,6 @@ class TestGroundingModeValidation:
             compare(
                 doc_a=a,
                 doc_b=b,
-                playbook=None,
                 extraction_model=None,
                 qa_model=None,
                 confidence_threshold=None,
@@ -584,7 +573,6 @@ class TestGroundingModeValidation:
         compare(
             doc_a=a,
             doc_b=b,
-            playbook=None,
             extraction_model=None,
             qa_model=None,
             confidence_threshold=None,
@@ -623,7 +611,6 @@ class TestGroundingModeValidation:
         compare(
             doc_a=a,
             doc_b=b,
-            playbook=None,
             extraction_model=None,
             qa_model=None,
             confidence_threshold=None,
@@ -676,7 +663,6 @@ class TestAlignOnly:
         compare(
             doc_a=a,
             doc_b=b,
-            playbook=None,
             extraction_model=None,
             qa_model=None,
             confidence_threshold=None,
@@ -730,7 +716,6 @@ class TestVerbose:
         compare(
             doc_a=a,
             doc_b=b,
-            playbook=None,
             extraction_model=None,
             qa_model=None,
             confidence_threshold=None,
@@ -785,7 +770,6 @@ class TestConservative:
         compare(
             doc_a=a,
             doc_b=b,
-            playbook=None,
             extraction_model=None,
             qa_model=None,
             confidence_threshold=None,
@@ -840,7 +824,6 @@ class TestJsonFormat:
         compare(
             doc_a=a,
             doc_b=b,
-            playbook=None,
             extraction_model=None,
             qa_model=None,
             confidence_threshold=None,
@@ -882,7 +865,6 @@ class TestJsonFormat:
         compare(
             doc_a=a,
             doc_b=b,
-            playbook=None,
             extraction_model=None,
             qa_model=None,
             confidence_threshold=None,
@@ -922,7 +904,6 @@ class TestErrorOutput:
             compare(
                 doc_a="/nonexistent/a.pdf",
                 doc_b="/nonexistent/b.pdf",
-                playbook=None,
                 extraction_model=None,
                 qa_model=None,
                 confidence_threshold=None,
@@ -955,7 +936,6 @@ class TestErrorOutput:
             compare(
                 doc_a=a,
                 doc_b=b,
-                playbook=None,
                 extraction_model=None,
                 qa_model=None,
                 confidence_threshold=0.8,
@@ -988,7 +968,6 @@ class TestErrorOutput:
             compare(
                 doc_a=a,
                 doc_b=b,
-                playbook=None,
                 extraction_model=None,
                 qa_model=None,
                 confidence_threshold=None,
@@ -1021,7 +1000,6 @@ class TestErrorOutput:
             compare(
                 doc_a=a,
                 doc_b=b,
-                playbook=None,
                 extraction_model=None,
                 qa_model=None,
                 confidence_threshold=None,
@@ -1075,7 +1053,6 @@ class TestRunComparisonErrors:
             compare(
                 doc_a=a,
                 doc_b=b,
-                playbook=None,
                 extraction_model=None,
                 qa_model=None,
                 confidence_threshold=None,
@@ -1119,7 +1096,6 @@ class TestRunComparisonErrors:
             compare(
                 doc_a=a,
                 doc_b=b,
-                playbook=None,
                 extraction_model=None,
                 qa_model=None,
                 confidence_threshold=None,
@@ -1155,7 +1131,6 @@ class TestMultipleErrorPaths:
             compare(
                 doc_a="/nonexistent/a.pdf",
                 doc_b="/nonexistent/b.pdf",
-                playbook=None,
                 extraction_model=None,
                 qa_model=None,
                 confidence_threshold=None,
@@ -1183,7 +1158,6 @@ class TestMultipleErrorPaths:
             compare(
                 doc_a="/nonexistent/a.pdf",
                 doc_b="/nonexistent/b.pdf",
-                playbook=None,
                 extraction_model=None,
                 qa_model=None,
                 confidence_threshold=None,
@@ -1238,7 +1212,6 @@ class TestDispatchCombinations:
         compare(
             doc_a=a,
             doc_b=b,
-            playbook=None,
             extraction_model=None,
             qa_model=None,
             confidence_threshold=None,
@@ -1287,7 +1260,6 @@ class TestDispatchCombinations:
         compare(
             doc_a=a,
             doc_b=b,
-            playbook=None,
             extraction_model="gpt4",
             qa_model="claude3",
             confidence_threshold=0.5,
