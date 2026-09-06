@@ -3148,6 +3148,11 @@ _PRODUCT_MODES: list[tuple[str, str, str]] = [
         "Path to a Data Processing Agreement (PDF or DOCX).",
     ),
     (
+        "privacycheck_v2",
+        "Review a Data Processing Agreement (v2) with PrivacyCheck.",
+        "Path to a Data Processing Agreement (PDF or DOCX).",
+    ),
+    (
         "dealcheck",
         "Review a vendor/service agreement with DealCheck.",
         "Path to a vendor or service agreement (PDF or DOCX).",
