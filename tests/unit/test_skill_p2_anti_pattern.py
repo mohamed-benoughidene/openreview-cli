@@ -281,10 +281,7 @@ def test_p2_27_scanned_pdf_in_skill(skill_text: str) -> None:
     assert mentions_no_text, (
         "Skill must document the PDF scanned-image failure mode "
         "(ParseError category=no_text, exit 8) and route the user to "
-        "re-export with an embedded text layer. Source: pdf_parser.py:113-146. "
-        "Note: the product defect pointing users at the non-existent "
-        "`openreview install ocr` command must be worked around in the "
-        "skill text."
+        "re-export with an embedded text layer. Source: pdf_parser.py:113-146."
     )
 
 

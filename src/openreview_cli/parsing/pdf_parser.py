@@ -141,8 +141,8 @@ class PdfParser:
                 raise ParseError(
                     exit_code=8,
                     category="no_text",
-                    message="This PDF contains no extractable text. If it is a scanned document, install the OCR extension: openreview install ocr",
-                    action="Install OCR extension or provide a text-based PDF.",
+                    message="This PDF contains no extractable text. If it is a scanned document, re-export with an embedded text layer (e.g. ocrmypdf input.pdf output.pdf, or export from the original authoring tool as 'searchable PDF').",
+                    action="Re-export with an embedded text layer or provide a text-based PDF.",
                 )
 
         except GeneratorExit:
