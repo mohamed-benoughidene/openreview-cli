@@ -1692,9 +1692,6 @@ def chunk(
 def compare(
     doc_a: str | None = typer.Argument(None, help="Path to Party A's document (PDF or DOCX)."),
     doc_b: str | None = typer.Argument(None, help="Path to Party B's document (PDF or DOCX)."),
-    playbook: str | None = typer.Option(
-        None, "--playbook", help="Path to custom YAML playbook override."
-    ),
     extraction_model: str | None = typer.Option(
         None, "--extraction-model", help="Model slot for the extraction agent."
     ),
