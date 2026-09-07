@@ -1,7 +1,7 @@
 ![openreview-cli](assets/ChatGPT%20Image%20Aug%203,%202026,%2007_05_28%20PM.png)
 # openreview-cli
 
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue)](https://github.com/mohamed-benoughidene/openreview-cli) [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/LICENSE) [![status: pre-alpha](https://img.shields.io/badge/status-pre--alpha-orange)](https://github.com/mohamed-benoughidene/openreview-cli)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue)](https://github.com/mohamed-benoughidene/openreview-cli) [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/LICENSE) [![status: alpha](https://img.shields.io/badge/status-alpha-green)](https://github.com/mohamed-benoughidene/openreview-cli)
 
 Privacy-first contract review automation CLI. Local-first, multi-agent AI that strips PII before any cloud call. Parse, review, and negotiate contracts through an AI Gateway spanning 17 providers all from the command line.
 
@@ -63,7 +63,7 @@ uv run openreview
 
 | Area | Value |
 |---|---|
-| Version | 0.1.2 (pre-alpha) |
+| Version | 0.1.2 (alpha) |
 | Tests | 3,034 collected (10 markers) |
 | Gateway | 17 providers, 27 models |
 | Contract modes | 23 |
@@ -214,6 +214,6 @@ Python 3.12 · Typer CLI · Textual TUI · Presidio (PII) · litellm (gateway) �
 
 AGPL-3.0-only, with a commercial license option (see [LICENSE](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/LICENSE) and [COMMERCIAL_LICENSE.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/COMMERCIAL_LICENSE.md)).
 
-Pre-alpha. Measured performance, accuracy, and methodology in [BENCHMARKS.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/BENCHMARKS.md).
+Alpha. Measured performance, accuracy, and methodology in [BENCHMARKS.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/BENCHMARKS.md).
 
 [Architecture](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/ARCHITECTURE.md) · [Benchmarks](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/BENCHMARKS.md) · [Issues](https://github.com/mohamed-benoughidene/openreview-cli/issues) · [Discussions](https://github.com/mohamed-benoughidene/openreview-cli/discussions)

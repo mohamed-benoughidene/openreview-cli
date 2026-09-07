@@ -18,7 +18,8 @@ wheels/
 products/
 Papers/
 data/
-draft/
+draft/*
+!draft/ALPHA_RELEASE_NOTES.md
 # Python caches and tooling
 .mypy_cache/
 .pytest_cache/
