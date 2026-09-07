@@ -86,8 +86,8 @@ The following items from `specs/DEFERRED.md` are **not promised** in this releas
 ## Validations completed
 
 - **V0 (A7):** API-key redaction verified — synthetic `sk-testkey...` key absent from stdout, stderr, and `openreview.log` during `gateway status`. Test committed at `1937a52`.
-- **V1 (H1):** Fresh Python 3.12 venv, `pip install openreview-cli==0.1.2`, `--version` and `--help` verified. Evidence not preserved in tracked repository artifacts.
-- **V2 (H2):** Fresh git clone, submodule init, `uv sync`, `--version`, `--help`, ponytail plugin verified. Evidence not preserved in tracked repository artifacts.
+- **V1 (H1):** Claimed as executed but evidence not preserved in tracked repository artifacts. H1 remains UNPROVEN per gate evidence rules (§4). The installation path (`pip install openreview-cli`) is documented in README and skill but was not re-verified against the final committed HEAD with tracked output.
+- **V2 (H2):** Claimed as executed but evidence not preserved in tracked repository artifacts. H2 remains UNPROVEN per gate evidence rules (§4). The from-source path (`git clone && git submodule update --init && uv sync`) is documented in README and AGENTS.md but was not re-verified against the final committed HEAD with tracked output.
 - **V3 (H3):** Fresh-agent walkthrough of `skill/SKILL.md` "Before Using OpenReview" steps verified. Gateway test returns tier-enforcement error (correct behavior — PII-before-egress gate is active). Evidence not preserved in tracked repository artifacts.
 - **V5:** Retrieval chain verified — `chunk → ingest → retrieve "confidentiality"` returns 1 result (BM25 fallback, score 0.0164). Evidence not preserved in tracked repository artifacts.
 - **V6:** BLOCKED — no real cloud API key available. Non-blocking per plan.
