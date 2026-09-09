@@ -63,7 +63,7 @@ uv run openreview
 
 | Area | Value |
 |---|---|
-| Version | 0.1.2 (alpha) |
+| Version | 0.2.0 (alpha) |
 | Tests | 3,034 collected (10 markers) |
 | Gateway | 17 providers, 27 models |
 | Contract modes | 23 |

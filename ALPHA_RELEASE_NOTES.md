@@ -1,4 +1,4 @@
-# openreview-cli v0.1.2 — Alpha Release
+# openreview-cli v0.2.0 — Alpha Release
 
 **Release date:** 2026-09-01
 **Status:** Alpha (pre-production)
@@ -107,9 +107,9 @@ Constitution version bumped from 1.2.0 to 2.0.0 (MAJOR). Two changes:
 
 From pre-alpha:
 - **From source:** `uv sync` (from-source) or `uv run openreview --version` to verify.
-- **From PyPI:** `pip install openreview-cli==0.1.2` (published on PyPI).
+- **From PyPI:** `pip install openreview-cli==0.2.0` (published on PyPI).
 
 ## Version
 
-- Product: 0.1.2
+- Product: 0.2.0
 - Constitution: 2.0.0

@@ -1,6 +1,6 @@
 ---
 name: openreview-cli
-version: 0.1.2
+version: 0.2.0
 description: Use when a user wants to review, compare, search, or analyze legal/contract documents (PDF/DOCX) locally — produce review memos, compare two versions, search indexed clauses, run negotiation analysis, manage LLM gateway slots/playbooks, or audit/delete stored PII mappings. This is the local `openreview` CLI, NOT the openreview.net academic platform.
 ---
 
