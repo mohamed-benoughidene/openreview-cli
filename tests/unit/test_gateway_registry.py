@@ -338,6 +338,79 @@ def test_load_registry_keeps_user_custom_provider_when_bundled_gains_new(
     assert "deepseek" in reg
 
 
+def test_provider_add_persists_and_reload_sees_custom_provider(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Phase-6 B2: provider add -> writes config.yml -> load_registry() sees it.
+
+    Exercises the real registry.add_custom_provider ->
+    config.loader.add_custom_provider path end-to-end against an
+    isolated tmp_path config dir. Proves the write+reload round
+    trip that no existing test covers. The bundled models.json
+    is still loaded by load_registry() (registry.py:49), so
+    'isolated' refers to the user's config dir only.
+    """
+    from openreview_cli.gateway import registry as reg_mod
+    from openreview_cli.gateway.models import ProviderInfo
+
+    # 1. Isolated, empty user config dir. Pre-seed an empty
+    # config.yml because the loader does a read-then-write at
+    # loader.py:335 and would raise FileNotFoundError on an
+    # absent file.
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    (config_dir / "config.yml").write_text("")
+    monkeypatch.setattr(reg_mod, "_config_dir", lambda: config_dir)
+
+    # 2. Add a custom provider with a non-trivial capability set.
+    capabilities = {
+        "embedding": True,
+        "reasoning": True,
+        "tool_call": False,
+        "context_window": 16384,
+    }
+    info = add_custom_provider(
+        name="mycustom",
+        base_url="https://mycustom.example.com/v1",
+        capabilities=capabilities,
+        api_key_env="MYCUSTOM_API_KEY",
+    )
+
+    # 3. Write succeeded: config.yml exists and contains the new entry.
+    config_yml = config_dir / "config.yml"
+    assert config_yml.exists()
+    on_disk = yaml.safe_load(config_yml.read_text())
+    assert on_disk["gateway"]["custom_providers"]
+    entry = next(e for e in on_disk["gateway"]["custom_providers"] if e["name"] == "mycustom")
+    assert entry["base_url"] == "https://mycustom.example.com/v1"
+    assert entry["api_key_env"] == "MYCUSTOM_API_KEY"
+    assert entry["source"] == "custom"
+    assert entry["capabilities"]["embedding"] is True
+    assert entry["capabilities"]["reasoning"] is True
+    assert entry["capabilities"]["context_window"] == 16384
+
+    # 4. Reload via load_registry() and assert the ProviderInfo.
+    reg = load_registry()
+    assert "mycustom" in reg
+    assert isinstance(reg["mycustom"], ProviderInfo)
+    p = reg["mycustom"]
+    assert p.base_url == "https://mycustom.example.com/v1"
+    assert p.env_key == "MYCUSTOM_API_KEY"
+    assert p.source == "custom"
+    assert p.is_local is False
+    assert p.models == {}
+    caps = p.capabilities
+    assert caps.embedding is True
+    assert caps.reasoning is True
+    assert caps.tool_call is False
+    assert caps.context_window == 16384
+
+    # 5. Returned ProviderInfo matches the reload view.
+    assert info.name == "mycustom"
+    assert info.source == "custom"
+    assert info.env_key == "MYCUSTOM_API_KEY"
+
+
 def test_env_key_collision_message_matches_contract(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

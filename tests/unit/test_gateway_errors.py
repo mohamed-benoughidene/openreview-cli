@@ -5,12 +5,14 @@ from __future__ import annotations
 from openreview_cli.gateway.errors import (
     AllProvidersFailedError,
     AuthError,
+    ConnectionError,
     GatewayError,
     ModelNotFoundError,
     NoMatchingProviderError,
     PIIUnavailableError,
     SlotNotConfiguredError,
     TierRoutingError,
+    UnclassifiedProviderError,
 )
 
 
@@ -100,3 +102,24 @@ class TestTierRoutingErrors:
             line for line in msg.split("\n") if line.strip().startswith(("A.", "B.", "C."))
         ]
         assert len(suggestions) >= 2
+
+
+class TestR34ErrorTaxonomy:
+    """R3-4 — AllProvidersFailedError (exhaustion) vs UnclassifiedProviderError
+    (catch-all) are distinct types with distinct recovery semantics."""
+
+    def test_unclassified_provider_error_is_gateway_error(self) -> None:
+        """UnclassifiedProviderError must be a GatewayError subclass so the
+        recovery-seam isinstance() check treats it as a typed gateway error."""
+        assert issubclass(UnclassifiedProviderError, GatewayError)
+        # And critically, distinct from AllProvidersFailedError — no conflation.
+        assert not issubclass(UnclassifiedProviderError, AllProvidersFailedError)
+        assert not issubclass(AllProvidersFailedError, UnclassifiedProviderError)
+
+    def test_unclassified_provider_error_message_roundtrip(self) -> None:
+        err = UnclassifiedProviderError("provider ollama raised RuntimeError('boom')")
+        assert str(err) == "provider ollama raised RuntimeError('boom')"
+
+    def test_connection_error_still_gateway_error(self) -> None:
+        """Regression guard — ConnectionError remains a GatewayError subclass."""
+        assert issubclass(ConnectionError, GatewayError)

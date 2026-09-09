@@ -65,6 +65,7 @@ def _validate_enum(value: str, options: tuple[str, ...], name: str) -> None:
 def _privacy_footer() -> str:
     """Build the privacy-tier footer for terminal reports."""
     from openreview_cli.gateway.models import PrivacyTierReport
+    from openreview_cli.gateway.router import get_total_cloud_calls
     from openreview_cli.gateway.tier_config import TierConfig
     from openreview_cli.gateway.tier_tracker import TierTracker
 
@@ -76,7 +77,9 @@ def _privacy_footer() -> str:
     if _msg:
         logger.info(_msg)
 
-    return PrivacyTierReport(tier=_tier_cfg.tier).report_footer()
+    return PrivacyTierReport(
+        tier=_tier_cfg.tier, cloud_calls_made=get_total_cloud_calls()
+    ).report_footer()
 
 
 def _export_memo_reports(
@@ -140,6 +143,15 @@ def _export_memo_reports(
                 typer.echo(f"    - {p}")
 
 
+def _write_output_file(path: str | Path, content: str) -> None:
+    """Write CLI --output content to a file, surfacing a clean error on failure."""
+    try:
+        Path(path).write_text(content, encoding="utf-8")
+    except OSError as exc:
+        typer.echo(f"Error: cannot write output file '{path}': {exc}", err=True)
+        raise typer.Exit(code=1) from None
+
+
 def _emit_reviews(
     reports: list[Any],
     format: str,
@@ -159,7 +171,7 @@ def _emit_reviews(
     if format == "json":
         output_str = format_json(reports)
         if output:
-            Path(output).write_text(output_str, encoding="utf-8")
+            _write_output_file(output, output_str)
         else:
             typer.echo(output_str)
     else:
@@ -252,12 +264,30 @@ def _cleanup_expired_pii(data_dir: Path) -> None:
         logger.debug("PII cleanup skipped", exc_info=True)
 
 
+def _load_ndax_chunks(file_path: Path) -> list[dict[str, Any]]:
+    """Load a .ndax JSON file as a list of chunk objects, or raise a clean error.
+
+    Non-.ndax (e.g. PDF/binary) or malformed input previously crashed with a
+    raw json decode traceback; surface a clean CLI error instead (R4 / D-5).
+    """
+    try:
+        with open(file_path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        typer.echo(f"Error: {file_path.name} is not a valid .ndax JSON file.", err=True)
+        raise typer.Exit(code=1) from None
+    if not isinstance(data, list) or (data and not isinstance(data[0], dict)):
+        typer.echo(
+            f"Error: {file_path.name} is not a valid .ndax JSON file (expected a list of chunks).",
+            err=True,
+        )
+        raise typer.Exit(code=1) from None
+    return data
+
+
 def _resolve_doc_id(file_path: Path) -> str:
     """Load a .ndax JSON file and extract the document_id (or SHA-256 fallback)."""
-    import json
-
-    with open(file_path) as f:
-        chunks_data = json.load(f)
+    chunks_data = _load_ndax_chunks(file_path)
     doc_id = chunks_data[0].get("document_id", "") if chunks_data else ""
     if not doc_id:
         import hashlib
@@ -1118,11 +1148,6 @@ def precheck(
     force_reprocess: bool = typer.Option(
         False, "--force-reprocess", help="Force re-processing even if cached."
     ),
-    dual_path: bool = typer.Option(
-        False,
-        "--dual-path",
-        help="Enable dual-path: call providers in parallel, pick first success.",
-    ),
 ) -> None:
     """Run a PreCheck review (NDA analysis) on a document.
 
@@ -1207,7 +1232,9 @@ def review(
         None, "--extraction-model", help="Model slot for the extraction agent."
     ),
     qa_model: str | None = typer.Option(
-        None, "--qa-model", help="Model slot for the QA verification agent."
+        None,
+        "--qa-model",
+        help="Model slot for the QA verification agent (defaults to --extraction-model).",
     ),
     allow_partial_pii: bool = typer.Option(
         False,
@@ -1235,11 +1262,6 @@ def review(
         "designed to mitigate this — set the threshold generously to push "
         "uncertain comparisons to Amber rather than risking false Green or Red.",
         callback=_validate_threshold,
-    ),
-    dual_path: bool = typer.Option(
-        False,
-        "--dual-path",
-        help="Enable dual-path: call providers in parallel, pick first success.",
     ),
 ) -> None:
     """Review one or more contract documents against a 3-position playbook.
@@ -1270,7 +1292,6 @@ def review(
             grounding_mode=None if no_grounding else grounding_mode,
             confidence_threshold=confidence_threshold,
             mode="precheck",
-            dual_path=dual_path,
             allow_partial_pii=allow_partial_pii,
         )
     except FileNotFoundError as e:
@@ -1671,14 +1692,13 @@ def chunk(
 def compare(
     doc_a: str | None = typer.Argument(None, help="Path to Party A's document (PDF or DOCX)."),
     doc_b: str | None = typer.Argument(None, help="Path to Party B's document (PDF or DOCX)."),
-    playbook: str | None = typer.Option(
-        None, "--playbook", help="Path to custom YAML playbook override."
-    ),
     extraction_model: str | None = typer.Option(
         None, "--extraction-model", help="Model slot for the extraction agent."
     ),
     qa_model: str | None = typer.Option(
-        None, "--qa-model", help="Model slot for the QA verification agent."
+        None,
+        "--qa-model",
+        help="Model slot for the QA verification agent (defaults to --extraction-model).",
     ),
     comparison_model: str | None = typer.Option(
         None, "--comparison-model", help="Override model slot for the comparison agent (D-13)."
@@ -1828,7 +1848,7 @@ def compare(
     if format == "json":
         output_str = format_comparison_json(report)
         if output:
-            Path(output).write_text(output_str, encoding="utf-8")
+            _write_output_file(output, output_str)
         else:
             typer.echo(output_str)
     else:
@@ -1952,10 +1972,7 @@ def ingest(
         typer.echo(f"Error: File not found: {file}", err=True)
         raise typer.Exit(code=1)
 
-    import json
-
-    with open(file_path) as f:
-        chunks_data = json.load(f)
+    chunks_data = _load_ndax_chunks(file_path)
 
     if not chunks_data:
         typer.echo("Error: No chunks found in file.", err=True)
@@ -2945,13 +2962,13 @@ def negotiate(
     if format == "json":
         output_str = format_json(report)
         if output:
-            Path(output).write_text(output_str, encoding="utf-8")
+            _write_output_file(output, output_str)
         else:
             typer.echo(output_str)
     elif format == "memo":
         output_str = format_memo(report)
         if output:
-            Path(output).write_text(output_str, encoding="utf-8")
+            _write_output_file(output, output_str)
         else:
             typer.echo(output_str)
     else:
@@ -3125,6 +3142,11 @@ _PRODUCT_MODES: list[tuple[str, str, str]] = [
     (
         "privacycheck",
         "Review a Data Processing Agreement with PrivacyCheck.",
+        "Path to a Data Processing Agreement (PDF or DOCX).",
+    ),
+    (
+        "privacycheck_v2",
+        "Review a Data Processing Agreement (v2) with PrivacyCheck.",
         "Path to a Data Processing Agreement (PDF or DOCX).",
     ),
     (

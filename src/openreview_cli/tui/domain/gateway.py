@@ -46,17 +46,26 @@ def _safe(fn: Callable[..., T], default: T) -> T:
 
 
 def gateway_health_check() -> dict[str, Any]:
-    """Run gateway health check, return slot->status dict."""
-    from openreview_cli.config.auth import ensure_auth
-    from openreview_cli.gateway.router import Gateway
+    """Check gateway slot configuration status without importing litellm.
 
-    return _safe(
-        lambda: (
-            ensure_auth(_PATHS["auth"].parent),
-            Gateway(_PATHS["config"], _PATHS["auth"], _PATHS["data"]).health_check(),
-        )[1],
-        {},
-    )
+    Returns a dict mapping slot names to their configuration status.
+    Uses config file directly to avoid importing gateway.router (which
+    pulls in litellm ~160 MB). Actual connectivity testing is done via
+    ``openreview gateway test`` in the CLI, not in the TUI status bar.
+    """
+    config = _safe(lambda: load_config(_PATHS["config"]), None)
+    if config is None:
+        return {}
+    models = config.get("gateway", {}).get("models", {})
+    result: dict[str, Any] = {}
+    for slot in sorted(VALID_SLOTS):
+        cfg = models.get(slot, {})
+        primary = cfg.get("primary", "")
+        if primary:
+            result[slot] = {"status": "configured", "error": None}
+        else:
+            result[slot] = {"status": "unconfigured", "error": None}
+    return result
 
 
 def get_slot_configs() -> dict[str, dict[str, Any]]:

@@ -11,6 +11,7 @@ from openreview_cli.pii.cache import PiiCache
 from openreview_cli.pii.config_hash import compute_config_hash
 from openreview_cli.pii.engine import strip_and_persist
 from openreview_cli.pii.mapping import ensure_encryption_key
+from openreview_cli.pii.persist import persist_pii_for_document
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,17 @@ class ReviewCommand:
         if not self._document_path.exists():
             raise FileNotFoundError(f"Document not found: {self._document_path}")
 
+        # PII-1: `_pii_available` is per-operation evidence, not persistent
+        # state from a previous operation. Reset at the top of every run so
+        # a stale True from a prior ReviewCommand.run() (or TUI/repl cycle)
+        # cannot silently authorize this operation's cloud calls.
+        from openreview_cli.gateway.router import (
+            mark_pii_available,
+            reset_pii_available,
+        )
+
+        reset_pii_available()
+
         # ponytail: PrivacyTierReport constructed from live config each run
         privacy_report = self._build_privacy_report()
         sys.stderr.write(privacy_report.progress_banner() + "\n")
@@ -58,6 +70,12 @@ class ReviewCommand:
             if not self._force_reprocess and cache.is_valid(doc_hash, config_hash):
                 cached = cache.get(doc_hash)
                 if cached and Path(cached["review_result_path"]).exists():
+                    # PII-1: a cache hit returns already-stripped text. The
+                    # cached artifact IS the evidence of a prior successful
+                    # strip; mark the flag without writing a new audit row
+                    # (the original strip is governed by its own row from
+                    # when it ran).
+                    mark_pii_available()
                     return {
                         "document_hash": doc_hash,
                         "review_dir": str(review_dir),
@@ -76,14 +94,18 @@ class ReviewCommand:
                 threshold=threshold,
                 encryption_key=self._get_encryption_key(),
             )
+            mark_pii_available()
             result_path.write_text(pii_result.stripped_text)
 
-            cache.put(
-                doc_hash,
-                config_hash,
-                str(result_path),
-                str(review_dir / "pii_map.enc"),
-            )
+            # PII-3: delegate governance persistence to the shared helper so
+            # the legacy path produces the same encrypted mapping + pii_cache
+            # + pii_audit_trail triplet that the bilateral / StripStage paths
+            # produce. Empty mapping short-circuits inside the helper (no
+            # negative cache/audit rows for clean documents). The helper also
+            # writes the cache row with the correct mapping_path (under
+            # <data>/reviews/<hash[:12]>/, not <output>/<hash[:12]>/), which
+            # is the latent base.py:103 inconsistency the previous code had.
+            persist_pii_for_document(self._document_path, pii_result)
 
             return {
                 "document_hash": doc_hash,
@@ -97,6 +119,10 @@ class ReviewCommand:
         else:
             clauses, document = self._parse_document()
             raw_text = " ".join(c.text for c in clauses)
+            # --no-pii path: ensure the flag stays False. The reset at the
+            # top of run() already cleared any prior True; this is a
+            # defensive reset on the path that bypasses any strip call.
+            reset_pii_available()
             result_path.write_text(raw_text)
             logger.warning("PII stripping disabled. Raw text processed.")
             return {
@@ -111,6 +137,7 @@ class ReviewCommand:
 
     def _build_privacy_report(self) -> PrivacyTierReport:
         """Build a PrivacyTierReport from config for tier visibility."""
+        from openreview_cli.gateway.router import get_total_cloud_calls
         from openreview_cli.gateway.tier_config import TierConfig
         from openreview_cli.gateway.tier_tracker import TierTracker
 
@@ -122,7 +149,7 @@ class ReviewCommand:
         if msg:
             logger.info(msg)
 
-        return PrivacyTierReport(tier=tier_cfg.tier)
+        return PrivacyTierReport(tier=tier_cfg.tier, cloud_calls_made=get_total_cloud_calls())
 
     def _compute_hash(self) -> str:
         return hashlib.sha256(self._document_path.read_bytes()).hexdigest()

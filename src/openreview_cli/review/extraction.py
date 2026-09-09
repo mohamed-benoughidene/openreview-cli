@@ -56,6 +56,9 @@ def extract_clause(
     extraction_model: str,
     mode: str = "precheck",
     session_id: str | None = None,
+    coordinator: Any = None,
+    recovery_ctx: Any = None,
+    provider_list: list[str] | None = None,
 ) -> ClauseAssessment:
     """Run extraction for a single clause against a playbook category.
 
@@ -69,6 +72,12 @@ def extract_clause(
         The matched playbook category, or ``None`` if no match found.
     extraction_model : str
         Model slot name for extraction.
+    coordinator:
+        Optional recovery coordinator for the gateway recovery seam.
+    recovery_ctx:
+        Optional recovery context for the gateway recovery seam.
+    provider_list:
+        Optional ordered provider list for provider fallback.
 
     Returns
     -------
@@ -111,6 +120,9 @@ def extract_clause(
             messages,
             requirement=CapabilityRequirement(capability="reasoning"),
             session_id=session_id,
+            coordinator=coordinator,
+            recovery_ctx=recovery_ctx,
+            provider_list=provider_list,
         )
         parsed = _parse_response(raw_response)
     except Exception as exc:

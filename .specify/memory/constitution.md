@@ -1,13 +1,15 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 1.1.0 → 1.2.0 (MINOR — GPU acceleration mandate + NLP model memory exemption)
-Modified principles: III (Hardware-Bounded) — added GPU auto-detection rule and NLP model memory exemption rule
-Added sections: Core Principles (I–V), Constraints, Development Workflow
+Version change: 1.2.0 → 2.0.0 (MAJOR — remove OCR format claim + relax local-only e2e mandate)
+Modified principles: I (Privacy-First) — relaxed local-only e2e mandate to in-code support;
+                     III (Hardware-Bounded) — removed scanned PDF (OCR) from document formats
+Added sections: none
 Removed sections: none
-Templates requiring updates: none — the current spec-kit templates have
-  no principle-driven content that contradicts this constitution.
-Deferred items: none.
+Templates requiring updates: README.md, ARCHITECTURE.md, AGENTS.md, skill/SKILL.md
+  (OCR claims removed; local-only mandate relaxed).
+Deferred items: live end-to-end local-only verification (H4) deferred to a future release
+  with Ollama available.
 -->
 
 # openreview Constitution
@@ -44,7 +46,9 @@ Rules:
   weekly refresh of the cloud model registry, which carries no user
   data. All other outbound traffic is subject to PII stripping.
 - A configuration in which every model slot is local (no network call is
-  ever made by the tool) MUST be supported end-to-end.
+  ever made by the tool) MUST be supported in code. Live end-to-end
+  verification of the all-local configuration is deferred to a future
+  release (requires Ollama in the test environment).
 
 Rationale: privacy posture is the project's primary market differentiator
 and the only durable basis for the dual-license business model. Any
@@ -80,9 +84,8 @@ permits the last 10% only as headroom for incidental variance.
 
 Rules:
 
-- Document parsers MUST stream page-by-page (PDF), paragraph-by-paragraph
-  (DOCX), or page-by-page (scanned PDF via Docling). Full-document loads
-  are forbidden.
+- Document parsers MUST stream page-by-page (PDF) or paragraph-by-paragraph
+  (DOCX). Full-document loads are forbidden.
 - Large collections (chunks, vectors, hierarchy nodes) MUST live in
   SQLite, not in-process dicts or lists.
 - Hot-path data classes SHOULD use `@dataclass(slots=True)`.
@@ -201,8 +204,9 @@ hold regardless of feature priority.
   balanced (PII-stripped cloud where local is not feasible), and
   performance (cloud throughout with PII stripping). Removing a tier
   is a MAJOR amendment; adding a tier is a MINOR amendment.
-- **Document formats**: PDF, DOCX, scanned PDF (OCR). Adding a format
-  is a MINOR amendment; removing a format is a MAJOR amendment.
+- **Document formats**: PDF, DOCX. Adding a format is a MINOR
+  amendment; removing a format is a MAJOR amendment. (Scanned PDF/OCR
+  support was removed in v2.0.0 — deferred to a future release.)
 - **Forbidden dependency set**: see Principle IV. The list is
   reviewed on every dependency-add pull request.
 - **Product modes**: the public CLI surface (one subcommand per
@@ -311,4 +315,4 @@ Before executing any task in tasks.md, read `.specify/memory/impl-context.md`.
   successor that fills the same role is a PATCH amendment, provided
   the replacement does not change observable behaviour.
 
-**Version**: 1.2.0 | **Ratified**: 2026-06-23 | **Last Amended**: 2026-06-25
+**Version**: 2.0.0 | **Ratified**: 2026-06-23 | **Last Amended**: 2026-09-01

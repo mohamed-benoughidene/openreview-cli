@@ -65,3 +65,25 @@ def test_compare_version_labels_accepted(tmp_path: Path) -> None:
         ],
     )
     assert result.exit_code != 0
+
+
+def test_compare_playbook_flag_removed() -> None:
+    """Regression: Blocker 2 — --playbook must not be accepted by precheck compare.
+
+    The flag was silently inert (hard-coded to None). It must be removed
+    rather than silently dropped.
+    """
+    result = runner.invoke(
+        app,
+        [
+            "precheck",
+            "compare",
+            "/nonexistent/doc_a.pdf",
+            "/nonexistent/doc_b.pdf",
+            "--playbook",
+            "/nonexistent/playbook.yaml",
+        ],
+    )
+    # Should fail with "no such option" or similar, NOT with file-not-found
+    output = (result.stdout + result.stderr).lower()
+    assert "no such option" in output or "unexpected" in output or "error" in output

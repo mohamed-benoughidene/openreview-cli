@@ -65,7 +65,7 @@ Privacy tier routing (`maximum` / `balanced` / `performance`) gates which provid
 
 SQLite serves two distinct roles:
 
-1. **App database** a single `openreview.db` in the platformdirs data dir. 12 migrations (001–013, no 012), 20 tables: `clients`, `reviews`, `review_reports`, `review_diffs`, `cost_logs`, `pii_cache`, `pii_audit_trail`, `prompt_versions`, `prompt_bindings`, `playbook_versions`, `playbook_meta`, `benchmark_runs`/`results`/`baselines`, contract graph (`graph_nodes`/`edges`/`meta`), `recovery_state`, `schema_version`.
+1. **App database** a single `openreview.db` in the platformdirs data dir. 12 migrations (001–013, no 012), 19 tables: `clients`, `reviews`, `review_reports`, `review_diffs`, `cost_logs`, `pii_cache`, `pii_audit_trail`, `prompt_versions`, `prompt_bindings`, `playbook_versions`, `playbook_meta`, `benchmark_runs`/`results`/`baselines`, contract graph (`graph_nodes`/`edges`/`meta`), `recovery_state`, `schema_version`.
 2. **Per-document retrieval indexes** separate SQLite files at `{data_dir}/indexes/{doc_hash}.db`, isolating vector/FTS data per contract.
 
 Pipeline flow: parse → strip → review writes the review + report + cost rows to the app DB; retrieval reads from the per-doc index DB; the encrypted PII map and audit JSON live next to the review in `{data_dir}/reviews/{id}/`.

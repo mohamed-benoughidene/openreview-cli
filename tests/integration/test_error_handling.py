@@ -64,6 +64,22 @@ class TestErrorHandling:
         assert exc.value.category in ("corrupt", "no_text")
 
     @pytest.mark.integration
+    def test_no_text_error_does_not_reference_nonexistent_command(self) -> None:
+        """Regression: Blocker 1 — pdf_parser.py:144 must not point users
+        at a non-existent 'openreview install ocr' command."""
+        from openreview_cli.parsing.models import ParseError
+        from openreview_cli.parsing.stream import stream_clauses
+
+        with pytest.raises(ParseError) as exc:
+            list(stream_clauses(PDF / "corrupt.pdf"))
+        if exc.value.category == "no_text":
+            assert "openreview install ocr" not in exc.value.message
+            assert (
+                "re-export" in exc.value.message.lower()
+                or "text layer" in exc.value.message.lower()
+            )
+
+    @pytest.mark.integration
     def test_all_errors_exit_code_8(self) -> None:
         from openreview_cli.parsing.models import ParseError
 

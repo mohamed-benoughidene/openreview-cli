@@ -7,7 +7,23 @@ class SlotNotConfiguredError(GatewayError):
 
 
 class AllProvidersFailedError(GatewayError):
-    pass
+    """Genuine gateway-local exhaustion: every provider that the gateway itself
+    tried (primary + any configured fallback at the slot level) has failed.
+    This signal is terminal at the recovery layer — the recovery framework
+    must NOT attempt cross-slot fallback, since the gateway has already
+    exhausted what it could.
+    """
+
+
+class UnclassifiedProviderError(GatewayError):
+    """Unclassified single-provider failure raised by the gateway's
+    ``_classify_error`` catch-all (router.py). Distinct from
+    ``AllProvidersFailedError`` (which means gateway-local exhaustion).
+
+    The recovery layer treats this as transient and routes it through
+    ``provider_fallback``, because the gateway may not have tried every
+    provider in the cross-slot ``provider_list``.
+    """
 
 
 class AuthError(GatewayError):

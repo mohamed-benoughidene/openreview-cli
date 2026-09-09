@@ -31,12 +31,25 @@ def get_custom_recognizers() -> list[Any]:
             patterns=[
                 Pattern("passport", r"\b[A-Z]{1,2}\d{6,9}\b", 0.8),
                 Pattern("drivers_license", r"\bDL\d{7,10}\b", 0.8),
+                Pattern("passport_word", r"\bPASSPORT\d{6,9}\b", 0.8),
             ],
         ),
         PatternRecognizer(
             supported_entity="REG_NUMBER",
             patterns=[
                 Pattern("reg_number", r"\bREG[-_]\d{6,10}\b", 1.0),
+            ],
+        ),
+        PatternRecognizer(
+            supported_entity="PHONE_NUMBER",
+            patterns=[
+                Pattern("us_local_number", r"\b\d{3}-\d{4}\b", 0.8),
+            ],
+        ),
+        PatternRecognizer(
+            supported_entity="ACCT",
+            patterns=[
+                Pattern("iban", r"\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b", 0.8),
             ],
         ),
     ]

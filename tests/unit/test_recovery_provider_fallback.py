@@ -145,3 +145,123 @@ class TestProviderFallback:
         assert "ollama/mixtral" in call_order
         assert event.outcome == "resolved"
         assert event.provider_name == "ollama/mixtral"
+
+    @pytest.mark.asyncio
+    async def test_second_episode_resets_cursor_after_exhaustion(self) -> None:
+        """R3-3 Test A — second independent provider_fallback call on the same
+        context must start the provider scan at index 0 again. Without the fix,
+        the first call leaves ``current_provider_index`` at ``len(provider_list) - 1``,
+        and the second call's loop becomes ``range(len, len)`` = empty, skipping
+        every provider and raising immediately without reaching index 1.
+        """
+        call_order: list[str] = []
+
+        async def _record(provider: str) -> bool:
+            call_order.append(provider)
+            return False  # every fallback fails
+
+        ctx = RecoveryContext(
+            provider_list=["ollama/llama3.1", "openai/gpt-4", "anthropic/claude"],
+            current_provider_index=0,
+            user_privacy_tier=PRIVACY_TIER_STANDARD,
+        )
+        # First episode — exhausts the provider list.
+        with pytest.raises(RecoveryError):
+            await provider_fallback(
+                ctx,
+                stage_name="generate",
+                error_metadata={"last_error": "primary failed"},
+                attempt_fn=_record,
+            )
+        # Without the fix the cursor is at index 2 (last provider tried); the
+        # second episode below would not reach index 1.
+        with pytest.raises(RecoveryError):
+            await provider_fallback(
+                ctx,
+                stage_name="generate",
+                error_metadata={"last_error": "primary failed again"},
+                attempt_fn=_record,
+            )
+        # Second episode must re-visit index 1 (openai/gpt-4), proving the
+        # cursor was reset to 0 at the top of the episode.
+        assert call_order.count("openai/gpt-4") == 2, (
+            f"expected openai/gpt-4 visited in both episodes, got {call_order}"
+        )
+        assert call_order.count("ollama/llama3.1") == 0
+
+    @pytest.mark.asyncio
+    async def test_second_episode_resets_cursor_after_successful_fallback(self) -> None:
+        """R3-3 Test B — after a successful fallback to provider index 1, the
+        second independent episode on the same context must retry index 1
+        (proving the cursor was reset), not skip past it.
+        """
+        call_order: list[str] = []
+
+        async def _succeed_at_index_1(provider: str) -> bool:
+            call_order.append(provider)
+            # Index 1 succeeds every time; everything else fails.
+            return provider == "openai/gpt-4"
+
+        ctx = RecoveryContext(
+            provider_list=["ollama/llama3.1", "openai/gpt-4", "anthropic/claude"],
+            current_provider_index=0,
+            user_privacy_tier=PRIVACY_TIER_STANDARD,
+        )
+        # First episode — resolves at index 1.
+        event = await provider_fallback(
+            ctx,
+            stage_name="generate",
+            error_metadata={"last_error": "primary failed"},
+            attempt_fn=_succeed_at_index_1,
+        )
+        assert event.outcome == "resolved"
+        assert event.provider_name == "openai/gpt-4"
+        # Second episode — must reset and try index 1 again. Without the fix
+        # the cursor would still be 1 and the loop would skip straight to index 2.
+        event2 = await provider_fallback(
+            ctx,
+            stage_name="generate",
+            error_metadata={"last_error": "primary failed again"},
+            attempt_fn=_succeed_at_index_1,
+        )
+        assert event2.outcome == "resolved"
+        assert event2.provider_name == "openai/gpt-4"
+        # Index 1 was visited in both episodes; index 2 was never visited
+        # (without the fix, the second episode would skip index 1 and hit index 2).
+        assert call_order.count("openai/gpt-4") == 2, (
+            f"expected openai/gpt-4 visited in both episodes, got {call_order}"
+        )
+        assert "anthropic/claude" not in call_order, (
+            f"second episode must not skip to index 2, got {call_order}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_inner_loop_iterates_forward_within_episode(self) -> None:
+        """R3-3 Test C — regression guard. Within a single recovery episode the
+        inner for-loop must still iterate forward through providers after a
+        failure, preserving the intended cursor semantics.
+        """
+        call_order: list[str] = []
+
+        async def _fail_first_succeed_second(provider: str) -> bool:
+            call_order.append(provider)
+            if provider == "openai/gpt-4":
+                return False
+            return provider == "anthropic/claude"
+
+        ctx = RecoveryContext(
+            provider_list=["ollama/llama3.1", "openai/gpt-4", "anthropic/claude"],
+            current_provider_index=0,
+            user_privacy_tier=PRIVACY_TIER_STANDARD,
+        )
+        event = await provider_fallback(
+            ctx,
+            stage_name="generate",
+            error_metadata={"last_error": "primary failed"},
+            attempt_fn=_fail_first_succeed_second,
+        )
+        # Inner loop must visit index 1 (fails), then index 2 (succeeds), and
+        # not re-visit any provider.
+        assert call_order == ["openai/gpt-4", "anthropic/claude"]
+        assert event.outcome == "resolved"
+        assert event.provider_name == "anthropic/claude"

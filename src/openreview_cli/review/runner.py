@@ -35,7 +35,6 @@ def run_review(  # noqa: PLR0912
     confidence_threshold: float = 0.7,
     mode_threshold_overrides: dict[str, float] | None = None,
     mode: str = "precheck",
-    dual_path: bool = False,
     session_id: str | None = None,
     allow_partial_pii: bool = False,
 ) -> list[ReviewReport]:
@@ -71,9 +70,6 @@ def run_review(  # noqa: PLR0912
         Per-mode confidence threshold overrides, e.g. ``{"leasecheck": 0.85}``.
         When the current mode has an override, it takes precedence over
         *confidence_threshold*.
-    dual_path : bool
-        When ``True``, use dual-path execution: call providers in parallel
-        and return first success.  Default ``False`` (sequential).
     session_id : str | None
         Optional caller-provided session identifier for cost attribution.
         When a single document is processed, this ID is used directly.
@@ -188,6 +184,26 @@ def run_review(  # noqa: PLR0912
     return reports
 
 
+def _configured_providers(*slots: str) -> list[str]:
+    """Return the ordered primary provider strings for the given model slots.
+
+    Providers are the bare ``provider/model`` strings configured as each slot's
+    primary in ``config.yml``, de-duplicated preserving order. Empty list when
+    no config is present (recovery then reports "No providers configured").
+    """
+    from openreview_cli.config.loader import load_config
+    from openreview_cli.config.paths import get_config_dir
+
+    config = load_config(get_config_dir() / "config.yml")
+    models = config.get("gateway", {}).get("models", {})
+    providers: list[str] = []
+    for slot in slots:
+        primary = models.get(slot, {}).get("primary")
+        if primary and primary not in providers:
+            providers.append(primary)
+    return providers
+
+
 def _run_review_doc_pipeline(
     doc_path: str | Path,
     playbook: Any,
@@ -211,6 +227,16 @@ def _run_review_doc_pipeline(
     Returns ``(report, clauses)`` where *clauses* are the parsed source
     clauses (used for downstream grounding).
 
+    P3-C1: runtime defense-in-depth guard for ``--no_pii`` + cloud provider.
+    If ``no_pii=True`` AND the configured extraction model resolves to a
+    cloud provider (anything other than a known local prefix
+    ``ollama/`` or ``local/``), abort before any LLM call. This
+    complements the agent-level Rule 13 (skill CRITICAL anti-pattern)
+    and prevents accidental exfiltration of raw contract text to a
+    cloud LLM if the agent layer is bypassed. The sanctioned resolution
+    is to set ``privacy.tier maximum`` and use a local model — see
+    Rule 13 in the skill.
+
     Parameters
     ----------
     session_id:
@@ -219,6 +245,45 @@ def _run_review_doc_pipeline(
         document share the same ID.
     """
     from openreview_cli.review.pipeline import ReviewStage
+
+    provider_list = _configured_providers(extraction_model, qa_model)
+
+    from openreview_cli.config.loader import load_config
+    from openreview_cli.config.paths import get_config_dir, get_data_dir
+    from openreview_cli.gateway.tier_config import TierConfig
+    from openreview_cli.recovery.coordinator import RecoveryCoordinator
+
+    # P3-C1: runtime guard for --no-pii + cloud provider. Defense in depth
+    # alongside the agent-level Rule 13 (skill/SKILL.md CRITICAL anti-pattern).
+    # The guard fires only when the extraction_model looks like a real
+    # `provider/model` reference (i.e. contains a `/`) AND the provider
+    # is NOT a known local provider. The set of local-provider prefixes
+    # mirrors `_LOCAL_PROVIDER_PREFIXES` in
+    # `src/openreview_cli/gateway/tier_router.py:20` so the guard and
+    # the rest of the gateway agree on what counts as "local".
+    _local_provider_prefixes = ("ollama/", "local/")
+    if (
+        no_pii
+        and "/" in extraction_model
+        and not extraction_model.startswith(_local_provider_prefixes)
+    ):
+        raise SystemExit(
+            f"Error: --no-pii is incompatible with cloud provider "
+            f"'{extraction_model}'. PII stripping is disabled, so raw "
+            f"contract text would be sent to a cloud LLM. "
+            f"Either: (a) set 'privacy.tier maximum' in config.yml and "
+            f"use a local model (e.g. 'ollama/qwen3:8b' or "
+            f"'local/llama-3.1'), or (b) remove --no-pii (PII stripping "
+            f"is automatic and fail-closed). See Rule 13 in skill/SKILL.md."
+        )
+
+    tier_config = TierConfig.from_config(load_config(get_config_dir() / "config.yml"))
+
+    coordinator = RecoveryCoordinator(
+        provider_list=provider_list,
+        user_privacy_tier=tier_config.tier,
+        db_path=str(get_data_dir() / "recovery.db"),
+    )
 
     review_stage = ReviewStage(
         playbook=playbook,
@@ -230,6 +295,8 @@ def _run_review_doc_pipeline(
         verbose=verbose,
         mode=mode,
         session_id=session_id,
+        recovery_coordinator=coordinator,
+        provider_list=provider_list,
     )
 
     stages: list[Any] = [ParseStage()]
@@ -247,7 +314,11 @@ def _run_review_doc_pipeline(
                 file=sys.stderr,
             )
 
-    pipeline = Pipeline(stages=stages, progress_callback=_progress)
+    pipeline = Pipeline(
+        stages=stages,
+        progress_callback=_progress,
+        recovery_coordinator=coordinator,
+    )
 
     pipeline_ctx: dict[str, Any] = {"document_path": str(doc_path)}
     try:

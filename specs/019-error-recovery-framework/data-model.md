@@ -213,7 +213,15 @@ Controls cloud provider fallback behavior. Used by `ProviderFallbackStrategy` to
 | `standard` | Cloud fallback allowed if provider is user-configured. |
 | `none` | No privacy restrictions on fallback. |
 
-**Validation**: Set at pipeline start from user config. Never changes mid-pipeline.
+**Derivation**: Set at `RecoveryCoordinator.create_context()` from the
+product `privacy.tier` (`maximum`/`balanced`/`performance`, per spec 020)
+through a centralized translation (`privacy_tier_from_product` in
+`recovery/models.py`) that fails closed to `"strict"`. The product
+enum is the user-facing source of truth; the recovery vocabulary is
+an internal fallback-guard vocabulary used only by
+`ProviderFallbackStrategy`.
+
+**Validation**: Never changes mid-pipeline.
 
 ---
 

@@ -139,6 +139,10 @@
     {
       "value": "REG-100003",
       "type": "REG_NUMBER"
+    },
+    {
+      "value": "AutoCompanyB3 LLC",
+      "type": "ORGANIZATION"
     }
   ],
   "auto/auto_contract_4.txt": [
@@ -281,6 +285,10 @@
     {
       "value": "REG-100006",
       "type": "REG_NUMBER"
+    },
+    {
+      "value": "AutoCompanyB6 LLC",
+      "type": "ORGANIZATION"
     }
   ],
   "auto/auto_contract_7.txt": [
@@ -423,6 +431,10 @@
     {
       "value": "REG-100009",
       "type": "REG_NUMBER"
+    },
+    {
+      "value": "AutoCompanyB9 LLC",
+      "type": "ORGANIZATION"
     }
   ],
   "auto/auto_contract_10.txt": [
@@ -565,6 +577,10 @@
     {
       "value": "REG-100012",
       "type": "REG_NUMBER"
+    },
+    {
+      "value": "AutoCompanyB12 LLC",
+      "type": "ORGANIZATION"
     }
   ],
   "auto/auto_contract_13.txt": [
@@ -707,6 +723,10 @@
     {
       "value": "REG-100015",
       "type": "REG_NUMBER"
+    },
+    {
+      "value": "AutoCompanyB15 LLC",
+      "type": "ORGANIZATION"
     }
   ],
   "auto/auto_contract_16.txt": [
@@ -849,6 +869,10 @@
     {
       "value": "REG-100018",
       "type": "REG_NUMBER"
+    },
+    {
+      "value": "AutoCompanyB18 LLC",
+      "type": "ORGANIZATION"
     }
   ],
   "auto/auto_contract_19.txt": [
@@ -991,6 +1015,10 @@
     {
       "value": "REG-100021",
       "type": "REG_NUMBER"
+    },
+    {
+      "value": "AutoCompanyB21 LLC",
+      "type": "ORGANIZATION"
     }
   ],
   "auto/auto_contract_22.txt": [
@@ -1133,6 +1161,10 @@
     {
       "value": "REG-100024",
       "type": "REG_NUMBER"
+    },
+    {
+      "value": "AutoCompanyB24 LLC",
+      "type": "ORGANIZATION"
     }
   ],
   "auto/auto_contract_25.txt": [
@@ -1325,6 +1357,10 @@
     {
       "value": "REG-200003",
       "type": "REG_NUMBER"
+    },
+    {
+      "value": "ManualCompanyB3 Ltd",
+      "type": "ORGANIZATION"
     }
   ],
   "manual/manual_contract_4.txt": [
@@ -1467,6 +1503,10 @@
     {
       "value": "REG-200006",
       "type": "REG_NUMBER"
+    },
+    {
+      "value": "ManualCompanyB6 Ltd",
+      "type": "ORGANIZATION"
     }
   ],
   "manual/manual_contract_7.txt": [
@@ -1609,6 +1649,10 @@
     {
       "value": "REG-200009",
       "type": "REG_NUMBER"
+    },
+    {
+      "value": "ManualCompanyB9 Ltd",
+      "type": "ORGANIZATION"
     }
   ],
   "manual/manual_contract_10.txt": [
@@ -1751,6 +1795,10 @@
     {
       "value": "REG-200012",
       "type": "REG_NUMBER"
+    },
+    {
+      "value": "ManualCompanyB12 Ltd",
+      "type": "ORGANIZATION"
     }
   ],
   "manual/manual_contract_13.txt": [
@@ -1893,6 +1941,10 @@
     {
       "value": "REG-200015",
       "type": "REG_NUMBER"
+    },
+    {
+      "value": "ManualCompanyB15 Ltd",
+      "type": "ORGANIZATION"
     }
   ],
   "manual/manual_contract_16.txt": [
@@ -2035,6 +2087,10 @@
     {
       "value": "REG-200018",
       "type": "REG_NUMBER"
+    },
+    {
+      "value": "ManualCompanyB18 Ltd",
+      "type": "ORGANIZATION"
     }
   ],
   "manual/manual_contract_19.txt": [
@@ -2177,6 +2233,10 @@
     {
       "value": "REG-200021",
       "type": "REG_NUMBER"
+    },
+    {
+      "value": "ManualCompanyB21 Ltd",
+      "type": "ORGANIZATION"
     }
   ],
   "manual/manual_contract_22.txt": [
@@ -2319,6 +2379,10 @@
     {
       "value": "REG-200024",
       "type": "REG_NUMBER"
+    },
+    {
+      "value": "ManualCompanyB24 Ltd",
+      "type": "ORGANIZATION"
     }
   ],
   "manual/manual_contract_25.txt": [

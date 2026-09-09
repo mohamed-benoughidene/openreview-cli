@@ -59,7 +59,7 @@ class PdfParser:
             password = os.environ.get("OPENREVIEW_PDF_PASSWORD")
             if password:
                 try:
-                    doc.authenticate(password)
+                    authed = doc.authenticate(password)
                 except Exception:
                     doc.close()
                     raise ParseError(
@@ -68,12 +68,20 @@ class PdfParser:
                         message="This contract is password-protected.",
                         action="The password in OPENREVIEW_PDF_PASSWORD was incorrect. Set the correct password or provide an unlocked copy.",
                     ) from None
+                if not authed:
+                    doc.close()
+                    raise ParseError(
+                        exit_code=8,
+                        category="password_protected",
+                        message="This contract is password-protected.",
+                        action="The password in OPENREVIEW_PDF_PASSWORD was incorrect. Set the correct password or provide an unlocked copy.",
+                    )
             elif sys.stdin.isatty():
                 import getpass
 
                 try:
                     password = getpass.getpass("PDF password: ")
-                    doc.authenticate(password)
+                    authed = doc.authenticate(password)
                 except Exception:
                     doc.close()
                     raise ParseError(
@@ -82,6 +90,14 @@ class PdfParser:
                         message="This contract is password-protected.",
                         action="Incorrect password. Try again or provide an unlocked copy.",
                     ) from None
+                if not authed:
+                    doc.close()
+                    raise ParseError(
+                        exit_code=8,
+                        category="password_protected",
+                        message="This contract is password-protected.",
+                        action="Incorrect password. Try again or provide an unlocked copy.",
+                    )
             else:
                 doc.close()
                 raise ParseError(
@@ -125,8 +141,8 @@ class PdfParser:
                 raise ParseError(
                     exit_code=8,
                     category="no_text",
-                    message="This PDF contains no extractable text. If it is a scanned document, install the OCR extension: openreview install ocr",
-                    action="Install OCR extension or provide a text-based PDF.",
+                    message="This PDF contains no extractable text. If it is a scanned document, re-export with an embedded text layer (e.g. ocrmypdf input.pdf output.pdf, or export from the original authoring tool as 'searchable PDF').",
+                    action="Re-export with an embedded text layer or provide a text-based PDF.",
                 )
 
         except GeneratorExit:

@@ -26,6 +26,7 @@ from openreview_cli.recovery.models import (
     RecoveryOutcome,
     RecoveryReport,
     classify_error,
+    privacy_tier_from_product,
 )
 from openreview_cli.recovery.strategies.auto_retry import auto_retry
 from openreview_cli.recovery.strategies.graceful_degradation import graceful_degradation
@@ -63,22 +64,32 @@ class RecoveryCoordinator:
         config: RecoveryConfig | None = None,
         memory_budget_bytes: int = 104_857_600,
         db_path: str | None = None,
+        provider_list: list[str] | None = None,
+        user_privacy_tier: str | None = None,
     ) -> None:
         self._config = config or RecoveryConfig()
         self._memory_budget_bytes = memory_budget_bytes
         self._db_path = db_path
+        self._provider_list = provider_list
+        self._user_privacy_tier = user_privacy_tier
         self._pipeline_id = uuid.uuid4().hex
 
     # -- Public API called by pipeline runner --
 
     def create_context(self, provider_list: list[str] | None = None) -> RecoveryContext:
-        """Create a RecoveryContext with the coordinator's config injected."""
+        """Create a RecoveryContext with the coordinator's config injected.
+
+        The effective provider list is ``provider_list`` if given, else the
+        coordinator-level ``provider_list`` configured at construction time
+        (else an empty list).
+        """
         return RecoveryContext(
             memory_budget_bytes=self._memory_budget_bytes,
             memory_threshold_bytes=int(
                 self._memory_budget_bytes * self._config.memory_threshold_pct / 100.0
             ),
-            provider_list=provider_list or [],
+            provider_list=list(provider_list or self._provider_list or []),
+            user_privacy_tier=privacy_tier_from_product(self._user_privacy_tier),
             saved_results={},
         )
 

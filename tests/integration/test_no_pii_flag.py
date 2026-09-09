@@ -12,7 +12,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 if TYPE_CHECKING:
@@ -31,6 +31,31 @@ PDF = FIXTURES / "pdf"
 SIMPLE_CONTRACT = str(PDF / "simple_contract.pdf")
 
 # ── helpers ──
+
+
+def _empty_pii_result() -> Any:
+    """Return a real empty PiiResult for tests that mock strip_and_persist.
+
+    PII-3: the legacy ReviewCommand.run now also calls
+    persist_pii_for_document after strip_and_persist. A MagicMock's
+    auto-generated `.mapping` attribute is a child MagicMock (truthy),
+    which would cause the helper's empty-mapping short-circuit to fail
+    and trigger a swallowed exception → spurious warning log. Returning
+    a real PiiResult with mapping={} keeps the helper's early-return
+    path and exercises the actual legacy code without real persistence
+    (the short-circuit writes nothing).
+    """
+    from openreview_cli.pii.models import PiiResult
+
+    return PiiResult(
+        stripped_text="stripped",
+        mapping={},
+        entities=[],
+        page_count=1,
+        duration_seconds=0.0,
+        warnings=[],
+        failed_pages=None,
+    )
 
 
 def _make_review_report(*, pii_stripped: bool = True) -> ReviewReport:
@@ -137,7 +162,7 @@ class TestPrecheckPiiEngineCalls:
     @patch("openreview_cli.review.base.strip_and_persist")
     def test_engine_called_when_enabled(self, mock_strip: MagicMock) -> None:
         """strip_and_persist called once when --no-pii absent."""
-        mock_strip.return_value = MagicMock(stripped_text="stripped", entities=[], failed_pages=[])
+        mock_strip.return_value = _empty_pii_result()
         result = runner.invoke(
             app,
             [
@@ -180,11 +205,7 @@ class TestPrecheckRawTextBehavior:
     @patch("openreview_cli.review.base.strip_and_persist")
     def test_stripped_text_written_by_default(self, mock_strip: MagicMock) -> None:
         """Default: stripped text written to result path."""
-        mock_strip.return_value = MagicMock(
-            stripped_text="stripped contract text",
-            entities=[],
-            failed_pages=[],
-        )
+        mock_strip.return_value = _empty_pii_result()
         result = runner.invoke(
             app,
             [
@@ -217,7 +238,7 @@ class TestPrecheckOutputFormat:
     @patch("openreview_cli.review.base.strip_and_persist")
     def test_json_format_without_no_pii(self, mock_strip: MagicMock) -> None:
         """--format json works without --no-pii."""
-        mock_strip.return_value = MagicMock(stripped_text="stripped", entities=[], failed_pages=[])
+        mock_strip.return_value = _empty_pii_result()
         result = runner.invoke(
             app,
             [
@@ -264,7 +285,7 @@ class TestReviewSubcommandPii:
         mock_strip: MagicMock,
     ) -> None:
         """review: strip_pii_clauses called when --no-pii absent."""
-        mock_strip.return_value = ([], MagicMock(entities=[], failed_pages=[]))
+        mock_strip.return_value = ([], _empty_pii_result())
         mock_ext_gw.return_value = '{"position": "preferred", "confidence": 0.9, "citation": "t"}'
         mock_qa_gw.return_value = (
             '{"verdict": "agree", "citation_valid": true, '

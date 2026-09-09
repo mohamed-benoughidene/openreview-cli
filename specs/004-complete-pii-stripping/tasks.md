@@ -112,7 +112,7 @@
 
 ### Tests for User Story 4
 
-- [X] [P] [US4] Implement PII accuracy validation test in `tests/integration/test_pii_accuracy.py` — load `tests/fixtures/pii/seeded_contracts/ground_truth.json`, run PII detection on each contract, compute recall (true_positives / total_ground_truth) and precision (true_positives / total_detections), assert recall ≥90% and precision ≥95%, assert zero false positives on `no_pii_document.txt`
+- [X] [P] [US4] Implement PII accuracy validation test in `tests/integration/test_pii_accuracy.py` — load `tests/fixtures/pii/seeded_contracts/ground_truth.json`, run PII detection on each contract, compute recall (true_positives / total_ground_truth) and precision (true_positives / total_detections) using MUC/CoNLL-style partial (token-overlap) matching (R8 amendment: a detection matches when the type matches exactly case-insensitively and values overlap as a substring either direction or share ≥1 non-trivial token; a single detection may credit multiple same-type ground-truth entities), assert recall ≥90% and precision ≥95%, assert zero false positives on `no_pii_document.txt`
 
 ### Implementation for User Story 4
 

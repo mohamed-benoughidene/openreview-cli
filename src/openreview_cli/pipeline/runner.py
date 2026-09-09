@@ -158,7 +158,7 @@ class Pipeline:
                     halt = True
 
             if not halt:
-                result = await self._execute_single_stage(context, i, stage)
+                result = await self._execute_single_stage(context, i, stage, recovery_ctx)
                 stage_results.append(result.sr)
 
                 # Post-stage recovery update
@@ -174,9 +174,12 @@ class Pipeline:
                         partial_output = {k: context.get(k) for k in result.sr.output_keys}
 
                         async def _attempt_retry(
-                            attempt: int, _i: int = i, _stg: Stage = stage
+                            attempt: int,
+                            _i: int = i,
+                            _stg: Stage = stage,
+                            _rctx: RecoveryContext | None = recovery_ctx,
                         ) -> bool:
-                            outcome = await self._execute_single_stage(context, _i, _stg)
+                            outcome = await self._execute_single_stage(context, _i, _stg, _rctx)
                             return not outcome.critical and outcome.sr.error is None
 
                         await self._recovery_coordinator.handle_stage_failure(
@@ -234,6 +237,7 @@ class Pipeline:
         context: PipelineContext,
         index: int,
         stage: Stage,
+        recovery_ctx: RecoveryContext | None = None,
     ) -> _StageOutcome:
         """Run one stage: pre-snapshot, execute, post-snapshot, merge.
 
@@ -244,6 +248,13 @@ class Pipeline:
         stage._emit_callback = self._emit  # type: ignore[attr-defined]
         stage._stage_index = index  # type: ignore[attr-defined]
         stage._total_stages = len(self._stages)  # type: ignore[attr-defined]
+
+        # Wire the recovery seam into stages that participate (e.g. ReviewStage):
+        # the stage forwards coordinator + shared recovery context to its
+        # gateway calls so provider fallback works inside a stage run.
+        if self._recovery_coordinator is not None:
+            stage._recovery_coordinator = self._recovery_coordinator  # type: ignore[attr-defined]
+            stage._recovery_ctx = recovery_ctx  # type: ignore[attr-defined]
 
         self._emit(
             ProgressEvent(
@@ -287,8 +298,14 @@ class Pipeline:
             critical = True
         except StageError as exc:
             error = str(exc)
+            # A critical stage must halt regardless of the exception class it
+            # raises. Without this, the recovery coordinator would retry a
+            # critical ParseStage failure (which raises StageError, not
+            # CriticalStageError) with backoff instead of halting.
+            critical = stage.critical
         except Exception as exc:
             error = f"Unexpected error: {exc}"
+            critical = stage.critical
 
         stage_duration = time.monotonic() - stage_start
 

@@ -12,6 +12,7 @@ from openreview_cli.recovery.models import (
     RecoveryOutcome,
     RecoveryReport,
     classify_error,
+    privacy_tier_from_product,
 )
 
 
@@ -46,6 +47,28 @@ class TestPrivacyTierConstants:
         assert PRIVACY_TIER_STRICT == "strict"
         assert PRIVACY_TIER_STANDARD == "standard"
         assert PRIVACY_TIER_NONE == "none"
+
+
+class TestPrivacyTierTranslation:
+    def test_maximum_to_strict(self) -> None:
+        assert privacy_tier_from_product("maximum") == PRIVACY_TIER_STRICT
+
+    def test_balanced_to_standard(self) -> None:
+        assert privacy_tier_from_product("balanced") == PRIVACY_TIER_STANDARD
+
+    def test_performance_to_none(self) -> None:
+        assert privacy_tier_from_product("performance") == PRIVACY_TIER_NONE
+
+    def test_case_insensitive(self) -> None:
+        assert privacy_tier_from_product("MAXIMUM") == PRIVACY_TIER_STRICT
+        assert privacy_tier_from_product("Balanced") == PRIVACY_TIER_STANDARD
+
+    def test_unknown_product_tier_falls_back_to_strict(self) -> None:
+        # The product config contract (PrivacyTier.parse) coerces invalid/absent
+        # values to "maximum"; this helper mirrors that fail-closed default.
+        assert privacy_tier_from_product("garbage") == PRIVACY_TIER_STRICT
+        assert privacy_tier_from_product("") == PRIVACY_TIER_STRICT
+        assert privacy_tier_from_product(None) == PRIVACY_TIER_STRICT
 
 
 class TestRecoveryEvent:
@@ -225,3 +248,38 @@ class TestClassifyError:
             )
             == ErrorCategory.resource
         )
+
+
+class TestR34Classification:
+    """R3-4 — classification of gateway errors that the recovery seam must
+    handle distinctly.
+
+    Note: classify_error() itself only knows about ``http_status`` and
+    ``error_type`` (the typed-error name) — it does not import
+    gateway.errors. The HTTP-status mapping lives in
+    ``review/_gateway.py._GATEWAY_ERROR_HTTP_STATUS``. These tests verify
+    the seam end-to-end through ``coordinator.handle_gateway_failure``.
+    """
+
+    def test_unclassified_provider_error_type_is_unknown_via_classify(self) -> None:
+        """Pre-fix sanity: without the new HTTP-status mapping, the bare
+        ``UnclassifiedProviderError`` typed name classifies as unknown.
+        The new mapping in _GATEWAY_ERROR_HTTP_STATUS must elevate it to
+        transient — verified separately in coordinator-level tests below.
+        """
+        assert classify_error(error_type="UnclassifiedProviderError") == ErrorCategory.unknown
+
+    def test_all_providers_failed_type_classifies_unknown(self) -> None:
+        """The typed name alone classifies unknown; the status map keeps it
+        at None → unknown (terminal) — verified at coordinator level."""
+        assert classify_error(error_type="AllProvidersFailedError") == ErrorCategory.unknown
+
+    def test_connection_error_typed_name_classifies_unknown(self) -> None:
+        """Pre-fix sanity: the typed name ``ConnectionError`` alone does not
+        match the error_type table — the new status-map entry drives its
+        transient classification. Verified at coordinator level."""
+        assert classify_error(error_type="ConnectionError") == ErrorCategory.unknown
+
+    def test_no_matching_provider_type_classifies_unknown(self) -> None:
+        """NoMatchingProviderError remains unknown → terminal (no fallback)."""
+        assert classify_error(error_type="NoMatchingProviderError") == ErrorCategory.unknown

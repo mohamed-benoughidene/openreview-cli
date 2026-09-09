@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any
 from openreview_cli.pipeline.base import PipelineContext, Stage
 
 if TYPE_CHECKING:
+    from openreview_cli.recovery.coordinator import RecoveryCoordinator
     from openreview_cli.review.models import ClauseAssessment, Playbook, ReviewReport
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,8 @@ class ReviewStage(Stage):
         verbose: bool = False,
         mode: str = "precheck",
         session_id: str | None = None,
+        recovery_coordinator: RecoveryCoordinator | None = None,
+        provider_list: list[str] | None = None,
     ) -> None:
         """Initialise the review stage.
 
@@ -82,6 +85,12 @@ class ReviewStage(Stage):
             Optional session identifier for cost attribution.  Passed through
             to every ``call_gateway_chat`` invocation so extraction and QA
             costs land under the same session ID.
+        recovery_coordinator:
+            Optional recovery coordinator wired by the pipeline runner.  When
+            set (together with ``provider_list``), extraction/QA gateway calls
+            participate in the spec-019 sequential provider-fallback seam.
+        provider_list:
+            Optional ordered provider list for provider fallback.
         """
         self._playbook = playbook
         self._extraction_model = extraction_model
@@ -92,6 +101,10 @@ class ReviewStage(Stage):
         self._verbose = verbose
         self._mode = mode
         self._session_id = session_id
+        self._recovery_coordinator = recovery_coordinator
+        self._provider_list = provider_list
+        # Injected by the pipeline runner (T2.4) when the coordinator is wired.
+        self._recovery_ctx: Any = None
         self.report: ReviewReport | None = None
         self.document: Any = None
         self.clauses: list[Any] | None = []
@@ -128,6 +141,9 @@ class ReviewStage(Stage):
                 extraction_model=self._extraction_model,
                 mode=self._mode,
                 session_id=self._session_id,
+                coordinator=self._recovery_coordinator,
+                recovery_ctx=self._recovery_ctx,
+                provider_list=self._provider_list,
             )
 
             if category is not None and assessment.playbook_category != "no-match":
@@ -137,6 +153,9 @@ class ReviewStage(Stage):
                     category,
                     qa_model=self._qa_model,
                     session_id=self._session_id,
+                    coordinator=self._recovery_coordinator,
+                    recovery_ctx=self._recovery_ctx,
+                    provider_list=self._provider_list,
                 )
 
             assessments.append(assessment)

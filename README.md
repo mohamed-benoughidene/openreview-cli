@@ -1,7 +1,7 @@
 ![openreview-cli](assets/ChatGPT%20Image%20Aug%203,%202026,%2007_05_28%20PM.png)
 # openreview-cli
 
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue)](https://github.com/mohamed-benoughidene/openreview-cli) [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/LICENSE) [![status: pre-alpha](https://img.shields.io/badge/status-pre--alpha-orange)](https://github.com/mohamed-benoughidene/openreview-cli)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue)](https://github.com/mohamed-benoughidene/openreview-cli) [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/LICENSE) [![status: alpha](https://img.shields.io/badge/status-alpha-green)](https://github.com/mohamed-benoughidene/openreview-cli)
 
 Privacy-first contract review automation CLI. Local-first, multi-agent AI that strips PII before any cloud call. Parse, review, and negotiate contracts through an AI Gateway spanning 17 providers all from the command line.
 
@@ -14,7 +14,7 @@ openreview-cli is a local-first, privacy-first contract review automation tool t
 - **PII stripped locally before cloud:** the pipeline is fail-closed if page-level detection fails, the review halts rather than leak.
 - **Local-first by default:** every slot defaults to local Ollama (`qwen3` reasoning, `nomic-embed-text` embeddings). Sub in any local model per slot  `openreview config set gateway.reasoning.primary ollama/<model>`  or opt a slot into the cloud. Cloud providers are opt-in per slot.
 - **Multi-agent review pipeline:** extraction → QA verification → citation grounding, not one monolithic prompt.
-- **21 contract-type modes** with bundled 3-position playbooks (Preferred / Acceptable / Walkaway).
+- **23 contract-type modes** with bundled 3-position playbooks (Preferred / Acceptable / Walkaway).
 - **Dual human/agent interface:** Typer CLI + Textual TUI for humans; Python API + JSON output for agents; plus an agent routing skill (`skill/SKILL.md`) for intent-to-command mapping.
 - **Spec-driven development:** 33 specs, all tracked in `specs/`.
 
@@ -63,10 +63,10 @@ uv run openreview
 
 | Area | Value |
 |---|---|
-| Version | 0.1.1 (pre-alpha) |
-| Tests | 2,725 collected (10 markers) |
+| Version | 0.1.2 (alpha) |
+| Tests | 3,034 collected (10 markers) |
 | Gateway | 17 providers, 27 models |
-| Contract modes | 21 |
+| Contract modes | 23 |
 | Startup | 0.68 s median, ~43 MB RSS |
 | Review accuracy | 90.9% F1 (12 NDA clauses, claude-sonnet-4.6 via OpenRouter) |
 | CUAD clause identification | 100% sentence boundary recall (462 contracts, 4,034 queries) |
@@ -111,7 +111,7 @@ A single litellm abstraction: `chat → completion`, `embed → embedding`, `rer
 
 ### Multi-agent review
 
-Per-clause pipeline: keyword category match (no LLM) → extraction agent (LLM, outputs position + confidence + citation) → QA verification agent (LLM, agree/disagree/uncertain verdict, amber flag) → citation grounding discriminator (LLM, claim-vs-source verification, strict/lenient modes). 24 bundled playbooks across 21 modes. 3-position model: Preferred / Acceptable / Walkaway. 3-color confidence output: Green / Amber / Red with configurable threshold.
+Per-clause pipeline: keyword category match (no LLM) → extraction agent (LLM, outputs position + confidence + citation) → QA verification agent (LLM, agree/disagree/uncertain verdict, amber flag) → citation grounding discriminator (LLM, claim-vs-source verification, strict/lenient modes). 24 bundled playbooks across 23 modes. 3-position model: Preferred / Acceptable / Walkaway. 3-color confidence output: Green / Amber / Red with configurable threshold.
 
 ### Analysis tools
 
@@ -121,7 +121,7 @@ Per-clause pipeline: keyword category match (no LLM) → extraction agent (LLM, 
 
 ### Storage & retrieval
 
-Single SQLite database (20 tables: reviews, cost_logs, PII cache, playbooks, benchmarks, graph data, recovery state). Per-document retrieval indexes in separate SQLite files with FTS5 (BM25 unicode61, prefix 2–3) + dense embeddings (brute-force cosine scan, no vector DB honest limitation) + RRF fusion (k=60). Reranker present but disabled by default (degrades legal text); opt-in with `--rerank`.
+Single SQLite database (19 tables: reviews, cost_logs, PII cache, playbooks, benchmarks, graph data, recovery state). Per-document retrieval indexes in separate SQLite files with FTS5 (BM25 unicode61, prefix 2–3) + dense embeddings (brute-force cosine scan, no vector DB honest limitation) + RRF fusion (k=60). Reranker present but disabled by default (degrades legal text); opt-in with `--rerank`.
 
 ### Terminal UI
 
@@ -135,6 +135,7 @@ A full Textual app (`src/openreview_cli/tui/`) for humans who prefer browsing ov
 | licensecheck | SaaS/software license agreement |
 | leasecheck | Commercial lease agreement |
 | privacycheck | Data Processing Agreement (DPA) |
+| privacycheck_v2 | Data Processing Agreement (v2) |
 | dealcheck | Vendor/service agreement |
 | hirecheck | Employment agreement |
 | indemnitycheck | Indemnification agreement |
@@ -143,6 +144,7 @@ A full Textual app (`src/openreview_cli/tui/`) for humans who prefer browsing ov
 | loicheck | Letter of intent or MOU |
 | subcheck | Subcontractor agreement |
 | settlementcheck | Settlement/release agreement |
+| settlementcheck_v2 | Complex settlement/release agreement (v2) |
 | assetcheck | Asset transfer/assignment agreement |
 | buycheck | Asset purchase/business acquisition agreement |
 | engagecheck | Professional services engagement letter |
@@ -212,6 +214,6 @@ Python 3.12 · Typer CLI · Textual TUI · Presidio (PII) · litellm (gateway) �
 
 AGPL-3.0-only, with a commercial license option (see [LICENSE](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/LICENSE) and [COMMERCIAL_LICENSE.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/COMMERCIAL_LICENSE.md)).
 
-Pre-alpha. Measured performance, accuracy, and methodology in [BENCHMARKS.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/BENCHMARKS.md).
+Alpha. Measured performance, accuracy, and methodology in [BENCHMARKS.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/BENCHMARKS.md).
 
 [Architecture](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/ARCHITECTURE.md) · [Benchmarks](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/BENCHMARKS.md) · [Issues](https://github.com/mohamed-benoughidene/openreview-cli/issues) · [Discussions](https://github.com/mohamed-benoughidene/openreview-cli/discussions)
