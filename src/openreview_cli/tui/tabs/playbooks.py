@@ -156,7 +156,7 @@ class _ImportModal(ModalScreen[dict[str, Any] | None]):
             yield Label("Import playbook from YAML", id="import-title")
             yield Label("Enter path to .yaml/.yml file:")
             yield Input(placeholder="/path/to/playbook.yaml", id="import-path-input")
-            yield Static("", id="preview-content")
+            yield Static("", id="preview-content", markup=False)
             yield Label("", id="preview-validation")
             yield Horizontal(
                 Button("Browse\u2026", id="import-browse"),
@@ -190,6 +190,8 @@ class _ImportModal(ModalScreen[dict[str, Any] | None]):
     def _show_preview(self, path: Path) -> None:
         from openreview_cli.review.playbook import load_playbook
 
+        content = self.query_one("#preview-content", Static)
+        validation = self.query_one("#preview-validation", Label)
         try:
             playbook = load_playbook(path)
             lines = [
@@ -202,15 +204,17 @@ class _ImportModal(ModalScreen[dict[str, Any] | None]):
             ]
             for cat in playbook.categories:
                 lines.append(f"  - {cat.name} [{cat.default_position.value}]")
-            self.query_one("#preview-content", Static).update("\n".join(lines))
-            self.query_one("#preview-validation", Label).update("[green]\u2713 Valid playbook[/]")
+            content.update("\n".join(lines))
+            validation.update("[green]\u2713 Valid playbook[/]")
             self._path = path
         except Exception as exc:
-            self.query_one("#preview-content", Static).update(f"[red]Validation error:[/]\n{exc}")
-            self.query_one("#preview-validation", Label).update(f"[red]\u2717 {exc}[/]")
+            # Arbitrary data + exception text go only to the non-markup widget;
+            # #preview-validation keeps intentional markup on a controlled string.
+            content.update(f"Validation error:\n{exc}")
+            validation.update("[red]\u2717 Invalid playbook[/]")
             self._path = None
-        self.query_one("#preview-content", Static).display = True
-        self.query_one("#preview-validation", Label).display = True
+        content.display = True
+        validation.display = True
         self.query_one("#preview-import", Button).display = self._path is not None
 
     def on_button_pressed(self, event: Button.Pressed) -> None:

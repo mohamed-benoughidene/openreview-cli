@@ -6,6 +6,7 @@ import dataclasses
 import io
 import json
 import logging
+import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -17,10 +18,23 @@ from openreview_cli.review.models import Position, ReviewReport
 
 logger = logging.getLogger(__name__)
 
+# Mode-specific report headings. The bundled NDA playbook backs `precheck`, so
+# that mode keeps its historical title; every other mode is derived from the
+# mode name (e.g. "licensecheck" -> "Licensecheck Review Report").
+_MODE_TITLES: dict[str, str] = {"precheck": "NDA Review Report"}
+
+
+def _report_title(mode: str) -> str:
+    """Derive the report heading from the review mode."""
+    return _MODE_TITLES.get(mode, f"{mode.replace('_', ' ').title()} Review Report")
+
 
 def format_terminal(  # noqa: PLR0912, PLR0915  # ponytail: function extraction would add more complexity
     report: ReviewReport,
     privacy_footer: str | None = None,
+    *,
+    color: bool | None = None,
+    width: int | None = None,
 ) -> str:
     """Format a ``ReviewReport`` as a human-readable terminal string.
 
@@ -33,6 +47,14 @@ def format_terminal(  # noqa: PLR0912, PLR0915  # ponytail: function extraction 
         The review report to format.
     privacy_footer : str | None
         Optional privacy tier footer line(s) appended at the end.
+    color : bool | None
+        ``None`` (default) auto-detects whether the *real* stdout supports colour
+        using Rich's ``Console.is_terminal`` (honours ``FORCE_COLOR`` /
+        ``TTY_COMPATIBLE`` / ``NO_COLOR`` and falls back to ``sys.stdout.isatty()``).
+        ``True`` forces ANSI output, ``False`` forces plain text.
+    width : int | None
+        Console width. ``None`` (default) uses
+        ``shutil.get_terminal_size(fallback=(100, 24)).columns``.
 
     Returns the rendered string (no side effects).
     """
@@ -44,12 +66,21 @@ def format_terminal(  # noqa: PLR0912, PLR0915  # ponytail: function extraction 
     from rich.console import Console
     from rich.table import Table
 
+    # Native detection: probe the real stdout, not the StringIO sink below.
+    probe = Console()
+    use_color = (probe.is_terminal and not probe.no_color) if color is None else color
     buf = io.StringIO()
-    console = Console(width=100, force_terminal=False, file=buf)
+    console = Console(
+        width=width if width is not None else shutil.get_terminal_size(fallback=(100, 24)).columns,
+        file=buf,
+        force_terminal=use_color,
+        color_system="truecolor" if use_color else None,
+        no_color=not use_color,
+    )
 
     # Header
     console.print()
-    console.print("[bold]NDA Review Report[/bold]")
+    console.print(f"[bold]{_report_title(report.mode)}[/bold]")
     if report.playbook_version is not None:
         console.print(
             f"[dim]Playbook: {report.playbook_id} (version {report.playbook_version})[/dim]"

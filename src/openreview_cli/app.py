@@ -62,6 +62,15 @@ def _validate_enum(value: str, options: tuple[str, ...], name: str) -> None:
         raise typer.Exit(code=2)
 
 
+def _log_level(debug: bool = False, verbose: bool = False) -> int:
+    """Resolve the root log level from CLI flags (default: quiet)."""
+    if debug:
+        return logging.DEBUG
+    if verbose:
+        return logging.INFO
+    return logging.WARNING
+
+
 def _privacy_footer() -> str:
     """Build the privacy-tier footer for terminal reports."""
     from openreview_cli.gateway.models import PrivacyTierReport
@@ -185,11 +194,11 @@ def _emit_reviews(
         typer.echo("⚠  Some clauses flagged Amber — review recommended.", err=True)
 
 
-def _init(debug: bool = False) -> None:
+def _init(debug: bool = False, verbose: bool = False) -> None:
     log_dir = get_log_dir()
     log_file = log_dir / "openreview.log"
     log_dir.mkdir(parents=True, exist_ok=True)
-    _level = logging.DEBUG if debug else logging.INFO
+    _level = _log_level(debug=debug, verbose=verbose)
     _fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
     root = logging.getLogger()
     root.setLevel(_level)
@@ -311,8 +320,14 @@ def _root(
         "--debug",
         help="Enable debug-level logging.",
     ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Enable info-level logging (startup diagnostics).",
+    ),
 ) -> None:
-    _init(debug=debug)
+    _init(debug=debug, verbose=verbose)
 
     # If a subcommand was invoked, let it proceed normally
     if ctx.invoked_subcommand is not None:

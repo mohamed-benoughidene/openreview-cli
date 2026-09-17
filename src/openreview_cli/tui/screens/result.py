@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import ClassVar
 
 from textual.app import ComposeResult
@@ -11,9 +10,22 @@ from textual.containers import Container, Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Button, Label, ListItem, ListView, Static
 
+from openreview_cli.review.memo.filename import DEFAULT_OUTPUT_DIR
 from openreview_cli.review.models import ClauseAssessment, ReviewReport
 
 CLAUSES_PER_PAGE = 100
+
+# Textual colour names; "amber" is not one, so it maps to the CSS colour "orange".
+_STATUS_COLOR_TAG: dict[str, str] = {
+    "green": "green",
+    "amber": "orange",
+    "red": "red",
+}
+
+
+def status_color_tag(color: object) -> str:
+    """Map an assessment colour value to a valid Textual colour name."""
+    return _STATUS_COLOR_TAG.get(str(color), "white")
 
 
 class ResultScreen(Screen[None]):
@@ -56,6 +68,8 @@ class ResultScreen(Screen[None]):
 
     def compose(self) -> ComposeResult:
         total_pages = 1
+        # Guard empty/error reviews: counts stay defined for every branch.
+        green = amber = red = 0
         if self._reports and self._reports[0].assessments:
             total = len(self._reports[0].assessments)
             total_pages = max(1, (total + CLAUSES_PER_PAGE - 1) // CLAUSES_PER_PAGE)
@@ -97,7 +111,7 @@ class ResultScreen(Screen[None]):
                 with Vertical():
                     yield Static(id="save-title")
                     yield Label(id="save-file-path")
-                    yield Label("The file will be saved to /tmp/")
+                    yield Label(f"The file will be saved to {DEFAULT_OUTPUT_DIR}/")
                     yield Button("Save", id="btn-save", variant="primary")
                     yield Button("Cancel", id="btn-save-cancel", variant="default")
             yield Static("", id="description-bar")
@@ -124,8 +138,9 @@ class ResultScreen(Screen[None]):
         items = [
             ListItem(
                 Label(
-                    f"{i + 1}. [{a.color}] "
+                    f"{i + 1}. [{status_color_tag(a.color)}] "
                     f"{(a.clause_text or getattr(a, 'clause_ref', None) or f'Clause {i}')[:50]}",
+                    markup=False,
                 )
             )
             for i, a in enumerate(assessments)
@@ -136,13 +151,15 @@ class ResultScreen(Screen[None]):
             "confidence": Label(
                 f"Confidence: {first.effective_confidence or first.confidence:.2f}"
             ),
-            "clause": Label(f"Clause: {first.clause_text or '\u2014'}"),
+            "clause": Label(f"Clause: {first.clause_text or '\u2014'}", markup=False),
             "position": Label(f"Position: {first.position.value}"),
         }
         reasoning = getattr(first, "reasoning", None) or getattr(
             first, "qa_revised_rationale", None
         )
-        labels["reasoning"] = Label(f"Reasoning: {str(reasoning)[:200]}" if reasoning else "")
+        labels["reasoning"] = Label(
+            f"Reasoning: {str(reasoning)[:200]}" if reasoning else "", markup=False
+        )
         self._right_labels = labels
         return Horizontal(
             ListView(*items, id="clause-list-pane"),
@@ -155,11 +172,11 @@ class ResultScreen(Screen[None]):
         children: list[Label] = []
         for i, a in enumerate(assessments):
             text = a.clause_text or getattr(a, "clause_ref", None) or f"Clause {i}"
-            children.append(Label(f"{i + 1}. [{a.color}] {text}"))
+            children.append(Label(f"{i + 1}. [{status_color_tag(a.color)}] {text}", markup=False))
             children.append(Label(f"   Confidence: {a.effective_confidence or a.confidence:.2f}"))
             reasoning = getattr(a, "reasoning", None) or getattr(a, "qa_revised_rationale", None)
             if reasoning:
-                children.append(Label(f"   Reasoning: {str(reasoning)[:100]}"))
+                children.append(Label(f"   Reasoning: {str(reasoning)[:100]}", markup=False))
         return Vertical(*children, id="full-screen-scroll")
 
     async def action_toggle_layout(self) -> None:
@@ -240,7 +257,9 @@ class ResultScreen(Screen[None]):
             self._export_format = btn_id.split("-")[-1]
             ext = f".{self._export_format}"
             self.query_one("#save-title", Static).update(f"Save as {self._export_format.upper()}")
-            self.query_one("#save-file-path", Label).update(f"File: /tmp/review-result{ext}")
+            self.query_one("#save-file-path", Label).update(
+                f"File: {DEFAULT_OUTPUT_DIR}/review-result{ext}"
+            )
             self.query_one("#export-view", Container).display = False
             self.query_one("#save-view", Container).display = True
         elif btn_id == "btn-save":
@@ -267,7 +286,7 @@ class ResultScreen(Screen[None]):
             exporter = MemoExporter(
                 report=self._reports[0],
                 mode=self._mode,
-                output_dir=Path("/tmp"),
+                output_dir=DEFAULT_OUTPUT_DIR,
                 formats={memo_fmt},
             )
             result_paths = exporter.export()
