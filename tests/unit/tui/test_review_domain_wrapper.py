@@ -64,4 +64,18 @@ class TestReviewDomainWrapper:
             verbose=True,
             confidence_threshold=0.8,
             mode="hirecheck",
+            progress_callback=None,
         )
+
+    def test_review_wrapper_forwards_progress_callback(self) -> None:
+        """An explicit progress_callback is forwarded to run_review (P1/T5)."""
+        from openreview_cli.tui.domain.review import run_review_via_tui
+
+        def _cb(_event: object) -> None:
+            return None
+
+        with patch("openreview_cli.tui.domain.review.run_review") as mock_run:
+            mock_run.return_value = []
+            run_review_via_tui(paths=["test.pdf"], mode="precheck", progress_callback=_cb)
+
+        assert mock_run.call_args.kwargs.get("progress_callback") is _cb

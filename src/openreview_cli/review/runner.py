@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from openreview_cli.pipeline.progress import ProgressEvent
+    from openreview_cli.pipeline.progress import ProgressCallback, ProgressEvent
 
 from openreview_cli.pipeline.adapters.parse import ParseStage
 from openreview_cli.pipeline.adapters.strip import StripStage
@@ -37,6 +37,7 @@ def run_review(  # noqa: PLR0912
     mode: str = "precheck",
     session_id: str | None = None,
     allow_partial_pii: bool = False,
+    progress_callback: ProgressCallback | None = None,
 ) -> list[ReviewReport]:
     """Run the PAKTON 3-agent review pipeline on one or more documents.
 
@@ -76,6 +77,11 @@ def run_review(  # noqa: PLR0912
         When ``None`` or multiple documents, a unique ``review:<uuid>`` ID
         is minted per document.  All extraction, QA, and grounding calls
         for the same document share the same ID.
+    progress_callback : ProgressCallback | None
+        Optional sink for per-stage :class:`ProgressEvent`s
+        (``parse`` / ``strip`` / ``review`` transitions).  Called from the
+        thread running the pipeline, so UI consumers must marshal onto their
+        own thread.
 
     Returns
     -------
@@ -138,6 +144,7 @@ def run_review(  # noqa: PLR0912
                 mode=mode,
                 session_id=doc_session_id,
                 allow_partial_pii=allow_partial_pii,
+                progress_callback=progress_callback,
             )
         except Exception as exc:
             logger.error("Failed to process %s: %s", doc_path, exc, exc_info=True)
@@ -217,6 +224,7 @@ def _run_review_doc_pipeline(
     mode: str = "precheck",
     session_id: str | None = None,
     allow_partial_pii: bool = False,
+    progress_callback: ProgressCallback | None = None,
 ) -> tuple[ReviewReport, list[Any]] | None:
     """Run a pipeline for a single document using the pipeline framework.
 
@@ -313,6 +321,8 @@ def _run_review_doc_pipeline(
                 f"{event.stage_name} {event.status}",
                 file=sys.stderr,
             )
+        if progress_callback is not None:
+            progress_callback(event)
 
     pipeline = Pipeline(
         stages=stages,
