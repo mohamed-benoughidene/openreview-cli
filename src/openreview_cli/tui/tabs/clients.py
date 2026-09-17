@@ -62,13 +62,15 @@ class ClientsTab(Static):
         list_view.clear()
 
         if not self._clients:
-            list_view.append(ListItem(Label("No clients yet. Add one with [+ New client].")))
+            list_view.append(
+                ListItem(Label("No clients yet. Add one with + New client.", markup=False))
+            )
             self._selected_client_id = None
             self.query_one("#btn-delete", Button).disabled = True
             return
 
         for c in self._clients:
-            list_view.append(ListItem(Label(f"{c['id']} \u2014 {c['name']}")))
+            list_view.append(ListItem(Label(f"{c['id']} \u2014 {c['name']}", markup=False)))
 
         self._selected_client_id = None
         self.query_one("#btn-delete", Button).disabled = True

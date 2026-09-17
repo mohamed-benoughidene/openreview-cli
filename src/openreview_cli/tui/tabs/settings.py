@@ -217,8 +217,9 @@ class SettingsTab(Vertical):
         )
 
     def _about_text(self) -> str:
-        """Render about section."""
+        """Render about section (FR-038, FR-032b, FR-046)."""
         from openreview_cli.config.paths import get_config_dir, get_data_dir
+        from openreview_cli.tui.domain.privacy import read_privacy_tier
 
         cfg_dir = get_config_dir()
         data_dir = get_data_dir()
@@ -229,14 +230,18 @@ class SettingsTab(Vertical):
         return "\n".join(
             [
                 "[bold]About[/bold]",
-                f"Version:     {__version__}",
-                "License:     AGPL-3.0",
-                f"Python:      {sys.version.split()[0]}",
-                f"Database:    {db_path}",
-                f"Config:      {config_path}",
+                f"Version:       {__version__}",
+                "License:       AGPL-3.0",
+                f"Python:        {sys.version.split()[0]}",
+                f"Privacy tier:  {read_privacy_tier()}",
+                f"Database:      {db_path}",
+                f"Config:        {config_path}",
                 f"Documentation: {doc_url}",
                 "",
-                "[dim]Keyboard navigation only. Screen reader support is not yet available.[/dim]",
+                "[bold]Accessibility[/bold]",
+                "Keyboard navigation is fully supported: Tab / Shift+Tab, number keys "
+                '(1-5), arrow keys, Enter, Escape, "/" for search, and Ctrl-C to quit.',
+                "[dim]Screen reader support is not yet available in v1.[/dim]",
             ]
         )
 

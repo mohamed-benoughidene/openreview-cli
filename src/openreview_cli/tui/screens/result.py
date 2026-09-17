@@ -34,6 +34,7 @@ class ResultScreen(Screen[None]):
     DEFAULT_CSS = """
     ResultScreen #result-container { height: 100%; }
     ResultScreen #result-header { text-style: bold; background: $primary; color: $text; padding: 1 2; }
+    ResultScreen #doc-context { padding: 0 2; color: $text-muted; }
     ResultScreen .summary-header { text-style: bold; padding: 0 1; background: $boost; }
     ResultScreen #split-view { height: 1fr; }
     ResultScreen #clause-list-pane { width: 2fr; border: solid $primary; }
@@ -46,6 +47,8 @@ class ResultScreen(Screen[None]):
 
     BINDINGS: ClassVar = [
         Binding("l", "toggle_layout", "Toggle layout"),
+        Binding("]", "next_doc", "Next document"),
+        Binding("[", "prev_doc", "Prev document"),
         Binding("right", "next_page", "Next page"),
         Binding("left", "prev_page", "Prev page"),
         Binding("escape", "close", "Close"),
@@ -65,41 +68,91 @@ class ResultScreen(Screen[None]):
         self._export_format: str = "md"
         self._right_labels: dict[str, Label] = {}
         self._current_page: int = 0
+        # Index of the report in view when several documents come back in a batch.
+        self._current_report: int = 0
 
-    def compose(self) -> ComposeResult:
-        total_pages = 1
-        # Guard empty/error reviews: counts stay defined for every branch.
-        green = amber = red = 0
-        if self._reports and self._reports[0].assessments:
-            total = len(self._reports[0].assessments)
-            total_pages = max(1, (total + CLAUSES_PER_PAGE - 1) // CLAUSES_PER_PAGE)
+    # ── Batch (multi-document) helpers ────────────────────────────────
+
+    def _active_report(self) -> ReviewReport | None:
+        """Return the report currently in view, clamped to the batch bounds."""
+        if not self._reports:
+            return None
+        index = min(max(self._current_report, 0), len(self._reports) - 1)
+        return self._reports[index]
+
+    def _active_assessments(self) -> list[ClauseAssessment]:
+        report = self._active_report()
+        if report is None:
+            return []
+        return list(getattr(report, "assessments", None) or [])
+
+    @staticmethod
+    def _report_filename(report: ReviewReport) -> str:
+        filename = getattr(getattr(report, "document", None), "filename", None)
+        return str(filename) if filename else "Untitled document"
+
+    def _header_text(self, active: ReviewReport | None) -> str:
+        if self._error:
+            return f"Review failed: {self._error}"
+        if active is None:
+            return "Review complete"
+        return f"Review complete \u2014 {self._report_filename(active)}"
+
+    def _doc_context_text(self, active: ReviewReport, assessments: list[ClauseAssessment]) -> str:
+        """Sub-header describing the active document and, for batches, the whole set."""
+        count = len(assessments)
+        noun = "clause" if count == 1 else "clauses"
+        doc_count = len(self._reports)
+        if doc_count <= 1:
+            return f"{self._report_filename(active)} \u00b7 {count} {noun}"
+        total = sum(len(getattr(r, "assessments", None) or []) for r in self._reports)
+        total_noun = "clause" if total == 1 else "clauses"
+        return (
+            f"Document {self._current_report + 1} of {doc_count}: "
+            f"{self._report_filename(active)} \u00b7 {count} {noun}\n"
+            f"Batch: {doc_count} documents \u00b7 {total} {total_noun} total"
+        )
+
+    def compose(self) -> ComposeResult:  # noqa: PLR0915  # ponytail: one linear layout tree
+        doc_count = len(self._reports)
+        # Clamp the active index so a shrinking batch never points out of range.
+        self._current_report = min(max(self._current_report, 0), doc_count - 1) if doc_count else 0
+        active = self._active_report()
+        assessments = self._active_assessments()
+        total = len(assessments)
+        total_pages = max(1, (total + CLAUSES_PER_PAGE - 1) // CLAUSES_PER_PAGE)
+
         with Vertical(id="result-container"):
-            yield Static(
-                "Review complete" if not self._error else f"Review failed: {self._error}",
-                id="result-header",
-            )
+            yield Static(self._header_text(active), id="result-header")
             if self._error:
                 yield Container(id="step-content")
-            elif not self._reports or not self._reports[0].assessments:
+            elif active is None:
                 yield Container(Static("No clauses found."), id="step-content")
             else:
-                all_assessments = self._reports[0].assessments
-                total = len(all_assessments)
-                green = sum(1 for a in all_assessments if a.color and a.color == "green")
-                amber = sum(1 for a in all_assessments if a.color and a.color == "amber")
-                red = sum(1 for a in all_assessments if a.color and a.color == "red")
-                start = self._current_page * CLAUSES_PER_PAGE
-                end = min(start + CLAUSES_PER_PAGE, total)
-                page_assessments = all_assessments[start:end]
-                summary = (
-                    f"{green} Green \u00b7 {amber} Amber \u00b7 {red} Red \u00b7 {total} clauses"
-                )
-                if total_pages > 1:
-                    summary += f" \u00b7 Page {self._current_page + 1} of {total_pages}"
                 with Container(id="step-content"):
-                    yield Static(summary, classes="summary-header")
-                    yield self._build_split_view(page_assessments)
-                    yield self._build_full_screen(page_assessments)
+                    yield Static(
+                        self._doc_context_text(active, assessments),
+                        id="doc-context",
+                        markup=False,
+                    )
+                    if not assessments:
+                        yield Static("No clauses found for this document.")
+                    else:
+                        green = sum(1 for a in assessments if a.color == "green")
+                        amber = sum(1 for a in assessments if a.color == "amber")
+                        red = sum(1 for a in assessments if a.color == "red")
+                        start = self._current_page * CLAUSES_PER_PAGE
+                        end = min(start + CLAUSES_PER_PAGE, total)
+                        page_assessments = assessments[start:end]
+                        summary = (
+                            f"{green} Green \u00b7 {amber} Amber \u00b7 {red} Red "
+                            f"\u00b7 {total} clauses"
+                        )
+                        if total_pages > 1:
+                            summary += f" \u00b7 Page {self._current_page + 1} of {total_pages}"
+                        yield Static(summary, classes="summary-header")
+                        yield self._build_split_view(page_assessments)
+                        yield self._build_full_screen(page_assessments)
             with Container(id="export-view"):
                 with Vertical():
                     yield Static("Select export format", id="export-title")
@@ -116,6 +169,13 @@ class ResultScreen(Screen[None]):
                     yield Button("Cancel", id="btn-save-cancel", variant="default")
             yield Static("", id="description-bar")
             with Horizontal(id="result-nav"):
+                if doc_count > 1:
+                    yield Button(
+                        "Prev doc",
+                        id="btn-prev-doc",
+                        variant="default",
+                        disabled=self._current_report == 0,
+                    )
                 if total_pages > 1:
                     yield Button(
                         "Prev page",
@@ -131,6 +191,13 @@ class ResultScreen(Screen[None]):
                         id="btn-next-page",
                         variant="default",
                         disabled=self._current_page >= total_pages - 1,
+                    )
+                if doc_count > 1:
+                    yield Button(
+                        "Next doc",
+                        id="btn-next-doc",
+                        variant="default",
+                        disabled=self._current_report >= doc_count - 1,
                     )
 
     def _build_split_view(self, assessments: list[ClauseAssessment]) -> Horizontal:
@@ -181,6 +248,8 @@ class ResultScreen(Screen[None]):
 
     async def action_toggle_layout(self) -> None:
         """Toggle between split view and full-screen scroll."""
+        if not self.query("#split-view"):
+            return
         self._layout_split = not self._layout_split
         split_view = self.query_one("#split-view", Horizontal)
         full_scroll = self.query_one("#full-screen-scroll", Vertical)
@@ -192,10 +261,8 @@ class ResultScreen(Screen[None]):
 
     async def action_next_page(self) -> None:
         """Go to next page of clauses."""
-        total_pages = 1
-        if self._reports and self._reports[0].assessments:
-            total = len(self._reports[0].assessments)
-            total_pages = max(1, (total + CLAUSES_PER_PAGE - 1) // CLAUSES_PER_PAGE)
+        total = len(self._active_assessments())
+        total_pages = max(1, (total + CLAUSES_PER_PAGE - 1) // CLAUSES_PER_PAGE)
         if self._current_page < total_pages - 1:
             self._current_page += 1
             await self.recompose()
@@ -206,10 +273,24 @@ class ResultScreen(Screen[None]):
             self._current_page -= 1
             await self.recompose()
 
+    async def action_next_doc(self) -> None:
+        """Switch to the next document when a batch holds several reports."""
+        if self._current_report < len(self._reports) - 1:
+            self._current_report += 1
+            self._current_page = 0
+            await self.recompose()
+
+    async def action_prev_doc(self) -> None:
+        """Switch to the previous document when a batch holds several reports."""
+        if self._current_report > 0:
+            self._current_report -= 1
+            self._current_page = 0
+            await self.recompose()
+
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         if event.list_view.id != "clause-list-pane":
             return
-        assessments = self._reports[0].assessments if self._reports else []
+        assessments = self._active_assessments()
         if not assessments or event.item is None:
             return
         self._update_focus(assessments)
@@ -248,6 +329,10 @@ class ResultScreen(Screen[None]):
             await self.action_next_page()
         elif btn_id == "btn-prev-page":
             await self.action_prev_page()
+        elif btn_id == "btn-next-doc":
+            await self.action_next_doc()
+        elif btn_id == "btn-prev-doc":
+            await self.action_prev_doc()
         elif btn_id == "btn-close":
             self.action_close()
         elif btn_id == "btn-export":
@@ -268,8 +353,9 @@ class ResultScreen(Screen[None]):
             await self._reset_export()
 
     async def _do_save(self) -> None:
-        """Write file using MemoExporter."""
-        if not self._reports:
+        """Write the currently viewed report using MemoExporter."""
+        report = self._active_report()
+        if report is None:
             self.notify("No report to export.", severity="error")
             await self._reset_export()
             return
@@ -284,7 +370,7 @@ class ResultScreen(Screen[None]):
             return
         try:
             exporter = MemoExporter(
-                report=self._reports[0],
+                report=report,
                 mode=self._mode,
                 output_dir=DEFAULT_OUTPUT_DIR,
                 formats={memo_fmt},
