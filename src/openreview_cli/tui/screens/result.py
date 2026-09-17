@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -12,6 +12,9 @@ from textual.widgets import Button, Label, ListItem, ListView, Static
 
 from openreview_cli.review.memo.filename import DEFAULT_OUTPUT_DIR
 from openreview_cli.review.models import ClauseAssessment, ReviewReport
+
+if TYPE_CHECKING:
+    from openreview_cli.tui.domain.amber import AmberQueueState
 
 CLAUSES_PER_PAGE = 100
 
@@ -47,6 +50,8 @@ class ResultScreen(Screen[None]):
 
     BINDINGS: ClassVar = [
         Binding("l", "toggle_layout", "Toggle layout"),
+        Binding("t", "open_amber_queue", "Triage"),
+        Binding("m", "open_amber_queue", "Amber queue", show=False),
         Binding("]", "next_doc", "Next document"),
         Binding("[", "prev_doc", "Prev document"),
         Binding("right", "next_page", "Next page"),
@@ -70,6 +75,8 @@ class ResultScreen(Screen[None]):
         self._current_page: int = 0
         # Index of the report in view when several documents come back in a batch.
         self._current_report: int = 0
+        # Triage ledger handed back by the amber queue screen (Phase 5).
+        self._amber_state: AmberQueueState | None = None
 
     # ── Batch (multi-document) helpers ────────────────────────────────
 
@@ -121,6 +128,9 @@ class ResultScreen(Screen[None]):
         assessments = self._active_assessments()
         total = len(assessments)
         total_pages = max(1, (total + CLAUSES_PER_PAGE - 1) // CLAUSES_PER_PAGE)
+        # Counted here so the amber-queue entry point is safe on every branch,
+        # including empty reports and error screens (amber == 0 there).
+        amber = sum(1 for a in assessments if a.color == "amber")
 
         with Vertical(id="result-container"):
             yield Static(self._header_text(active), id="result-header")
@@ -139,7 +149,6 @@ class ResultScreen(Screen[None]):
                         yield Static("No clauses found for this document.")
                     else:
                         green = sum(1 for a in assessments if a.color == "green")
-                        amber = sum(1 for a in assessments if a.color == "amber")
                         red = sum(1 for a in assessments if a.color == "red")
                         start = self._current_page * CLAUSES_PER_PAGE
                         end = min(start + CLAUSES_PER_PAGE, total)
@@ -184,6 +193,12 @@ class ResultScreen(Screen[None]):
                         disabled=self._current_page == 0,
                     )
                 yield Button("Export memo", id="btn-export", variant="primary")
+                if amber:
+                    yield Button(
+                        f"Amber queue ({amber})",
+                        id="btn-amber-queue",
+                        variant="warning",
+                    )
                 yield Button("Close", id="btn-close", variant="default")
                 if total_pages > 1:
                     yield Button(
@@ -258,6 +273,33 @@ class ResultScreen(Screen[None]):
 
     def action_close(self) -> None:
         self.app.pop_screen()
+
+    def action_open_amber_queue(self) -> None:
+        """Open the interactive amber triage screen (Phase 5)."""
+        report = self._active_report()
+        if report is None:
+            return
+        from openreview_cli.tui.domain.amber import collect_amber
+        from openreview_cli.tui.screens.amber_queue import AmberQueueScreen
+
+        if not collect_amber(report):
+            self.notify("No amber clauses to triage.", severity="information")
+            return
+        self.app.push_screen(AmberQueueScreen(report=report), self._on_amber_triage_done)
+
+    def _on_amber_triage_done(self, state: AmberQueueState | None) -> None:
+        """Keep the triage decisions taken in the amber queue (Phase 5)."""
+        if state is None:
+            return
+        self._amber_state = state
+        if not (state.decided or state.notes):
+            return
+        self.notify(
+            f"Amber triage: {state.accepted} accepted, {state.flagged} flagged, "
+            f"{len(state.notes)} noted.",
+            severity="information",
+            timeout=5,
+        )
 
     async def action_next_page(self) -> None:
         """Go to next page of clauses."""
@@ -335,6 +377,8 @@ class ResultScreen(Screen[None]):
             await self.action_prev_doc()
         elif btn_id == "btn-close":
             self.action_close()
+        elif btn_id == "btn-amber-queue":
+            self.action_open_amber_queue()
         elif btn_id == "btn-export":
             self.query_one("#step-content", Container).display = False
             self.query_one("#export-view", Container).display = True

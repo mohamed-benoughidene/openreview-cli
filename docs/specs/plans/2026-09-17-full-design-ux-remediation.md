@@ -3294,6 +3294,15 @@ clause, toggles a summary table with T, and reports completion.
 
 ### Task P5T1: Amber collection + triage state machine
 
+> **Executed 2026-09-17:** implemented as specified, with two additions driven by the
+> accepted design decisions: `collect_amber` also honours the legacy
+> `is_amber` flag (colour never assigned), and the ledger carries clause notes
+> (`annotate(index, note)` / `current_note(index)` / `notes: dict[str, str]` keyed by
+> clause id) plus `prev_pending(before)` mirroring `next_pending` for K/Up navigation.
+> `AmberQueueState.__post_init__` seeds the `list[str]` decision ledger (the "no seeding
+> loop" trim was not achievable with one entry per clause). 12/12 tests pass;
+> `ruff check`, `ruff format --check`, `mypy src/ tests/` clean.
+
 **Files:**
 - Create: `src/openreview_cli/tui/domain/amber.py`
 - Test: `tests/unit/tui/test_amber_queue_state.py` (create)
@@ -3301,12 +3310,13 @@ clause, toggles a summary table with T, and reports completion.
 **Interfaces:**
 - Produces: `collect_amber(report) -> list[ClauseAssessment]`; `AmberQueueState` with
   `total`, `decided`, `accepted`, `flagged`, `current_decision(i)`, `decide(i, decision)`,
-  `next_pending(after) -> int | None`, `row(i)`; constants `DECISION_PENDING`,
+  `next_pending(after) -> int | None`, `prev_pending(before) -> int | None`,
+  `annotate(i, note)`, `current_note(i)`, `row(i)`; constants `DECISION_PENDING`,
   `DECISION_ACCEPTED`, `DECISION_FLAGGED`.
 - Internals: decisions are held as a `list[str]` (one entry per clause) and tallies are
   derived with `collections.Counter` — no per-index dict and no `__post_init__` seeding loop.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/unit/tui/test_amber_queue_state.py`:
 
@@ -3370,12 +3380,12 @@ def test_next_pending_wraps_and_skips_decided() -> None:
     assert state.next_pending(2) is None  # everything decided
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `.venv/bin/pytest tests/unit/tui/test_amber_queue_state.py -q`
 Expected: FAIL — `ModuleNotFoundError: openreview_cli.tui.domain.amber`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Create `src/openreview_cli/tui/domain/amber.py`:
 
@@ -3454,12 +3464,12 @@ class AmberQueueState:
         return (a.clause_id, (a.clause_text or "")[:40], self.decisions[index])
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/pytest tests/unit/tui/test_amber_queue_state.py -q`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/openreview_cli/tui/domain/amber.py tests/unit/tui/test_amber_queue_state.py
@@ -3470,20 +3480,40 @@ git commit -m "feat(tui): add amber queue triage state machine"
 
 ### Task P5T2: `AmberQueueScreen` + result-screen entry point
 
+> **Executed 2026-09-17:** implemented with the keymap from the accepted design decisions —
+> Accept (A), Reject (R), Note (N), Next (S/J/Down), Previous (K/Up), Overview (T/O),
+> Done (Esc/Q) — so `N` opens the annotate prompt rather than advancing, and `T`/`O` toggle
+> between the guided card and the overview table (both retained). Deliberate deviations:
+> (1) the integration tests live in `tests/integration/tui/test_amber_queue_screen.py`
+> (13 tests) instead of `test_amber_queue.py`; (2) notes are captured through a small
+> `AnnotateModal` (the `ConfirmModal` pattern) and stored in the ledger, so the DataTable
+> gained a key-addressed `c-note` column; (3) `action_close` returns the ledger via
+> `dismiss(state)` and `ResultScreen` keeps it in `self._amber_state` (the on-screen
+> "save triage decisions" contract); (4) the DataTable sets `can_focus = False` so
+> Up/Down reach the queue instead of moving the table cursor, and clause text is rendered
+> as Rich `Text` cells (`markup=False` on the Label) because `escape()` misses
+> uppercase-initial brackets. Regression suites: `test_result_screen.py`,
+> `test_result_screen_markup.py`, `test_multi_doc_review_ux.py`, `test_app.py`,
+> `test_flow_wiring.py`, `test_progress_screen*.py`, `test_recent_reviews.py`,
+> `test_search_screen.py` — all pass; `ruff check .` + `mypy src/ tests/` clean.
+
 **Files:**
 - Create: `src/openreview_cli/tui/screens/amber_queue.py`
 - Modify: `src/openreview_cli/tui/screens/result.py` (BINDINGS; `compose` guard lines 57–58;
   amber count line 75; result-nav buttons lines 104–120; `on_button_pressed` lines 228–249)
-- Test: `tests/integration/tui/test_amber_queue.py` (create)
+- Test: `tests/integration/tui/test_amber_queue_screen.py` (create)
 
 **Interfaces:**
-- Produces: `AmberQueueScreen(report: ReviewReport)` — `Screen[None]` with bindings
-  `a` (accept), `r` (reject/flag), `n` (next), `t` (toggle overview), `escape` (close).
+- Produces: `AmberQueueScreen(report: ReviewReport)` — `Screen[AmberQueueState]` (dismisses
+  with the triage ledger) with bindings `a` (accept), `r` (reject/flag), `n` (annotate),
+  `s`/`j`/`down` (next), `k`/`up` (previous), `t`/`o` (toggle overview), `escape`/`q` (done);
+  plus the `AnnotateModal(note) -> ModalScreen[str | None]` note prompt.
 - Consumes: `openreview_cli.tui.domain.amber` (Task P5T1).
-- DataTable uses explicit column keys (`("Decision", "c-decision")`); button labels use
-  parentheses (`Accept (A)`, …) because Textual parses `[A]` in a Button label as markup.
+- DataTable uses explicit column keys (`("Decision", "c-decision")`, `("Note", "c-note")`)
+  and explicit row keys; button labels use parentheses (`Accept (A)`, …) because Textual
+  parses `[A]` in a Button label as markup.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/integration/tui/test_amber_queue.py`:
 
@@ -3593,13 +3623,13 @@ async def test_result_screen_opens_amber_queue_when_amber_present() -> None:
         assert any(isinstance(s, AmberQueueScreen) for s in app._screen_stack)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `.venv/bin/pytest tests/integration/tui/test_amber_queue.py -q`
 Expected: FAIL — `ModuleNotFoundError: openreview_cli.tui.screens.amber_queue`; the result
 screen has no `#btn-amber-queue`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Create `src/openreview_cli/tui/screens/amber_queue.py`:
 
@@ -3810,12 +3840,12 @@ Modify `src/openreview_cli/tui/screens/result.py`:
 > The amber-queue button renders only when `amber` is non-zero; `amber = 0` keeps the empty
 > and error paths from raising `NameError` while building the nav bar.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `.venv/bin/pytest tests/integration/tui/test_amber_queue.py tests/integration/tui/test_result_screen.py -q`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/openreview_cli/tui/screens/amber_queue.py \
@@ -3861,7 +3891,7 @@ After all phases are committed, run the complete affected suites from a clean wo
                  tests/integration/tui/test_recent_reviews.py \
                  tests/integration/tui/test_egress_review.py \
                  tests/integration/tui/test_status_bar_egress.py \
-                 tests/integration/tui/test_amber_queue.py -m slow -q
+                 tests/integration/tui/test_amber_queue_screen.py -m slow -q
 
 # Lint the touched modules
 .venv/bin/ruff check src/openreview_cli/app.py \
@@ -3921,7 +3951,7 @@ Expected: all suites PASS; `ruff` reports no new findings. Additional manual che
 | 3 | P3 dead pricing tier | P3T5 | `test_pricing_section_has_no_dead_placeholder` + updated `test_settings_pricing_tier_em_dash` / `test_pricing_tier_em_dash_with_note` |
 | 4 | Pre-flight egress review | P4T1 | `test_egress_summary_*`, `test_egress_modal_*` |
 | 4 | Status-bar cloud-call counter | P4T2 | `test_cloud_call_counter.py`, `test_status_bar_shows_cloud_calls` |
-| 5 | Interactive amber queue | P5T1, P5T2 | `test_amber_queue_state.py`, `test_amber_queue_records_decisions_and_advances`, `test_amber_queue_toggles_overview`, `test_result_screen_opens_amber_queue_when_amber_present` |
+| 5 | Interactive amber queue | P5T1, P5T2 | `test_amber_queue_state.py` (12), `test_amber_queue_screen.py` (13): mount/flagged collection, next-prev stepping, accept/reject + auto-advance, note modal (save & cancel), card↔overview toggle, Esc/Q return + decisions kept, `[bracketed]` text, empty-queue guard, result-screen entry button/binding |
 
 **Placeholder scan:** none — every step contains runnable code/commands and exact paths.
 
