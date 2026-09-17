@@ -49,8 +49,22 @@ def _version_callback(value: bool) -> None:
 
 
 def _validate_threshold(value: float | None) -> float | None:
+    """Typer callback for ``--confidence-threshold`` (must be within [0.0, 1.0])."""
     if value is not None and not 0.0 <= value <= 1.0:
-        raise typer.BadParameter(f"confidence-threshold must be between 0.0 and 1.0, got {value}")
+        raise typer.BadParameter(f"--confidence-threshold must be between 0.0 and 1.0, got {value}")
+    return value
+
+
+def _validate_pii_threshold(value: float | None) -> float | None:
+    """Typer callback for ``--pii-threshold`` (must be within [0.0, 1.0]).
+
+    Emits a one-line usage error like ``_validate_enum`` rather than a Rich
+    ``BadParameter`` panel: the panel wraps at terminal width, which can split
+    the message (e.g. break ``0.0 and 1.0`` across lines) and obscure the value.
+    """
+    if value is not None and not 0.0 <= value <= 1.0:
+        typer.echo(f"Error: --pii-threshold must be between 0.0 and 1.0, got {value}", err=True)
+        raise typer.Exit(code=EXIT_USAGE)
     return value
 
 
@@ -1176,7 +1190,7 @@ def precheck(
         None,
         "--pii-threshold",
         help="PII detection confidence threshold (0.0 to 1.0).",
-        callback=_validate_threshold,
+        callback=_validate_pii_threshold,
     ),
     output: str | None = typer.Option(
         None, "--output", help="Output directory for review results."
