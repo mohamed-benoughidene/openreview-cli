@@ -133,11 +133,11 @@ class ResultScreen(Screen[None]):
         amber = sum(1 for a in assessments if a.color == "amber")
 
         with Vertical(id="result-container"):
-            yield Static(self._header_text(active), id="result-header")
+            yield Static(self._header_text(active), id="result-header", markup=False)
             if self._error:
                 yield Container(id="step-content")
             elif active is None:
-                yield Container(Static("No clauses found."), id="step-content")
+                yield Container(Static("No clauses found.", markup=False), id="step-content")
             else:
                 with Container(id="step-content"):
                     yield Static(
@@ -146,7 +146,7 @@ class ResultScreen(Screen[None]):
                         markup=False,
                     )
                     if not assessments:
-                        yield Static("No clauses found for this document.")
+                        yield Static("No clauses found for this document.", markup=False)
                     else:
                         green = sum(1 for a in assessments if a.color == "green")
                         red = sum(1 for a in assessments if a.color == "red")

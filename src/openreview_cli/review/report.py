@@ -13,6 +13,10 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+from rich.console import Console
+from rich.table import Table
+from rich.text import Text
+
 from openreview_cli.review.colors import AssessmentColor
 from openreview_cli.review.models import Position, ReviewReport
 
@@ -63,8 +67,6 @@ def format_terminal(  # noqa: PLR0912, PLR0915  # ponytail: function extraction 
         from openreview_cli.review.colors import assign_colors
 
         assign_colors(report.assessments, threshold=report.confidence_threshold)
-    from rich.console import Console
-    from rich.table import Table
 
     # Native detection: probe the real stdout, not the StringIO sink below.
     probe = Console()
@@ -138,7 +140,13 @@ def format_terminal(  # noqa: PLR0912, PLR0915  # ponytail: function extraction 
         else:
             status = "[bold yellow]⚠ AMBER[/bold yellow]"
 
-        row: list[str] = [str(i), clause_display, category_display, pos_text, conf_bar]
+        row: list[Any] = [
+            str(i),
+            Text(clause_display),
+            Text(category_display),
+            pos_text,
+            conf_bar,
+        ]
         if has_grounding:
             row.append(_grounding_style(ca))
         row.append(status)

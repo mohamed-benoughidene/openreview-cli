@@ -122,3 +122,31 @@ def test_report_title_derives_from_mode() -> None:
 
     privacy_v2 = format_terminal(_make_report(mode="privacycheck_v2"), color=False)
     assert "Privacycheck V2 Review Report" in privacy_v2
+
+
+def test_format_terminal_preserves_bracketed_legal_text() -> None:
+    """Bracketed text such as [intentionally omitted] or [Party A] must not be eaten as markup."""
+    ca = ClauseAssessment(
+        clause_id="c1",
+        clause_text="Confidentiality [intentionally omitted] and [Party A].",
+        playbook_category="confidentiality-term",
+        position=Position.PREFERRED,
+        confidence=0.92,
+        citation="clause c1",
+        qa_verdict=QAVerdict.agree,
+        extraction_model="m1",
+        qa_model="m1",
+    )
+    dm = DocMeta(filename="nda.docx", page_count=1, clause_count=1, pii_stripped=True)
+    report = ReviewReport(
+        document=dm,
+        assessments=[ca],
+        summary=ReviewSummary(preferred_count=1, avg_confidence=0.92),
+        playbook_id="precheck-nda-v1",
+        generated_at=datetime.now(UTC),
+        mode="precheck",
+    )
+    rendered = format_terminal(report, color=False)
+    assert "[intentionally" in rendered
+    assert "omitted]" in rendered
+    assert "[Party A]" in rendered

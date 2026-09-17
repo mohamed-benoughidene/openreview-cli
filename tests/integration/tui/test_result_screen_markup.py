@@ -107,3 +107,19 @@ async def test_save_uses_relative_review_results_dir(tmp_path, monkeypatch) -> N
             await pilot.pause()
 
             assert mock_exporter_cls.call_args.kwargs["output_dir"] == Path("review_results")
+
+
+@pytest.mark.asyncio
+async def test_result_screen_header_preserves_bracketed_filename() -> None:
+    """The ResultScreen header must not strip brackets from filenames like [Draft] NDA.pdf."""
+    from openreview_cli.tui.app import OpenReviewApp
+    from openreview_cli.tui.screens.result import ResultScreen
+
+    report = _make_mock_report([_make_mock_assessment()], filename="[Draft] NDA.pdf")
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        app.push_screen(ResultScreen(reports=[report], mode="precheck"))
+        await pilot.pause()
+
+        header = str(app.screen.query_one("#result-header").render())
+        assert "[Draft]" in header, header

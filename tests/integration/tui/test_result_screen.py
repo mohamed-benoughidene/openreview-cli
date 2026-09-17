@@ -30,11 +30,11 @@ def _make_mock_assessment(
     return a
 
 
-def _make_mock_report(assessments: list | None = None) -> MagicMock:
+def _make_mock_report(assessments: list | None = None, filename: str = "test.docx") -> MagicMock:
     r = MagicMock()
     asm = assessments or []
     r.assessments = asm
-    r.document.filename = "test.pdf"
+    r.document.filename = filename
     r.document.page_count = 5
     r.document.clause_count = len(asm)
     r.document.pii_stripped = True
