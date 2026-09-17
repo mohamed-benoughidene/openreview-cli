@@ -38,6 +38,9 @@ from openreview_cli.gateway.models import (
     PrivacyTierReport,
     ProviderInfo,
     StreamingOutputEvent,
+    get_total_cloud_calls,
+    record_cloud_call,
+    reset_total_cloud_calls,
 )
 from openreview_cli.gateway.redaction import RedactingFilter, redact_key
 from openreview_cli.gateway.registry import load_registry
@@ -46,6 +49,11 @@ from openreview_cli.slots import VALID_SLOTS
 from openreview_cli.storage.costs import check_daily_limit, check_session_limit
 
 logger = logging.getLogger(__name__)
+
+# Explicit re-exports (mypy no_implicit_reexport): the process-wide cloud-call
+# counter now lives in the litellm-free ``gateway.models``; re-export it here so
+# existing importers (``review.base``, ``app``, tests) keep working.
+__all__ = ["get_total_cloud_calls", "record_cloud_call", "reset_total_cloud_calls"]
 
 # Track env vars seeded across all Gateway instances so long-lived
 # processes (TUI) can clean them up without holding a Gateway reference.
@@ -57,22 +65,6 @@ def clear_seeded_env_vars() -> None:
     for name in list(_env_vars_seeded):
         os.environ.pop(name, None)
     _env_vars_seeded.clear()
-
-
-# D-10: process-wide count of cloud provider calls actually dispatched, so the
-# privacy footer can report truthfully (maximum blocks cloud by enforcement).
-_total_cloud_calls = 0
-
-
-def get_total_cloud_calls() -> int:
-    """Return the number of cloud provider calls dispatched in this process."""
-    return _total_cloud_calls
-
-
-def reset_total_cloud_calls() -> None:
-    """Reset the process-wide cloud call counter (test isolation)."""
-    global _total_cloud_calls  # noqa: PLW0603 — module-level counter by design
-    _total_cloud_calls = 0
 
 
 # PII-before-egress gate (spec 020 FR-03/FR-04): a process-wide flag set after a
@@ -794,7 +786,6 @@ class Gateway:
         primary. Otherwise the counter under-reports cloud egress and the
         privacy footer misrepresents actual network activity.
         """
-        global _total_cloud_calls  # noqa: PLW0603 — module-level counter by design
         if provider_prefix is not None:
             registry = load_registry()
             info = registry.get(provider_prefix)
@@ -803,7 +794,7 @@ class Gateway:
                 # privacy counter; the actual dispatch path is the concern of
                 # _enforce_tier, not this counter).
                 self._cloud_calls_made += 1
-                _total_cloud_calls += 1
+                record_cloud_call()
                 return
         else:
             info = self._resolve_provider_info(slot)
@@ -817,7 +808,7 @@ class Gateway:
             return
         if klass == "cloud":
             self._cloud_calls_made += 1
-            _total_cloud_calls += 1
+            record_cloud_call()
 
     def privacy_report(self) -> PrivacyTierReport:
         tier_config = getattr(self, "_tier_config", None)

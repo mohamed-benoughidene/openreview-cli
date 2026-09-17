@@ -145,3 +145,10 @@ def provider_has_key(provider: str) -> bool:
 def save_api_key(provider: str, key: str) -> None:
     """Save API key for provider."""
     _save_key(_PATHS["auth"], provider, key)
+
+
+def read_cloud_call_count() -> int:
+    """Return the number of cloud calls dispatched this process (litellm-free)."""
+    from openreview_cli.gateway.models import get_total_cloud_calls
+
+    return _safe(get_total_cloud_calls, 0)

@@ -60,6 +60,8 @@ def _make_mock_report(mode: str = "precheck") -> MagicMock:
 
 async def test_home_tab_empty_state_no_reviews() -> None:
     """Fresh launch — empty-state message visible, list hidden."""
+    from textual.widgets import Button
+
     from openreview_cli.tui.app import OpenReviewApp
 
     app = OpenReviewApp()
@@ -68,12 +70,33 @@ async def test_home_tab_empty_state_no_reviews() -> None:
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
 
-            empty = app.query_one("#empty-state", TLabel)
+            empty = app.query_one("#empty-state", Button)
             recent_list = app.query_one("#recent-list", ListView)
 
             assert empty.display is True
             assert recent_list.display is False
-            assert "No reviews yet" in empty.content
+            assert "No reviews yet" in str(empty.label)
+
+
+@pytest.mark.asyncio
+async def test_home_empty_state_is_actionable(monkeypatch) -> None:
+    """With no reviews, the empty state is a button that opens the wizard (P3)."""
+    from textual.widgets import Button
+
+    from openreview_cli.tui.app import OpenReviewApp
+    from openreview_cli.tui.screens.review_wizard import ReviewWizard
+
+    monkeypatch.setattr(
+        "openreview_cli.tui.domain.review.list_recent_reviews_via_tui",
+        lambda limit=5: [],
+    )
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        btn = app.query_one("#empty-state", Button)
+        assert btn.display is True
+        await pilot.click(btn)
+        await pilot.pause()
+        assert any(isinstance(s, ReviewWizard) for s in app._screen_stack)
 
 
 async def test_home_tab_shows_recent_reviews() -> None:

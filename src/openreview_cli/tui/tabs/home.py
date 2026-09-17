@@ -36,7 +36,11 @@ class HomeTab(Container):
             yield Button("New review", id="btn-new-review", variant="primary")
             yield Button("Import document", id="btn-import-doc", variant="default")
         yield Static("Recent reviews", id="recent-header")
-        yield Label("No reviews yet. Start one with [New review].", id="empty-state")
+        yield Button(
+            "No reviews yet. Start one with New review.",
+            id="empty-state",
+            variant="primary",
+        )
         yield ListView(id="recent-list")
         yield Static("", id="desc-bar")
 
@@ -49,7 +53,7 @@ class HomeTab(Container):
 
         self._reviews = list_recent_reviews_via_tui(limit=5)
 
-        empty = self.query_one("#empty-state", Label)
+        empty = self.query_one("#empty-state", Button)
         lst = self.query_one("#recent-list", ListView)
 
         if not self._reviews:
@@ -118,3 +122,5 @@ class HomeTab(Container):
         elif event.button.id == "btn-import-doc":
             self.app.push_screen(ReviewWizard())
             self.app.action_show_tab("review")  # type: ignore[attr-defined]
+        elif event.button.id == "empty-state":
+            self.app.push_screen(ReviewWizard())

@@ -318,17 +318,35 @@ class ReviewWizard(Screen[None]):
         self.app.pop_screen()
 
     async def _run_review(self) -> None:
-        """Execute review and push progress screen."""
+        """Confirm the egress boundary, then push the progress screen.
+
+        The pre-flight modal is pushed on top of the wizard; dismissing it pops
+        the modal (Escape/Cancel → False, Continue → True) before the result
+        callback runs, so the wizard either stays put (cancelled) or is replaced
+        by ``ProgressScreen`` (confirmed).
+        """
+        from openreview_cli.tui.domain.egress import build_egress_summary
+        from openreview_cli.tui.screens.egress_review import EgressReviewModal
         from openreview_cli.tui.screens.progress import ProgressScreen
 
-        self.app.switch_screen(
-            ProgressScreen(
-                paths=[self._selected_file] if self._selected_file else [],
-                mode=self._selected_mode or "precheck",
-                disable_pii=self._disable_pii,
-                playbook_id=self._selected_playbook
-                if self._selected_playbook and self._selected_playbook != "default"
-                else None,
-                client_id=self._client_id,
-            )
+        summary = build_egress_summary(
+            disable_pii=self._disable_pii,
+            extraction_model=self._override_model or "extraction",
         )
+
+        def _on_confirm(confirmed: bool | None) -> None:
+            if not confirmed:
+                return
+            self.app.switch_screen(
+                ProgressScreen(
+                    paths=[self._selected_file] if self._selected_file else [],
+                    mode=self._selected_mode or "precheck",
+                    disable_pii=self._disable_pii,
+                    playbook_id=self._selected_playbook
+                    if self._selected_playbook and self._selected_playbook != "default"
+                    else None,
+                    client_id=self._client_id,
+                )
+            )
+
+        self.app.push_screen(EgressReviewModal(summary), _on_confirm)

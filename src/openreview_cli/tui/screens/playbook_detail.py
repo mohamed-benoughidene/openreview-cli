@@ -26,8 +26,14 @@ class _CategoryItem(ListItem):
     ) -> None:
         self.cat_id = cat_id
         ex_str = "; ".join(exemplars[:3])
+        # markup=False: name/description/exemplars are user-authored YAML and may
+        # contain bracketed expressions (e.g. "[Party A]") that the markup parser
+        # would otherwise consume.
         super().__init__(
-            Label(f"{name} [{default_position}]\n  {description}\n  Exemplars: {ex_str}")
+            Label(
+                f"{name} [{default_position}]\n  {description}\n  Exemplars: {ex_str}",
+                markup=False,
+            )
         )
 
 

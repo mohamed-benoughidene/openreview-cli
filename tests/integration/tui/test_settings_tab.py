@@ -111,7 +111,7 @@ class TestSettingsTab:
             assert __version__ in text
             assert "AGPL-3.0" in text
             assert "Python" in text
-            assert "Keyboard navigation only" in text
+            assert "Keyboard navigation" in text
 
     async def test_settings_gateway_section_shows_slots(self) -> None:
         """Select Gateway section, assert 6 slot rows visible."""
@@ -223,7 +223,7 @@ class TestSettingsTab:
     async def test_copy_database_path_to_clipboard(self) -> None:
         """Click copy DB path button, assert clipboard contains db path."""
         app = OpenReviewApp()
-        async with app.run_test(size=(80, 24)) as pilot:
+        async with app.run_test(size=(120, 40)) as pilot:
             await pilot.press("5")
             await pilot.pause()
             await pilot.click("#section-about")
@@ -238,7 +238,7 @@ class TestSettingsTab:
     async def test_copy_config_path_to_clipboard(self) -> None:
         """Click copy config path button, assert clipboard contains config path."""
         app = OpenReviewApp()
-        async with app.run_test(size=(80, 24)) as pilot:
+        async with app.run_test(size=(120, 40)) as pilot:
             await pilot.press("5")
             await pilot.pause()
             await pilot.click("#section-about")
@@ -253,7 +253,7 @@ class TestSettingsTab:
     async def test_copy_documentation_url_to_clipboard(self) -> None:
         """Click copy docs URL button, assert clipboard contains URL."""
         app = OpenReviewApp()
-        async with app.run_test(size=(80, 24)) as pilot:
+        async with app.run_test(size=(120, 40)) as pilot:
             await pilot.press("5")
             await pilot.pause()
             await pilot.click("#section-about")
@@ -269,7 +269,7 @@ class TestSettingsTab:
         """Click copy button, assert 'Copied!' notification appears."""
         notified: list[str] = []
         app = OpenReviewApp()
-        async with app.run_test(size=(80, 24)) as pilot:
+        async with app.run_test(size=(120, 40)) as pilot:
             await pilot.press("5")
             await pilot.pause()
             await pilot.click("#section-about")
@@ -313,4 +313,22 @@ class TestSettingsTab:
             await pilot.click("#section-about")
             await pilot.pause()
             display = app.query_one("#section-content-display", Static)
-            assert "Keyboard navigation only" in display.content
+            assert "Keyboard navigation" in display.content
+
+    # ── T046: Accessibility & privacy in About ─────────────────────────
+
+    async def test_about_section_documents_accessibility(self) -> None:
+        """About must state the keyboard scope and the screen-reader limitation (P2)."""
+        from openreview_cli.tui.tabs.settings import SettingsTab
+
+        app = OpenReviewApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            tab = app.query_one(SettingsTab)
+            tab.select_section("about")
+            await pilot.pause()
+            display = tab.query_one("#section-content-display", Static)
+            text = str(display.render())
+            assert "Accessibility" in text, text
+            assert "Screen reader" in text, text
+            assert "Keyboard" in text, text
+            assert "Privacy" in text, text

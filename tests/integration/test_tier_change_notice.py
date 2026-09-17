@@ -93,7 +93,10 @@ class TestTierChangeNotice:
         root_logger.addHandler(handler)
 
         try:
-            result = runner.invoke(app, ["precheck", "--document", str(doc_path), "--no-pii"])
+            # Root -v/--verbose re-enables the INFO diagnostics (quiet by default).
+            result = runner.invoke(
+                app, ["--verbose", "precheck", "--document", str(doc_path), "--no-pii"]
+            )
             assert result.exit_code == 0, f"CLI exited {result.exit_code}: {result.output}"
             log_output = log_stream.getvalue()
             assert "Tier changed from maximum to performance" in log_output

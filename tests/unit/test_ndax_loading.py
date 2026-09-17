@@ -35,7 +35,7 @@ def _no_init(monkeypatch: pytest.MonkeyPatch) -> None:
     file-loading path, so stub ``_init`` out entirely.
     """
 
-    def _stub_init(debug: bool = False) -> None:
+    def _stub_init(debug: bool = False, verbose: bool = False) -> None:
         pass
 
     monkeypatch.setattr("openreview_cli.app._init", _stub_init)

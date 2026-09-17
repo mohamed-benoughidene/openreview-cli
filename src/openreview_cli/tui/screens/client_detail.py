@@ -38,7 +38,7 @@ class ClientDetailScreen(Screen[None]):
             yield Static(id="detail-subtitle")
             yield ListView(id="review-list")
             yield Button(
-                "No reviews for this client yet. Start one with [New review].",
+                "No reviews for this client yet. Start one with New review.",
                 id="btn-empty-review",
                 variant="primary",
             )

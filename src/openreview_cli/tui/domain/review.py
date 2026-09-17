@@ -9,9 +9,13 @@ from __future__ import annotations
 import json
 import logging
 import uuid as _uuid
+from typing import TYPE_CHECKING
 
 from openreview_cli.config.paths import get_data_dir
 from openreview_cli.review import ReviewReport, run_review
+
+if TYPE_CHECKING:
+    from openreview_cli.pipeline.progress import ProgressCallback
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +39,7 @@ def run_review_via_tui(
     verbose: bool = False,
     client_id: str | None = None,
     cancel_requested: bool = False,
+    progress_callback: ProgressCallback | None = None,
 ) -> list[ReviewReport]:
     """Run a review from the TUI with PII stripping enabled by default."""
     # If cancel was requested before we even started (e.g. signal received
@@ -52,6 +57,7 @@ def run_review_via_tui(
         verbose=verbose,
         confidence_threshold=confidence_threshold,
         mode=mode,
+        progress_callback=progress_callback,
     )
 
     # Persist each report to the database for the recent-reviews list.

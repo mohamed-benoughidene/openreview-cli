@@ -156,8 +156,11 @@ class TestReviewWizard:
                 await pilot.pause()
                 wizard.query_one("#btn-next").press()
                 await pilot.pause()
-                # Step 4: click Run review
+                # Step 4: click Run review → pre-flight egress modal
                 wizard.query_one("#btn-next").press()
+                await pilot.pause()
+                # Confirm the egress boundary before the review starts (Phase 4).
+                await pilot.click("#btn-egress-continue")
                 await pilot.pause()
 
                 # ProgressScreen should be on screen stack

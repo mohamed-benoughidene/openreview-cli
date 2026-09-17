@@ -142,6 +142,10 @@ module = [
     "tests.integration.tui.*",
     "tests.unit.tui.*",
     "tests.unit.test_app_tui_dispatch",
+    # Exploratory probes intentionally use duck-typed stub doubles (e.g. a
+    # minimal AmberQueue clause) to exercise boundary behaviour without the
+    # full model surface; strict typing would only fight the probes.
+    "tests.exploratory.*",
 ]
 ignore_errors = true
 

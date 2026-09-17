@@ -18,7 +18,7 @@ runner = CliRunner()
 
 def test_no_args_with_tty_launches_tui(monkeypatch):
     """Invoking with no args and a TTY should launch the TUI."""
-    monkeypatch.setattr("openreview_cli.app._init", lambda debug: None)
+    monkeypatch.setattr("openreview_cli.app._init", lambda debug=False, verbose=False: None)
 
     with patch("openreview_cli.tui.launcher.launch_tui") as mock_launch:
         result = runner.invoke(app_module.app, [])
@@ -29,7 +29,7 @@ def test_no_args_with_tty_launches_tui(monkeypatch):
 
 def test_no_args_without_tty_prints_message(monkeypatch):
     """Invoking with no args and no TTY should print friendly message."""
-    monkeypatch.setattr("openreview_cli.app._init", lambda debug: None)
+    monkeypatch.setattr("openreview_cli.app._init", lambda debug=False, verbose=False: None)
     monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
 
     # Do NOT mock launch_tui — let real launcher handle non-TTY path
@@ -41,7 +41,7 @@ def test_no_args_without_tty_prints_message(monkeypatch):
 
 def test_no_tui_flag_skips_tui(monkeypatch):
     """--no-tui should skip TUI and show help even with TTY."""
-    monkeypatch.setattr("openreview_cli.app._init", lambda debug: None)
+    monkeypatch.setattr("openreview_cli.app._init", lambda debug=False, verbose=False: None)
     monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
     monkeypatch.setattr(app_module, "_NO_TUI", True)
 

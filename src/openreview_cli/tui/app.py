@@ -61,6 +61,7 @@ class OpenReviewApp(App[None]):
             yield Static("Privacy: —", id="status-privacy")
             yield Button("Gateway: —", id="status-gateway")
             yield Static("Pricing: —", id="status-tier")
+            yield Static("Cloud calls: 0", id="status-egress")
             yield Button("Quit", id="btn-quit", variant="error")
         yield Footer()
 
@@ -120,6 +121,17 @@ class OpenReviewApp(App[None]):
 
         self.push_screen(SearchScreen())
 
+    def _refresh_egress_status(self) -> None:
+        """Refresh the live cloud-call counter (Phase 4)."""
+        from openreview_cli.tui.domain.gateway import read_cloud_call_count
+
+        try:
+            self.query_one("#status-egress", Static).update(
+                f"Cloud calls: {read_cloud_call_count()}"
+            )
+        except NoMatches:
+            return
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "status-gateway":
             self.action_show_tab("settings")
@@ -139,7 +151,9 @@ class OpenReviewApp(App[None]):
             pass
 
         self._refresh_gateway_status()
+        self._refresh_egress_status()
         self._gateway_timer = self.set_interval(5.0, self._refresh_gateway_status)
+        self._egress_timer = self.set_interval(2.0, self._refresh_egress_status)
 
         self._register_signal_handlers()
 
@@ -148,6 +162,7 @@ class OpenReviewApp(App[None]):
         signal.signal(signal.SIGTERM, self._orig_sigterm)
         signal.signal(signal.SIGINT, self._orig_sigint)
         self._gateway_timer.stop()
+        self._egress_timer.stop()
         # Prevent API key leakage to crash-dump / subprocess after TUI exits.
         from openreview_cli.gateway.router import clear_seeded_env_vars
 
