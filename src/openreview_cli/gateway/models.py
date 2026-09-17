@@ -134,3 +134,26 @@ class PrivacyTierReport:
         if self.cloud_calls_made > 0:
             parts.append(f"Cloud calls: {self.cloud_calls_made}")
         return "\n".join(parts)
+
+
+# D-10: process-wide count of cloud provider calls actually dispatched, so the
+# privacy footer can report truthfully. Defined here (not in ``router``) so the
+# TUI can read it without importing litellm.
+_total_cloud_calls = 0
+
+
+def record_cloud_call() -> None:
+    """Increment the count of cloud provider calls dispatched in this process."""
+    global _total_cloud_calls  # noqa: PLW0603 — module-level counter by design
+    _total_cloud_calls += 1
+
+
+def get_total_cloud_calls() -> int:
+    """Return the number of cloud provider calls dispatched in this process."""
+    return _total_cloud_calls
+
+
+def reset_total_cloud_calls() -> None:
+    """Reset the process-wide cloud call counter (test isolation)."""
+    global _total_cloud_calls  # noqa: PLW0603 — module-level counter by design
+    _total_cloud_calls = 0
