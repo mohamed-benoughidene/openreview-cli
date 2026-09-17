@@ -14,7 +14,7 @@ from openreview_cli import __version__
 from openreview_cli.config.auth import ensure_auth
 from openreview_cli.config.loader import get_config_value, load_config, set_config_value
 from openreview_cli.config.paths import get_config_dir, get_data_dir, get_log_dir
-from openreview_cli.errors import config_error
+from openreview_cli.errors import EXIT_USAGE, config_error
 from openreview_cli.storage.clients import (
     add_client,
     client_has_reviews,
@@ -69,6 +69,18 @@ def _log_level(debug: bool = False, verbose: bool = False) -> int:
     if verbose:
         return logging.INFO
     return logging.WARNING
+
+
+def _format_exception(exc: BaseException) -> str:
+    """Collapse an exception into a single human-readable line.
+
+    Library exceptions (pydantic, httpx) sometimes stringify to multi-line
+    blobs; the CLI prints one line per error so scripts and terminals stay
+    readable. Prefers an explicit ``message`` attribute, then ``str(exc)``,
+    then the class name, and truncates to 500 characters.
+    """
+    msg = getattr(exc, "message", None) or str(exc) or exc.__class__.__name__
+    return " ".join(str(msg).split())[:500]
 
 
 def _privacy_footer() -> str:
@@ -157,7 +169,10 @@ def _write_output_file(path: str | Path, content: str) -> None:
     try:
         Path(path).write_text(content, encoding="utf-8")
     except OSError as exc:
-        typer.echo(f"Error: cannot write output file '{path}': {exc}", err=True)
+        typer.echo(
+            f"Error: cannot write output file '{path}': {_format_exception(exc)}",
+            err=True,
+        )
         raise typer.Exit(code=1) from None
 
 
@@ -171,6 +186,8 @@ def _emit_reviews(
     mode: str = "precheck",
 ) -> None:
     """Shared post-processing: format output, export memos, emit amber warning."""
+    _validate_enum(format, ("text", "json", "terminal", "table", "memo"), "format")
+
     from openreview_cli.review import format_json, format_terminal
 
     if not reports:
@@ -471,8 +488,10 @@ pii_app = typer.Typer(
 
 @pii_app.command("list")
 def pii_list(
-    format: str = typer.Option("text", "--format", help="Output format: text, json"),
+    format: str = typer.Option("table", "--format", help="Output format: table, json"),
 ) -> None:
+    _validate_enum(format, ("table", "json"), "format")
+
     import sqlite3
 
     from openreview_cli.config.paths import get_data_dir
@@ -1154,7 +1173,10 @@ def precheck(
         False, "--no-pii", help="Disable PII stripping. Processes raw text."
     ),
     pii_threshold: float | None = typer.Option(
-        None, "--pii-threshold", help="PII detection confidence threshold (0.0 to 1.0)."
+        None,
+        "--pii-threshold",
+        help="PII detection confidence threshold (0.0 to 1.0).",
+        callback=_validate_threshold,
     ),
     output: str | None = typer.Option(
         None, "--output", help="Output directory for review results."
@@ -1310,10 +1332,10 @@ def review(
             allow_partial_pii=allow_partial_pii,
         )
     except FileNotFoundError as e:
-        typer.echo(f"Error: {e}", err=True)
+        typer.echo(f"Error: {_format_exception(e)}", err=True)
         raise typer.Exit(code=1) from None
     except Exception as e:
-        typer.echo(f"Error: {e}", err=True)
+        typer.echo(f"Error: {_format_exception(e)}", err=True)
         raise typer.Exit(code=2) from None
 
     _emit_reviews(reports, format, output, _privacy_footer(), memo_format, output_dir)
@@ -1329,6 +1351,8 @@ def parse(
     format: str = typer.Option("text", "--format", help="Output format: text, json"),
     summary: bool = typer.Option(False, "--summary", help="Show one-line summary only"),
 ) -> None:
+    _validate_enum(format, ("text", "json"), "format")
+
     from openreview_cli.parsing.models import ParseError
     from openreview_cli.parsing.stream import (
         format_json,
@@ -1671,6 +1695,8 @@ def chunk(
     format: str = typer.Option("text", "--format", help="Output format: text, json"),
     summary: bool = typer.Option(False, "--summary", help="Show one-line summary only"),
 ) -> None:
+    _validate_enum(format, ("text", "json"), "format")
+
     from openreview_cli.chunking.models import ChunkConfig
     from openreview_cli.chunking.stream import (
         format_chunks_json,
@@ -2872,6 +2898,32 @@ def negotiate(
         )
         raise typer.Exit(code=2)
 
+    # Parse and validate --weights BEFORE any document I/O so a malformed value
+    # fails with a clear usage error instead of an uncaught ValueError or a
+    # misleading "file not found"/"no clauses" message.
+    weights_dict: dict[str, float] | None = None
+    if weights:
+        parts = [p.strip() for p in weights.split(",")]
+        if len(parts) != 3:
+            typer.echo(
+                "Error: --weights must contain exactly 3 comma-separated values "
+                f"(risk,financial,obligation), got {len(parts)}",
+                err=True,
+            )
+            raise typer.Exit(code=EXIT_USAGE)
+        try:
+            parsed = [float(p) for p in parts]
+        except ValueError:
+            typer.echo(
+                "Error: --weights values must be numeric (e.g. --weights 0.7,0.15,0.15)",
+                err=True,
+            )
+            raise typer.Exit(code=EXIT_USAGE) from None
+        if any(w < 0 for w in parsed):
+            typer.echo("Error: --weights values must be non-negative", err=True)
+            raise typer.Exit(code=EXIT_USAGE)
+        weights_dict = {"risk": parsed[0], "financial": parsed[1], "obligation": parsed[2]}
+
     path = Path(doc_path)
     if not path.exists():
         typer.echo(f"Error: File not found: {doc_path}", err=True)
@@ -2940,13 +2992,6 @@ def negotiate(
         doc_filename = doc.filename if hasattr(doc, "filename") else str(path)
         typer.echo(f"Loaded {len(assessments)} clauses from {doc_filename}", err=True)
 
-    # Parse weights string
-    weights_dict: dict[str, float] | None = None
-    if weights:
-        parts = [float(x) for x in weights.split(",")]
-        if len(parts) == 3:
-            weights_dict = {"risk": parts[0], "financial": parts[1], "obligation": parts[2]}
-
     from openreview_cli.negotiation import (
         format_json,
         format_memo,
@@ -2965,13 +3010,13 @@ def negotiate(
             playbook_id=playbook.id if hasattr(playbook, "id") else "bundled",
         )
     except FileNotFoundError as e:
-        typer.echo(f"Error: {e}", err=True)
+        typer.echo(f"Error: {_format_exception(e)}", err=True)
         raise typer.Exit(code=1) from None
     except ValueError as e:
-        typer.echo(f"Error: {e}", err=True)
+        typer.echo(f"Error: {_format_exception(e)}", err=True)
         raise typer.Exit(code=2) from None
     except Exception as e:
-        typer.echo(f"Error: {e}", err=True)
+        typer.echo(f"Error: {_format_exception(e)}", err=True)
         raise typer.Exit(code=3) from None
 
     if format == "json":
