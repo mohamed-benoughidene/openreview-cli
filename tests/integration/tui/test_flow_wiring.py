@@ -84,8 +84,11 @@ async def test_home_to_review_to_wizard_to_progress_to_result() -> None:
             # Step 3: first playbook is pre-selected; Next always enabled
             wizard.query_one("#btn-next").press()
             await pilot.pause()
-            # Step 4: click Run review
+            # Step 4: click Run review → pre-flight egress modal
             wizard.query_one("#btn-next").press()
+            await pilot.pause()
+            # Confirm the egress boundary before the review starts (Phase 4).
+            await pilot.click("#btn-egress-continue")
             await pilot.pause()
 
             # Wait for switch and progress to complete

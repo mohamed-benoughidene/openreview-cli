@@ -2748,7 +2748,19 @@ litellm-free counter.
 - Produces: `EgressReviewModal(summary: EgressSummary)` — `ModalScreen[bool]`; `dismiss(True)`
   continues, `dismiss(False)`/Escape aborts.
 
-- [ ] **Step 1: Write the failing tests**
+> **Executed 2026-09-17:** implemented as specified. Two deliberate internal deviations
+> (neither touches a public interface): (1) `_is_cloud` takes only the provider — the plan's
+> second `model` argument was unused; (2) the reported slots are collected into an ordered,
+> de-duplicated tuple instead of a `set`, so destination order is deterministic rather than
+> per-process hash order. Four existing wizard-flow tests (`test_wizard_progress_screen`,
+> `test_full_review_workflow`, `test_sigterm_mid_review_cancels_cleanly`,
+> `test_home_to_review_to_wizard_to_progress_to_result`) now click `#btn-egress-continue`
+> after "Run review". The step-1 integration test below was made timing-proof by spying on
+> `App.switch_screen` and stubbing `ProgressScreen`: the literal plan version races
+> `ProgressScreen`'s review worker (12 × 10 ms yields) and flakily observed `ResultScreen`
+> instead of `ProgressScreen`. `ruff check`, `ruff format --check`, `mypy src/ tests/` clean.
+
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/unit/tui/test_egress_summary.py`:
 
@@ -2861,7 +2873,7 @@ async def test_egress_modal_cancel_stays_on_wizard() -> None:
         assert any(isinstance(s, ReviewWizard) for s in app._screen_stack)
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `.venv/bin/pytest tests/unit/tui/test_egress_summary.py -q`
 Expected: FAIL — `ModuleNotFoundError: openreview_cli.tui.domain.egress`.
@@ -2870,7 +2882,7 @@ Run: `.venv/bin/pytest tests/integration/tui/test_egress_review.py -q`
 Expected: FAIL — `EgressReviewModal` does not exist; `_run_review` jumps straight to
 `ProgressScreen`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Create `src/openreview_cli/tui/domain/egress.py`:
 
@@ -3048,12 +3060,12 @@ Modify `ReviewWizard._run_review` in `src/openreview_cli/tui/screens/review_wiza
 
 > The modal is litellm-free (it reads slot config + privacy tier only), so the TUI stays cold.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `.venv/bin/pytest tests/unit/tui/test_egress_summary.py tests/integration/tui/test_egress_review.py -q`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/openreview_cli/tui/domain/egress.py \
