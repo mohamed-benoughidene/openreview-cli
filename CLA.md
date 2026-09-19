@@ -37,4 +37,4 @@ When you open a pull request, a bot will ask you to agree to this CLA electronic
 
 ## 7. Contact
 
-If you have questions about this CLA, contact: cla@openreview.dev
+If you have questions about this CLA, contact: mohamedbenoughidene@gmail.com

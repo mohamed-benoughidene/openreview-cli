@@ -43,6 +43,6 @@ In short: if you're a solo lawyer, small firm, or large firm using openreview as
 - **White-label:** custom pricing
 - **Enterprise / custom terms:** contact us
 
-Contact: commercial@openreview.dev
+Contact: mohamedbenoughidene@gmail.com
 
 A commercial license is a separate written agreement between you and the Licensor. The terms in this document are a summary; the signed agreement is the binding contract.

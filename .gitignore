@@ -12,6 +12,7 @@ wheels/
 # Local agent/tooling state (regenerable, may contain secrets)
 .drafts
 .commandcode/
+.impeccable/
 .opencode/
 
 # Working drafts (not part of the public product)

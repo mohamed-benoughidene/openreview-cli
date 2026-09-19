@@ -14,11 +14,9 @@ By contributing, you agree to the [CLA](./CLA.md). All contributions are subject
 
 ## Trademarks
 
-"openreview" and the openreview logo are trademarks of [Your Name]. Use of these trademarks is subject to the trademark policy (not yet adopted).
+"openreview" and the openreview logo are trademarks of Mohamed Benoughidene. No license to use these marks is granted by the AGPL; all rights reserved.
 
 ## Contact
 
-- General: hello@openreview.dev
-- Commercial licensing: commercial@openreview.dev
-- CLA questions: cla@openreview.dev
-- Security: security@openreview.dev
+- General, commercial licensing, and CLA questions: mohamedbenoughidene@gmail.com
+- Security vulnerabilities: report through [GitHub Issues](https://github.com/mohamed-benoughidene/openreview-cli/issues) — see [SECURITY.md](./SECURITY.md)
