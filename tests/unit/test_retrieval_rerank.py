@@ -12,6 +12,19 @@ from openreview_cli.retrieval.models import RetrievalResult
 from openreview_cli.retrieval.rerank import Reranker
 
 
+def _candidate(chunk_id: str, score: float) -> RetrievalResult:
+    return RetrievalResult(
+        chunk_id=chunk_id,
+        text=f"text {chunk_id}",
+        clause_heading=f"Article {chunk_id}",
+        clause_level=0,
+        hierarchy_chain=[f"Article {chunk_id}"],
+        parent_chunk_id=None,
+        score=score,
+        method="hybrid",
+    )
+
+
 class TestRerankerInit:
     """Tests for Reranker.__init__."""
 
@@ -38,9 +51,9 @@ class TestRerankerRerank:
         mock_gateway = MagicMock()
         # Simulate gateway.rerank returning scores for each pair
         mock_gateway.rerank.return_value = [
-            {"score": 0.9, "index": 0},
-            {"score": 0.7, "index": 1},
-            {"score": 0.5, "index": 2},
+            {"index": 0, "relevance_score": 0.9},
+            {"index": 1, "relevance_score": 0.7},
+            {"index": 2, "relevance_score": 0.5},
         ]
 
         reranker = Reranker(mock_gateway, model_id="test-cross-encoder")
@@ -91,8 +104,8 @@ class TestRerankerRerank:
         """The gateway must be called with the 'reranking' slot, not the model id (B3)."""
         mock_gateway = MagicMock()
         mock_gateway.rerank.return_value = [
-            {"score": 0.9, "index": 0},
-            {"score": 0.7, "index": 1},
+            {"index": 0, "relevance_score": 0.9},
+            {"index": 1, "relevance_score": 0.7},
         ]
 
         reranker = Reranker(mock_gateway, model_id="test-cross-encoder")
@@ -154,9 +167,9 @@ class TestRerankerRerank:
     def test_rerank_top_k_respected(self) -> None:
         mock_gateway = MagicMock()
         mock_gateway.rerank.return_value = [
-            {"score": 0.9, "index": 0},
-            {"score": 0.8, "index": 1},
-            {"score": 0.7, "index": 2},
+            {"index": 0, "relevance_score": 0.9},
+            {"index": 1, "relevance_score": 0.8},
+            {"index": 2, "relevance_score": 0.7},
         ]
 
         reranker = Reranker(mock_gateway, model_id="test-cross-encoder")
@@ -176,6 +189,31 @@ class TestRerankerRerank:
 
         results = reranker.rerank("test query", candidates, top_k=1)
         assert len(results) == 1
+
+    def test_rerank_reorders_from_gateway_relevance_score(self) -> None:
+        """Regression guard for B1: gateway scores must change the order, not just annotate it."""
+        mock_gateway = MagicMock()
+        mock_gateway.rerank.return_value = [
+            {"index": 2, "relevance_score": 0.9},
+            {"index": 0, "relevance_score": 0.5},
+            {"index": 1, "relevance_score": 0.1},
+        ]
+        reranker = Reranker(mock_gateway, model_id="test-cross-encoder")
+        candidates = [_candidate("c1", 0.9), _candidate("c2", 0.6), _candidate("c3", 0.1)]
+
+        results = reranker.rerank("test query", candidates, top_k=3)
+
+        assert [r.chunk_id for r in results] == ["c3", "c1", "c2"]
+        assert [r.rerank_score for r in results] == [0.9, 0.5, 0.1]
+
+    def test_rerank_raises_when_payload_lacks_relevance_score(self) -> None:
+        """A payload the code cannot parse must fail loudly, not silently keep the input order."""
+        mock_gateway = MagicMock()
+        mock_gateway.rerank.return_value = [{"index": 0, "score": 0.9}]
+        reranker = Reranker(mock_gateway, model_id="test-cross-encoder")
+
+        with pytest.raises(KeyError):
+            reranker.rerank("test query", [_candidate("c1", 0.5)], top_k=1)
 
 
 class TestRerankerValidate:
@@ -231,8 +269,8 @@ class TestRerankerValidate:
         """validate() returns dict with expected keys."""
         mock_gateway = MagicMock()
         mock_gateway.rerank.return_value = [
-            {"score": 0.9, "index": 0},
-            {"score": 0.8, "index": 1},
+            {"index": 0, "relevance_score": 0.9},
+            {"index": 1, "relevance_score": 0.8},
         ]
         mock_storage = MagicMock()
 
@@ -406,8 +444,8 @@ class TestConsecutiveDegradation:
         mock_gateway = MagicMock()
         # Reranker returns worse results each time (degradation)
         mock_gateway.rerank.return_value = [
-            {"score": 0.1, "index": 0},
-            {"score": 0.05, "index": 1},
+            {"index": 0, "relevance_score": 0.1},
+            {"index": 1, "relevance_score": 0.05},
         ]
         mock_storage = MagicMock(wraps=storage)
         mock_storage.search_fts.return_value = [
@@ -460,8 +498,8 @@ class TestConsecutiveDegradation:
 
         mock_gateway = MagicMock()
         mock_gateway.rerank.return_value = [
-            {"score": 0.1, "index": 0},
-            {"score": 0.05, "index": 1},
+            {"index": 0, "relevance_score": 0.1},
+            {"index": 1, "relevance_score": 0.05},
         ]
         mock_storage = MagicMock(wraps=storage)
         mock_storage.search_fts.return_value = [

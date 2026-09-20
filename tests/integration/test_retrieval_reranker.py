@@ -162,6 +162,50 @@ class TestRetrieveRerankFlag:
         for r in data["results"]:
             assert r["rerank_score"] is None
 
+    @patch("openreview_cli.gateway.router.Gateway")
+    def test_rerank_reorders_emitted_results(
+        self,
+        mock_gateway_class: MagicMock,
+        runner: CliRunner,
+        indexed_db: Path,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """B1 end-to-end guard: the emitted order must change, not just the rerank_score field."""
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg_config"))
+        mock_gw = MagicMock()
+        mock_gw.rerank.return_value = [
+            {"index": 2, "relevance_score": 0.99},
+            {"index": 1, "relevance_score": 0.50},
+        ]
+        mock_gateway_class.return_value = mock_gw
+
+        result = runner.invoke(
+            app,
+            [
+                "retrieve",
+                "confidential information",
+                str(FIXTURE_PATH),
+                "--method",
+                "sparse",
+                "--top-k",
+                "3",
+                "--rerank",
+                "--format",
+                "json",
+                "--db-dir",
+                str(indexed_db.parent),
+            ],
+        )
+        assert result.exit_code == 0, f"exit {result.exit_code}: {result.output}"
+        data = _extract_json_from_output(result.output)
+        assert [r["chunk_id"] for r in data["results"]] == [
+            "chunk-006",
+            "chunk-004",
+            "chunk-003",
+        ]
+        assert data["results"][0]["rerank_score"] == 0.99
+
 
 class TestRerankerDegradationWarning:
     """retrieve --rerank respects the stored degradation record."""
@@ -176,9 +220,9 @@ class TestRerankerDegradationWarning:
         """With a stored degradation_pp <= 0 record and no --force-rerank, warn."""
         mock_gw = MagicMock()
         mock_gw.rerank.return_value = [
-            {"chunk_id": "c1", "score": 0.95, "text": "test"},
-            {"chunk_id": "c2", "score": 0.90, "text": "test"},
-            {"chunk_id": "c3", "score": 0.85, "text": "test"},
+            {"index": 0, "relevance_score": 0.95},
+            {"index": 1, "relevance_score": 0.90},
+            {"index": 2, "relevance_score": 0.85},
         ]
         mock_gateway_class.return_value = mock_gw
 
@@ -225,9 +269,9 @@ class TestRerankerDegradationWarning:
         """--force-rerank suppresses the degradation warning."""
         mock_gw = MagicMock()
         mock_gw.rerank.return_value = [
-            {"chunk_id": "c1", "score": 0.95, "text": "test"},
-            {"chunk_id": "c2", "score": 0.90, "text": "test"},
-            {"chunk_id": "c3", "score": 0.85, "text": "test"},
+            {"index": 0, "relevance_score": 0.95},
+            {"index": 1, "relevance_score": 0.90},
+            {"index": 2, "relevance_score": 0.85},
         ]
         mock_gateway_class.return_value = mock_gw
 
