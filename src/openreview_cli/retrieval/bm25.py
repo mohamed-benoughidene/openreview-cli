@@ -7,21 +7,40 @@ from typing import Any
 
 _NON_ALPHANUM_RE = re.compile(r"[^\w\s-]")
 _WHITESPACE_RE = re.compile(r"\s+")
+_FTS_OPERATORS = frozenset({"AND", "OR", "NOT"})
+
+
+def _tokenize(query_text: str) -> list[str]:
+    """Split query text into punctuation-free tokens, preserving inner hyphens."""
+    stripped = _NON_ALPHANUM_RE.sub(" ", query_text)
+    return [token for token in _WHITESPACE_RE.split(stripped.strip()) if token]
 
 
 def preprocess_query(query_text: str) -> str:
-    """Normalize query text for FTS5 search.
+    """Build a safe FTS5 MATCH expression from raw query text.
 
     Steps:
-    1. Lowercase
-    2. Strip punctuation (preserve hyphens in legal terms like "data-processing")
-    3. Split on whitespace, rejoin with spaces
+    1. Strip punctuation (preserve hyphens in legal terms like "data-processing")
+    2. Lowercase and quote each term, so FTS5 metacharacters (" * - : NEAR)
+       cannot raise a syntax error
+    3. Join terms with OR — FTS5 reads a bare multi-term query as an implicit
+       AND, which matches nothing for natural-language questions
+    4. Keep uppercase AND/OR/NOT as operators where they separate two terms;
+       FTS5 operators are uppercase-only, so a lowercased operator would be
+       silently demoted to an ordinary term
     """
-    lowered = query_text.lower()
-    # Remove punctuation but preserve hyphens between words
-    stripped = _NON_ALPHANUM_RE.sub(" ", lowered)
-    tokens = _WHITESPACE_RE.split(stripped.strip())
-    return " ".join(tokens)
+    expression: list[str] = []
+    pending_operator: str | None = None
+    for token in _tokenize(query_text):
+        if token in _FTS_OPERATORS:
+            if expression:
+                pending_operator = token
+            continue
+        if expression:
+            expression.append(pending_operator or "OR")
+        expression.append(f'"{token.lower()}"')
+        pending_operator = None
+    return " ".join(expression)
 
 
 def normalize_bm25_scores(

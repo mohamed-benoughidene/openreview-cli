@@ -161,6 +161,46 @@ def pooled_db(tmp_path: Path) -> str:
     return db_path
 
 
+@pytest.fixture
+def nl_query_db(tmp_path: Path) -> str:
+    """Sparse-only index of natural-language contract clauses (no embeddings)."""
+    db_path = str(tmp_path / "nl_query.db")
+    conn = sqlite3.connect(db_path)
+    conn.executescript("""
+        CREATE TABLE index_meta (
+            document_id TEXT PRIMARY KEY, document_path TEXT NOT NULL DEFAULT '',
+            index_version INTEGER NOT NULL DEFAULT 1,
+            index_status TEXT NOT NULL DEFAULT 'indexed',
+            index_timestamp TEXT, chunk_count INTEGER NOT NULL DEFAULT 0,
+            method TEXT NOT NULL DEFAULT 'sparse', embedding_model TEXT,
+            embedding_dim INTEGER, db_size_bytes INTEGER DEFAULT 0
+        );
+        INSERT INTO index_meta (document_id, index_status, chunk_count, method)
+        VALUES ('nl-doc', 'indexed', 4, 'sparse');
+        CREATE TABLE chunks (
+            chunk_id TEXT PRIMARY KEY, document_id TEXT NOT NULL DEFAULT 'nl-doc',
+            text TEXT NOT NULL, clause_heading TEXT NOT NULL,
+            clause_level INTEGER NOT NULL DEFAULT 0, parent_chunk_id TEXT,
+            heading_chain TEXT NOT NULL DEFAULT '[]',
+            char_start INTEGER NOT NULL DEFAULT 0, char_end INTEGER NOT NULL DEFAULT 1
+        );
+        INSERT INTO chunks VALUES
+            ('n1','nl-doc','the expiration date of this contract is twelve months from the effective date','Section 9.1',0,NULL,'["Section 9.1"]',0,100),
+            ('n2','nl-doc','either party may terminate this agreement for material breach','Section 12',0,NULL,'["Section 12"]',200,300),
+            ('n3','nl-doc','governing law is the state of delaware','Section 7',0,NULL,'["Section 7"]',400,500),
+            ('n4','nl-doc','confidential information shall be protected by the receiving party','Section 3',0,NULL,'["Section 3"]',600,700);
+        CREATE VIRTUAL TABLE chunk_fts USING fts5(
+            chunk_id UNINDEXED, text, clause_heading, content='chunks', content_rowid='rowid',
+            tokenize='unicode61', prefix='2 3'
+        );
+        INSERT INTO chunk_fts (rowid, chunk_id, text, clause_heading)
+        SELECT rowid, chunk_id, text, clause_heading FROM chunks;
+    """)
+    conn.commit()
+    conn.close()
+    return db_path
+
+
 class TestRetrievalEngine:
     """Tests for RetrievalEngine."""
 
@@ -203,8 +243,11 @@ class TestRetrievalEngine:
         query = RetrievalQuery(
             query_text="confidential OR governing OR indemnification", method="sparse", top_k=2
         )
+
         results = engine.retrieve(query)
-        assert len(results) <= 2
+
+        assert [r.chunk_id for r in results] == ["c3", "c1"]
+        assert all(r.method == "sparse" for r in results)
 
     def test_retrieve_dense_with_gateway(self, populated_db: str) -> None:
         mock_gateway = MagicMock()
@@ -455,3 +498,103 @@ class TestRerankCandidatePool:
         )
 
         assert [r.chunk_id for r in pooled[:2]] == [r.chunk_id for r in plain]
+
+
+class TestSparseNaturalLanguageQueries:
+    """The sparse leg must match real questions, not just single keywords."""
+
+    def test_natural_language_question_returns_rows(self, nl_query_db: str) -> None:
+        engine = RetrievalEngine(nl_query_db)
+        query = RetrievalQuery(
+            query_text="What is the expiration date of this contract?",
+            method="sparse",
+            top_k=3,
+        )
+
+        results = engine.retrieve(query)
+
+        assert [r.chunk_id for r in results] == ["n1", "n3", "n2"]
+
+    def test_cuad_style_question_with_hyphenated_name_returns_rows(self, nl_query_db: str) -> None:
+        engine = RetrievalEngine(nl_query_db)
+        query = RetrievalQuery(
+            query_text=(
+                "Consider [PARTY_C] between I-Escrow, Inc. and [PARTY_A]; "
+                "What is the expiration date of this contract?"
+            ),
+            method="sparse",
+            top_k=3,
+        )
+
+        results = engine.retrieve(query)
+
+        assert [r.chunk_id for r in results] == ["n1", "n3", "n2"]
+
+    def test_lowercase_or_does_not_empty_the_result_set(self, nl_query_db: str) -> None:
+        engine = RetrievalEngine(nl_query_db)
+        query = RetrievalQuery(query_text="expiration or terminate", method="sparse", top_k=5)
+
+        results = engine.retrieve(query)
+
+        assert {r.chunk_id for r in results} == {"n1", "n2"}
+
+    def test_uppercase_or_query_returns_rows(self, nl_query_db: str) -> None:
+        engine = RetrievalEngine(nl_query_db)
+        query = RetrievalQuery(query_text="expiration OR terminate", method="sparse", top_k=5)
+
+        results = engine.retrieve(query)
+
+        assert {r.chunk_id for r in results} == {"n1", "n2"}
+
+    def test_realistic_multi_word_query_returns_matching_clause(self, nl_query_db: str) -> None:
+        engine = RetrievalEngine(nl_query_db)
+        query = RetrievalQuery(
+            query_text="return or destroy confidential information", method="sparse", top_k=5
+        )
+
+        results = engine.retrieve(query)
+
+        assert results[0].chunk_id == "n4"
+
+    @pytest.mark.parametrize(
+        "query_text",
+        [
+            '"',
+            "*",
+            "NEAR",
+            "-",
+            "data-processing",
+            "-confidential",
+            'he said "confidential"',
+            "confid* -term",
+            "a NEAR/3 b",
+            "text:confidential",
+            ":",
+        ],
+    )
+    def test_fts_metacharacters_do_not_raise(self, nl_query_db: str, query_text: str) -> None:
+        engine = RetrievalEngine(nl_query_db)
+
+        results = engine.retrieve(RetrievalQuery(query_text=query_text, method="sparse", top_k=3))
+
+        assert isinstance(results, list)
+
+
+class TestOperatorSemantics:
+    """Uppercase FTS5 operators must narrow, not be OR-ified away."""
+
+    def test_uppercase_and_matches_only_chunks_with_both_terms(self, nl_query_db: str) -> None:
+        engine = RetrievalEngine(nl_query_db)
+        query = RetrievalQuery(query_text="expiration AND contract", method="sparse", top_k=5)
+
+        results = engine.retrieve(query)
+
+        assert [r.chunk_id for r in results] == ["n1"]
+
+    def test_uppercase_and_excludes_chunks_without_both_terms(self, nl_query_db: str) -> None:
+        engine = RetrievalEngine(nl_query_db)
+        query = RetrievalQuery(query_text="expiration AND breach", method="sparse", top_k=5)
+
+        results = engine.retrieve(query)
+
+        assert results == []

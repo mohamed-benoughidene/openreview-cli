@@ -9,27 +9,26 @@ class TestPreprocessQuery:
     """Tests for query preprocessing."""
 
     def test_lowercase(self) -> None:
-        assert preprocess_query("CONFIDENTIALITY") == "confidentiality"
+        assert preprocess_query("CONFIDENTIALITY") == '"confidentiality"'
 
     def test_strip_punctuation(self) -> None:
         result = preprocess_query("confidentiality, obligations!")
-        assert result == "confidentiality obligations"
+        assert result == '"confidentiality" OR "obligations"'
 
     def test_preserve_hyphens(self) -> None:
         result = preprocess_query("data-processing agreement")
-        assert result == "data-processing agreement"
+        assert result == '"data-processing" OR "agreement"'
 
     def test_mixed_punctuation_and_hyphens(self) -> None:
         result = preprocess_query("Return of Confidential Information? (Section 5.1)")
-        # Periods and parentheses stripped, hyphen preserved
-        assert "return" in result
-        assert "confidential" in result
-        assert "section" in result
-        assert "5" in result or "5 1" in result
+        assert (
+            result
+            == '"return" OR "of" OR "confidential" OR "information" OR "section" OR "5" OR "1"'
+        )
 
     def test_whitespace_collapse(self) -> None:
         result = preprocess_query("  wide   spaces  ")
-        assert result == "wide spaces"
+        assert result == '"wide" OR "spaces"'
 
     def test_empty_query_returns_empty(self) -> None:
         result = preprocess_query("")
@@ -38,6 +37,47 @@ class TestPreprocessQuery:
     def test_query_with_only_punctuation(self) -> None:
         result = preprocess_query("?!,.;:")
         assert result == ""
+
+    def test_terms_are_quoted_so_metacharacters_are_inert(self) -> None:
+        result = preprocess_query('he said "confidential"')
+        assert result == '"he" OR "said" OR "confidential"'
+
+    def test_multi_term_query_is_or_joined(self) -> None:
+        result = preprocess_query("governing law delaware")
+        assert result == '"governing" OR "law" OR "delaware"'
+
+    def test_lowercase_or_is_a_term_not_an_operator(self) -> None:
+        result = preprocess_query("confidential or governing")
+        assert result == '"confidential" OR "or" OR "governing"'
+
+    def test_uppercase_or_is_preserved_as_an_operator(self) -> None:
+        result = preprocess_query("confidential OR governing")
+        assert result == '"confidential" OR "governing"'
+
+    def test_uppercase_and_is_preserved_as_an_operator(self) -> None:
+        result = preprocess_query("confidential AND governing")
+        assert result == '"confidential" AND "governing"'
+
+    def test_uppercase_not_is_preserved_as_an_operator(self) -> None:
+        result = preprocess_query("a NOT b NOT c")
+        assert result == '"a" NOT "b" NOT "c"'
+
+    def test_operator_without_a_left_term_is_dropped(self) -> None:
+        assert preprocess_query("OR confidential") == '"confidential"'
+        assert preprocess_query("NOT confidential") == '"confidential"'
+
+    def test_operator_without_a_right_term_is_dropped(self) -> None:
+        assert preprocess_query("confidential OR") == '"confidential"'
+
+    def test_operator_only_query_returns_empty(self) -> None:
+        assert preprocess_query("AND") == ""
+        assert preprocess_query("OR OR") == ""
+
+    def test_repeated_operators_collapse(self) -> None:
+        assert preprocess_query("a OR OR b") == '"a" OR "b"'
+
+    def test_implicit_or_applies_around_an_explicit_operator(self) -> None:
+        assert preprocess_query("a b AND c") == '"a" OR "b" AND "c"'
 
 
 class TestNormalizeBm25Scores:
