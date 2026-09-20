@@ -189,12 +189,18 @@ class TestSlotPrimaryModel:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
-        assert gw.slot_primary_model("grounding") is None
+        assert gw.slot_primary_model("unknown_slot") is None
 ```
 
 `COMMON_CONFIG` (`tests/unit/test_gateway_router.py:85-108`) declares
-`reranking: primary: cohere/rerank-english-v3.0` and no `grounding` slot. `_gateway` (line 59)
+`reranking: primary: cohere/rerank-english-v3.0`. `_gateway` (line 59)
 builds a fully offline `Gateway` from a temp config.
+
+> **Correction (found during execution):** use a slot absent from *both* `COMMON_CONFIG` and
+> `DEFAULT_CONFIG` (`unknown_slot`), **not** `grounding`. `Gateway._config` is the **merged** config
+> (`config/loader.py:317` deep-merges `DEFAULT_CONFIG`), which already declares
+> `gateway.models.grounding.primary = ollama/qwen3:8b` (`loader.py:37-41`), so `grounding` is always
+> configured and the accessor correctly returns that id.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
@@ -976,6 +982,10 @@ def test_rerank_disabled_by_default() -> None:
 
 
 def test_rerank_enabled_from_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Materialize config.yml first: `load_config` early-returns `DEFAULT_CONFIG` and skips env
+    # overrides on the call that creates the file (`config/loader.py:307-311`). Env overrides only
+    # apply on a subsequent load, which is what the CLI does (`app.py:252-253` loads in `_init`).
+    load_config(get_config_dir() / "config.yml")
     monkeypatch.setenv("OPENREVIEW_RETRIEVAL__RERANK_ENABLED", "true")
 
     assert _rerank_enabled_from_config() is True

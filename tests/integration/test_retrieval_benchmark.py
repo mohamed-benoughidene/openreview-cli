@@ -311,11 +311,9 @@ class TestRerankerBenchmark:
         mock_gw = MagicMock()
         mock_gw.embed.side_effect = _mock_embed
         mock_gw.rerank.return_value = [
-            {"chunk_id": "chunk-004", "score": 0.95, "text": "test"},
-            {"chunk_id": "chunk-003", "score": 0.90, "text": "test"},
-            {"chunk_id": "chunk-008", "score": 0.85, "text": "test"},
-            {"chunk_id": "chunk-005", "score": 0.80, "text": "test"},
-            {"chunk_id": "chunk-012", "score": 0.75, "text": "test"},
+            {"index": 1, "relevance_score": 0.95},
+            {"index": 0, "relevance_score": 0.90},
+            {"index": 2, "relevance_score": 0.85},
         ]
         mock_gateway_class.return_value = mock_gw
 

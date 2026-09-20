@@ -351,6 +351,20 @@ class TestRerank:
         assert captured.get("aws_region_name") == "us-east-1"
 
 
+class TestSlotPrimaryModel:
+    def test_returns_configured_primary(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
+        assert gw.slot_primary_model("reranking") == "cohere/rerank-english-v3.0"
+
+    def test_returns_none_for_unconfigured_slot(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
+        assert gw.slot_primary_model("unknown_slot") is None
+
+
 class TestGetLitellmKwargs:
     def test_returns_correct_kwargs(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)

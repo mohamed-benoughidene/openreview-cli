@@ -16,12 +16,14 @@ logger = logging.getLogger(__name__)
 # actual provider/model from this slot's config (see Gateway.rerank).
 RERANK_SLOT = "reranking"
 
+DEFAULT_RERANK_MODEL = "qwen3-reranker-0.6b"
+
 
 class Reranker:
     """Cross-encoder reranker wrapper via AI Gateway.
 
-    The reranker is DISABLED by default per P-9 warning (degrades legal text).
-    Users must opt in via --rerank flag.
+    The reranker is DISABLED by default (reported to degrade legal text; not yet measured).
+    Enable it with the --rerank flag or ``retrieval.rerank_enabled``.
 
     Attributes:
         gateway: AI Gateway instance for cross-encoder calls.
@@ -31,7 +33,7 @@ class Reranker:
     def __init__(
         self,
         gateway: Any | None,
-        model_id: str = "qwen3-reranker-0.6b",
+        model_id: str = DEFAULT_RERANK_MODEL,
     ) -> None:
         """Initialize the reranker.
 
@@ -89,8 +91,7 @@ class Reranker:
         score_map: dict[int, float] = {}
         for item in scores:
             if isinstance(item, dict):
-                idx = item.get("index", 0)
-                score_map[idx] = item.get("score", 0.0)
+                score_map[int(item["index"])] = float(item["relevance_score"])
 
         # Assign rerank scores and method
         for i, r in enumerate(candidates):

@@ -2090,6 +2090,32 @@ def ingest(
         raise typer.Exit(code=1) from None
 
 
+def _rerank_enabled_from_config() -> bool:
+    """Return `retrieval.rerank_enabled` from config.yml (OPENREVIEW_* overrides included)."""
+    config = load_config(get_config_dir() / "config.yml")
+    retrieval = config.get("retrieval", {})
+    return bool(retrieval.get("rerank_enabled", False))
+
+
+def _reranker_model_id(gateway: Any) -> str:
+    """Resolve the model id used for reranker validation bookkeeping.
+
+    Prefers the configured `reranking` gateway slot (the model that actually
+    scores), then `retrieval.reranker_model`, then the bundled default.
+    """
+    from openreview_cli.retrieval.rerank import DEFAULT_RERANK_MODEL, RERANK_SLOT
+
+    if gateway is not None:
+        primary = gateway.slot_primary_model(RERANK_SLOT)
+        if isinstance(primary, str) and primary:
+            return primary
+    config = load_config(get_config_dir() / "config.yml")
+    fallback: object = config.get("retrieval", {}).get("reranker_model")
+    if isinstance(fallback, str) and fallback:
+        return fallback
+    return DEFAULT_RERANK_MODEL
+
+
 def _should_warn_reranker_degradation(val: dict[str, object] | None, force_rerank: bool) -> bool:
     """Return True when a stored validation shows reranker degradation and the
     user has not suppressed the warning with --force-rerank.
@@ -2183,13 +2209,15 @@ def retrieve(
         )
         raise typer.Exit(code=2)
 
+    rerank_enabled = rerank or _rerank_enabled_from_config()
+
     # Build query
     try:
         rq = RetrievalQuery(
             query_text=query,
             method=method,
             top_k=top_k,
-            rerank=rerank,
+            rerank=rerank_enabled,
             rerank_depth=rerank_depth,
             force_rerank=force_rerank,
         )
@@ -2199,7 +2227,7 @@ def retrieve(
 
     # Get gateway for dense/hybrid mode
     gateway: Gateway | None = None
-    if method in ("dense", "hybrid") or rerank:
+    if method in ("dense", "hybrid") or rerank_enabled:
         try:
             gateway = Gateway()
         except Exception:
@@ -2221,14 +2249,13 @@ def retrieve(
         typer.echo(f"⚠  {notice}", err=True)
 
     # ── Reranker integration (T031) ──
-    if rerank and results:
+    if rerank_enabled and results:
         from openreview_cli.retrieval.rerank import Reranker
         from openreview_cli.retrieval.storage import RetrievalStorage
 
         try:
-            reranker = Reranker(gateway)
-            candidates = results[:rerank_depth] if rerank_depth < len(results) else results
-            results = reranker.rerank(query, candidates, top_k)
+            reranker = Reranker(gateway, model_id=_reranker_model_id(gateway))
+            results = reranker.rerank(query, results, top_k)
 
             # Check reranker validation warning
             with RetrievalStorage(db_path) as store:
@@ -2250,6 +2277,7 @@ def retrieve(
 
         except Exception as exc:
             logger.warning("Reranker integration failed (%s); returning raw results.", exc)
+            results = results[:top_k]
 
     if not results:
         typer.echo(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+import struct
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -79,8 +80,6 @@ def populated_db(db_path: str) -> str:
     """)
 
     # Insert embeddings (4-dim vectors for simplicity)
-    import struct
-
     vecs = {
         "c1": [0.5, 0.3, 0.1, 0.8],
         "c2": [0.1, 0.9, 0.2, 0.1],
@@ -95,6 +94,68 @@ def populated_db(db_path: str) -> str:
             (cid, blob, "test-model", 4, norm),
         )
 
+    conn.commit()
+    conn.close()
+    return db_path
+
+
+@pytest.fixture
+def pooled_db(tmp_path: Path) -> str:
+    """Index with four chunks matching one term plus one chunk that does not."""
+    db_path = str(tmp_path / "pool.db")
+    conn = sqlite3.connect(db_path)
+    conn.executescript("""
+        CREATE TABLE index_meta (
+            document_id TEXT PRIMARY KEY, document_path TEXT NOT NULL DEFAULT '',
+            index_version INTEGER NOT NULL DEFAULT 1, index_status TEXT NOT NULL DEFAULT 'indexed',
+            index_timestamp TEXT, chunk_count INTEGER NOT NULL DEFAULT 0,
+            method TEXT NOT NULL DEFAULT 'hybrid', embedding_model TEXT, embedding_dim INTEGER,
+            db_size_bytes INTEGER DEFAULT 0
+        );
+        INSERT INTO index_meta (document_id, index_status, chunk_count, method, embedding_dim)
+        VALUES ('test-doc', 'indexed', 5, 'hybrid', 4);
+        CREATE TABLE chunks (
+            chunk_id TEXT PRIMARY KEY, document_id TEXT NOT NULL DEFAULT 'test-doc',
+            text TEXT NOT NULL, clause_heading TEXT NOT NULL, clause_level INTEGER NOT NULL DEFAULT 0,
+            parent_chunk_id TEXT, heading_chain TEXT NOT NULL DEFAULT '[]',
+            char_start INTEGER NOT NULL DEFAULT 0, char_end INTEGER NOT NULL DEFAULT 0
+        );
+        INSERT INTO chunks VALUES
+            ('c1','test-doc','confidential information shall be protected','Article 3',0,NULL,'["Article 3"]',0,100),
+            ('c2','test-doc','governing law is delaware','Section 7.2',1,'c1','["Article 7","Section 7.2"]',200,300);
+        CREATE VIRTUAL TABLE chunk_fts USING fts5(
+            chunk_id UNINDEXED, text, clause_heading, content='chunks', content_rowid='rowid',
+            tokenize='unicode61', prefix='2 3'
+        );
+        INSERT INTO chunk_fts (rowid, chunk_id, text, clause_heading)
+        SELECT rowid, chunk_id, text, clause_heading FROM chunks;
+        CREATE TABLE chunk_embeddings (
+            chunk_id TEXT PRIMARY KEY, embedding BLOB NOT NULL, model_id TEXT NOT NULL,
+            dimension INTEGER NOT NULL, chunk_norm REAL NOT NULL
+        );
+    """)
+    extra = {"c3": [0.8, 0.1, 0.3, 0.5], "c4": [0.2, 0.4, 0.7, 0.2], "c5": [0.3, 0.2, 0.9, 0.1]}
+    for chunk_id, _vector in extra.items():
+        heading = f"Article {chunk_id}"
+        conn.execute(
+            "INSERT INTO chunks VALUES (?, 'test-doc', ?, ?, 0, NULL, ?, 1000, 1100)",
+            (chunk_id, f"confidential obligation {chunk_id}", heading, f'["{heading}"]'),
+        )
+        conn.execute(
+            "INSERT INTO chunk_fts (rowid, chunk_id, text, clause_heading) "
+            "SELECT rowid, chunk_id, text, clause_heading FROM chunks WHERE chunk_id = ?",
+            (chunk_id,),
+        )
+    vectors = {
+        "c1": [0.5, 0.3, 0.1, 0.8],
+        "c2": [0.1, 0.9, 0.2, 0.1],
+        **extra,
+    }
+    for chunk_id, vector in vectors.items():
+        conn.execute(
+            "INSERT INTO chunk_embeddings VALUES (?, ?, 'test-model', 4, ?)",
+            (chunk_id, struct.pack("<4f", *vector), (sum(v * v for v in vector)) ** 0.5),
+        )
     conn.commit()
     conn.close()
     return db_path
@@ -337,3 +398,60 @@ class TestRetrievalEngine:
         for r in results:
             assert isinstance(r.hierarchy_chain, list)
             assert len(r.hierarchy_chain) > 0
+
+
+class TestRerankCandidatePool:
+    """B2: a rerank query must materialize rerank_depth candidates, a plain one must not."""
+
+    def test_sparse_pool_reaches_rerank_depth(self, pooled_db: str) -> None:
+        engine = RetrievalEngine(pooled_db)
+        query = RetrievalQuery(
+            query_text="confidential", method="sparse", top_k=1, rerank=True, rerank_depth=4
+        )
+
+        results = engine.retrieve(query)
+
+        assert {r.chunk_id for r in results} == {"c1", "c3", "c4", "c5"}
+
+    def test_dense_pool_reaches_rerank_depth(self, pooled_db: str) -> None:
+        mock_gateway = MagicMock()
+        mock_gateway.embed.return_value = [[0.3, 0.5, 0.2, 0.7]]
+        engine = RetrievalEngine(pooled_db, gateway=mock_gateway)
+        query = RetrievalQuery(
+            query_text="confidential", method="dense", top_k=1, rerank=True, rerank_depth=5
+        )
+
+        results = engine.retrieve(query)
+
+        assert len(results) == 5
+
+    def test_hybrid_pool_reaches_rerank_depth(self, pooled_db: str) -> None:
+        mock_gateway = MagicMock()
+        mock_gateway.embed.return_value = [[0.3, 0.5, 0.2, 0.7]]
+        engine = RetrievalEngine(pooled_db, gateway=mock_gateway)
+        query = RetrievalQuery(
+            query_text="confidential", method="hybrid", top_k=1, rerank=True, rerank_depth=5
+        )
+
+        results = engine.retrieve(query)
+
+        assert len(results) == 5
+
+    def test_rerank_off_ignores_rerank_depth(self, pooled_db: str) -> None:
+        engine = RetrievalEngine(pooled_db)
+        query = RetrievalQuery(query_text="confidential", method="sparse", top_k=2, rerank_depth=4)
+
+        results = engine.retrieve(query)
+
+        assert len(results) == 2
+
+    def test_pool_keeps_the_plain_result_order(self, pooled_db: str) -> None:
+        engine = RetrievalEngine(pooled_db)
+        plain = engine.retrieve(RetrievalQuery(query_text="confidential", method="sparse", top_k=2))
+        pooled = engine.retrieve(
+            RetrievalQuery(
+                query_text="confidential", method="sparse", top_k=2, rerank=True, rerank_depth=4
+            )
+        )
+
+        assert [r.chunk_id for r in pooled[:2]] == [r.chunk_id for r in plain]
