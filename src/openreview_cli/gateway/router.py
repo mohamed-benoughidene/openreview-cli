@@ -224,6 +224,20 @@ class Gateway:
         registry = load_registry()  # new registry source, not ModelRegistry.load()
         return registry.get(provider)
 
+    def slot_primary_model(self, slot: str) -> str | None:
+        """Return the configured primary model id for a slot, or None.
+
+        Unlike ``_get_slot_config``, an unknown or unconfigured slot returns None
+        instead of raising: callers use this for validation bookkeeping, where a
+        missing slot must fall back to a default.
+        """
+        models = self._config.get("gateway", {}).get("models", {})
+        cfg = models.get(slot)
+        if not isinstance(cfg, dict):
+            return None
+        primary = cfg.get("primary")
+        return primary if isinstance(primary, str) and primary else None
+
     def _enforce_tier(  # noqa: PLR0912 — tier rules branch on override vs slot, registry presence, klass, call_type, local_only, and PII gate (R3-5)
         self,
         slot: str,
