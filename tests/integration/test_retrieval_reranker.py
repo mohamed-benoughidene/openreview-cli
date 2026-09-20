@@ -340,9 +340,10 @@ class TestRerankerDegradationWarning:
             {"index": 1, "relevance_score": 0.90},
             {"index": 2, "relevance_score": 0.85},
         ]
+        mock_gw.slot_primary_model.return_value = "qwen3-reranker-0.6b"
         mock_gateway_class.return_value = mock_gw
 
-        # Seed a degraded record for the default Reranker model id
+        # Seed a degraded record for the resolved Reranker model id
         with RetrievalStorage(str(indexed_db)) as store:
             store.insert_rerank_validation(
                 model_id="qwen3-reranker-0.6b",
@@ -389,6 +390,7 @@ class TestRerankerDegradationWarning:
             {"index": 1, "relevance_score": 0.90},
             {"index": 2, "relevance_score": 0.85},
         ]
+        mock_gw.slot_primary_model.return_value = "qwen3-reranker-0.6b"
         mock_gateway_class.return_value = mock_gw
 
         with RetrievalStorage(str(indexed_db)) as store:

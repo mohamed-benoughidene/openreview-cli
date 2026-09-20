@@ -22,8 +22,8 @@ DEFAULT_RERANK_MODEL = "qwen3-reranker-0.6b"
 class Reranker:
     """Cross-encoder reranker wrapper via AI Gateway.
 
-    The reranker is DISABLED by default per P-9 warning (degrades legal text).
-    Users must opt in via --rerank flag.
+    The reranker is DISABLED by default (reported to degrade legal text; not yet measured).
+    Enable it with the --rerank flag or ``retrieval.rerank_enabled``.
 
     Attributes:
         gateway: AI Gateway instance for cross-encoder calls.

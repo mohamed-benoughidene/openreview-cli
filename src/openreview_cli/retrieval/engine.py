@@ -89,7 +89,8 @@ class RetrievalEngine:
             query: The retrieval query parameters.
 
         Returns:
-            Ranked list of RetrievalResult (length = top_k).
+            Ranked list of RetrievalResult (length = top_k, or rerank_depth when the
+            query reranks).
 
         Raises:
             IndexNotFoundError: If the index database doesn't exist or status is wrong.
@@ -262,7 +263,7 @@ class RetrievalEngine:
         # Step 3: RRF fusion
         fused = rrf_fuse(sparse_ranks, dense_ranks)
 
-        # Step 4: Build results for top_k
+        # Step 4: Build results
         results: list[RetrievalResult] = []
         for _rank, (cid, rrf_score) in enumerate(fused[:limit], start=1):
             chunk = storage.load_chunk(cid)
