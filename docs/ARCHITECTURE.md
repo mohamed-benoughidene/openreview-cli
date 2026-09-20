@@ -6,7 +6,7 @@ openreview-cli is a local-first, privacy-first contract review automation tool: 
 
 The tool serves two audiences through the same codebase:
 
-- **Human CLI/TUI:** `openreview precheck review contract.pdf` (Typer CLI) or no-args → Textual TUI with 13 screens. Rich formatting, progress bars, interactive prompts.
+- **Human CLI/TUI:** `openreview precheck review contract.pdf` (Typer CLI) or no-args → Textual TUI. Rich formatting, progress bars, interactive prompts.
 - **Agent/programmatic API:** every module is independently importable (`from openreview_cli.parsing.stream import parse_document`, `from openreview_cli.review.extraction import extract_clause`, etc.). CLI supports `--format json` / `--memo-format json --output <path>` for structured output. The benchmark runner (`BenchmarkRunner`) and pipeline runner (`run_review`) are Python-callable. Non-zero exit codes signal failures for automation.
 
 - [Dual interface](#dual-interface)
@@ -24,27 +24,28 @@ The tool serves two audiences through the same codebase:
 ```mermaid
 flowchart LR
     F[PDF / DOCX] --> P[ParseStage]
-    P --> S{StripStage<br/>fail-closed gate}
+    P --> S[StripStage<br/>fail-closed gate]
     S -- page detection failure --> HALT["halt before any API call<br/>(--allow-partial-pii opts out)"]
     S --> R[ReviewStage]
     R --> C["per-clause: keyword match (no LLM)"]
     C --> E["extraction agent (LLM)<br/>position + confidence + citation"]
     E --> Q["QA agent (LLM)<br/>agree / disagree / uncertain"]
-    Q --> G["citation grounding (LLM discriminator)<br/>strict / lenient"]
-    G --> M[structured memo + report]
-    D[(SQLite app DB)] -.-> R
-    D -.-> G
-    I[(per-doc index DB)] -.-> R
+    Q --> M[structured memo + report]
+    Q --> G["citation grounding (post-pipeline)<br/>LLM discriminator, strict / lenient"]
+    G --> M
+    D[(SQLite app DB)] -.-> S
 ```
 
-The pipeline is an async sequential framework (`pipeline/base.py`: `Stage` ABC + runner). Stages:
+The pipeline is an async sequential framework (`pipeline/base.py`: `Stage` ABC; `pipeline/runner.py`: `Pipeline` runner). Stages:
 
-1. **ParseStage** (critical): PyMuPDF page-by-page streaming iterator the full PDF is never loaded into memory (the public `parse_document()` materializes the clause list; the streaming path does not). DOCX via python-docx. Clause detection is heuristic: 7 regex header patterns plus nupunkt sentence segmentation (lazy, one-time ~3 s model load per process). Metadata extraction covers author/title/company, corrupt/empty/password detection (`OPENREVIEW_PDF_PASSWORD`), and non-English + tofu (broken glyph) detection.
-2. **StripStage**: Presidio PII engine with spaCy `en_core_web_lg` plus 4 custom regex recognizers (AMOUNT, TAX_ID, ID_DOCUMENT, REG_NUMBER). **Fail-closed by default**: any page-detection failure raises `PartialProcessingError`; the pipeline converts it to `CriticalStageError` and halts before any external API call. `--allow-partial-pii` opts out. A 50-char overlap buffer catches boundary-crossing PII. Entities become `[PARTY_A]`-style placeholders; the reversible mapping is encrypted with Fernet (AES-128-CBC + HMAC), key derived via HKDF-SHA256(document_hash + salt), written chmod 600 to `{data_dir}/reviews/{id}/pii_map.enc`. An audit JSON is written per review.
-3. **ReviewStage**: multi-agent review means separate LLM calls per clause, not agent classes keyword category match (no LLM) → extraction agent (LLM, JSON: position, confidence, citation) → QA agent (LLM, verdict agree/disagree/uncertain, amber flag). Playbook selection precedence: DB id > file path > bundled (24 YAMLs: `precheck-nda-v1`, `saas-license-v1`, `hirecheck-v1`, …). Findings use a 3-position model: Preferred / Acceptable / Walkaway.
+1. **ParseStage** (critical): PyMuPDF page-by-page streaming iterator the full PDF is never loaded into memory (the public `parse_document()` materializes the clause list; the streaming path does not). DOCX via python-docx. Clause detection is heuristic: 7 regex header patterns plus nupunkt sentence segmentation (lazy, one-time model load per process see [BENCHMARKS.md](BENCHMARKS.md) for the measured cost). Corrupt/empty/password detection (`OPENREVIEW_PDF_PASSWORD`).
+2. **StripStage**: Presidio PII engine with spaCy `en_core_web_lg` plus 6 custom regex recognizers (AMOUNT, TAX_ID, ID_DOCUMENT, REG_NUMBER, PHONE_NUMBER, ACCT). **Fail-closed by default**: any page-detection failure raises `PartialProcessingError`; the pipeline converts it to `CriticalStageError` and halts before any external API call. `--allow-partial-pii` opts out. A 50-char overlap buffer catches boundary-crossing PII. Entities become `[PARTY_A]`-style placeholders; the reversible mapping is encrypted with Fernet (AES-128-CBC + HMAC), key derived via HKDF-SHA256(document_hash + salt), written chmod 600 to `{data_dir}/reviews/{document_hash[:12]}/pii_map.enc`. An audit record is persisted to the `pii_audit_trail` table (a `pii_audit.json` is also written on the legacy path).
+3. **ReviewStage**: multi-agent review means separate LLM calls per clause, not agent classes keyword category match (no LLM) → extraction agent (LLM, JSON: position, confidence, citation) → QA agent (LLM, verdict agree/disagree/uncertain, amber flag). Playbook selection precedence: DB id > file path > bundled (24 YAMLs: `precheck-nda-v1`, `saas-license-v1`, `hirecheck-v1`, …). Findings use a 3-position model: Preferred / Acceptable / Walkaway (plus an Uncertain state).
 4. **Citation grounding** (post-pipeline): an LLM discriminator verifies each claim against the source (strict/lenient modes). A failure here never kills the review.
 
-The runner emits per-stage progress events and tracks per-stage memory via tracemalloc against a quota. A recovery coordinator selects among 5 strategies by error category: `auto_retry` (exponential backoff), `provider_fallback`, `graceful_degradation`, `stage_isolation`, `user_guided_recovery`; recovery state persists to the `recovery_state` table.
+The runner emits per-stage progress events and tracks per-stage memory via tracemalloc; a 100 MB recovery budget is enforced before each stage. A recovery coordinator selects among 5 strategies by error category: `auto_retry` (exponential backoff), `provider_fallback`, `graceful_degradation`, `stage_isolation`, `user_guided_recovery`; recovery state persists to the `recovery_state` table.
+
+> Note on stage count: the shipped review runner wires 3 stages (Parse → Strip → Review). Spec 018 ("5-Stage Async Pipeline Framework") describes a broader framework example; the Chunk/Retrieve/Generate adapters exist but are not wired into `run_review`.
 
 ## Model routing
 
@@ -59,29 +60,29 @@ All model calls go through the AI Gateway (litellm): `chat → completion`, `emb
 | grounding | `qwen3:8b` (Ollama) | | claim-vs-source verification |
 | graph | `qwen3:8b` (Ollama) | | clause-graph health scoring and clustering |
 
-Privacy tier routing (`maximum` / `balanced` / `performance`) gates which providers a slot may use; `maximum` blocks cloud entirely. Fallback: 2 retries, 60 s timeout, a fallback model per slot except embedding/reranking, which are primary-only by design.
+Privacy tier routing (`maximum` / `balanced` / `performance`) gates which providers a slot may use; `maximum` blocks cloud entirely. Fallback: 2 retries, 60 s timeout, a fallback model per slot except embedding/reranking, which are primary-only by design (no fallback is configured by default).
 
 ## Data flow and SQLite's two roles
 
 SQLite serves two distinct roles:
 
-1. **App database** a single `openreview.db` in the platformdirs data dir. 12 migrations (001–013, no 012), 19 tables: `clients`, `reviews`, `review_reports`, `review_diffs`, `cost_logs`, `pii_cache`, `pii_audit_trail`, `prompt_versions`, `prompt_bindings`, `playbook_versions`, `playbook_meta`, `benchmark_runs`/`results`/`baselines`, contract graph (`graph_nodes`/`edges`/`meta`), `recovery_state`, `schema_version`.
-2. **Per-document retrieval indexes** separate SQLite files at `{data_dir}/indexes/{doc_hash}.db`, isolating vector/FTS data per contract.
+1. **App database** a single `openreview.db` in the platformdirs data dir (the review path also keeps a `recovery.db` for recovery state). 12 migrations (001–013, no 012), 19 core tables: `clients`, `reviews`, `review_reports`, `review_diffs`, `cost_logs`, `pii_cache`, `pii_audit_trail`, `prompt_versions`, `prompt_bindings`, `playbook_versions`, `playbook_meta`, `benchmark_runs`/`results`/`baselines`, contract graph (`graph_nodes`/`edges`/`meta`), `recovery_state`, `schema_version`, plus a runtime-created `comparison_history` used by bilateral comparison.
+2. **Per-document retrieval indexes** separate SQLite files at `{data_dir}/indexes/{doc_hash[:32]}.db`, isolating vector/FTS data per contract.
 
-Pipeline flow: parse → strip → review writes the review + report + cost rows to the app DB; retrieval reads from the per-doc index DB; the encrypted PII map and audit JSON live next to the review in `{data_dir}/reviews/{id}/`.
+Pipeline flow: parse → strip → review writes cost rows to the app DB (the TUI additionally persists review reports; the CLI review path does not write `reviews`/`review_reports`); retrieval reads from the per-doc index DB; the encrypted PII map and audit file live next to the review in `{data_dir}/reviews/{id}/`.
 
 ## AI Gateway
 
-- **Single abstraction**: litellm for chat, embedding, and rerank calls one surface over 17 providers, 27 bundled models in `models.json` (openai, anthropic, google, ollama with auto-discovery via localhost:11434, openrouter, cohere, huggingface, deepseek, qwen, minimax, voyage, moonshot, mistral, zai; bedrock/azure/vertex supported via multi-field credentials, spec 034).
+- **Single abstraction**: litellm for chat, embedding, and rerank calls one surface over 17 providers, 27 bundled models in `models.json` (openai, anthropic, google, ollama with base URL localhost:11434, openrouter, cohere, huggingface, deepseek, qwen, minimax, voyage, moonshot, mistral, zai; bedrock/azure/vertex supported via multi-field credentials, spec 034).
 - **Fallback & streaming**: 2 retries default, 60 s timeout, fallback model per slot; streaming chat with 15 s connect / 45 s idle timeouts.
-- **Cost tracking**: tokens from responses → `litellm.completion_cost` → cents → SQLite `cost_logs` (non-fatal on error); configurable per-review/per-day limits (100¢ / 1,000¢, warn-only defaults).
-- **Privacy**: tier routing per slot; a redaction filter strips API-key patterns from **all** logs.
-- **Credentials**: multi-field provider credentials (spec 034) CLI-managed (`openreview gateway set`, `provider add`), stored in `auth.json` (chmod 600).
+- **Cost tracking**: tokens from responses → `litellm.completion_cost` → cents → SQLite `cost_logs` (non-fatal on error the guard lives in the gateway callers, not in `cost.py`); configurable per-review/per-day limits (100¢ / 1,000¢ defaults, hard-exit with exit code 6 when exceeded).
+- **Privacy**: tier routing per slot. API keys are redacted at known log call sites (`redact_key`); note the `RedactingFilter` is attached to the root logger only, so records emitted by module loggers are not filtered.
+- **Credentials**: multi-field provider credentials (spec 034) CLI-managed (`openreview gateway set`, `openreview gateway provider add`), stored in `auth.json` (chmod 600).
 
 ## Retrieval and chunking
 
 - **Chunking**: custom RCTS recursive char split on `["\n\n", ". "]` with word-split fallback and merge of undersized chunks; regex tokenizer (explicitly an approximation, not model-aware); defaults 512 tokens / 50 overlap; clause-boundary aware; groups short clauses; flattens tables.
-- **Retrieval**: hybrid BM25 + dense + RRF. BM25 via SQLite FTS5 (unicode61, prefix 2–3); dense via gateway embeddings (default `nomic-embed-text`) with a **brute-force cosine scan no vector DB, no ANN**; RRF fusion (k=60). A reranker exists but is disabled by default (it degrades legal text; opt-in `--rerank`, auto-disables after 3 consecutive degradations). Degrades gracefully to BM25-only when the gateway is unavailable.
+- **Retrieval**: hybrid BM25 + dense + RRF. BM25 via SQLite FTS5 (unicode61, prefix 2–3); dense via gateway embeddings (default `nomic-embed-text`) with a **brute-force cosine scan no vector DB, no ANN**; RRF fusion (k=60). A reranker exists but is disabled by default (it is reported to degrade legal text, though this has not been measured; opt-in `--rerank`, warns after 3 consecutive degradations). Degrades gracefully to BM25-only when the gateway is unavailable.
 
 ## Negotiation, comparison, graph
 
@@ -104,7 +105,7 @@ Development is driven by spec-kit: requirements land as specs in `specs/`, get p
 | 011 | Single-party review 3-agent pipeline |
 | 012 | Citation grounding |
 | 016 | Hierarchical retrieval (BM25 + dense + RRF) |
-| 018 | 5-stage async pipeline |
+| 018 | 5-stage async pipeline framework |
 | 020 | Privacy tier routing |
 | 025 | Contract graph |
 | 026 | Game-theoretic negotiation |
@@ -122,8 +123,8 @@ Deferred work is tracked in `specs/DEFERRED.md` check it before touching any mod
 - **`prompt test` (A/B) and `prompt optimize` are roadmap stubs** the prompt storage, versioning, bindings, and YAML import/export are real; the A/B and optimization commands are not shipped features.
 - **Negotiation uses a simplified local path** (heading-match + defaults), not the full review pipeline no LLM, no clause grounding.
 - **Bilateral comparison has a documented accuracy ceiling ≤ 64% F1** and is experimental.
-- **Audit-table gap**: the `pii_audit_trail` SQL table and `pii_cache` exist, but the pipeline currently writes the audit trail to a JSON file only verified source gap.
+- **PII audit trail**: the `pii_audit_trail` table and `pii_cache` are written by the pipeline; a `pii_audit.json` file is also produced on the legacy path.
 - **TUI discipline**: the Textual TUI must never import litellm at module level (lazy gateway via PEP 562 + domain wrappers) keeps TUI startup fast; treat that boundary as load-bearing.
 - **Cost/accuracy numbers**: see [BENCHMARKS.md](BENCHMARKS.md) for what was measured this session and what was not.
 
-Back to [README.md](README.md) (overview) · [BENCHMARKS.md](BENCHMARKS.md) (measured numbers).
+Back to [README.md](../README.md) (overview) · [BENCHMARKS.md](BENCHMARKS.md) (measured numbers).

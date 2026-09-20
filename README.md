@@ -1,32 +1,25 @@
 ![openreview-cli](assets/ChatGPT%20Image%20Aug%203,%202026,%2007_05_28%20PM.png)
+
 # openreview-cli
 
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue)](https://github.com/mohamed-benoughidene/openreview-cli) [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/LICENSE) [![status: alpha](https://img.shields.io/badge/status-alpha-green)](https://github.com/mohamed-benoughidene/openreview-cli)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)](https://github.com/mohamed-benoughidene/openreview-cli) [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/LICENSE) [![status: alpha](https://img.shields.io/badge/status-alpha-orange)](https://github.com/mohamed-benoughidene/openreview-cli)
 
-Privacy-first contract review automation CLI. Local-first, multi-agent AI that strips PII before any cloud call. Parse, review, and negotiate contracts through an AI Gateway spanning 17 providers all from the command line.
+Privacy-first contract review automation CLI. Local-first, multi-agent AI that strips PII before any cloud call. Parse, review, and negotiate contracts through an AI Gateway spanning 17 providers, all from the command line.
 
-## What is openreview-cli?
+## What it is
 
-openreview-cli is a local-first, privacy-first contract review automation tool that runs entirely from the command line. It parses contract documents, strips personally identifiable information before any cloud call, reviews clauses through a multi-agent pipeline, and emits a structured memo. It runs fully locally by default, with cloud providers and privacy tiers available as explicit opt-in.
+openreview-cli runs entirely from the command line. It parses a contract, strips personally identifiable information before anything leaves your machine, reviews each clause through a multi-agent pipeline, and writes a structured memo. Every model slot ships pointed at local Ollama, so a default run makes no cloud calls. Set `privacy.tier` to `maximum` to hard-enforce local-only.
 
-## Why it matters
+## Status: alpha
 
-- **PII stripped locally before cloud:** the pipeline is fail-closed if page-level detection fails, the review halts rather than leak.
-- **Local-first by default:** every slot defaults to local Ollama (`qwen3` reasoning, `nomic-embed-text` embeddings). Sub in any local model per slot  `openreview config set gateway.reasoning.primary ollama/<model>`  or opt a slot into the cloud. Cloud providers are opt-in per slot.
-- **Multi-agent review pipeline:** extraction → QA verification → citation grounding, not one monolithic prompt.
-- **23 contract-type modes** with bundled 3-position playbooks (Preferred / Acceptable / Walkaway).
-- **Dual human/agent interface:** Typer CLI + Textual TUI for humans; Python API + JSON output for agents; plus an agent routing skill (`skill/SKILL.md`) for intent-to-command mapping.
-- **Spec-driven development:** 33 specs, all tracked in `specs/`.
+The core pipeline works and is tested (3,358 tests). Two numbers matter most if you're deciding whether to trust it with real documents right now.
 
-## Agent skill
+- Review accuracy: 90.9% F1 on 12 labeled NDA clauses (Claude Sonnet 4.6 via OpenRouter)
+- PII detection: 52.8% recall on 50 seeded contracts (spaCy `en_core_web_lg`)
 
-A project-local agent skill (`skill/SKILL.md`) maps an AI agent's intent to the right `openreview` command: review memos, bilateral comparison, retrieval over indexed chunks, negotiation analysis, gateway/playbook/PII management, privacy-tier config, and report export. It is a routing layer with 10 capabilities and 12 command-selection rules, and it disambiguates from the unrelated openreview.net academic platform.
-
-Full routing rules and worked examples: [skill/SKILL.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/skill/SKILL.md).
+Sit with that second number. Roughly half of the PII entities in the seeded test set were missed. The pipeline is fail-closed, meaning it halts rather than proceed if page-level detection fails outright, but fail-closed is not the same as high-recall. Read the full methodology and the honest list of what's not yet measured before using this on anything sensitive: [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
 
 ## Quickstart
-
-Install from PyPI (Python ≥ 3.12):
 
 ```bash
 pip install openreview-cli
@@ -37,101 +30,59 @@ openreview gateway setup
 # Review a contract
 openreview precheck review contract.pdf
 
-# Browse everything in the terminal UI (no args = launches the Textual TUI)
+# No args launches the Textual TUI
 openreview
 ```
 
-### From source (contributors)
+<details>
+<summary>From source (contributors)</summary>
 
 ```bash
 git clone https://github.com/mohamed-benoughidene/openreview-cli.git
 cd openreview-cli && git submodule update --init && uv sync
 
-# One-time: configure the AI Gateway (local Ollama by default)
 uv run openreview gateway setup
-
-# Review a contract
 uv run openreview precheck review contract.pdf
-
-# Browse everything in the terminal UI
 uv run openreview
-
-# Memo written to review_results/ (Markdown, JSON, or DOCX)
 ```
 
-## Measured results
+Memo written to `review_results/` as Markdown, JSON, or DOCX.
 
-| Area | Value |
-|---|---|
-| Version | 0.2.0 (alpha) |
-| Tests | 3,034 collected (10 markers) |
-| Gateway | 17 providers, 27 models |
-| Contract modes | 23 |
-| Startup | 0.68 s median, ~43 MB RSS |
-| Review accuracy | 90.9% F1 (12 NDA clauses, claude-sonnet-4.6 via OpenRouter) |
-| CUAD clause identification | 100% sentence boundary recall (462 contracts, 4,034 queries) |
-| PII detection | 52.8% recall on 50 seeded contracts (spaCy `en_core_web_lg`) |
+</details>
 
-Full methodology + raw numbers + measured-vs-unmeasured: [BENCHMARKS.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/BENCHMARKS.md).
+## Why local-first
 
-### What was measured
+- **Fail-closed by design.** If page-level PII detection fails, the review halts instead of proceeding partially stripped.
+- **Local by default.** Every model slot defaults to Ollama (`qwen3` reasoning, `nomic-embed-text` embeddings). Swap any slot to a different local or cloud model.
+- **Three privacy tiers** control exactly what, if anything, leaves the machine.
 
-- **Review accuracy**: 90.9% F1 on 12 labeled NDA clauses (Claude Sonnet 4.6 via OpenRouter)
-- **Clause detection**: 100% sentence boundary recall on CUAD v1 (462 real commercial contracts, 4,034 queries)
-- **PII detection**: 52.8% recall on 50 seeded contracts (spaCy en_core_web_lg)
-- **Startup**: 0.68 s median, ~43 MB RSS
-- **Honest gaps documented**: what is NOT measured (e.g. retrieval on raw PDFs, end-to-end pipeline accuracy) is called out explicitly in [BENCHMARKS.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/BENCHMARKS.md)
+| Tier | PII | Reasoning | Embedding |
+|---|---|---|---|
+| Maximum | Local | Local | Local |
+| Balanced (default) | Local | Cloud | Local |
+| Performance | Local | Cloud | Cloud |
 
-## How it works
+Set with `openreview config set privacy.tier maximum|balanced|performance`.
 
-An async pipeline splits a contract into clauses, strips PII behind a fail-closed gate, and runs each clause through keyword match (no LLM), an extraction agent, a QA verification agent, and a citation-grounding discriminator before emitting a memo. The AI Gateway abstracts 17 providers through litellm with fallback, cost tracking, privacy tier routing, and API-key redaction. State lives in a single SQLite database, with per-document retrieval indexes alongside. → [ARCHITECTURE.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/ARCHITECTURE.md)
+## What it does
 
-### Architecture at a glance
+- **Multi-agent review**: keyword match → extraction agent → QA verification → citation-grounding discriminator, per clause
+- **23 named product modes** covering NDAs, leases, DPAs, licensing, employment, M&A, and more, plus the base `precheck` NDA review, each with a bundled 3-position playbook (Preferred / Acceptable / Walkaway)
+- **Negotiation analysis**: local game-theoretic solvers (Nash, QRE, Level-k), no LLM calls
+- **Contract graph**: clause relationships, a 0–100 structural health score, diffing
+- **Dual interface**: Typer CLI and a Textual terminal UI, both running the same pipeline
+- **Agent-ready**: JSON output, an importable Python API, and a routing skill for AI agents ([skill/SKILL.md](skill/SKILL.md))
 
-- **Pipeline**: parse → PII strip (fail-closed) → clause split → per-clause multi-agent review (keyword match, extraction agent, QA verification, citation grounding) → structured memo
-- **AI Gateway**: one litellm abstraction (chat / embed / rerank) across 17 providers, 27 bundled models, local Ollama by default
-- **Storage**: single SQLite DB (reviews, cost logs, PII cache, playbooks, benchmarks) + per-document FTS5 retrieval indexes with RRF fusion
-- **Privacy**: three tiers (Maximum / Balanced / Performance); nothing leaves the machine unless you opt in
+Run `openreview --help` for the full command list.
 
-Full architecture: [ARCHITECTURE.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/ARCHITECTURE.md)
+<details>
+<summary>All contract-type modes</summary>
 
-## Features by capability
-
-### Document processing
-
-PyMuPDF page-by-page streaming parser (never loads the full PDF) plus python-docx for DOCX. Clause detection via 7 regex patterns + nupunkt sentence segmentation. Metadata extraction, corrupt/empty/password detection, non-English and tofu (broken glyph) detection. Streaming keeps memory bounded regardless of document length.
-
-### Privacy & PII
-
-Presidio PII engine with spaCy `en_core_web_lg` plus 4 custom regex recognizers (AMOUNT, TAX_ID, ID_DOCUMENT, REG_NUMBER). **Fail-closed by default:** if page-level detection fails, the pipeline halts before any cloud call raises `PartialProcessingError`; opt out with `--allow-partial-pii`. Entities are replaced with `[PARTY_A]`-style placeholders; the reversible mapping is encrypted with Fernet (AES-128-CBC + HMAC, key via HKDF-SHA256) and stored chmod 600. Privacy tiers (Maximum / Balanced / Performance) control what leaves the machine.
-
-### AI Gateway
-
-A single litellm abstraction: `chat → completion`, `embed → embedding`, `rerank → rerank`. 17 providers (openai, anthropic, google, openrouter, cohere, huggingface, deepseek, qwen, minimax, voyage, moonshot, mistral, zai, bedrock, azure, vertex, ollama). 27 bundled models; its default config points at local Ollama (`qwen3:8b`, `qwen3:4b`, `nomic-embed-text`) — bundled defaults, swappable for any local model. Per-slot fallback (2 retries, 60 s timeout), cost tracking to SQLite `cost_logs` (cents via `litellm.completion_cost`, non-fatal on error), configurable per-review/per-day limits (100¢/1,000¢ defaults, warn-only). API-key pattern redaction on all log output. Streaming with 15 s connect / 45 s idle timeouts.
-
-### Multi-agent review
-
-Per-clause pipeline: keyword category match (no LLM) → extraction agent (LLM, outputs position + confidence + citation) → QA verification agent (LLM, agree/disagree/uncertain verdict, amber flag) → citation grounding discriminator (LLM, claim-vs-source verification, strict/lenient modes). 24 bundled playbooks across 23 modes. 3-position model: Preferred / Acceptable / Walkaway. 3-color confidence output: Green / Amber / Red with configurable threshold.
-
-### Analysis tools
-
-- **Game-theoretic negotiation** (`openreview negotiate`): pure local NumPy Nash (support enumeration), QRE (logit fixed-point), Level-k (k ≤ 3) solvers. No LLM calls.
-- **Bilateral comparison** (`precheck compare`): experimental RCBSF 5-dimension divergence detection, 3-tier heading alignment, ≤64% F1 ceiling (documented).
-- **Contract graph** (`openreview graph`): directed clause graph, 0–100 health score from 5 structural metrics, optional legal-bert + HDBSCAN clustering, ASCII tree view, graph diff.
-
-### Storage & retrieval
-
-Single SQLite database (19 tables: reviews, cost_logs, PII cache, playbooks, benchmarks, graph data, recovery state). Per-document retrieval indexes in separate SQLite files with FTS5 (BM25 unicode61, prefix 2–3) + dense embeddings (brute-force cosine scan, no vector DB honest limitation) + RRF fusion (k=60). Reranker present but disabled by default (degrades legal text); opt-in with `--rerank`.
-
-### Terminal UI
-
-A full Textual app (`src/openreview_cli/tui/`) for humans who prefer browsing over flags: review documents, inspect the AI Gateway, and configure the tool — without typing subcommands. Launch with a bare `openreview`. The CLI and the TUI share the same pipeline, so a review started in one is identical in the other.
-
-## Contract-type modes
+`precheck` is the base NDA mode, not counted among the 23 named product modes below it.
 
 | Mode | What it reviews |
 |---|---|
-| precheck | Non-Disclosure Agreement (NDA) |
+| precheck | Non-Disclosure Agreement (NDA), base mode |
 | licensecheck | SaaS/software license agreement |
 | leasecheck | Commercial lease agreement |
 | privacycheck | Data Processing Agreement (DPA) |
@@ -156,64 +107,39 @@ A full Textual app (`src/openreview_cli/tui/`) for humans who prefer browsing ov
 | sponsorcheck | Sponsorship agreement |
 | distrocheck | Distribution or reseller agreement |
 
-Each mode has a bundled 3-position playbook and mode-specific prompt vocabulary.
+</details>
 
-## Privacy tiers
+## Where to go next
 
-| Tier | PII processing | Reasoning | Embedding | Description |
-|---|---|---|---|---|
-| Maximum | All local (fail-closed) | Local (Ollama) | Local | Nothing leaves the machine |
-| Balanced (default) | All local (fail-closed) | Cloud (OpenRouter, OpenAI…) | Local | PII stripped, reasoning in cloud |
-| Performance | All local (fail-closed) | Cloud | Cloud | PII stripped, all inference in cloud |
+| Doc | For |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the pipeline, AI Gateway, and storage actually work |
+| [docs/BENCHMARKS.md](docs/BENCHMARKS.md) | Every accuracy and privacy number, methodology, and what's not yet measured |
+| [skill/SKILL.md](skill/SKILL.md) | Intent-to-command routing for AI agents |
 
-Configure with `openreview config set privacy.tier maximum|balanced|performance` or env var `OPENREVIEW_PRIVACY_TIER`.
+<details>
+<summary>FAQ</summary>
 
-## Essential commands
-
-```
-openreview      → launch the Textual terminal UI (browse, review, configure)
-parse          → inspect clauses in a PDF/DOCX
-precheck review → run full review (parse → PII strip → extract → QA → memo)
-gateway setup  → configure AI providers (one-time)
-gateway test   → verify each slot can connect
-negotiate      → run game-theoretic negotiation analysis
-export         → batch-export saved review reports
-```
-
-Run `openreview --help` for all 77 subcommands. No args launches the Textual TUI.
-
-## FAQ
-
-**Does openreview-cli send contract text to the cloud?**
-
-No not by default. PII is stripped locally by Presidio before any cloud call. The pipeline is fail-closed: if a page-level detection fails, the review halts immediately (use `--allow-partial-pii` to opt out). Cloud providers are opt-in per slot.
+**Does it send contract text to the cloud?**
+Not by default. PII is stripped locally before any cloud call, and the pipeline halts rather than proceed on a failed detection (`--allow-partial-pii` to opt out). Cloud providers are opt-in per slot.
 
 **Can it run fully offline?**
-
-Yes. The default gateway configuration points at local Ollama models (`qwen3:8b` reasoning, `qwen3:4b` extraction, `nomic-embed-text` embeddings). Set the privacy tier to Maximum to guarantee nothing leaves the machine.
-
-**How accurate is it?**
-
-Measured against public benchmarks: 90.9% F1 on contract clause review (12 labeled NDA clauses through Claude Sonnet 4.6), 100% sentence boundary recall on CUAD v1 (462 real commercial contracts), 52.8% PII recall on 50 seeded contracts. All numbers, methodology, and unmeasured gaps in [BENCHMARKS.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/BENCHMARKS.md).
-
-**What can AI agents do with it?**
-
-Every module is independently importable as a Python library (`from openreview_cli.parsing.stream import parse_document`, `from openreview_cli.review.extraction import extract_clause`). The CLI supports `--format json` and `--output` for structured output. The benchmark runner (`BenchmarkRunner`) and pipeline (`run_review`) are Python-callable with typed return values. For intent-to-command routing (not raw library calls), use the agent skill at [skill/SKILL.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/skill/SKILL.md).
+Yes, with the default local Ollama configuration. Set the privacy tier to Maximum to guarantee nothing leaves the machine.
 
 **What file formats are supported?**
+PDF (PyMuPDF, page-by-page streaming, password-protected and corrupt/empty detection) and DOCX (python-docx, track-changes, images, flat documents).
 
-PDF (PyMuPDF, page-by-page streaming, password-protected, corrupt/empty detection) and DOCX (python-docx, track-changes, images, flat documents).
+**What can AI agents do with it?**
+Every module is independently importable (`from openreview_cli.parsing.stream import parse_document`, `from openreview_cli.review.extraction import extract_clause`). The CLI supports `--format json` and `--output`. For intent-to-command routing rather than raw library calls, use [skill/SKILL.md](skill/SKILL.md).
 
-**Is openreview-cli free?**
+</details>
 
-Open source under AGPL-3.0 ([LICENSE](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/LICENSE)). A commercial license option is available ([COMMERCIAL_LICENSE.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/COMMERCIAL_LICENSE.md)).
+## Contributing
 
-## Tech stack / Licenses / Status
+Issues and discussions are open. Contributing code requires agreeing to the [CLA](CLA.md). Dev setup is in the "from source" section above.
 
-Python 3.12 · Typer CLI · Textual TUI · Presidio (PII) · litellm (gateway) · PyMuPDF / python-docx (parsing) · SQLite + FTS5 (storage, BM25) · numpy / scikit-learn (embeddings, solvers) · torch / transformers (CPU-only) · nupunkt · pydantic · cryptography · rich · jinja2 · httpx · pyyaml. Dev: pytest, mypy (strict), ruff.
+## License
 
-AGPL-3.0-only, with a commercial license option (see [LICENSE](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/LICENSE) and [COMMERCIAL_LICENSE.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/COMMERCIAL_LICENSE.md)).
+AGPL-3.0-only ([LICENSE](LICENSE)), with a commercial license available ([COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md)) for anyone who can't use AGPL.
 
-Alpha. Measured performance, accuracy, and methodology in [BENCHMARKS.md](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/BENCHMARKS.md).
-
-[Architecture](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/ARCHITECTURE.md) · [Benchmarks](https://github.com/mohamed-benoughidene/openreview-cli/blob/main/BENCHMARKS.md) · [Issues](https://github.com/mohamed-benoughidene/openreview-cli/issues) · [Discussions](https://github.com/mohamed-benoughidene/openreview-cli/discussions)
+<sub>Python 3.12 · Typer · Textual · Presidio · litellm · PyMuPDF / python-docx · SQLite + FTS5 · numpy / scikit-learn · torch (CPU-only) · pydantic</sub>
