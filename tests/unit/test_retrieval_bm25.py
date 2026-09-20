@@ -50,6 +50,35 @@ class TestPreprocessQuery:
         result = preprocess_query("confidential or governing")
         assert result == '"confidential" OR "or" OR "governing"'
 
+    def test_uppercase_or_is_preserved_as_an_operator(self) -> None:
+        result = preprocess_query("confidential OR governing")
+        assert result == '"confidential" OR "governing"'
+
+    def test_uppercase_and_is_preserved_as_an_operator(self) -> None:
+        result = preprocess_query("confidential AND governing")
+        assert result == '"confidential" AND "governing"'
+
+    def test_uppercase_not_is_preserved_as_an_operator(self) -> None:
+        result = preprocess_query("a NOT b NOT c")
+        assert result == '"a" NOT "b" NOT "c"'
+
+    def test_operator_without_a_left_term_is_dropped(self) -> None:
+        assert preprocess_query("OR confidential") == '"confidential"'
+        assert preprocess_query("NOT confidential") == '"confidential"'
+
+    def test_operator_without_a_right_term_is_dropped(self) -> None:
+        assert preprocess_query("confidential OR") == '"confidential"'
+
+    def test_operator_only_query_returns_empty(self) -> None:
+        assert preprocess_query("AND") == ""
+        assert preprocess_query("OR OR") == ""
+
+    def test_repeated_operators_collapse(self) -> None:
+        assert preprocess_query("a OR OR b") == '"a" OR "b"'
+
+    def test_implicit_or_applies_around_an_explicit_operator(self) -> None:
+        assert preprocess_query("a b AND c") == '"a" OR "b" AND "c"'
+
 
 class TestNormalizeBm25Scores:
     """Tests for BM25 score normalization."""

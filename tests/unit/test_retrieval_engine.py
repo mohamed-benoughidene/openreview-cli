@@ -578,3 +578,23 @@ class TestSparseNaturalLanguageQueries:
         results = engine.retrieve(RetrievalQuery(query_text=query_text, method="sparse", top_k=3))
 
         assert isinstance(results, list)
+
+
+class TestOperatorSemantics:
+    """Uppercase FTS5 operators must narrow, not be OR-ified away."""
+
+    def test_uppercase_and_matches_only_chunks_with_both_terms(self, nl_query_db: str) -> None:
+        engine = RetrievalEngine(nl_query_db)
+        query = RetrievalQuery(query_text="expiration AND contract", method="sparse", top_k=5)
+
+        results = engine.retrieve(query)
+
+        assert [r.chunk_id for r in results] == ["n1"]
+
+    def test_uppercase_and_excludes_chunks_without_both_terms(self, nl_query_db: str) -> None:
+        engine = RetrievalEngine(nl_query_db)
+        query = RetrievalQuery(query_text="expiration AND breach", method="sparse", top_k=5)
+
+        results = engine.retrieve(query)
+
+        assert results == []
