@@ -9,19 +9,23 @@ _NON_ALPHANUM_RE = re.compile(r"[^\w\s-]")
 _WHITESPACE_RE = re.compile(r"\s+")
 
 
+def _tokenize(query_text: str) -> list[str]:
+    """Split query text into punctuation-free tokens, preserving inner hyphens."""
+    stripped = _NON_ALPHANUM_RE.sub(" ", query_text)
+    return [token for token in _WHITESPACE_RE.split(stripped.strip()) if token]
+
+
 def preprocess_query(query_text: str) -> str:
-    """Normalize query text for FTS5 search.
+    """Build a safe FTS5 MATCH expression from raw query text.
 
     Steps:
-    1. Lowercase
-    2. Strip punctuation (preserve hyphens in legal terms like "data-processing")
-    3. Split on whitespace, rejoin with spaces
+    1. Strip punctuation (preserve hyphens in legal terms like "data-processing")
+    2. Lowercase and quote each term, so FTS5 metacharacters (" * - : NEAR)
+       cannot raise a syntax error
+    3. Join terms with OR — FTS5 reads a bare multi-term query as an implicit
+       AND, which matches nothing for natural-language questions
     """
-    lowered = query_text.lower()
-    # Remove punctuation but preserve hyphens between words
-    stripped = _NON_ALPHANUM_RE.sub(" ", lowered)
-    tokens = _WHITESPACE_RE.split(stripped.strip())
-    return " ".join(tokens)
+    return " OR ".join(f'"{token.lower()}"' for token in _tokenize(query_text))
 
 
 def normalize_bm25_scores(
