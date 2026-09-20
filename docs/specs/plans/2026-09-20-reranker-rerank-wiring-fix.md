@@ -982,6 +982,10 @@ def test_rerank_disabled_by_default() -> None:
 
 
 def test_rerank_enabled_from_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Materialize config.yml first: `load_config` early-returns `DEFAULT_CONFIG` and skips env
+    # overrides on the call that creates the file (`config/loader.py:307-311`). Env overrides only
+    # apply on a subsequent load, which is what the CLI does (`app.py:252-253` loads in `_init`).
+    load_config(get_config_dir() / "config.yml")
     monkeypatch.setenv("OPENREVIEW_RETRIEVAL__RERANK_ENABLED", "true")
 
     assert _rerank_enabled_from_config() is True

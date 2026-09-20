@@ -247,6 +247,81 @@ class TestRetrieveRerankFlag:
         data = _extract_json_from_output(result.output)
         assert [r["chunk_id"] for r in data["results"]] == ["chunk-008", "chunk-004"]
 
+    @patch("openreview_cli.gateway.router.Gateway")
+    def test_config_enables_rerank_without_the_flag(
+        self,
+        mock_gateway_class: MagicMock,
+        runner: CliRunner,
+        indexed_db: Path,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """B3: retrieval.rerank_enabled must be honoured, not just the --rerank flag."""
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg_config"))
+        monkeypatch.setenv("OPENREVIEW_RETRIEVAL__RERANK_ENABLED", "true")
+        mock_gw = MagicMock()
+        mock_gw.rerank.return_value = [{"index": 1, "relevance_score": 0.99}]
+        mock_gateway_class.return_value = mock_gw
+
+        result = runner.invoke(
+            app,
+            [
+                "retrieve",
+                "confidential information",
+                str(FIXTURE_PATH),
+                "--method",
+                "sparse",
+                "--top-k",
+                "2",
+                "--format",
+                "json",
+                "--db-dir",
+                str(indexed_db.parent),
+            ],
+        )
+        assert result.exit_code == 0, f"exit {result.exit_code}: {result.output}"
+        data = _extract_json_from_output(result.output)
+        assert data["results"][0]["chunk_id"] == "chunk-004"
+        assert data["results"][0]["rerank_score"] == 0.99
+
+    @patch("openreview_cli.gateway.router.Gateway")
+    def test_unparseable_rerank_payload_falls_back_to_top_k(
+        self,
+        mock_gateway_class: MagicMock,
+        runner: CliRunner,
+        indexed_db: Path,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A payload the reranker cannot parse must not widen the emitted list past --top-k."""
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg_config"))
+        mock_gw = MagicMock()
+        mock_gw.rerank.return_value = [{"index": 0, "score": 0.9}]
+        mock_gateway_class.return_value = mock_gw
+
+        result = runner.invoke(
+            app,
+            [
+                "retrieve",
+                "confidential information",
+                str(FIXTURE_PATH),
+                "--method",
+                "sparse",
+                "--top-k",
+                "2",
+                "--rerank",
+                "--rerank-depth",
+                "6",
+                "--format",
+                "json",
+                "--db-dir",
+                str(indexed_db.parent),
+            ],
+        )
+        assert result.exit_code == 0, f"exit {result.exit_code}: {result.output}"
+        data = _extract_json_from_output(result.output)
+        assert [r["chunk_id"] for r in data["results"]] == ["chunk-003", "chunk-004"]
+
 
 class TestRerankerDegradationWarning:
     """retrieve --rerank respects the stored degradation record."""
