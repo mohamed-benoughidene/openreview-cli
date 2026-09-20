@@ -27,6 +27,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _result_limit(query: RetrievalQuery) -> int:
+    """Number of candidates to materialize (the rerank pool when reranking)."""
+    return query.rerank_depth if query.rerank else query.top_k
+
+
 class RetrievalEngine:
     """Orchestrates hybrid retrieval across BM25 + Dense + RRF fusion."""
 
@@ -142,7 +147,8 @@ class RetrievalEngine:
         """Run BM25-only retrieval."""
         from openreview_cli.retrieval.models import RetrievalResult
 
-        raw_results = search_bm25(storage, query.query_text, query.top_k)
+        limit = _result_limit(query)
+        raw_results = search_bm25(storage, query.query_text, limit)
         ranks = normalize_bm25_scores(raw_results)
 
         results: list[RetrievalResult] = []
@@ -170,7 +176,7 @@ class RetrievalEngine:
                 )
             )
 
-        return results[: query.top_k]
+        return results[:limit]
 
     def _retrieve_dense(
         self,
@@ -193,12 +199,13 @@ class RetrievalEngine:
             self.notices.append("Dense retrieval unavailable, using BM25 only")
             return self._retrieve_sparse(storage, query)
 
+        limit = _result_limit(query)
         dense_ranks: dict[str, int] = {
-            cid: rank for rank, (cid, _) in enumerate(scored[: query.top_k], start=1)
+            cid: rank for rank, (cid, _) in enumerate(scored[:limit], start=1)
         }
 
         results: list[RetrievalResult] = []
-        for cid, sim in scored[: query.top_k]:
+        for cid, sim in scored[:limit]:
             chunk = storage.load_chunk(cid)
             if chunk is None:
                 continue
@@ -234,20 +241,19 @@ class RetrievalEngine:
         from openreview_cli.retrieval.models import RetrievalResult
 
         # Step 1: BM25 search
-        bm25_depth = max(query.top_k * 3, 30)  # Get more candidates for fusion
-        raw_sparse = search_bm25(storage, query.query_text, bm25_depth)
+        limit = _result_limit(query)
+        search_depth = max(limit * 3, 30)
+        raw_sparse = search_bm25(storage, query.query_text, search_depth)
         sparse_ranks = normalize_bm25_scores(raw_sparse)
-        # Keep only top_k from BM25 for the ranking dict
-        sparse_ranks = dict(list(sparse_ranks.items())[:bm25_depth])
+        sparse_ranks = dict(list(sparse_ranks.items())[:search_depth])
 
         # Step 2: Dense search (if gateway available)
         dense_ranks: dict[str, int] = {}
         if self.gateway is not None:
             try:
-                dense_depth = max(query.top_k * 3, 30)
                 scored = self._search_dense_candidates(storage, self.gateway, query.query_text)
                 dense_ranks = {
-                    cid: rank for rank, (cid, _) in enumerate(scored[:dense_depth], start=1)
+                    cid: rank for rank, (cid, _) in enumerate(scored[:search_depth], start=1)
                 }
             except Exception as exc:
                 logger.warning("Dense retrieval unavailable (%s); using BM25 only.", exc)
@@ -258,7 +264,7 @@ class RetrievalEngine:
 
         # Step 4: Build results for top_k
         results: list[RetrievalResult] = []
-        for _rank, (cid, rrf_score) in enumerate(fused[: query.top_k], start=1):
+        for _rank, (cid, rrf_score) in enumerate(fused[:limit], start=1):
             chunk = storage.load_chunk(cid)
             if chunk is None:
                 continue
