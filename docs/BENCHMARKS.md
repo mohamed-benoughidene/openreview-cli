@@ -197,7 +197,7 @@ Clause boundary recall against the [CUAD v1](https://www.atticusprojectai.org/cu
 | Sentence boundary recall | **100.0%** (4,034/4,034) |
 | Time | 8.5 s (0.018 s/contract) |
 
-Every expert-labeled clause in the CUAD dataset falls within a detected sentence boundary. Full clause-text matching, however, is ~40%: our clause detector groups sentences under section headings (6 regex patterns), so individual CUAD spans within a larger clause merge into the parent clause the sentence-level recall more closely reflects correct text extraction.
+Every expert-labeled clause in the CUAD dataset falls within a detected sentence boundary. Full clause-text matching, however, is ~40%: our clause detector groups sentences under section headings (7 regex patterns), so individual CUAD spans within a larger clause merge into the parent clause the sentence-level recall more closely reflects correct text extraction.
 
 **Reproduction:** download CUAD v1 from [atticusprojectai.org/cuad](https://www.atticusprojectai.org/cuad) (CC BY 4.0), or run `uv run python scripts/benchmark_legalbenchrag.py` to fetch the LegalBench-RAG processed version to `/tmp/opencode/legalbenchrag_data/`. The corpus is gitignored (`data/` in `.gitignore`).
 
