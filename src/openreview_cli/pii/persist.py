@@ -4,8 +4,10 @@ Writes the results of a PII stripping run into the SQLite governance tables
 (``pii_audit_trail``, ``pii_cache``) so that the PII lifecycle commands
 (``pii list``, ``pii delete``, retention cleanup) can govern detected PII.
 
-This module is the DB-persistence half of PII governance.  The encrypted
-mapping file and audit JSON file are handled by
+Every strip records one ``pii_audit_trail`` row, clean documents included
+(``entity_count`` 0).  The encrypted mapping file, the stripped text and the
+``pii_cache`` row are written only when PII was detected.  Mapping encryption
+and the legacy ``pii_audit.json`` file are handled by
 :func:`openreview_cli.pii.mapping.write_pii_mapping` and
 :func:`openreview_cli.pii.audit.write_pii_audit`.
 """
@@ -94,10 +96,10 @@ def persist_pii_result(
 ) -> None:
     """Persist a PII stripping result to the PII governance lifecycle.
 
-    When ``pii_result.mapping`` is non-empty (PII was detected), writes the
-    encrypted mapping file, the stripped text, a ``pii_cache`` row and a
-    ``pii_audit_trail`` row.  When the mapping is empty (no PII detected)
-    nothing is written — there is nothing to govern.
+    Always writes one ``pii_audit_trail`` row — a clean document
+    (``pii_result.mapping`` empty) records ``entity_count`` 0 with no
+    mapping or cache artifacts.  When PII was detected, additionally writes
+    the encrypted mapping file, the stripped text and a ``pii_cache`` row.
 
     Args:
         db_path: Path to the SQLite database (schema initialized).
@@ -108,21 +110,19 @@ def persist_pii_result(
         encryption_key: Key used to encrypt the mapping file.
         ttl_days: Cache expiry in days (default 30).
     """
-    if not pii_result.mapping:
-        return
+    if pii_result.mapping:
+        mapping_path = write_pii_mapping(pii_result.mapping, review_dir, encryption_key)
 
-    mapping_path = write_pii_mapping(pii_result.mapping, review_dir, encryption_key)
+        review_result_path = review_dir / "stripped.txt"
+        review_result_path.write_text(pii_result.stripped_text, encoding="utf-8")
 
-    review_result_path = review_dir / "stripped.txt"
-    review_result_path.write_text(pii_result.stripped_text, encoding="utf-8")
-
-    PiiCache(db_path).put(
-        document_hash,
-        config_hash,
-        str(review_result_path),
-        str(mapping_path),
-        ttl_days=ttl_days,
-    )
+        PiiCache(db_path).put(
+            document_hash,
+            config_hash,
+            str(review_result_path),
+            str(mapping_path),
+            ttl_days=ttl_days,
+        )
 
     write_audit_trail_row(
         db_path,
@@ -141,31 +141,29 @@ def persist_pii_for_document(
     pii_result: PiiResult,
     *,
     config_path: Path | None = None,
-) -> bool:
+) -> None:
     """Persist a PII stripping result to the governance lifecycle for one
     document.
 
     Used by callers that hold only the document path and a PiiResult (the
     bilateral path; the legacy ReviewCommand path; the StripStage in the
     new pipeline). Loads config + encryption key, computes the document
-    hash + config hash, and writes the same governance triplet as
+    hash + config hash, and writes the same governance records as
     :func:`persist_pii_result`:
 
-      * encrypted mapping file at ``<data>/reviews/<doc_hash[:12]>/pii_map.enc``
-      * one row in ``pii_cache``
-      * one row in ``pii_audit_trail`` (only when ``pii_result.mapping`` is
-        non-empty; clean documents write nothing, per the PII-2 invariant)
+      * one row in ``pii_audit_trail`` on every strip, clean documents
+        included (``entity_count`` 0)
+      * when PII was detected, additionally the encrypted mapping file at
+        ``<data>/reviews/<doc_hash[:12]>/pii_map.enc`` and one row in
+        ``pii_cache``
 
     Persistence failures are non-fatal — a PII strip is the security
-    boundary, governance writes must not block it. The return value is
-    ``True`` if persistence actually wrote the triplet, ``False`` if it
-    short-circuited on an empty mapping, a missing file, or a swallowed
-    exception.
+    boundary, governance writes must not block it.
     """
     try:
         doc_path = Path(document_path)
         if not doc_path.exists():
-            return False
+            return
 
         from openreview_cli.config.loader import load_config
         from openreview_cli.config.paths import get_config_dir, get_data_dir
@@ -189,5 +187,3 @@ def persist_pii_for_document(
         )
     except Exception as exc:
         logger.warning("PII persistence failed (non-fatal): %s", exc)
-        return False
-    return bool(pii_result.mapping)

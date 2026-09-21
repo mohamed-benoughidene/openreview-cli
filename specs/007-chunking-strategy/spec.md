@@ -150,7 +150,7 @@ A lawyer wants to chunk a parsed contract and see the output in different format
 ### Key Entities
 
 - **Chunk**: The fundamental unit of retrieval-ready content. Key attributes: id (unique within document, format "chunk-{n}" auto-incremented), text (chunk text content), token_count (number of tokens in chunk), source_clause_id (reference to source clause), source_clause_title (clause title or None), source_clause_level (clause hierarchy level), chunk_index_within_clause (0, 1, 2... for sub-chunks), char_offset_start (character offset within clause text), char_offset_end (character offset within clause text), parent_chunk_id (reference to parent chunk for hierarchical structure, None for top-level). Relationships: has zero or one parent chunk, has zero or more child chunks, belongs to exactly one source clause.
-- **ChunkConfig**: Configuration for chunking behavior. Key attributes: chunk_size (target tokens per chunk, default 512), chunk_overlap (overlap tokens between consecutive chunks, default 50), group_short_clauses (boolean, default true), respect_clause_boundaries (boolean, default true). Relationships: none.
+- **ChunkConfig**: Configuration for chunking behavior. Key attributes: chunk_size (target tokens per chunk, default 512), chunk_overlap (overlap tokens between consecutive chunks, default 50), group_short_clauses (boolean, default true), respect_clause_boundaries (boolean, default true). Relationships: none. (2026-09-21: `respect_clause_boundaries` removed — declared but never read, deleted from `ChunkConfig`; clause-boundary behaviour is unchanged because `split_clause` already runs per clause. Plan `docs/specs/plans/2026-09-21-p3-gaps-fix.md`, #11.)
 
 ## Success Criteria *(mandatory)*
 

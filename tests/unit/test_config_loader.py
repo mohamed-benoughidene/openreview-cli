@@ -1,9 +1,16 @@
+import os
 from pathlib import Path
 
 import pytest
 
 from openreview_cli.config.loader import load_config
 from openreview_cli.config.paths import get_config_dir
+
+
+@pytest.fixture(autouse=True)
+def _scrub_openreview_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    for key in [k for k in os.environ if k.startswith("OPENREVIEW_")]:
+        monkeypatch.delenv(key, raising=False)
 
 
 def test_default_config_has_no_fallback_models(tmp_path: Path) -> None:
@@ -66,6 +73,16 @@ def test_env_var_falls_through_to_defaults(monkeypatch: pytest.MonkeyPatch, tmp_
     config_path.write_text("version: 1\n")
     result = load_config(config_path)
     assert result["version"] == 1
+
+
+def test_env_override_applies_on_config_creation(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("OPENREVIEW_PRIVACY_TIER", "maximum")
+    config_path = tmp_path / "config.yml"
+    result = load_config(config_path)
+    assert result["privacy"]["tier"] == "maximum"
+    assert "maximum" not in config_path.read_text()
 
 
 def test_config_path_uses_platformdirs() -> None:

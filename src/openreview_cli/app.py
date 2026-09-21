@@ -506,6 +506,7 @@ pii_app = typer.Typer(
 @pii_app.command("list")
 def pii_list(
     format: str = typer.Option("table", "--format", help="Output format: table, json"),
+    all_flag: bool = typer.Option(False, "--all", help="Also list clean documents (no PII)"),
 ) -> None:
     _validate_enum(format, ("table", "json"), "format")
 
@@ -517,16 +518,30 @@ def pii_list(
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
     try:
-        rows = conn.execute(
+        audit_aggregate = (
+            "SELECT document_hash, entity_count, MAX(timestamp) as max_ts "
+            "FROM pii_audit_trail GROUP BY document_hash"
+        )
+        base = (
             "SELECT pc.document_hash, pc.created_at, pc.expiry_at, "
             "COALESCE(pat.entity_count, 0) as entity_count, "
             "pc.mapping_path "
             "FROM pii_cache pc "
-            "LEFT JOIN (SELECT document_hash, entity_count, MAX(timestamp) as max_ts "
-            "FROM pii_audit_trail GROUP BY document_hash) pat "
+            "LEFT JOIN (" + audit_aggregate + ") pat "
             "ON pc.document_hash = pat.document_hash "
-            "ORDER BY pc.created_at DESC"
-        ).fetchall()
+        )
+        if all_flag:
+            query = (
+                base + "UNION ALL "
+                "SELECT pat.document_hash, pat.max_ts, NULL, pat.entity_count, NULL "
+                "FROM (" + audit_aggregate + ") pat "
+                "WHERE NOT EXISTS "
+                "(SELECT 1 FROM pii_cache pc WHERE pc.document_hash = pat.document_hash) "
+                "ORDER BY created_at DESC"
+            )
+        else:
+            query = base + "ORDER BY pc.created_at DESC"
+        rows = conn.execute(query).fetchall()
     finally:
         conn.close()
 
@@ -567,11 +582,13 @@ def pii_delete(
 
     db_path = get_data_dir() / "openreview.db"
     result = delete_pii_data(db_path, document_hash)
-    if result["mapping_removed"]:
+    if result["mapping_removed"] or result["cache_removed"] or result["audit_records"]:
         typer.echo(f"Deleted PII data for document hash: {document_hash}")
-        typer.echo("  - Encrypted mapping: removed")
+        if result["mapping_removed"]:
+            typer.echo("  - Encrypted mapping: removed")
         typer.echo(f"  - Audit trail: removed ({result['audit_records']} records)")
-        typer.echo("  - Cache entry: removed")
+        if result["cache_removed"]:
+            typer.echo("  - Cache entry: removed")
     else:
         typer.echo(f"No PII data found for document hash: {document_hash}")
 
@@ -2167,11 +2184,18 @@ def ingest(
         raise typer.Exit(code=1) from None
 
 
+def _retrieval_config() -> dict[str, Any]:
+    """Return the `retrieval` config section (OPENREVIEW_* overrides applied)."""
+    config = load_config(get_config_dir() / "config.yml")
+    section: object = config.get("retrieval")
+    if isinstance(section, dict):
+        return section
+    return {}
+
+
 def _rerank_enabled_from_config() -> bool:
     """Return `retrieval.rerank_enabled` from config.yml (OPENREVIEW_* overrides included)."""
-    config = load_config(get_config_dir() / "config.yml")
-    retrieval = config.get("retrieval", {})
-    return bool(retrieval.get("rerank_enabled", False))
+    return bool(_retrieval_config().get("rerank_enabled", False))
 
 
 def _reranker_model_id(gateway: Any) -> str:
@@ -2216,15 +2240,15 @@ def retrieve(
     file: str | None = typer.Argument(
         None, help="Document file (.ndax). Omit to use most recently indexed document."
     ),
-    method: str = typer.Option(
-        "hybrid", "--method", help="Retrieval method: sparse, dense, hybrid"
+    method: str | None = typer.Option(
+        None, "--method", help="Retrieval method: sparse, dense, hybrid"
     ),
-    top_k: int = typer.Option(5, "--top-k", help="Number of results (1-50)"),
+    top_k: int | None = typer.Option(None, "--top-k", help="Number of results (1-50)"),
     rerank: bool = typer.Option(
         False, "--rerank", help="Enable cross-encoder reranker (experimental, opt-in)."
     ),
-    rerank_depth: int = typer.Option(
-        20, "--rerank-depth", help="Number of hybrid results to rerank."
+    rerank_depth: int | None = typer.Option(
+        None, "--rerank-depth", help="Number of hybrid results to rerank."
     ),
     force_rerank: bool = typer.Option(
         False, "--force-rerank", help="Override reranker validation warning."
@@ -2285,6 +2309,15 @@ def retrieve(
             err=True,
         )
         raise typer.Exit(code=2)
+
+    retrieval_cfg = _retrieval_config()
+
+    if method is None:
+        method = retrieval_cfg.get("default_method", "hybrid")
+    if top_k is None:
+        top_k = retrieval_cfg.get("top_k", 5)
+    if rerank_depth is None:
+        rerank_depth = retrieval_cfg.get("rerank_depth", 20)
 
     rerank_enabled = rerank or _rerank_enabled_from_config()
 

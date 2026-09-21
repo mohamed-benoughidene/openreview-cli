@@ -11,6 +11,8 @@ import pytest
 from typer.testing import CliRunner
 
 from openreview_cli.app import app
+from openreview_cli.config.loader import load_config, set_config_value
+from openreview_cli.config.paths import get_config_dir
 from openreview_cli.retrieval.ingest import ingest_from_file
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "retrieval"
@@ -71,6 +73,13 @@ def indexed_db(tmp_path: Path) -> Path:
         method="sparse",
     )
     return index_db
+
+
+@pytest.fixture(autouse=True)
+def _isolate_user_dirs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg_config"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg_data"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg_state"))
 
 
 class TestRetrieveCommand:
@@ -303,6 +312,30 @@ class TestRetrieveCommand:
         )
         assert result.exit_code == 0, f"exit {result.exit_code}: {result.stderr[-200:]}"
 
+    def test_retrieve_uses_config_flag_defaults(self, runner: CliRunner, indexed_db: Path) -> None:
+        """`retrieval.default_method` / `retrieval.top_k` drive the flag defaults."""
+        config_path = get_config_dir() / "config.yml"
+        load_config(config_path)
+        set_config_value(config_path, "retrieval.default_method", "sparse")
+        set_config_value(config_path, "retrieval.top_k", "2")
+
+        result = runner.invoke(
+            app,
+            [
+                "retrieve",
+                "confidentiality",
+                str(FIXTURE_PATH),
+                "--format",
+                "json",
+                "--db-dir",
+                str(indexed_db.parent),
+            ],
+        )
+        assert result.exit_code == 0, f"exit {result.exit_code}: {result.output}"
+        data = _extract_json_from_output(result.output)
+        assert data["method"] == "sparse"
+        assert data["top_k"] == 2
+
     def test_retrieve_invalid_method(self, runner: CliRunner, indexed_db: Path) -> None:
         """Invalid --method value should error."""
         result = runner.invoke(
@@ -427,19 +460,11 @@ class TestRetrieveCommand:
 class TestRetrieveTopKAboveDefaultRerankDepth:
     """`--top-k` above the default `--rerank-depth` (20) must work without touching `--rerank`."""
 
-    def _isolate_user_dirs(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg_config"))
-        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg_data"))
-        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg_state"))
-
     def test_retrieve_top_k_above_default_rerank_depth(
         self,
         runner: CliRunner,
         indexed_db: Path,
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        self._isolate_user_dirs(monkeypatch, tmp_path)
         result = runner.invoke(
             app,
             [
@@ -468,8 +493,6 @@ class TestRetrieveTopKAboveDefaultRerankDepth:
         mock_cls: MagicMock,
         runner: CliRunner,
         indexed_db: Path,
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """`--top-k 30 --rerank` must not raise on the rerank path and must apply scores.
 
@@ -478,7 +501,6 @@ class TestRetrieveTopKAboveDefaultRerankDepth:
         `--top-k` above the default rerank depth and that the reranked scores
         are written onto the results.
         """
-        self._isolate_user_dirs(monkeypatch, tmp_path)
         mock_cls.return_value.rerank.return_value = [{"index": 0, "relevance_score": 0.9}]
         result = runner.invoke(
             app,
@@ -520,3 +542,48 @@ class TestRetrieveTopKAboveDefaultRerankDepth:
         )
         assert result.exit_code == 1
         assert "top_k" in result.output
+
+
+class TestRetrieveRerankDepthFromConfig:
+    """`retrieval.rerank_depth` must drive the rerank candidate pool, like the flag."""
+
+    @patch("openreview_cli.gateway.router.Gateway")
+    def test_retrieve_rerank_depth_from_config_limits_the_candidate_pool(
+        self,
+        mock_cls: MagicMock,
+        runner: CliRunner,
+        indexed_db: Path,
+    ) -> None:
+        config_path = get_config_dir() / "config.yml"
+        load_config(config_path)
+        set_config_value(config_path, "retrieval.rerank_depth", "3")
+
+        mock_cls.return_value.rerank.return_value = [
+            {"index": 2, "relevance_score": 0.99},
+            {"index": 0, "relevance_score": 0.50},
+            {"index": 5, "relevance_score": 0.98},
+        ]
+
+        result = runner.invoke(
+            app,
+            [
+                "retrieve",
+                "confidential information",
+                str(FIXTURE_PATH),
+                "--method",
+                "sparse",
+                "--top-k",
+                "2",
+                "--rerank",
+                "--format",
+                "json",
+                "--db-dir",
+                str(indexed_db.parent),
+            ],
+        )
+        assert result.exit_code == 0, f"exit {result.exit_code}: {result.output}"
+        data = _extract_json_from_output(result.output)
+        # A pool of rerank_depth=3 stops before plain-rank-6 chunk-008 (index 5);
+        # only indices 0..2 are candidates, so chunk-008 can never be promoted.
+        assert len(mock_cls.return_value.rerank.call_args.args[2]) == 3
+        assert [r["chunk_id"] for r in data["results"]] == ["chunk-006", "chunk-003"]

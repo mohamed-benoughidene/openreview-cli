@@ -14,7 +14,7 @@ Cases:
   A. PII-bearing document A — full triplet on disk + DB
   B. PII-bearing document B — full triplet on disk + DB
   C. Both documents PII-bearing — both triplets independent
-  D. Clean document — NO negative cache row, NO negative audit row
+  D. Clean document — no cache row; one audit row with entity_count 0
   E. Cache reuse — no phantom audit row on cache hit
   F. --no-pii — no persistence (bilateral opts out)
   G. align_only — no strip, no persistence
@@ -444,9 +444,9 @@ class TestPII2BilateralTriplet:
 
 
 class TestPII2CleanDocumentBehavior:
-    """Case D — clean documents must NOT create negative cache/audit rows."""
+    """Case D — a clean document gets no cache row and exactly one audit row."""
 
-    def test_clean_doc_writes_no_persistence(
+    def test_clean_doc_writes_only_an_audit_row(
         self,
         tmp_path: Path,
         xdg_isolated: dict[str, Path],
@@ -487,8 +487,8 @@ class TestPII2CleanDocumentBehavior:
         _process_document(str(doc_a), sample_playbook, "extraction", "qa")
 
         # The strip ran (no_pii=False, align_only=False) but the result has
-        # no entities. The persistence helper must early-return on empty
-        # mapping and write nothing.
+        # no entities. The persistence helper writes one audit row with
+        # entity_count 0 and no mapping/cache artifacts.
         doc_hash = hashlib.sha256(doc_a.read_bytes()).hexdigest()
         cache = _cache_row(xdg_isolated["db_path"], doc_hash)
         audit = _audit_count(xdg_isolated["db_path"], doc_hash)
@@ -496,7 +496,7 @@ class TestPII2CleanDocumentBehavior:
         mapping = review_dir / "pii_map.enc"
 
         assert cache is None, f"Negative cache row written for clean doc: {cache!r}"
-        assert audit == 0, f"Negative audit row written for clean doc: count={audit}"
+        assert audit == 1, f"Clean doc audit row count = {audit}, expected 1"
         assert not mapping.exists(), f"Encrypted mapping written for clean doc: {mapping}"
 
     def test_no_pii_path_writes_no_persistence(

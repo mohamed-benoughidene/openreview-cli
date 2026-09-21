@@ -25,7 +25,6 @@ def test_chunk_config_defaults() -> None:
     assert config.chunk_size == 512
     assert config.chunk_overlap == 50
     assert config.group_short_clauses is True
-    assert config.respect_clause_boundaries is True
 
 
 def test_chunk_config_custom() -> None:

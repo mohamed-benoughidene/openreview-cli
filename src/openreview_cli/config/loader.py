@@ -308,7 +308,11 @@ def load_config(config_path: Path) -> dict[str, Any]:
         config_path.parent.mkdir(parents=True, exist_ok=True)
         with open(config_path, "w") as f:
             yaml.safe_dump(DEFAULT_CONFIG, f, default_flow_style=False)
-        return dict(DEFAULT_CONFIG)
+        env_overrides = _get_env_overrides()
+        if not env_overrides:
+            return dict(DEFAULT_CONFIG)
+        merged = _deep_merge(dict(DEFAULT_CONFIG), env_overrides)
+        return _validate_and_merge(merged, dict(DEFAULT_CONFIG))
 
     with open(config_path) as f:
         raw = yaml.safe_load(f) or {}

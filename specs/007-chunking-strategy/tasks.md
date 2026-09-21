@@ -38,7 +38,7 @@ Single project — `src/`, `tests/` at repository root.
 **Purpose**: Data models and tokenizer — blocks all user stories
 
 - [X] T003 Implement `Chunk` dataclass in `src/openreview_cli/chunking/models.py` — fields: id, text, token_count, source_clause_id, source_clause_title, source_clause_level, chunk_index_within_clause, char_offset_start, char_offset_end, parent_chunk_id, structural_location. Use `@dataclass(slots=True)`. Add validation in `__post_init__`.
-- [X] T004 [P] Implement `ChunkConfig` dataclass in `src/openreview_cli/chunking/models.py` — fields: chunk_size (default 512), chunk_overlap (default 50), group_short_clauses (default True), respect_clause_boundaries (default True). Validation: overlap < chunk_size.
+- [X] T004 [P] Implement `ChunkConfig` dataclass in `src/openreview_cli/chunking/models.py` — fields: chunk_size (default 512), chunk_overlap (default 50), group_short_clauses (default True), respect_clause_boundaries (default True). Validation: overlap < chunk_size. (`respect_clause_boundaries` removed 2026-09-21 — never read, deleted from `ChunkConfig`; #11.)
 - [X] T005 [P] Implement `count_tokens(text) -> int` in `src/openreview_cli/chunking/tokenizer.py` — whitespace + punctuation splitter.
 - [X] T006 [P] Implement `split_tokens(text, start, end) -> list[tuple[str, int, int]]` in `src/openreview_cli/chunking/tokenizer.py` — split text into token ranges for overlap calculation.
 

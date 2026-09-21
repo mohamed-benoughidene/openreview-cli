@@ -100,11 +100,11 @@ class ReviewCommand:
             # PII-3: delegate governance persistence to the shared helper so
             # the legacy path produces the same encrypted mapping + pii_cache
             # + pii_audit_trail triplet that the bilateral / StripStage paths
-            # produce. Empty mapping short-circuits inside the helper (no
-            # negative cache/audit rows for clean documents). The helper also
-            # writes the cache row with the correct mapping_path (under
-            # <data>/reviews/<hash[:12]>/, not <output>/<hash[:12]>/), which
-            # is the latent base.py:103 inconsistency the previous code had.
+            # produce. A clean document (empty mapping) still records one
+            # pii_audit_trail row with entity_count 0 — no mapping, no pii_cache
+            # row and no stripped-text artifact. The helper writes the cache row
+            # with the correct mapping_path (under <data>/reviews/<hash[:12]>/,
+            # not <output>/<hash[:12]>/) — the previous code's inconsistency.
             persist_pii_for_document(self._document_path, pii_result)
 
             return {
