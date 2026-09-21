@@ -208,7 +208,7 @@ retrieval:
   top_k: 5                 # default result count
   rrf_k: 60                # RRF fusion constant
   rerank_enabled: false    # reranker default state
-  rerank_depth: 20         # candidates for reranking
+  rerank_depth: 20         # candidates for reranking (raised to top_k when smaller)
   embedding_model: nomic-embed-text  # default embedding model (gateway model name)
   db_dir: null             # override database directory (null = platform default)
 ```

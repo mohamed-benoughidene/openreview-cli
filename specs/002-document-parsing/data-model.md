@@ -68,6 +68,15 @@ The top-level container for a parsed document.
 | `clause_count` | `int` | Total number of clauses | `156` |
 | `parse_duration_seconds` | `float` | Time taken to parse | `2.34` |
 | `warnings` | `list[str]` | Non-fatal warnings during parsing | `["No document structure detected"]` |
+| `author` | `str \| None` | Author from PDF metadata / DOCX core properties | `"Jane Doe"` |
+| `title` | `str \| None` | Title from PDF metadata / DOCX core properties | `"Mutual NDA"` |
+| `company` | `str \| None` | Company from DOCX `docProps/app.xml` (always `None` for PDF) | `"Acme Corp"` |
+
+**Metadata note** (implemented 2026-09-21, plan `docs/specs/plans/2026-09-21-p1p2-gaps-fix.md`): the
+`author` / `title` / `company` fields are best-effort and default to `None`. They are populated by
+`parse_document()` — PDF sets `author`/`title` from `doc.metadata` (PDF has no standard company
+field); DOCX sets `author`/`title` from `core_properties` and `company` from `docProps/app.xml`.
+Extraction failure never aborts parsing. Consumed by PII stripping (spec 003 FR-017).
 
 **Relationships**:
 - Has many `Clause` objects
@@ -78,6 +87,7 @@ The top-level container for a parsed document.
 - `page_count` must be ≥ 1
 - `clause_count` must be ≥ 0
 - `parse_duration_seconds` must be ≥ 0
+- `author`/`title`/`company` are best-effort (`None` when absent; no validation)
 
 **Example**:
 ```python
@@ -87,7 +97,10 @@ Document(
     page_count=47,
     clause_count=156,
     parse_duration_seconds=2.34,
-    warnings=[]
+    warnings=[],
+    author="Jane Doe",
+    title="Mutual NDA",
+    company=None,
 )
 ```
 
@@ -277,8 +290,10 @@ The parser is stateless — it reads the document and produces clauses without m
 - Add `references: list[str]` field to track "See Section 5.2" references
 - Resolve references to actual clause IDs
 
-**Metadata**:
-- Add `metadata: dict` field to Document for title, author, creation date
+**Metadata** (implemented 2026-09-21 — supersedes this future-work note):
+- ~~Add `metadata: dict` field to Document for title, author, creation date~~ Replaced by the typed
+  `author` / `title` / `company` fields (`str | None`) on `Document`, populated by `parse_document()`
+  from PDF metadata / DOCX core properties / DOCX `docProps/app.xml` (see the `Document` entity above).
 
 **Annotations**:
 - Add `annotations: list[Annotation]` for tracked changes, comments

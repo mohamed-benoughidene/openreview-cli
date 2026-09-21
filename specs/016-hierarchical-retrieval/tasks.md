@@ -35,7 +35,7 @@
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
 - [X] T006 Create data model dataclasses in `src/openreview_cli/retrieval/models.py`:
-  - `RetrievalQuery`: query_text, method, top_k, rerank, rerank_depth, force_rerank — with validation (method in {"sparse","dense","hybrid"}, top_k 1-50, rerank_depth ≥ top_k, query_text non-empty)
+  - `RetrievalQuery`: query_text, method, top_k, rerank, rerank_depth, force_rerank — with validation (method in {"sparse","dense","hybrid"}, top_k 1-50, rerank_depth derived as max(rerank_depth, top_k), query_text non-empty)
   - `RetrievalResult`: chunk_id, text, clause_heading, clause_level, hierarchy_chain, parent_chunk_id, score, method, rank_sparse, rank_dense, rrf_score, rerank_score, char_start, char_end
   - `IndexMeta`: document_id, document_path, chunk_count, method, embedding_model, embedding_dimension, index_timestamp, index_status, db_size_bytes
 

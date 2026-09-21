@@ -355,10 +355,32 @@ def stream_clauses(
     ...
 ```
 
-### Metadata Extraction (Not in Phase 2)
+### Metadata Extraction (Implemented 2026-09-21)
+
+> **Superseded:** this section previously deferred metadata extraction to a later phase ("Not in
+> Phase 2"). It is now implemented — plan `docs/specs/plans/2026-09-21-p1p2-gaps-fix.md`; the
+> contract below matches the shipped code.
+
+`parse_document(path)` returns `(Document, list[Clause])`. The `Document` carries three best-effort
+metadata fields, all `str | None`:
+
+| Field | Source | Notes |
+|-------|--------|-------|
+| `author` | PDF `metadata["author"]`; DOCX `core_properties.author` | `None` when absent or empty |
+| `title` | PDF `metadata["title"]`; DOCX `core_properties.title` | `None` when absent or empty |
+| `company` | DOCX `docProps/app.xml` (`<Company>`, extended properties) | Always `None` for PDF — PDF has no standard company field |
+
+Behaviour:
+
+- Values are stripped; an empty string reported by the parser library is treated as absent (`None`).
+- Extraction is **best-effort**: any failure is swallowed and leaves the field `None`; it never aborts
+  parsing.
+- Metadata is read from the document the parser already has open — no second file open.
+- The values populate `Document.author` / `.title` / `.company` and are consumed by PII stripping
+  (spec 003 FR-017).
 
 ```python
-def parse_document(path: str | Path) -> tuple[Document, Iterator[Clause]]:
-    """Parse document and return metadata + clause stream."""
+def parse_document(path: str | Path) -> tuple[Document, list[Clause]]:
+    """Parse a document and return its metadata + clause list."""
     ...
 ```

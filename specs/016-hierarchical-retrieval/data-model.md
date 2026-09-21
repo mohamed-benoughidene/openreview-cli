@@ -117,7 +117,7 @@ Input parameters for a retrieval invocation.
 | `method` | `str` | `"hybrid"` | Retrieval method: "sparse", "dense", or "hybrid" |
 | `top_k` | `int` | 5 | Number of results (1–50) |
 | `rerank` | `bool` | `False` | Enable cross-encoder reranker |
-| `rerank_depth` | `int` | 20 | Number of hybrid results to rerank (≥top_k) |
+| `rerank_depth` | `int` | 20 | Number of hybrid results to rerank (raised to `top_k` when smaller) |
 | `force_rerank` | `bool` | `False` | Override reranker validation warning |
 
 ---
@@ -172,6 +172,6 @@ Cached result of reranker benchmark comparison (FR-5).
 3. **Embedding model consistency**: All embeddings in one index use the same model_id and dimension.
 4. **Parent reference integrity**: `parent_chunk_id` must reference an existing chunk in the same document.
 5. **Hierarchy depth limit**: Maximum 10 levels of clause nesting.
-6. **Query constraints**: `query_text` must be non-empty, `top_k` must be 1–50, `rerank_depth` must be ≥ `top_k`.
+6. **Query constraints**: `query_text` must be non-empty, `top_k` must be 1–50, `rerank_depth` is derived as `max(rerank_depth, top_k)` (raised to `top_k` when smaller).
 7. **Score range**: All scores are normalized to 0.0–1.0 for display.
 8. **Incomplete index detection**: If the `index_meta` table has `index_status = 'ingesting'`, retrieval is blocked.

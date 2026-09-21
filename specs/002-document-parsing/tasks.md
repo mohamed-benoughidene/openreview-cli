@@ -27,7 +27,8 @@ description: "Implementation tasks for Phase 2 — Document Parsing (PDF, DOCX, 
 | Phase 6: Error Handling | T031–T036 | US4 | P2 | Graceful errors, garbage-in |
 | Phase 7: CLI Command | T037–T042 | US5 | P3 | `parse` subcommand, output formats |
 | Phase 8: Polish | T043–T046 | — | P4 | Performance, accuracy, memory |
-| **Total** | **46 tasks** | | | |
+| Phase 9: Metadata Extraction (amendment, 2026-09-21) | T047 | US3 | P2 | `Document.author`/`.title`/`.company` from document properties |
+| **Total** | **47 tasks** | | | |
 
 **MVP scope**: Phases 1–5 (US1 + US2 + US3 = all P1 stories). P2/P3 can follow incrementally.
 
@@ -407,6 +408,22 @@ description: "Implementation tasks for Phase 2 — Document Parsing (PDF, DOCX, 
 
 ---
 
+## Phase 9: Metadata Extraction (Amendment — 2026-09-21) (P2)
+
+**Purpose**: Populate `Document.author` / `.title` / `.company` from document properties. Previously
+deferred ("Metadata Extraction (Not in Phase 2)"); implemented by plan
+`docs/specs/plans/2026-09-21-p1p2-gaps-fix.md`. Consumed by PII stripping (spec 003 FR-017).
+
+- [X] **T047** Populate `Document` metadata in `parse_document()` (`parsing/stream.py`):
+  - PDF: `author` / `title` from `doc.metadata`; PDF has no standard company field → `company` stays `None`
+  - DOCX: `author` / `title` from `core_properties`; `company` from `docProps/app.xml` (`<Company>`)
+  - All fields best-effort `str | None`; extraction failure must never abort parsing
+  - Read from the document the parser already has open (no second file open)
+
+**Checkpoint**: `Document.author`/`.title`/`.company` are populated from document properties on both formats.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -524,11 +541,11 @@ T046: accuracy test
 | Foundational | P0 | 2 | 4 | — |
 | US1: PDF Parsing | **P1 MVP** | 3 | 7 | Yes — standalone tests with PDF fixtures |
 | US2: DOCX Parsing | **P1 MVP** | 4 | 6 | Yes — standalone tests with DOCX fixtures |
-| US3: Common Model | **P1 MVP** | 5 | 8 | No — depends on US1 + US2 |
+| US3: Common Model | **P1 MVP** | 5, 9 | 9 | No — depends on US1 + US2 |
 | US4: Error Handling | P2 | 6 | 6 | Yes — standalone tests with garbage-in fixtures |
 | US5: CLI Command | P3 | 7 | 6 | Yes — standalone CLI tests |
 | Polish | P4 | 8 | 4 | No — depends on all stories |
-| **Total** | | | **46** | |
+| **Total** | | | **47** | |
 
 ---
 

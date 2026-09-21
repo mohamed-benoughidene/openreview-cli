@@ -14,14 +14,14 @@ class RetrievalQuery:
     method: str = "hybrid"         # "sparse" | "dense" | "hybrid"
     top_k: int = 5                 # 1–50
     rerank: bool = False
-    rerank_depth: int = 20         # ≥ top_k
+    rerank_depth: int = 20         # raised to top_k when smaller
     force_rerank: bool = False
 ```
 
 Validation:
 - `method` must be one of `{"sparse", "dense", "hybrid"}`
 - `top_k` must be ≥ 1 and ≤ 50
-- `rerank_depth` must be ≥ `top_k`
+- `rerank_depth` is derived as `max(rerank_depth, top_k)` (raised to `top_k` when smaller)
 - `query_text` must be non-empty
 
 ### `class RetrievalResult`
