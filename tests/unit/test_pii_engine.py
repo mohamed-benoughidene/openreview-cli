@@ -293,6 +293,39 @@ def test_is_available_logs_warning_on_failure(
     pii_engine._is_available_cache = None
 
 
+def test_annotate_clauses_output_reaches_pii_engine_flagged(
+    pii_engine: PiiEngine, monkeypatch: MonkeyPatch
+) -> None:
+    from openreview_cli.parsing.clause_detector import annotate_clauses
+
+    clauses = [
+        Clause(
+            id="clause-1",
+            title="Non-English",
+            text="مرحبا بالعالم",
+            level=0,
+            parent_id=None,
+            source_page=1,
+            source_paragraph=None,
+            source_span=None,
+        )
+    ]
+    annotate_clauses(clauses)
+    assert clauses[0].is_non_english is True
+
+    captured: dict[str, bool] = {}
+
+    def _record(text: str, **kwargs: object) -> list[object]:
+        captured["is_non_english"] = bool(kwargs.get("is_non_english", False))
+        return []
+
+    monkeypatch.setattr(pii_engine, "detect_on_page", _record)
+    _entities, warnings, _failed_pages, _errors = pii_engine.detect_all_pages(clauses)
+
+    assert captured["is_non_english"] is True
+    assert any("Non-English" in w for w in warnings)
+
+
 def test_detect_all_pages_emits_progress_via_callback(
     pii_engine: PiiEngine, monkeypatch: MonkeyPatch
 ) -> None:
@@ -358,3 +391,60 @@ class TestDetectOnPageAllowlist:
             "ID_DOCUMENT",
             "REG_NUMBER",
         ]
+
+
+def test_metadata_entities_include_author_title_company() -> None:
+    clause = Clause(
+        id="1",
+        title=None,
+        text="Confidential terms apply.",
+        level=1,
+        parent_id=None,
+        source_page=1,
+        source_paragraph=None,
+        source_span=None,
+    )
+    doc = Document(
+        source_path=Path("/tmp/report.pdf"),
+        format="pdf",
+        page_count=1,
+        clause_count=1,
+        parse_duration_seconds=0.1,
+        warnings=[],
+        author="Jane Doe",
+        title="Mutual NDA",
+        company="Acme Corp",
+    )
+    engine = PiiEngine(threshold=0.7)
+    with patch.object(engine, "detect_all_pages", return_value=([], [], [], {})):
+        result = strip_pii([clause], doc, strip_metadata=True, engine=engine)
+
+    assert result.mapping["AUTHOR_1"] == "Jane Doe"
+    assert result.mapping["TITLE_1"] == "Mutual NDA"
+    assert result.mapping["COMPANY_1"] == "Acme Corp"
+    assert result.mapping["FILENAME_1"] == "report.pdf"
+    assert "[AUTHOR_1]" in result.stripped_text
+    assert "[TITLE_1]" in result.stripped_text
+    assert "[COMPANY_1]" in result.stripped_text
+    assert "[FILENAME_1]" in result.stripped_text
+
+
+def test_python_docx_author_is_redacted_faithfully(tmp_path: Path) -> None:
+    from docx import Document as DocxDocument
+
+    from openreview_cli.parsing.stream import parse_document
+
+    path = tmp_path / "generated.docx"
+    source = DocxDocument()
+    source.add_paragraph("Mutual NDA between Jane Doe and Acme Corp.")
+    source.save(str(path))
+
+    doc, clauses = parse_document(path)
+    assert doc.author == "python-docx"
+
+    engine = PiiEngine(threshold=0.7)
+    with patch.object(engine, "detect_all_pages", return_value=([], [], [], {})):
+        result = strip_pii(clauses, doc, strip_metadata=True, engine=engine)
+
+    assert result.mapping["AUTHOR_1"] == "python-docx"
+    assert "[AUTHOR_1]" in result.stripped_text

@@ -78,6 +78,31 @@ def load_registry() -> dict[str, ProviderInfo]:
     return merged
 
 
+def discover_ollama(base_url: str = "http://localhost:11434") -> list[dict[str, Any]]:
+    """Return locally installed Ollama models, or [] if the server is unreachable."""
+    try:
+        resp = httpx.get(f"{base_url}/api/tags", timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        models: list[dict[str, Any]] = []
+        for model in data.get("models", []):
+            name = model.get("name", "")
+            details = model.get("details", {})
+            models.append(
+                {
+                    "model_id": name,
+                    "slots": ["reasoning", "extraction", "graph"],
+                    "ram": None,
+                    "recommended": False,
+                    "status": "available",
+                    "note": f"Ollama local — {details.get('parameter_size', 'unknown')}",
+                }
+            )
+    except Exception:
+        models = []
+    return models
+
+
 def provider_credential_status(info: ProviderInfo, auth: dict[str, Any]) -> dict[str, Any]:
     """Per-field credential resolution for a provider. Never includes values.
 
@@ -203,24 +228,4 @@ class ModelRegistry:
         return sum(len(p.models) for p in self._providers.values())
 
     def discover_ollama(self, base_url: str = "http://localhost:11434") -> list[dict[str, Any]]:
-        try:
-            resp = httpx.get(f"{base_url}/api/tags", timeout=5)
-            resp.raise_for_status()
-            data = resp.json()
-            models: list[dict[str, Any]] = []
-            for model in data.get("models", []):
-                name = model.get("name", "")
-                details = model.get("details", {})
-                models.append(
-                    {
-                        "model_id": name,
-                        "slots": ["reasoning", "extraction", "graph"],
-                        "ram": None,
-                        "recommended": False,
-                        "status": "available",
-                        "note": f"Ollama local — {details.get('parameter_size', 'unknown')}",
-                    }
-                )
-        except Exception:
-            models = []
-        return models
+        return discover_ollama(base_url)

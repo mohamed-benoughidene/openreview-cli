@@ -7,8 +7,66 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import pytest
 
+from openreview_cli.config.loader import load_config
 from openreview_cli.gateway.models import CredentialField
 from openreview_cli.gateway.wizard import gateway_setup
+
+
+def _fake_questionary(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    text_answer: str = "",
+    provider_answer: str = "ollama",
+) -> list[str]:
+    """Install the near-identical questionary/registry fakes the wizard tests share.
+
+    ``questionary.select`` answers ``provider_answer`` for a provider prompt and
+    the first choice otherwise; ``questionary.text`` returns ``text_answer`` and
+    ``questionary.password`` returns ``""``. The fake registry lists one model
+    for ``ollama`` and none for any other provider. Returns the title of every
+    ``questionary.select`` prompt, in order.
+    """
+    calls: list[str] = []
+
+    class FakeRegistry:
+        def __init__(self, *a: object, **k: object) -> None:
+            pass
+
+        def load(self) -> None:
+            pass
+
+        def list_models(self, provider: str) -> list[dict[str, object]]:
+            if provider == "ollama":
+                return [{"model_id": "qwen3:8b", "slots": [], "context": 0}]
+            return []
+
+        def list_providers(self) -> list[dict[str, object]]:
+            return [{"name": "ollama", "env_key": None}]
+
+    class FakeSelect:
+        def __init__(self, title: str, choices: list[str]) -> None:
+            self._title = title
+            self._choices = choices
+
+        def ask(self) -> str:
+            calls.append(self._title)
+            if "Provider" in self._title:
+                return provider_answer
+            return self._choices[0]
+
+    class FakeText:
+        def ask(self) -> str:
+            return text_answer
+
+    class FakePassword:
+        def ask(self) -> str:
+            return ""
+
+    monkeypatch.setattr("openreview_cli.gateway.wizard.ModelRegistry", FakeRegistry)
+    monkeypatch.setattr("questionary.select", FakeSelect)
+    monkeypatch.setattr("questionary.text", lambda prompt: FakeText())
+    monkeypatch.setattr("questionary.password", lambda prompt: FakePassword())
+    return calls
 
 
 class TestGatewayWizard:
@@ -25,38 +83,11 @@ class TestGatewayWizard:
         config_path.write_text("gateway:\n  models: {}\n")
         auth_path = tmp_path / "auth.json"
         auth_path.write_text("{}")
-        reg_path = (
-            Path(__file__).parent.parent.parent
-            / "src"
-            / "openreview_cli"
-            / "gateway"
-            / "models.json"
+        calls = _fake_questionary(
+            monkeypatch,
+            provider_answer="ollama/qwen3:8b",
+            text_answer="ollama/test-model",
         )
-        monkeypatch.setattr(
-            "openreview_cli.gateway.wizard.Path",
-            lambda *a: reg_path if "models.json" in str(a[-1]) else Path(*a),
-        )
-        calls: list[str] = []
-
-        class FakeSelect:
-            def __init__(self, title: str, choices: list[str]) -> None:
-                self._title = title
-
-            def ask(self) -> str:
-                calls.append(self._title)
-                return "ollama/qwen3:8b"
-
-        class FakeText:
-            def ask(self) -> str:
-                return "ollama/test-model"
-
-        class FakePassword:
-            def ask(self) -> str:
-                return ""
-
-        monkeypatch.setattr("questionary.select", FakeSelect)
-        monkeypatch.setattr("questionary.text", lambda prompt: FakeText())
-        monkeypatch.setattr("questionary.password", lambda prompt: FakePassword())
 
         gateway_setup()
 
@@ -64,6 +95,51 @@ class TestGatewayWizard:
         assert any("reasoning" in c for c in calls)
         assert any("graph" in c for c in calls)
         assert any("grounding" in c for c in calls)
+
+    def test_wizard_prompts_for_optional_fallback(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(
+            "openreview_cli.gateway.wizard.get_config_dir",
+            lambda: tmp_path,
+        )
+        config_path = tmp_path / "config.yml"
+        config_path.write_text("gateway:\n  models: {}\n")
+        (tmp_path / "auth.json").write_text("{}")
+
+        backup = "anthropic/claude-3-5-haiku"
+        _fake_questionary(monkeypatch, text_answer=backup)
+
+        gateway_setup()
+
+        models = load_config(config_path)["gateway"]["models"]
+        for slot in ("reasoning", "extraction", "graph", "grounding"):
+            assert models[slot]["fallback"] == backup
+        for slot in ("embedding", "reranking"):
+            assert models[slot].get("fallback") is None
+
+    def test_wizard_skips_blank_fallback(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(
+            "openreview_cli.gateway.wizard.get_config_dir",
+            lambda: tmp_path,
+        )
+        config_path = tmp_path / "config.yml"
+        config_path.write_text("gateway:\n  models: {}\n")
+        (tmp_path / "auth.json").write_text("{}")
+
+        _fake_questionary(monkeypatch)
+
+        gateway_setup()
+
+        models = load_config(config_path)["gateway"]["models"]
+        for slot in ("reasoning", "extraction", "graph", "grounding"):
+            assert models[slot]["fallback"] is None
 
     def test_wizard_aborts_on_none(
         self,

@@ -1,7 +1,9 @@
 from collections.abc import Iterator
 from pathlib import Path
 
+from openreview_cli.parsing.docx_parser import DocxParser
 from openreview_cli.parsing.models import Clause, Document, ParseError
+from openreview_cli.parsing.pdf_parser import PdfParser
 
 
 def _pdf_ends_with_eof(path: Path) -> bool:
@@ -15,7 +17,8 @@ def _pdf_ends_with_eof(path: Path) -> bool:
         return b"%%EOF" in tail
 
 
-def stream_clauses(path: str | Path) -> Iterator[Clause]:
+def _parser_for(path: str | Path) -> PdfParser | DocxParser:
+    """Validate *path* and return the parser for its format (shared by both entry points)."""
     path = Path(path)
 
     if not path.exists():
@@ -53,28 +56,34 @@ def stream_clauses(path: str | Path) -> Iterator[Clause]:
         )
 
     if ext == ".pdf":
-        from openreview_cli.parsing.pdf_parser import PdfParser
+        return PdfParser(path)
+    if ext == ".docx":
+        return DocxParser(path)
+    raise ParseError(
+        exit_code=8,
+        category="unsupported_format",
+        message=f"Format '{ext}' is not supported. Supported: .pdf, .docx",
+        action="Provide a PDF or DOCX file.",
+    )
 
-        yield from PdfParser(path).parse()
-    elif ext == ".docx":
-        from openreview_cli.parsing.docx_parser import DocxParser
 
-        yield from DocxParser(path).parse()
-    else:
-        raise ParseError(
-            exit_code=8,
-            category="unsupported_format",
-            message=f"Format '{ext}' is not supported. Supported: .pdf, .docx",
-            action="Provide a PDF or DOCX file.",
-        )
+def stream_clauses(path: str | Path) -> Iterator[Clause]:
+    yield from _parser_for(path).parse()
 
 
 def parse_document(path: str | Path) -> tuple[Document, list[Clause]]:
     import time
 
+    from openreview_cli.parsing.clause_detector import annotate_clauses
+
     start = time.perf_counter()
     path = Path(path)
-    clauses = list(stream_clauses(path))
+    parser = _parser_for(path)
+    clauses = list(parser.parse())
+
+    warnings = annotate_clauses(clauses)
+    # Timestamp taken after the annotation pass so the O(total-text) pass is
+    # included in parse_duration_seconds.
     duration = time.perf_counter() - start
 
     ext = path.suffix.lower()
@@ -87,7 +96,10 @@ def parse_document(path: str | Path) -> tuple[Document, list[Clause]]:
         page_count=page_count,
         clause_count=len(clauses),
         parse_duration_seconds=duration,
-        warnings=[],
+        warnings=warnings,
+        author=parser.author,
+        title=parser.title,
+        company=parser.company,
     )
     return doc, clauses
 

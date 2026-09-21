@@ -2,7 +2,9 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
+import pymupdf
 import pytest
 
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
@@ -15,6 +17,15 @@ def run_openreview(*args: str) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         text=True,
     )
+
+
+def _write_pdf(path: Path, author: str, title: str) -> None:
+    doc: Any = pymupdf.open()  # type: ignore[no-untyped-call]
+    page = doc.new_page()
+    page.insert_text((72, 72), "Mutual NDA between Jane Doe and Acme Corp.")
+    doc.set_metadata({"author": author, "title": title})
+    doc.save(str(path))
+    doc.close()
 
 
 class TestParseCommand:
@@ -57,3 +68,59 @@ class TestParseCommand:
         result = run_openreview(str(FIXTURES / "test.txt"))
         assert result.returncode == 8
         assert "supported" in result.stderr.lower()
+
+
+class TestParseDocumentMetadata:
+    @pytest.mark.integration
+    def test_parse_document_populates_docx_metadata(self, tmp_path: Path) -> None:
+        from docx import Document
+
+        from openreview_cli.parsing.stream import parse_document
+
+        path = tmp_path / "meta.docx"
+        source = Document()
+        source.add_paragraph("Mutual NDA between Jane Doe and Acme Corp.")
+        source.core_properties.author = "Jane Doe"
+        source.core_properties.title = "Mutual NDA"
+        source.save(str(path))
+
+        doc, clauses = parse_document(path)
+
+        assert doc.author == "Jane Doe"
+        assert doc.title == "Mutual NDA"
+        assert doc.company is None
+        assert clauses
+
+    @pytest.mark.integration
+    def test_parse_document_populates_pdf_metadata(self, tmp_path: Path) -> None:
+        from openreview_cli.parsing.stream import parse_document
+
+        path = tmp_path / "meta.pdf"
+        _write_pdf(path, "Jane Doe", "Mutual NDA")
+
+        doc, clauses = parse_document(path)
+
+        assert doc.author == "Jane Doe"
+        assert doc.title == "Mutual NDA"
+        assert doc.company is None
+        assert clauses
+
+    @pytest.mark.integration
+    def test_parse_document_survives_metadata_failure(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from openreview_cli.parsing.stream import parse_document
+
+        path = tmp_path / "meta.pdf"
+        _write_pdf(path, "Jane Doe", "Mutual NDA")
+
+        def _boom(_doc: object) -> object:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr("openreview_cli.parsing.pdf_parser.pdf_metadata", _boom)
+
+        doc, clauses = parse_document(path)
+
+        assert doc.author is None
+        assert doc.title is None
+        assert clauses

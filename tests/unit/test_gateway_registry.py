@@ -13,6 +13,7 @@ from openreview_cli.gateway.registry import (
     ModelRegistry,
     _build_provider,
     add_custom_provider,
+    discover_ollama,
     load_registry,
 )
 
@@ -185,6 +186,28 @@ def test_discover_ollama_unreachable(tmp_path: Path, monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(httpx, "get", mock_get)
     models = registry.discover_ollama("http://localhost:11434")
     assert models == []
+
+
+def test_discover_ollama_module_function(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """``ModelRegistry.discover_ollama`` must delegate to module-level ``discover_ollama``.
+
+    The parsed body itself is already covered by ``test_discover_ollama``.
+    """
+    ollama_data = {
+        "models": [
+            {"name": "llama3:latest", "details": {"parameter_size": "7B"}},
+            {"name": "mistral:latest", "details": {"parameter_size": "7B"}},
+        ]
+    }
+
+    def mock_get(url: str, **kwargs: Any) -> _MockResponse:
+        return _MockResponse(json.dumps(ollama_data))
+
+    monkeypatch.setattr(httpx, "get", mock_get)
+    registry = ModelRegistry(tmp_path / "models.json")
+    assert registry.discover_ollama("http://localhost:11434") == discover_ollama(
+        "http://localhost:11434"
+    )
 
 
 def test_load_registry_deepseek_complete_entry() -> None:

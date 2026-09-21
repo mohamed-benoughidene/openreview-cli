@@ -1,4 +1,5 @@
 from openreview_cli.parsing.clause_detector import (
+    annotate_clauses,
     build_hierarchy,
     detect_clause_starts,
     detect_non_english,
@@ -6,6 +7,20 @@ from openreview_cli.parsing.clause_detector import (
     detect_tofu,
     nupunkt_detect_boundaries,
 )
+from openreview_cli.parsing.models import Clause
+
+
+def _clause(text: str, id: str = "clause-1") -> Clause:
+    return Clause(
+        id=id,
+        title=None,
+        text=text,
+        level=0,
+        parent_id=None,
+        source_page=None,
+        source_paragraph=None,
+        source_span=None,
+    )
 
 
 class TestNupunktBoundaries:
@@ -78,3 +93,39 @@ class TestDetectTofu:
 
     def test_empty_string(self) -> None:
         assert detect_tofu("") is False
+
+
+class TestAnnotateClauses:
+    def test_annotate_clauses_flags_non_english_clause(self) -> None:
+        clauses = [_clause("مرحبا", id="clause-1"), _clause("Hello", id="clause-2")]
+        warnings = annotate_clauses(clauses)
+        assert clauses[0].is_non_english is True
+        assert clauses[1].is_non_english is False
+        assert warnings == ["The contract appears to be in Arabic. Results may be less accurate"]
+
+    def test_annotate_clauses_returns_cjk_and_cyrillic_names(self) -> None:
+        clauses = [
+            _clause("你好世界", id="clause-1"),
+            _clause("Привет мир", id="clause-2"),
+        ]
+        warnings = annotate_clauses(clauses)
+        assert set(warnings) == {
+            "The contract appears to be in Chinese/Japanese/Korean. Results may be less accurate",
+            "The contract appears to be in Russian/Ukrainian/Bulgarian. Results may be less accurate",
+        }
+
+    def test_annotate_clauses_dedupes_languages(self) -> None:
+        clauses = [_clause("مرحبا", id="clause-1"), _clause("أهلا وسهلا", id="clause-2")]
+        warnings = annotate_clauses(clauses)
+        assert warnings == ["The contract appears to be in Arabic. Results may be less accurate"]
+
+    def test_annotate_clauses_flags_tofu(self) -> None:
+        clauses = [_clause("Some text with \ufffd replacement")]
+        warnings = annotate_clauses(clauses)
+        assert "Some text could not be read correctly. Results may contain errors" in warnings
+
+    def test_annotate_clauses_clean_document_has_no_warnings(self) -> None:
+        clauses = [_clause("Hello world", id="clause-1"), _clause("Another clause", id="clause-2")]
+        warnings = annotate_clauses(clauses)
+        assert warnings == []
+        assert all(c.is_non_english is False for c in clauses)

@@ -42,10 +42,10 @@ from openreview_cli.gateway.models import (
     record_cloud_call,
     reset_total_cloud_calls,
 )
-from openreview_cli.gateway.redaction import RedactingFilter, redact_key
+from openreview_cli.gateway.redaction import install_on_root_handlers, redact_key
 from openreview_cli.gateway.registry import load_registry
 from openreview_cli.gateway.tier_config import TierConfig
-from openreview_cli.slots import VALID_SLOTS
+from openreview_cli.slots import PRIMARY_ONLY_SLOTS, VALID_SLOTS
 from openreview_cli.storage.costs import check_daily_limit, check_session_limit
 
 logger = logging.getLogger(__name__)
@@ -126,7 +126,6 @@ def _is_empty_parts(parts: list[dict[str, Any]]) -> bool:
     return True
 
 
-_PRIMARY_ONLY_SLOTS = frozenset({"embedding", "reranking"})
 _SLOT_METHOD_MAP: dict[str, str] = {
     "reasoning": "chat",
     "extraction": "chat",
@@ -135,17 +134,6 @@ _SLOT_METHOD_MAP: dict[str, str] = {
     "graph": "chat",
     "grounding": "chat",
 }
-_REDACT_PATTERNS = [
-    "OPENAI_API_KEY",
-    "ANTHROPIC_API_KEY",
-    "GOOGLE_API_KEY",
-    "OPENROUTER_API_KEY",
-    "COHERE_API_KEY",
-    "HUGGINGFACE_API_KEY",
-    "CUSTOM_API_KEY",
-    "sk-",
-    "sk-ant-",
-]
 
 
 class Gateway:
@@ -164,8 +152,7 @@ class Gateway:
         self._cloud_calls_made = 0
         self._tier_config = TierConfig.from_config(self._config)
 
-        _filter = RedactingFilter(_REDACT_PATTERNS)
-        logging.getLogger().addFilter(_filter)
+        install_on_root_handlers()
 
         # Track env vars seeded by this instance so user-owned vars survive cleanup.
         self._env_seeded: list[str] = []
@@ -526,7 +513,7 @@ class Gateway:
                     time.sleep(retry_delay)
 
         fallback = cfg.get("fallback")
-        if slot in _PRIMARY_ONLY_SLOTS or not fallback:
+        if slot in PRIMARY_ONLY_SLOTS or not fallback:
             if last_error is not None:
                 classified = self._classify_error(last_error, provider)
                 raise classified from last_error

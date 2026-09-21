@@ -6,6 +6,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from textual.widgets import Input, ListView, Static
 
 from openreview_cli.gateway.router import VALID_SLOTS
 from openreview_cli.tui.app import OpenReviewApp
@@ -49,6 +50,8 @@ def _patch_all() -> None:
         "save_slot_config",
         "save_api_key",
         "gateway_health_check",
+        "get_slot_configs",
+        "save_slot_fallback",
     ):
         _originals[name] = getattr(gw_mod, name)
     gw_mod.list_providers = lambda: MOCK_PROVIDERS  # type: ignore[method-assign]
@@ -57,6 +60,8 @@ def _patch_all() -> None:
     gw_mod.save_slot_config = lambda s, p, m: None  # type: ignore[method-assign]
     gw_mod.save_api_key = lambda p, k: None  # type: ignore[method-assign]
     gw_mod.gateway_health_check = lambda: MOCK_HEALTH  # type: ignore[method-assign]
+    gw_mod.get_slot_configs = lambda: {}  # type: ignore[method-assign]
+    gw_mod.save_slot_fallback = lambda slot, model: None  # type: ignore[method-assign]
 
 
 def _restore_all() -> None:
@@ -305,5 +310,147 @@ class TestGatewayWizardExtended:
             assert key_input.value == pasted
 
 
-# Need Static for type checks in test_wizard_skips_key_when_saved
-from textual.widgets import Static
+class TestGatewayWizardFallback:
+    """Gap #1 — optional per-slot backup model on the model step."""
+
+    async def _select_reasoning_and_reach_step3(self, pilot, wizard) -> None:
+        """Select the ``reasoning`` chat slot by index, then reach step 3.
+
+        The slot list is ``sorted(VALID_SLOTS)`` so ``embedding`` is item 0; the
+        index is set explicitly and ``focus()`` is called before Enter because
+        the nav (#wizard-cancel) is composed first and would otherwise receive
+        the keypress and dismiss the screen.
+        """
+        slot_list = wizard.query_one("#slot-list", ListView)
+        slot_list.index = sorted(VALID_SLOTS).index("reasoning")
+        await pilot.pause()
+        slot_list.focus()
+        await pilot.pause()
+        await pilot.press("enter")
+        await pilot.pause()
+        await pilot.click("#wizard-next")
+        await pilot.pause()
+        await pilot.click("#provider-list ListItem")
+        await pilot.pause()
+        await pilot.click("#wizard-next")
+        await pilot.pause()
+
+    async def test_wizard_offers_fallback_for_chat_slot(self) -> None:
+        app = OpenReviewApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            wizard = gw_mod.GatewayWizard()
+            await app.push_screen(wizard)
+            await pilot.pause()
+            await self._select_reasoning_and_reach_step3(pilot, wizard)
+
+            assert wizard._slot == "reasoning"
+            assert wizard.query("#fallback-input")
+
+    async def test_wizard_hides_fallback_for_primary_only_slots(self) -> None:
+        """The default path clicks the first slot item, i.e. ``embedding``.
+
+        ``_render_slot_step`` mounts ``sorted(VALID_SLOTS)`` so the first
+        ``#slot-list`` item is ``embedding``, a primary-only slot with no
+        backup model.
+        """
+        app = OpenReviewApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            wizard = gw_mod.GatewayWizard()
+            await app.push_screen(wizard)
+            await pilot.pause()
+            await pilot.click("#slot-list ListItem")
+            await pilot.pause()
+            await pilot.click("#wizard-next")
+            await pilot.pause()
+            await pilot.click("#provider-list ListItem")
+            await pilot.pause()
+            await pilot.click("#wizard-next")
+            await pilot.pause()
+
+            assert wizard._slot == "embedding"
+            assert list(wizard.query("#fallback-input")) == []
+
+    async def test_wizard_prefills_existing_fallback(self) -> None:
+        gw_mod.get_slot_configs = lambda: {  # type: ignore[method-assign]
+            "reasoning": {
+                "provider": "anthropic",
+                "model": "claude-3-5-haiku",
+                "configured": True,
+                "fallback": "anthropic/claude-3-5-haiku",
+            }
+        }
+        app = OpenReviewApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            wizard = gw_mod.GatewayWizard()
+            await app.push_screen(wizard)
+            await pilot.pause()
+            wizard._slot = "reasoning"
+            wizard._provider = "anthropic"
+            wizard._show_step(3)
+            await pilot.pause()
+
+            assert wizard.query_one("#fallback-input", Input).value == "anthropic/claude-3-5-haiku"
+
+    async def test_wizard_saves_fallback(self) -> None:
+        mock_fallback = MagicMock()
+        gw_mod.save_slot_fallback = mock_fallback  # type: ignore[method-assign]
+        gw_mod.gateway_health_check = lambda: MOCK_HEALTH_OK  # type: ignore[method-assign]
+        app = OpenReviewApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            wizard = gw_mod.GatewayWizard()
+            await app.push_screen(wizard)
+            await pilot.pause()
+            wizard._slot = "extraction"
+            wizard._provider = "openai"
+            wizard._model = "gpt-4o"
+            wizard._fallback = "anthropic/haiku"
+            wizard._do_save()
+            await pilot.pause()
+
+        mock_fallback.assert_called_once_with("extraction", "anthropic/haiku")
+
+    async def test_wizard_clears_fallback_when_blank(self) -> None:
+        mock_fallback = MagicMock()
+        gw_mod.save_slot_fallback = mock_fallback  # type: ignore[method-assign]
+        gw_mod.gateway_health_check = lambda: MOCK_HEALTH_OK  # type: ignore[method-assign]
+        app = OpenReviewApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            wizard = gw_mod.GatewayWizard()
+            await app.push_screen(wizard)
+            await pilot.pause()
+            wizard._slot = "extraction"
+            wizard._provider = "openai"
+            wizard._model = "gpt-4o"
+            wizard._fallback = ""
+            wizard._do_save()
+            await pilot.pause()
+
+        mock_fallback.assert_called_once_with("extraction", None)
+
+    async def test_wizard_keeps_prefilled_fallback_when_unchanged(self) -> None:
+        """Regression guard: an unchanged pre-filled backup must not be cleared."""
+        gw_mod.get_slot_configs = lambda: {  # type: ignore[method-assign]
+            "extraction": {
+                "provider": "anthropic",
+                "model": "claude-3-5-haiku",
+                "configured": True,
+                "fallback": "anthropic/claude-3-5-haiku",
+            }
+        }
+        mock_fallback = MagicMock()
+        gw_mod.save_slot_fallback = mock_fallback  # type: ignore[method-assign]
+        gw_mod.gateway_health_check = lambda: MOCK_HEALTH_OK  # type: ignore[method-assign]
+        app = OpenReviewApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            wizard = gw_mod.GatewayWizard()
+            await app.push_screen(wizard)
+            await pilot.pause()
+            wizard._slot = "extraction"
+            wizard._provider = "anthropic"
+            wizard._model = "claude-3-5-haiku"
+            wizard._show_step(3)
+            await pilot.pause()
+            wizard._do_save()
+            await pilot.pause()
+
+        mock_fallback.assert_called_once_with("extraction", "anthropic/claude-3-5-haiku")

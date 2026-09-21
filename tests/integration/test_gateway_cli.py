@@ -8,13 +8,16 @@ occur.
 
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from typer.testing import CliRunner
 
 from openreview_cli.app import app
 from openreview_cli.gateway import registry as _reg_mod
+from openreview_cli.gateway.models import ModelEntry, ProviderInfo
 from openreview_cli.gateway.router import Gateway
 from openreview_cli.slots import VALID_SLOTS
 
@@ -31,6 +34,37 @@ def _provider_stub(name: str, auth_required: bool, model_count: int) -> SimpleNa
 
 def _model_stub(slots: list[str], context: int, recommended: bool = False) -> SimpleNamespace:
     return SimpleNamespace(slots=slots, context=context, recommended=recommended)
+
+
+def _real_provider(
+    name: str,
+    models: dict[str, ModelEntry],
+    auth_required: bool = True,
+) -> ProviderInfo:
+    return ProviderInfo(name=name, auth_required=auth_required, models=models)
+
+
+def _discovered(model_id: str, parameter_size: str = "7B") -> dict[str, Any]:
+    return {
+        "model_id": model_id,
+        "slots": ["reasoning", "extraction", "graph"],
+        "ram": None,
+        "recommended": False,
+        "status": "available",
+        "note": f"Ollama local — {parameter_size}",
+    }
+
+
+def _discover_two() -> list[dict[str, Any]]:
+    return [_discovered("qwen2.5:7b"), _discovered("mistral:7b")]
+
+
+def _discover_empty() -> list[dict[str, Any]]:
+    return []
+
+
+def _discover_forbidden() -> list[dict[str, Any]]:
+    raise AssertionError("discover_ollama must not be called")
 
 
 class TestGatewayCli:
@@ -132,6 +166,122 @@ class TestGatewayCli:
         result = runner.invoke(app, ["gateway", "models", "nonexistent"])
         assert result.exit_code == 0
         assert "No models found for provider 'nonexistent'." in result.stdout
+
+    @pytest.mark.integration
+    def test_gateway_models_unknown_provider(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A provider absent from the registry exits 1 with the error message."""
+        monkeypatch.setattr(_reg_mod, "load_registry", dict)
+
+        result = runner.invoke(app, ["gateway", "models", "ghost"])
+        assert result.exit_code == 1
+        assert "No provider 'ghost' found." in result.output
+
+    @pytest.mark.integration
+    def test_gateway_models_ollama_merges_discovered(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Discovered Ollama models are merged alongside the bundled ones."""
+        monkeypatch.setattr(
+            _reg_mod,
+            "load_registry",
+            lambda: {
+                "ollama": _real_provider(
+                    "ollama",
+                    {"llama3.2:3b": ModelEntry(slots=["reasoning"], context=8192)},
+                    auth_required=False,
+                )
+            },
+        )
+        monkeypatch.setattr(_reg_mod, "discover_ollama", _discover_two)
+
+        result = runner.invoke(app, ["gateway", "models", "ollama"])
+        assert result.exit_code == 0
+        for model_id in ("llama3.2:3b", "qwen2.5:7b", "mistral:7b"):
+            assert model_id in result.stdout
+
+    @pytest.mark.integration
+    def test_gateway_models_ollama_json_includes_discovered(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The --json payload lists bundled and discovered models together."""
+        monkeypatch.setattr(
+            _reg_mod,
+            "load_registry",
+            lambda: {
+                "ollama": _real_provider(
+                    "ollama",
+                    {"llama3.2:3b": ModelEntry(slots=["reasoning"], context=8192)},
+                    auth_required=False,
+                )
+            },
+        )
+        monkeypatch.setattr(_reg_mod, "discover_ollama", _discover_two)
+
+        result = runner.invoke(app, ["gateway", "models", "ollama", "--json"])
+        assert result.exit_code == 0
+        rows = {row["id"]: row for row in json.loads(result.stdout)["ollama"]}
+        assert set(rows) == {"llama3.2:3b", "qwen2.5:7b", "mistral:7b"}
+        assert rows["qwen2.5:7b"]["note"].startswith("Ollama local — ")
+        assert rows["mistral:7b"]["note"].startswith("Ollama local — ")
+
+    @pytest.mark.integration
+    def test_gateway_models_non_ollama_never_discovers(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Discovery is Ollama-only; another provider must not probe the server."""
+        monkeypatch.setattr(
+            _reg_mod,
+            "load_registry",
+            lambda: {
+                "openai": _real_provider("openai", {"gpt-4o": ModelEntry(slots=["reasoning"])})
+            },
+        )
+        monkeypatch.setattr(_reg_mod, "discover_ollama", _discover_forbidden)
+
+        result = runner.invoke(app, ["gateway", "models", "openai"])
+        assert result.exit_code == 0
+        assert "gpt-4o" in result.stdout
+
+    @pytest.mark.integration
+    def test_gateway_models_ollama_unreachable_still_lists_bundled(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An unreachable Ollama server leaves the bundled models intact."""
+        monkeypatch.setattr(
+            _reg_mod,
+            "load_registry",
+            lambda: {
+                "ollama": _real_provider(
+                    "ollama",
+                    {"llama3.2:3b": ModelEntry(slots=["reasoning"], context=8192)},
+                    auth_required=False,
+                )
+            },
+        )
+        monkeypatch.setattr(_reg_mod, "discover_ollama", _discover_empty)
+
+        result = runner.invoke(app, ["gateway", "models", "ollama"])
+        assert result.exit_code == 0
+        assert "llama3.2:3b" in result.stdout
+        assert "Traceback" not in result.stdout
+
+    @pytest.mark.integration
+    def test_gateway_models_no_discover_skips_probe(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """--no-discover opts out of querying the local Ollama server."""
+        monkeypatch.setattr(
+            _reg_mod,
+            "load_registry",
+            lambda: {
+                "ollama": _real_provider(
+                    "ollama",
+                    {"llama3.2:3b": ModelEntry(slots=["reasoning"], context=8192)},
+                    auth_required=False,
+                )
+            },
+        )
+        monkeypatch.setattr(_reg_mod, "discover_ollama", _discover_forbidden)
+
+        result = runner.invoke(app, ["gateway", "models", "ollama", "--no-discover"])
+        assert result.exit_code == 0
+        assert "llama3.2:3b" in result.stdout
 
     @pytest.mark.integration
     def test_gateway_set(self, monkeypatch: pytest.MonkeyPatch) -> None:

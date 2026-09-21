@@ -15,6 +15,7 @@ from openreview_cli.config.auth import ensure_auth
 from openreview_cli.config.loader import get_config_value, load_config, set_config_value
 from openreview_cli.config.paths import get_config_dir, get_data_dir, get_log_dir
 from openreview_cli.errors import EXIT_USAGE, config_error
+from openreview_cli.gateway.redaction import install_on_root_handlers
 from openreview_cli.storage.clients import (
     add_client,
     client_has_reviews,
@@ -248,6 +249,8 @@ def _init(debug: bool = False, verbose: bool = False) -> None:
     _sh.setFormatter(_fmt)
     _sh._openreview_owned = True  # type: ignore[attr-defined]
     root.addHandler(_sh)
+
+    install_on_root_handlers()
 
     config_dir = get_config_dir()
     config = load_config(config_dir / "config.yml")
@@ -1485,15 +1488,32 @@ def gateway_providers(json_mode: bool = typer.Option(False, "--json")) -> None:
 def gateway_models(
     provider: str,
     json_mode: bool = typer.Option(False, "--json"),
+    no_discover: bool = typer.Option(
+        False, "--no-discover", help="Skip querying a local Ollama server for installed models."
+    ),
 ) -> None:
     """List available models for a provider."""
-    from openreview_cli.gateway.registry import load_registry
+    from openreview_cli.gateway.models import ModelEntry
+    from openreview_cli.gateway.registry import discover_ollama, load_registry
 
     registry = load_registry()
     p = registry.get(provider)
     if p is None:
         typer.echo(f"No provider '{provider}' found.", err=True)
         raise typer.Exit(code=1)
+
+    if provider == "ollama" and not no_discover:
+        for entry in discover_ollama():
+            model_id = entry.get("model_id")
+            if not model_id or model_id in p.models:  # bundled entries win
+                continue
+            p.models[model_id] = ModelEntry(
+                slots=list(entry.get("slots") or []),
+                ram=entry.get("ram"),
+                recommended=bool(entry.get("recommended", False)),
+                status=entry.get("status"),
+                note=entry.get("note"),
+            )
 
     if json_mode:
         data = {
@@ -1561,6 +1581,51 @@ def gateway_set(slot: str, model: str) -> None:
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1) from None
+
+
+@gateway_app.command("fallback")
+def gateway_fallback(
+    slot: str,
+    model: str | None = typer.Argument(
+        None, help="Backup model id, e.g. anthropic/claude-3-5-haiku"
+    ),
+    clear: bool = typer.Option(False, "--clear", help="Remove the backup model for this slot."),
+) -> None:
+    """Set or clear the optional backup model for a slot (no fallback by default)."""
+    from openreview_cli.config.loader import set_config_value
+    from openreview_cli.config.paths import get_config_dir
+    from openreview_cli.slots import PRIMARY_ONLY_SLOTS, VALID_SLOTS
+
+    if slot not in VALID_SLOTS:
+        typer.echo(
+            f"Invalid slot '{slot}'. Valid slots: {', '.join(sorted(VALID_SLOTS))}", err=True
+        )
+        raise typer.Exit(code=1)
+    if slot in PRIMARY_ONLY_SLOTS:
+        typer.echo(
+            f"Slot '{slot}' is primary-only — the gateway never uses a backup model for it.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    if clear == (model is not None):
+        typer.echo("Provide a model id, or --clear to remove the backup.", err=True)
+        raise typer.Exit(code=1)
+
+    config_path = get_config_dir() / "config.yml"
+    try:
+        set_config_value(
+            config_path,
+            f"gateway.models.{slot}.fallback",
+            model if model is not None else "null",
+        )
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
+
+    if model is not None:
+        typer.echo(f"Backup model for {slot} → {model} (used only if the primary fails).")
+    else:
+        typer.echo(f"Backup model for {slot} cleared.")
 
 
 @gateway_app.command("refresh")

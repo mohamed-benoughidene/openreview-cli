@@ -145,6 +145,9 @@ class SettingsTab(Vertical):
 
             display_name = slot.capitalize()
             lines.append(f"  {icon} [bold]{display_name}[/bold]  {provider}/{model}")
+            backup = cfg.get("fallback")
+            if backup:
+                lines.append(f"      [dim]↳ backup: {backup}[/dim]")
 
         return "\n".join(lines)
 

@@ -82,6 +82,27 @@ def detect_tofu(text: str) -> bool:
     return "\ufffd" in text
 
 
+def annotate_clauses(clauses: list[Clause]) -> list[str]:
+    """Set ``Clause.is_non_english`` in place; return document-level parse warnings."""
+    languages: set[str] = set()
+    has_tofu = False
+    for clause in clauses:
+        language = detect_non_english(clause.text)
+        clause.is_non_english = language is not None
+        if language:
+            languages.add(language)
+        if not has_tofu and detect_tofu(clause.text):
+            has_tofu = True
+
+    warnings = [
+        f"The contract appears to be in {language}. Results may be less accurate"
+        for language in sorted(languages)
+    ]
+    if has_tofu:
+        warnings.append("Some text could not be read correctly. Results may contain errors")
+    return warnings
+
+
 def build_hierarchy(
     boundaries: list[tuple[int, int]],
     clause_starts: list[tuple[int, dict[str, Any]]],

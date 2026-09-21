@@ -8,3 +8,5 @@ without triggering ``gateway/__init__.py`` (which pulls in litellm via
 VALID_SLOTS: frozenset[str] = frozenset(
     {"reasoning", "extraction", "embedding", "reranking", "graph", "grounding"}
 )
+
+PRIMARY_ONLY_SLOTS: frozenset[str] = frozenset({"embedding", "reranking"})
