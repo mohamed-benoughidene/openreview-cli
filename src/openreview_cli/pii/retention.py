@@ -6,8 +6,10 @@
 """
 
 import sqlite3
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
+_RETENTION_DAYS = 30
 
 
 def _get_conn(db_path: Path) -> sqlite3.Connection:
@@ -37,6 +39,13 @@ def cleanup_expired(db_path: Path) -> int:
                 expired_hashes,
             )
         deleted = conn.execute("DELETE FROM pii_cache WHERE expiry_at < ?", (now,)).rowcount
+        cutoff = (datetime.now(UTC) - timedelta(days=_RETENTION_DAYS)).isoformat()
+        conn.execute(
+            "DELETE FROM pii_audit_trail "
+            "WHERE timestamp < ? AND NOT EXISTS ("
+            "SELECT 1 FROM pii_cache pc WHERE pc.document_hash = pii_audit_trail.document_hash)",
+            (cutoff,),
+        )
         conn.commit()
         return deleted
     finally:
@@ -52,8 +61,6 @@ def delete_pii_data(db_path: Path, document_hash_prefix: str) -> dict[str, bool 
             "SELECT document_hash, mapping_path, review_result_path FROM pii_cache WHERE document_hash LIKE ?",
             (f"{document_hash_prefix}%",),
         ).fetchall()
-        if not rows:
-            return {"mapping_removed": False, "audit_records": 0, "cache_removed": False}
         for row in rows:
             for path_key in ("mapping_path", "review_result_path"):
                 p = Path(row[path_key])
@@ -69,7 +76,7 @@ def delete_pii_data(db_path: Path, document_hash_prefix: str) -> dict[str, bool 
         ).rowcount
         conn.commit()
         return {
-            "mapping_removed": True,
+            "mapping_removed": bool(rows),
             "audit_records": audit_count,
             "cache_removed": cache_deleted > 0,
         }

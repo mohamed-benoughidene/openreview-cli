@@ -34,7 +34,6 @@ class ChunkConfig:
     chunk_size: int = 512
     chunk_overlap: int = 50
     group_short_clauses: bool = True
-    respect_clause_boundaries: bool = True
 
     def __post_init__(self) -> None:
         if self.chunk_overlap >= self.chunk_size:

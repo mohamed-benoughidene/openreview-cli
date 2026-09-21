@@ -522,17 +522,18 @@ class TestLegacyPIIPersistence:
             "expected exactly 1. Legacy strip did not write the audit row."
         )
 
-    def test_legacy_clean_strip_writes_no_persistence(
+    def test_legacy_clean_strip_records_only_an_audit_row(
         self,
         tmp_path: Path,
         xdg_isolated: dict[str, Path],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """B4: a clean legacy strip (PiiResult with empty mapping) writes
-        NO persistence — no cache row, no audit row, no encrypted mapping.
+        """B4: a clean legacy strip (PiiResult with empty mapping) records
+        only an audit row — no cache row, no encrypted mapping.
 
-        The shared helper's early-return on empty mapping enforces this
-        invariant across all callers. Regression guard for (B2) and (B3)."""
+        The shared helper always writes the audit row and gates the
+        mapping/cache writes on a non-empty mapping. Regression guard for
+        (B2) and (B3)."""
         from openreview_cli.review.base import ReviewCommand
 
         pdf_path = _stub_review_command_deps(monkeypatch, _pii_result_no_mapping(), tmp_path)
@@ -552,7 +553,7 @@ class TestLegacyPIIPersistence:
         )
 
         assert cache_row is None, f"Negative cache row written for clean doc: {cache_row!r}"
-        assert audit_count == 0, f"Negative audit row written for clean doc: count={audit_count}"
+        assert audit_count == 1, f"Clean legacy strip audit row count = {audit_count}, expected 1"
         assert not mapping_path.exists(), f"Encrypted mapping written for clean doc: {mapping_path}"
 
     def test_legacy_pii_bearing_strip_does_not_duplicate_audit_on_cache_hit(

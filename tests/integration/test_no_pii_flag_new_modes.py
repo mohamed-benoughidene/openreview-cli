@@ -53,6 +53,7 @@ def _qa_response() -> str:
     )
 
 
+@pytest.mark.usefixtures("isolated_xdg")
 @pytest.mark.integration
 @pytest.mark.no_memory
 class TestNewModesNoPii:

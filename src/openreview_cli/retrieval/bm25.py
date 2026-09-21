@@ -26,15 +26,15 @@ def preprocess_query(query_text: str) -> str:
     3. Join terms with OR — FTS5 reads a bare multi-term query as an implicit
        AND, which matches nothing for natural-language questions
     4. Keep uppercase AND/OR/NOT as operators where they separate two terms;
-       FTS5 operators are uppercase-only, so a lowercased operator would be
-       silently demoted to an ordinary term
+       a leading operator has no left operand and is emitted as an ordinary
+       term, since FTS5 operators are uppercase-only and a lowercased operator
+       would be silently demoted anyway
     """
     expression: list[str] = []
     pending_operator: str | None = None
     for token in _tokenize(query_text):
-        if token in _FTS_OPERATORS:
-            if expression:
-                pending_operator = token
+        if token in _FTS_OPERATORS and expression:
+            pending_operator = token
             continue
         if expression:
             expression.append(pending_operator or "OR")

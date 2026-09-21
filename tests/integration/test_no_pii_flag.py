@@ -23,12 +23,39 @@ import pytest
 from typer.testing import CliRunner
 
 from openreview_cli.app import app
+from openreview_cli.storage import init_database
 
 runner = CliRunner()
 
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
 PDF = FIXTURES / "pdf"
 SIMPLE_CONTRACT = str(PDF / "simple_contract.pdf")
+
+
+@pytest.fixture(autouse=True)
+def _isolate_xdg(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Point the XDG config/data/cache dirs at tmp_path so the mocked legacy
+    commands never write into the developer's real ~/.config/openreview."""
+    config_base = tmp_path / "config"
+    data_base = tmp_path / "data"
+    for base in (config_base, data_base):
+        base.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(config_base))
+    monkeypatch.setenv("XDG_DATA_HOME", str(data_base))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+
+    config_dir = config_base / "openreview"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    (config_dir / "config.yml").write_text(
+        "privacy:\n  tier: balanced\ngateway:\n  models: {}\n",
+        encoding="utf-8",
+    )
+
+    data_dir = data_base / "openreview"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    init_database(data_dir / "openreview.db")
+
 
 # ── helpers ──
 
@@ -39,11 +66,11 @@ def _empty_pii_result() -> Any:
     PII-3: the legacy ReviewCommand.run now also calls
     persist_pii_for_document after strip_and_persist. A MagicMock's
     auto-generated `.mapping` attribute is a child MagicMock (truthy),
-    which would cause the helper's empty-mapping short-circuit to fail
-    and trigger a swallowed exception → spurious warning log. Returning
-    a real PiiResult with mapping={} keeps the helper's early-return
-    path and exercises the actual legacy code without real persistence
-    (the short-circuit writes nothing).
+    which would make the helper attempt mapping/cache writes for a
+    document with no PII and trigger a swallowed exception → spurious
+    warning log. Returning a real PiiResult with mapping={} exercises the
+    helper's clean-document path: one audit row with entity_count 0, no
+    mapping file and no cache row.
     """
     from openreview_cli.pii.models import PiiResult
 

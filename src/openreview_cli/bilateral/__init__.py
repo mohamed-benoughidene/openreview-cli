@@ -319,10 +319,10 @@ def _process_document(
         from openreview_cli.pii.persist import persist_pii_for_document
 
         clauses, pii_result = strip_pii_clauses(clauses, doc, allow_partial=allow_partial_pii)
-        # PII-2: write the governance triplet (encrypted mapping + pii_cache
-        # + pii_audit_trail) for this document. Clean documents (empty
-        # mapping) short-circuit inside persist_pii_for_document and write
-        # nothing.
+        # PII-2: write governance for this document: every strip writes one
+        # pii_audit_trail row (a clean document records entity_count 0), while
+        # the encrypted mapping, the stripped text and the pii_cache row are
+        # written only when PII was detected.
         persist_pii_for_document(doc_path, pii_result)
         mark_pii_available()
     else:

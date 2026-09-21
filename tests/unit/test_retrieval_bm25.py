@@ -62,16 +62,16 @@ class TestPreprocessQuery:
         result = preprocess_query("a NOT b NOT c")
         assert result == '"a" NOT "b" NOT "c"'
 
-    def test_operator_without_a_left_term_is_dropped(self) -> None:
-        assert preprocess_query("OR confidential") == '"confidential"'
-        assert preprocess_query("NOT confidential") == '"confidential"'
+    def test_operator_without_a_left_term_is_treated_as_a_term(self) -> None:
+        assert preprocess_query("OR confidential") == '"or" OR "confidential"'
+        assert preprocess_query("NOT confidential") == '"not" OR "confidential"'
 
     def test_operator_without_a_right_term_is_dropped(self) -> None:
         assert preprocess_query("confidential OR") == '"confidential"'
 
-    def test_operator_only_query_returns_empty(self) -> None:
-        assert preprocess_query("AND") == ""
-        assert preprocess_query("OR OR") == ""
+    def test_operator_only_query_is_treated_as_a_term(self) -> None:
+        assert preprocess_query("AND") == '"and"'
+        assert preprocess_query("OR OR") == '"or"'
 
     def test_repeated_operators_collapse(self) -> None:
         assert preprocess_query("a OR OR b") == '"a" OR "b"'

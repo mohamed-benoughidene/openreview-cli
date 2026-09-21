@@ -1,9 +1,10 @@
 """PII persistence — audit trail rows + cache rows written by the review pipeline.
 
-Regression coverage for D-8: the supported review pipeline (StripStage) runs PII
-detection/stripping but never persists the result to the PII governance lifecycle
-(pii_audit_trail table / pii_cache rows), so ``pii list`` always shows
-entity_count=0 and the audit trail is never written.
+Regression coverage for D-8: the supported review pipeline (StripStage) persists
+the result of every PII strip to the PII governance lifecycle (pii_audit_trail
+table / pii_cache rows), so ``pii list`` reports the recorded entity_count. Every
+strip records one ``pii_audit_trail`` row; a clean document records
+``entity_count=0`` and still gets no ``pii_cache`` row.
 """
 
 from __future__ import annotations
@@ -171,7 +172,9 @@ def test_persist_pii_result_writes_cache_and_audit_rows(tmp_path: Path) -> None:
     assert row["status"] == "success"
 
 
-def test_persist_pii_result_no_mapping_does_nothing(tmp_path: Path) -> None:
+def test_persist_pii_result_records_an_audit_row_for_a_clean_document(
+    tmp_path: Path,
+) -> None:
     db = tmp_path / "t.db"
     init_database(db)
     review_dir = tmp_path / "reviews" / ("n" * 12)
@@ -187,11 +190,14 @@ def test_persist_pii_result_no_mapping_does_nothing(tmp_path: Path) -> None:
 
     assert PiiCache(db).get("n" * 64) is None
     conn = sqlite3.connect(str(db))
+    conn.row_factory = sqlite3.Row
     try:
-        count = conn.execute("SELECT COUNT(*) FROM pii_audit_trail").fetchone()[0]
+        row = conn.execute("SELECT * FROM pii_audit_trail").fetchone()
     finally:
         conn.close()
-    assert count == 0
+    assert row is not None
+    assert row["entity_count"] == 0
+    assert row["status"] == "success"
     assert not (review_dir / "stripped.txt").exists()
     assert not (review_dir / "pii_map.enc").exists()
 

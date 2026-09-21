@@ -224,6 +224,47 @@ def fixtures_dir() -> Path:
     return FIXTURES_DIR
 
 
+@pytest.fixture
+def isolated_xdg(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
+    """Redirect XDG config/data/cache dirs at a per-test ``tmp_path``.
+
+    platformdirs appends the app name, so ``get_config_dir()`` resolves to
+    ``XDG_CONFIG_HOME/openreview`` and ``get_data_dir()`` to
+    ``XDG_DATA_HOME/openreview``. The fixture materializes a ``config.yml``
+    and initializes the SQLite schema so commands exercise the real data
+    path without writing into the developer's directories.
+    """
+    from openreview_cli.storage import init_database
+
+    config_base = tmp_path / "config"
+    data_base = tmp_path / "data"
+    for base in (config_base, data_base):
+        base.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(config_base))
+    monkeypatch.setenv("XDG_DATA_HOME", str(data_base))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+
+    openreview_config_dir = config_base / "openreview"
+    openreview_config_dir.mkdir(parents=True, exist_ok=True)
+    config_path = openreview_config_dir / "config.yml"
+    config_path.write_text(
+        "privacy:\n  tier: balanced\ngateway:\n  models: {}\n",
+        encoding="utf-8",
+    )
+
+    openreview_data_dir = data_base / "openreview"
+    openreview_data_dir.mkdir(parents=True, exist_ok=True)
+    db_path = openreview_data_dir / "openreview.db"
+    init_database(db_path)
+
+    return {
+        "config_path": config_path,
+        "data_dir": openreview_data_dir,
+        "db_path": db_path,
+    }
+
+
 @pytest.fixture(scope="session")
 def pii_engine() -> "PiiEngine":
     """Session-scoped shared PiiEngine for tests that build their own engine."""
