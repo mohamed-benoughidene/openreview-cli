@@ -134,6 +134,22 @@ class TestSettingsTab:
             assert btn is not None
             assert btn.visible
 
+    # ── Gap #1: gateway backup model line ───────────────────────────
+
+    async def test_gateway_section_shows_backup_model(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A slot with a backup model renders a read-only backup line."""
+        monkeypatch.setitem(MOCK_SLOTS["reasoning"], "fallback", "anthropic/claude-3-5-haiku")
+
+        app = OpenReviewApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.press("5")
+            await pilot.pause()
+
+            display = app.query_one("#section-content-display", Static)
+            assert "claude-3-5-haiku" in display.content
+
     # ── T042: About section details ─────────────────────────────────
 
     async def test_about_shows_version(self) -> None:

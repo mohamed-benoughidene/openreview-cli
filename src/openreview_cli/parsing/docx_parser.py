@@ -1,10 +1,42 @@
+import contextlib
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
+from xml.etree import ElementTree
 
 from openreview_cli.parsing.models import Clause, TrackedChange
 
 _WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+_EXT_PROPS_NS = "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"
+
+
+def _clean(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    return value.strip() or None
+
+
+def docx_metadata(doc: Any) -> tuple[str | None, str | None, str | None]:
+    """Return (author, title, company); company comes from docProps/app.xml."""
+    props = getattr(doc, "core_properties", None)
+    return (
+        _clean(getattr(props, "author", None)),
+        _clean(getattr(props, "title", None)),
+        _docx_company(doc),
+    )
+
+
+def _docx_company(doc: Any) -> str | None:
+    try:
+        for part in doc.part.package.iter_parts():
+            if str(part.partname) != "/docProps/app.xml":
+                continue
+            root = ElementTree.fromstring(part.blob)
+            element = root.find(f"{{{_EXT_PROPS_NS}}}Company")
+            return _clean(element.text if element is not None else None)
+    except Exception:
+        return None
+    return None
 
 
 def get_heading_level(paragraph: Any) -> int | None:
@@ -80,6 +112,9 @@ class DocxParser:
     def __init__(self, path: Path):
         self.path = path
         self.tracked_changes: list[TrackedChange] = []
+        self.author: str | None = None
+        self.title: str | None = None
+        self.company: str | None = None
 
     def parse(self) -> Iterator[Clause]:
         from docx import Document
@@ -95,6 +130,9 @@ class DocxParser:
                 message="The file appears to be corrupt or truncated.",
                 action="Provide a valid DOCX file.",
             ) from None
+
+        with contextlib.suppress(Exception):
+            self.author, self.title, self.company = docx_metadata(doc)
 
         from openreview_cli.parsing.clause_detector import (
             count_paragraphs,

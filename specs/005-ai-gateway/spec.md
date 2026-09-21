@@ -76,6 +76,7 @@ A user runs `openreview gateway setup` for the first time. An interactive wizard
 1. **Given** no existing configuration, **When** the user runs `openreview gateway setup`, **Then** the wizard prompts for each of the 5 slots, shows provider choices and model choices, and saves a valid configuration.
 2. **Given** the user selects Ollama for all slots, **When** setup completes, **Then** no API keys are requested and the configuration works without any network access.
 3. **Given** the user enters an API key, **When** setup completes, **Then** the key is saved to `auth.json` with mode 600 and is validated before saving.
+4. **Given** the user configures a chat slot, **When** they are prompted for an optional backup model, **Then** they may enter one or press Enter to skip, and the configuration remains valid with no backup model set.
 
 ---
 
@@ -137,11 +138,12 @@ The gateway ships with a cached `models.json` listing available models per provi
 - **FR-012**: System MUST support provider-specific pass-through parameters via an `extra_params` field on model configuration, per product-blueprint revision R-4.
 - **FR-013**: System MUST support an all-local configuration where no network calls are made (all slots configured to Ollama).
 - **FR-014**: System MUST validate configuration at load time and report missing or invalid fields before any API call is attempted.
-- **FR-015**: System MUST provide CLI subcommands: `gateway setup`, `gateway status`, `gateway providers`, `gateway models <provider>`, `gateway set <slot> <model>`, `gateway refresh`, `gateway test <slot>`, `gateway costs`.
+- **FR-015**: System MUST provide CLI subcommands: `gateway setup`, `gateway status`, `gateway providers`, `gateway models <provider>`, `gateway set <slot> <model>`, `gateway fallback <slot> <model>|--clear`, `gateway refresh`, `gateway test <slot>`, `gateway costs`.
+- **FR-016** (amendment 2026-09-21, gap #1): Per-slot backup models are opt-in: `gateway.models.<slot>.fallback` defaults to `null` and is only ever written by the user (CLI `openreview gateway fallback`, the CLI setup wizard, the Textual gateway wizard, or `openreview config set`). The application MUST NOT ship a default backup model and MUST NOT require one to start or to run a review. Slots `embedding` and `reranking` are primary-only and MUST NOT accept a backup.
 
 ### Key Entities
 
-- **ModelSlot**: Represents one of the 5 task-specific model assignments (reasoning, extraction, embedding, reranking, graph). Has a primary model, optional fallback model, and slot-specific parameters.
+- **ModelSlot**: Represents one of the 5 task-specific model assignments (reasoning, extraction, embedding, reranking, graph). Has a primary model, optional fallback model, and slot-specific parameters. Per FR-016, `fallback` is optional, user-set, defaults to `null`, and is never populated by the application.
 - **Provider**: Represents an AI service (OpenAI, Anthropic, Ollama, etc.). Has a name, authentication method, and a set of available models.
 - **ModelEntry**: A specific model offered by a provider. Has a model identifier, compatible slots, context window size, recommended flag, and optional metadata (RAM requirements for local models, embedding dimensions).
 - **CostRecord**: A log entry capturing token usage (prompt tokens, completion tokens), estimated cost, provider, model, slot, session_id, and timestamp.

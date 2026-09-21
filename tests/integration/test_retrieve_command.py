@@ -5,6 +5,7 @@ from __future__ import annotations
 import json as json_lib
 from pathlib import Path
 from typing import Any, cast
+from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
@@ -421,3 +422,101 @@ class TestRetrieveCommand:
             assert len(sec1["hierarchy_chain"]) == 2
             assert "Article 3" in sec1["hierarchy_chain"][0]
             assert "Section 3.1" in sec1["hierarchy_chain"][1]
+
+
+class TestRetrieveTopKAboveDefaultRerankDepth:
+    """`--top-k` above the default `--rerank-depth` (20) must work without touching `--rerank`."""
+
+    def _isolate_user_dirs(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg_config"))
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg_data"))
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg_state"))
+
+    def test_retrieve_top_k_above_default_rerank_depth(
+        self,
+        runner: CliRunner,
+        indexed_db: Path,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        self._isolate_user_dirs(monkeypatch, tmp_path)
+        result = runner.invoke(
+            app,
+            [
+                "retrieve",
+                "confidentiality",
+                str(FIXTURE_PATH),
+                "--method",
+                "sparse",
+                "--top-k",
+                "30",
+                "--format",
+                "json",
+                "--db-dir",
+                str(indexed_db.parent),
+            ],
+        )
+        assert result.exit_code == 0, f"exit {result.exit_code}: {result.output}"
+        data = _extract_json_from_output(result.output)
+        assert data["top_k"] == 30
+        assert len(data["results"]) == 2
+        assert [r["chunk_id"] for r in data["results"]] == ["chunk-004", "chunk-007"]
+
+    @patch("openreview_cli.gateway.router.Gateway")
+    def test_retrieve_top_k_30_with_rerank_applies_scores_without_raising(
+        self,
+        mock_cls: MagicMock,
+        runner: CliRunner,
+        indexed_db: Path,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """`--top-k 30 --rerank` must not raise on the rerank path and must apply scores.
+
+        The fixture yields only 2 candidates, so this does not prove the
+        candidate pool widened to 30 — it guards that the rerank path accepts a
+        `--top-k` above the default rerank depth and that the reranked scores
+        are written onto the results.
+        """
+        self._isolate_user_dirs(monkeypatch, tmp_path)
+        mock_cls.return_value.rerank.return_value = [{"index": 0, "relevance_score": 0.9}]
+        result = runner.invoke(
+            app,
+            [
+                "retrieve",
+                "confidentiality",
+                str(FIXTURE_PATH),
+                "--method",
+                "sparse",
+                "--top-k",
+                "30",
+                "--rerank",
+                "--format",
+                "json",
+                "--db-dir",
+                str(indexed_db.parent),
+            ],
+        )
+        assert result.exit_code == 0, f"exit {result.exit_code}: {result.output}"
+        data = _extract_json_from_output(result.output)
+        assert len(data["results"]) == 2
+        assert data["results"][0]["rerank_score"] == 0.9
+        assert data["results"][1]["rerank_score"] == 0.0
+
+    def test_retrieve_rejects_top_k_above_50(self, runner: CliRunner, indexed_db: Path) -> None:
+        result = runner.invoke(
+            app,
+            [
+                "retrieve",
+                "confidentiality",
+                str(FIXTURE_PATH),
+                "--method",
+                "sparse",
+                "--top-k",
+                "51",
+                "--db-dir",
+                str(indexed_db.parent),
+            ],
+        )
+        assert result.exit_code == 1
+        assert "top_k" in result.output

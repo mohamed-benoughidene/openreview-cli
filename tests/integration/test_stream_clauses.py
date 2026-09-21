@@ -74,5 +74,44 @@ class TestCrossFormatHierarchy:
                     assert clause.parent_id in ids
 
     @pytest.mark.integration
-    def test_warnings_match_across_formats(self) -> None:
-        pass  # Placeholder — warnings not fully implemented yet
+    def test_english_fixtures_have_no_warnings(self) -> None:
+        from openreview_cli.parsing.stream import parse_document
+
+        for path in (PDF / "simple_contract.pdf", DOCX / "simple_contract.docx"):
+            doc, clauses = parse_document(path)
+            assert doc.warnings == []
+            assert all(not c.is_non_english for c in clauses)
+
+    @pytest.mark.integration
+    def test_non_english_docx_is_flagged_end_to_end(self, tmp_path: Path) -> None:
+        from docx import Document as DocxDocument
+
+        from openreview_cli.parsing.stream import parse_document
+
+        docx_path = tmp_path / "arabic.docx"
+        source = DocxDocument()
+        source.add_paragraph("مرحبا بالعالم")
+        source.add_paragraph("Hello world")
+        source.save(str(docx_path))
+
+        doc, clauses = parse_document(docx_path)
+
+        assert doc.warnings == [
+            "The contract appears to be in Arabic. Results may be less accurate"
+        ]
+        assert any(c.is_non_english is True for c in clauses)
+
+    @pytest.mark.integration
+    def test_tofu_docx_is_flagged_end_to_end(self, tmp_path: Path) -> None:
+        from docx import Document as DocxDocument
+
+        from openreview_cli.parsing.stream import parse_document
+
+        docx_path = tmp_path / "tofu.docx"
+        source = DocxDocument()
+        source.add_paragraph("Broken text \ufffd here")
+        source.save(str(docx_path))
+
+        doc, _clauses = parse_document(docx_path)
+
+        assert "Some text could not be read correctly. Results may contain errors" in doc.warnings

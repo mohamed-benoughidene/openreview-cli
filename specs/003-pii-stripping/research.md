@@ -232,6 +232,14 @@ result = engine.anonymize(
 
 **Implementation**: Metadata redaction is a separate step from body text PII stripping, applied before body text processing to ensure metadata PII doesn't leak even if body text stripping fails.
 
+**Settled decision — FAITHFUL redaction (2026-09-21, owner).** The metadata fields are now populated
+by the parsers (spec 002, plan `docs/specs/plans/2026-09-21-p1p2-gaps-fix.md`), so this path acts on
+real values. Redaction is **faithful**: redact whatever the property contains, **including toolchain
+defaults** such as the `python-docx` generator author (`author == "python-docx"`). There is **no**
+denylist of toolchain names and **no** "skip when it equals the generator default" heuristic — both
+are behaviour inventions FR-017 does not ask for. Consequence: stripping a python-docx-authored file
+yields an `[AUTHOR_1]` placeholder for `python-docx` like any other author value.
+
 ---
 
 ### 10. Audit File Design

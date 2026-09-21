@@ -58,10 +58,17 @@ class TestRetrievalQuery:
             RetrievalQuery(query_text="test", top_k=51)
         assert "top_k" in str(exc.value).lower()
 
-    def test_rejects_rerank_depth_less_than_top_k(self) -> None:
-        with pytest.raises(ValueError) as exc:
-            RetrievalQuery(query_text="test", top_k=10, rerank_depth=5)
-        assert "rerank_depth" in str(exc.value).lower()
+    def test_rerank_depth_is_raised_to_top_k(self) -> None:
+        q = RetrievalQuery(query_text="test", top_k=30)
+        assert q.rerank_depth == 30
+
+    def test_explicit_rerank_depth_above_top_k_is_kept(self) -> None:
+        q = RetrievalQuery(query_text="test", top_k=5, rerank_depth=25)
+        assert q.rerank_depth == 25
+
+    def test_top_k_50_with_default_rerank_depth_is_accepted(self) -> None:
+        q = RetrievalQuery(query_text="test", top_k=50)
+        assert q.rerank_depth == 50
 
     def test_accepts_rerank_depth_equal_to_top_k(self) -> None:
         q = RetrievalQuery(query_text="test", top_k=10, rerank_depth=10)

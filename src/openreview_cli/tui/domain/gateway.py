@@ -13,7 +13,7 @@ from openreview_cli.config.auth import has_key as _has_key
 from openreview_cli.config.auth import save_key as _save_key
 from openreview_cli.config.loader import load_config, set_config_value
 from openreview_cli.config.paths import get_config_dir, get_data_dir
-from openreview_cli.slots import VALID_SLOTS
+from openreview_cli.slots import PRIMARY_ONLY_SLOTS, VALID_SLOTS
 
 if TYPE_CHECKING:
     from openreview_cli.gateway.models import ProviderInfo
@@ -84,6 +84,7 @@ def get_slot_configs() -> dict[str, dict[str, Any]]:
             "provider": provider,
             "model": model_name,
             "configured": bool(primary),
+            "fallback": cfg.get("fallback"),
         }
     return result
 
@@ -135,6 +136,13 @@ def save_slot_config(slot: str, provider: str, model_name: str) -> None:
     """Save slot primary model config."""
     full = f"{provider}/{model_name}" if provider else model_name
     set_config_value(_PATHS["config"], f"gateway.models.{slot}.primary", full)
+
+
+def save_slot_fallback(slot: str, model_name: str | None) -> None:
+    """Set or clear a slot's optional backup model (None/'' clears it)."""
+    if slot in PRIMARY_ONLY_SLOTS:
+        raise ValueError(f"Slot '{slot}' is primary-only and has no backup model.")
+    set_config_value(_PATHS["config"], f"gateway.models.{slot}.fallback", model_name or "null")
 
 
 def provider_has_key(provider: str) -> bool:

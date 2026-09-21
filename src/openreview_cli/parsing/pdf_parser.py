@@ -1,3 +1,4 @@
+import contextlib
 import os
 import sys
 from collections.abc import Iterator
@@ -31,9 +32,25 @@ def extract_font_properties(span: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _clean(value: Any) -> str | None:
+    """Return a stripped non-empty string, else None ('' from pymupdf is 'absent')."""
+    if not isinstance(value, str):
+        return None
+    return value.strip() or None
+
+
+def pdf_metadata(doc: Any) -> tuple[str | None, str | None]:
+    """Return (author, title) from PDF metadata. PDF has no standard company field."""
+    info = getattr(doc, "metadata", None) or {}
+    return _clean(info.get("author")), _clean(info.get("title"))
+
+
 class PdfParser:
     def __init__(self, path: Path) -> None:
         self.path = path
+        self.author: str | None = None
+        self.title: str | None = None
+        self.company: str | None = None
 
     def parse(self) -> Iterator[Clause]:
         import pymupdf
@@ -106,6 +123,9 @@ class PdfParser:
                     message="This contract is password-protected.",
                     action="Enter the password or provide an unlocked copy.",
                 )
+
+        with contextlib.suppress(Exception):
+            self.author, self.title = pdf_metadata(doc)
 
         toc = doc.get_toc()
         headings = detect_headings_from_toc(toc) if toc else []

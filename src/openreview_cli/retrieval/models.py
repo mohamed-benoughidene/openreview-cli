@@ -17,7 +17,7 @@ class RetrievalQuery:
         method: Retrieval method: "sparse", "dense", or "hybrid".
         top_k: Number of results (1-50).
         rerank: Enable cross-encoder reranker.
-        rerank_depth: Number of hybrid results to rerank (>= top_k).
+        rerank_depth: Number of hybrid results to rerank (raised to top_k when smaller).
         force_rerank: Override reranker validation warning.
     """
 
@@ -37,8 +37,7 @@ class RetrievalQuery:
             )
         if not 1 <= self.top_k <= 50:
             raise ValueError(f"top_k must be between 1 and 50, got {self.top_k}")
-        if self.rerank_depth < self.top_k:
-            raise ValueError(f"rerank_depth ({self.rerank_depth}) must be >= top_k ({self.top_k})")
+        self.rerank_depth = max(self.rerank_depth, self.top_k)
 
 
 @dataclass

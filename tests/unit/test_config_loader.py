@@ -6,6 +6,27 @@ from openreview_cli.config.loader import load_config
 from openreview_cli.config.paths import get_config_dir
 
 
+def test_default_config_has_no_fallback_models(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.yml"
+    result = load_config(config_path)
+    models = result["gateway"]["models"]
+    for slot in ("reasoning", "extraction", "graph", "grounding"):
+        assert models[slot]["fallback"] is None
+
+
+def test_primary_only_slots_drop_fallback_key(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.yml"
+    config_path.write_text(
+        "gateway:\n"
+        "  models:\n"
+        "    reranking:\n"
+        "      primary: cohere/rerank-x\n"
+        "      fallback: cohere/backup\n"
+    )
+    result = load_config(config_path)
+    assert "fallback" not in result["gateway"]["models"]["reranking"]
+
+
 def test_config_yml_created_with_defaults(tmp_path: Path) -> None:
     config_path = tmp_path / "config.yml"
     result = load_config(config_path)

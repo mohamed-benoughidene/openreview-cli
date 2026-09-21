@@ -10,6 +10,7 @@ from openreview_cli.config.auth import load_auth
 from openreview_cli.config.paths import get_config_dir
 from openreview_cli.gateway.models import CredentialField
 from openreview_cli.gateway.registry import ModelRegistry
+from openreview_cli.slots import PRIMARY_ONLY_SLOTS
 
 SLOT_NAMES = ["reasoning", "extraction", "embedding", "reranking", "graph", "grounding"]
 PROVIDER_CHOICES = [
@@ -56,6 +57,17 @@ def _collect_provider_credentials(creds: list[CredentialField]) -> dict[str, str
     return collected or None
 
 
+def _prompt_backup(config_path: Path, slot: str, primary: str) -> None:
+    """Optionally prompt for a per-slot backup model (skipped: primary-only slots)."""
+    from openreview_cli.config.loader import set_config_value
+
+    if slot in PRIMARY_ONLY_SLOTS:
+        return
+    backup = questionary.text(f"Backup model for '{slot}' (optional — press Enter to skip):").ask()
+    if backup and backup != primary:
+        set_config_value(config_path, f"gateway.models.{slot}.fallback", backup)
+
+
 def gateway_setup() -> None:
     from openreview_cli.config.loader import set_config_value
 
@@ -92,6 +104,8 @@ def gateway_setup() -> None:
             return
 
         set_config_value(config_path, f"gateway.models.{slot}.primary", model_id)
+
+        _prompt_backup(config_path, slot, model_id)
 
         if provider not in ("ollama",):
             info = next(
