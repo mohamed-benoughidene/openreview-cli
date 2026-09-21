@@ -353,7 +353,9 @@ Audit/delete stored PII mappings at rest.
 
 Use when: user asks "what PII data do you have" / "delete my data".
 
-CLI: `openreview pii list [--format json] | pii delete <document_hash> | pii cleanup [--dry-run]`.
+CLI: `openreview pii list [--format json] [--all] | pii delete <document_hash> | pii cleanup [--dry-run]`.
+
+`pii list --all` also lists clean documents — audit-trail entries with `entity_count 0` and no stored mapping — which the default listing omits. Source: `app.py:509, 530-539`.
 
 Key constraint: PII stripping on review (`precheck review`, `precheck compare`) is automatic and fail-closed — these commands only manage stored mappings. `negotiate` does NOT strip PII (Capability 5). Destructive (`pii delete`, `pii cleanup`) requires explicit user intent — see Rule 10.
 

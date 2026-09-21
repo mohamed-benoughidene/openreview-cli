@@ -189,7 +189,7 @@
 - [X] T032 [US3] Integrate reranker into `RetrievalEngine.retrieve()` in `src/openreview_cli/retrieval/engine.py`:
   - When `query.rerank=True`: after hybrid fusion, pass top-N candidates (N=`rerank_depth`) to `Reranker.rerank()`
   - If `reranker_degradation` flag is set and `query.force_rerank=False`: print warning "⚠ Reranker validation shows reranker does not improve retrieval quality"
-  - Method field in `RetrievalResult` set to `"hybrid+rerank"` when reranker used
+  - Method field in `RetrievalResult` derived as `f"{candidate.method}+rerank"` when the reranker runs — `sparse+rerank` / `dense+rerank` / `hybrid+rerank` are all reachable (was the literal `"hybrid+rerank"`; corrected 2026-09-21, #18b)
 
 - [X] T033 [US3] Implement reranker validation in `src/openreview_cli/retrieval/rerank.py` — write benchmark results to `rerank_validation` table with model_id, document_type, precision_with, precision_without, degradation_pp, timestamp
 

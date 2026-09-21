@@ -40,7 +40,7 @@ class ChunkConfig:
     chunk_size: int = 512                    # Target tokens per chunk
     chunk_overlap: int = 50                  # Overlap tokens between consecutive chunks
     group_short_clauses: bool = True         # Merge consecutive short clauses
-    respect_clause_boundaries: bool = True   # Don't split across top-level clauses
+    respect_clause_boundaries: bool = True   # Don't split across top-level clauses [REMOVED 2026-09-21: never read, field deleted — #11]
 ```
 
 **Validation rules**:

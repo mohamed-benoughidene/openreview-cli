@@ -167,6 +167,8 @@ Lists all documents with PII data (encrypted mappings, audit trails).
 **Options**:
 - `--format TEXT` (choices: `text`, `json`, default: `text`)
   - Output format
+- `--all` (flag, default: false)
+  - Also lists clean documents (audit-trail entries with `entity_count 0` and no stored mapping)
 
 **Output** (text format):
 
