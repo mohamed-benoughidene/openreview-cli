@@ -102,6 +102,19 @@ def test_fallback_command_requires_model_or_clear(isolated_config: Path) -> None
     assert result.exit_code == 1
 
 
+@pytest.mark.parametrize("model", ["claude-haiku", "/x", "anthropic/"])
+def test_fallback_command_rejects_model_without_provider_prefix(
+    isolated_config: Path, model: str
+) -> None:
+    before = isolated_config.read_text()
+
+    result = runner.invoke(app, ["gateway", "fallback", "reasoning", model])
+
+    assert result.exit_code == 1
+    assert "provider/model" in result.stderr
+    assert isolated_config.read_text() == before
+
+
 def test_default_install_starts_without_fallback(isolated_config: Path) -> None:
     for slot in ("reasoning", "extraction", "graph", "grounding"):
         result = runner.invoke(app, ["gateway", "fallback", slot, "--clear"])

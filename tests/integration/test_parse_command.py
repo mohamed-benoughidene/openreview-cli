@@ -124,3 +124,44 @@ class TestParseDocumentMetadata:
         assert doc.author is None
         assert doc.title is None
         assert clauses
+
+
+class TestParseCommandWarnings:
+    @pytest.mark.integration
+    def test_parse_shows_non_english_warning_on_stderr(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        from docx import Document
+
+        from openreview_cli.app import parse
+
+        path = tmp_path / "arabic.docx"
+        source = Document()
+        source.add_paragraph("مرحبا بالعالم")
+        source.add_paragraph("Hello world")
+        source.save(str(path))
+
+        parse(str(path), "text", False)
+
+        captured = capsys.readouterr()
+        assert "The contract appears to be in Arabic. Results may be less accurate" in captured.err
+
+    @pytest.mark.integration
+    def test_parse_clean_document_prints_no_warnings(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        from docx import Document
+
+        from openreview_cli.app import parse
+
+        path = tmp_path / "clean.docx"
+        source = Document()
+        source.add_paragraph("This agreement is governed by the laws of Delaware.")
+        source.save(str(path))
+
+        parse(str(path), "text", False)
+
+        captured = capsys.readouterr()
+        assert captured.err == ""
+        assert "Results may be less accurate" not in captured.out
+        assert "clause-" in captured.out

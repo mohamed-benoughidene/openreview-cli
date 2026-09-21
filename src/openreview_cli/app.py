@@ -1385,6 +1385,9 @@ def parse(
         typer.echo(f"What to do: {e.action}", err=True)
         raise typer.Exit(code=8) from None
 
+    for warning in doc.warnings:
+        typer.echo(f"⚠  {warning}", err=True)
+
     if summary:
         typer.echo(format_summary(doc))
     elif format == "json":
@@ -1610,6 +1613,15 @@ def gateway_fallback(
     if clear == (model is not None):
         typer.echo("Provide a model id, or --clear to remove the backup.", err=True)
         raise typer.Exit(code=1)
+    if model is not None:
+        provider, sep, name = model.partition("/")
+        if not sep or not provider or not name:
+            typer.echo(
+                f"Backup model '{model}' must be a provider/model id "
+                "(e.g. anthropic/claude-3-5-haiku).",
+                err=True,
+            )
+            raise typer.Exit(code=1)
 
     config_path = get_config_dir() / "config.yml"
     try:
