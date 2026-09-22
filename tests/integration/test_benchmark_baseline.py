@@ -2,7 +2,7 @@
 
 Tests:
   - T-B-01: baseline --help command exists
-  - T-B-02: Mock baseline produces 51 results (17 modes x 3 datasets)
+  - T-B-02: Mock baseline produces 72 results (24 modes x 3 datasets)
   - T-B-03: BaselineResult schema validation
   - T-B-04: --save-baseline --format json --output writes valid JSON file
   - T-B-05: BaselineReport JSON schema validation
