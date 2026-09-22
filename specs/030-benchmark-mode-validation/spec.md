@@ -115,7 +115,7 @@ The benchmark CLI SHALL define a `VALID_MODES` frozenset in
 | 5 Batch 2 modes | `assetcheck`, `buycheck`, `engagecheck`, `guaranteecheck`, `loancheck` |
 | 9 orphan modes | `licensecheck`, `leasecheck`, `privacycheck`, `indemnitycheck`, `consultcheck`, `workcheck`, `loicheck`, `subcheck`, `settlementcheck` |
 | 5 Batch 3 modes | `franchisecheck`, `opcheck`, `partnercheck`, `sponsorcheck`, `distrocheck` |
-| 2 Tier 4 modes | `privacycheck_v2`, `settlementcheck_v2` |
+| 2 v2 variant modes | `privacycheck_v2`, `settlementcheck_v2` |
 
 ```python
 VALID_MODES: frozenset[str] = frozenset(

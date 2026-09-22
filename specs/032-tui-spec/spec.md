@@ -149,7 +149,7 @@ A user with many clients and reviews wants to find something quickly. They press
 
 **Review wizard**
 - **FR-012**: System MUST provide a four-step new-review wizard: pick mode, pick document, pick playbook, confirm and run.
-- **FR-013**: System MUST group the 22 product modes by category (Basic, Employment, Commercial, Specialized, Settlement) in the mode picker, with collapsible groups.
+- **FR-013**: System MUST group the 24 product modes (23 named modes plus the base `precheck` mode) by category (Basic, Employment, Commercial, Specialized, Settlement) in the mode picker, with collapsible groups.
 - **FR-014**: System MUST show a default playbook option ("Use default for [Mode]") pre-selected in step 3.
 - **FR-015**: System MUST show a confirmation screen at step 4 with a summary of the chosen options and two optional checkboxes: "Override model" and "Disable PII stripping".
 - **FR-016**: System MUST show a progress screen during a review with one row per pipeline step (parsing, PII stripping, extraction, QA verification, report building), a progress bar, and elapsed time.

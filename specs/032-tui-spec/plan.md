@@ -36,7 +36,7 @@ Adding `textual>=8.2.8` as a runtime dependency increases the install size of `o
 
 **Constraints**: Peak memory <110MB total (constitution Principle III), PII stripping before any external API call (FR-045, FR-047), no background processes (constitution Principle II), local-only (constitution Principle II), no screen reader optimization in v1 (FR-032b), dark mode only for v1 (per TUI-Decisions.md), single-user/single-session.
 
-**Scale/Scope**: 5 tabs, 2 wizards (4 steps each), 1 file picker, ~10 screens total, 22 product modes referenced, 6 gateway slots, unlimited clients/playbooks/reviews in storage (lists with type-to-filter).
+**Scale/Scope**: 5 tabs, 2 wizards (4 steps each), 1 file picker, ~10 screens total, 24 product modes referenced, 6 gateway slots, unlimited clients/playbooks/reviews in storage (lists with type-to-filter).
 
 ## Constitution Check
 
