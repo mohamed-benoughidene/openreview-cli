@@ -49,7 +49,7 @@ Run each benchmark on your own machine to get comparable numbers the offline not
 
 The cold-PDF number is dominated by a one-time sentence-segmentation model load (~3 s per process), not by PDF parsing itself.
 
-No dedicated receipt; the PII-stress row derives from docs/benchmarks/results/pii-throughput.json.
+No receipt by design: these rows are wall-clock on the [methodology](#methodology) sandbox, and the CLI rows are dominated by the offline registry-refresh stall documented under [the environment artifact](#environment-artifact-offline-registry-refresh), so a committed receipt would pin an environment artifact rather than a product number. The PII-stress row derives from [docs/benchmarks/results/pii-throughput.json](benchmarks/results/pii-throughput.json).
 
 ## Resource footprint
 
@@ -61,7 +61,7 @@ No dedicated receipt; the PII-stress row derives from docs/benchmarks/results/pi
 
 The project's <100 MB memory budget (enforced by memory tests) applies to streaming pipeline paths parsers stream page-by-page and never load a full document. The parse CLI process peaked ~410 MB and the spaCy/PII path ~1724 MB on the 50-page stress; both include one-time model loads, reported factually.
 
-No dedicated receipt; the PII-stress row derives from docs/benchmarks/results/pii-throughput.json.
+No receipt by design: peak RSS includes one-time model loads and the offline registry-refresh stall (see the [environment artifact](#environment-artifact-offline-registry-refresh)), so it is sandbox-specific rather than a product number. The PII-stress row derives from [docs/benchmarks/results/pii-throughput.json](benchmarks/results/pii-throughput.json).
 
 ## Throughput
 
@@ -165,7 +165,7 @@ End-to-end `openreview precheck review` on `tests/fixtures/nda_with_pii.pdf` (1 
 
 **Result:** 0 matches, 5 differences, avg confidence 0.95, recommendation: revise. Full cost report via `openreview gateway costs --today`. Total wall time ~2.5 min (includes cold API connection overhead).
 
-**Note:** this is a qualitative pipeline integration test, not an accuracy measurement the fixture PDF has no ground-truth labels. Accuracy numbers are in the [Review accuracy](#review-accuracy-measured-12-labeled-nda-clauses) section above.
+**Note:** this is a qualitative pipeline integration test, not an accuracy measurement the fixture PDF has no ground-truth labels. **No receipt by design:** the run needs OpenRouter and Voyage (network) and the fixture carries no labels, so no reproducible JSON artifact exists to commit; the measured accuracy numbers live in the [Review accuracy](#review-accuracy-measured-12-labeled-nda-clauses) section above.
 
 ## ContractNLI public benchmark (real-world NDAs measured)
 
@@ -250,6 +250,8 @@ Historical numbers from earlier project READMEs (e.g. 860 docs, 2.28M chars/sec)
 ## Environment artifact: offline registry refresh
 
 The CLI in this sandbox took 14.0–44.4 s wall to parse a PDF an artifact of environment, not product performance. On startup the CLI refreshes the provider model registry over HTTPS; with no outbound network the connect stalls until timeout (debug log: `connect_tcp to raw.githubusercontent.com failed after 40s`, then "registry refresh skipped") before proceeding. On a networked machine this is a short request; the 410 MB peak RSS also reflects this process. The stall is a real improvement area (registry refresh should be fast-failing/timeout-aware when offline), but it is not representative of parse throughput.
+
+**No receipt by design:** the 14.0–44.4 s and ~410 MB figures describe this sandbox's offline registry-refresh stall, not product performance, and cannot be reproduced off the sandbox.
 
 ## Cost tracking
 

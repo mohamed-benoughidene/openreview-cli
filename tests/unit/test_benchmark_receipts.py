@@ -419,3 +419,60 @@ def test_pii_accuracy_per_type_numerators_match_the_receipt() -> None:
     numerator = round(organization["value"] * organization["n"])
     text = _page()
     assert f"ORGANIZATION {organization['value']:.1%} ({numerator} / {organization['n']})" in text
+
+
+NO_RECEIPT_BY_DESIGN_HEADINGS: tuple[str, ...] = (
+    "## Latency",
+    "## Resource footprint",
+    "## Full pipeline demo (qualitative measured)",
+    "## Environment artifact: offline registry refresh",
+)
+
+
+def _sections(text: str) -> list[tuple[str, str]]:
+    """Split the page into (heading, body) pairs; a body ends at the next heading."""
+    sections: list[tuple[str, str]] = []
+    heading: str | None = None
+    body: list[str] = []
+    for line in text.splitlines():
+        if line.startswith("#"):
+            if heading is not None:
+                sections.append((heading, "\n".join(body)))
+            heading, body = line, []
+        elif heading is not None:
+            body.append(line)
+    if heading is not None:
+        sections.append((heading, "\n".join(body)))
+    return sections
+
+
+def test_every_last_verified_line_is_covered_by_tables() -> None:
+    """D9: a section may not carry a Last verified line that the guard ignores."""
+    guarded = {
+        heading
+        for heading, body in _sections(_page())
+        if any(line.strip().startswith("Last verified:") for line in body.splitlines())
+    }
+    assert guarded == set(TABLES), (
+        f"unguarded Last verified sections: {sorted(guarded - set(TABLES))}; "
+        f"guarded headings without a Last verified line: {sorted(set(TABLES) - guarded)}"
+    )
+
+
+def test_every_published_receipt_is_registered() -> None:
+    """Every receipt cited on the page is in EXPECTED_RECEIPTS, and vice versa."""
+    cited = set(re.findall(r"docs/benchmarks/results/([A-Za-z0-9_.-]+\.json)", _page()))
+    assert cited == EXPECTED_RECEIPTS, (
+        f"cited but unregistered: {sorted(cited - EXPECTED_RECEIPTS)}; "
+        f"registered but never cited: {sorted(EXPECTED_RECEIPTS - cited)}"
+    )
+
+
+def test_receiptless_sections_say_so_explicitly() -> None:
+    """D1: a number-bearing section with no receipt must say why, in place."""
+    bodies = dict(_sections(_page()))
+    for heading in NO_RECEIPT_BY_DESIGN_HEADINGS:
+        assert heading in bodies, f"missing heading: {heading}"
+        assert "No receipt by design" in bodies[heading], (
+            f"{heading} publishes numbers with no receipt and no note (D1)"
+        )
