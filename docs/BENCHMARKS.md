@@ -76,9 +76,11 @@ Not measured: dense-retrieval/embedding throughput (needs a local Ollama server)
 
 | Metric | Value | Notes |
 |---|---|---|
-| Product-mode recall, synthetic ground truth + MOCKED gateway | 9 modes × 5 docs, 100% recall (10 expected flags per mode: 2 per synthetic doc) | 0.6–1.3 s/mode after the first; first mode 35.5 s (one-time engine init) |
+| Product-mode recall, synthetic ground truth + MOCKED gateway | 23 modes x 5 docs, 100% recall (10 expected flags per mode: 2 per synthetic doc) | 0.4-0.9 s/mode after the first; first mode 29.8 s (one-time engine init) |
 
-**Label this correctly:** this validates pipeline wiring (mode → playbook → match/extract/QA → flag) with a deterministic mocked gateway. It is **not** real-model accuracy. Real-model accuracy was measured separately through OpenRouter see [Review accuracy](#review-accuracy-measured-12-labeled-nda-clauses) below. The `scripts/benchmark_review_accuracy.py` script is structural-only (does not make real LLM calls reads `predicted_position` from corpus).
+Last verified: 2026-09-22 @ e844b98 (receipt: docs/benchmarks/results/product-modes.json).
+
+**Label this correctly:** this validates pipeline wiring (mode → playbook → match/extract/QA → flag) with a deterministic mocked gateway. 23 named modes are covered by this mechanism; Tier 2 modes have declared baselines only and Tier 3 modes are name-only (the mock baseline ignores the mode). It is **not** real-model accuracy. Real-model accuracy was measured separately through OpenRouter see [Review accuracy](#review-accuracy-measured-12-labeled-nda-clauses) below. The `scripts/benchmark_review_accuracy.py` script is structural-only (does not make real LLM calls reads `predicted_position` from corpus).
 
 ## Accuracy signals
 
@@ -210,7 +212,7 @@ Parsing scale against the [CUAD v1](https://www.atticusprojectai.org/cuad) datas
 
 ## Measured vs. not measured
 
-**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (94.4% recall), review accuracy on 12 NDA clauses through OpenRouter (90.9% F1), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale + timing only — clause identification not measured), product-mode wiring (mocked), test collection (3,477 tests), accuracy-test suite (27 passed, 1 failed).
+**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (94.4% recall), review accuracy on 12 NDA clauses through OpenRouter (90.9% F1), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale + timing only — clause identification not measured), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,477 tests), accuracy-test suite (27 passed, 1 failed).
 
 **Not measured (methodology documented, no numbers invented):**
 
