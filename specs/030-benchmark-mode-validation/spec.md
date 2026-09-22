@@ -23,7 +23,7 @@ for all 24 product modes, and adds end-to-end tests for 9 orphan modes that curr
    document → strip PII → run review → assert three-color output (Green/Amber/Red per clause).
    Tests mock the AI gateway to avoid network calls.
 
-Blueprint references: [the 22 product modes capability], [the Batch 2 product modes delivery],
+Blueprint references: [the product-modes capability], [the Batch 2 product modes delivery],
 [the multi-mode accuracy constraint], [the regression detection constraint].
 
 ### Deferred items resolved
@@ -60,8 +60,10 @@ The CLI validates each mode against `VALID_MODES`, rejects `invalidmode`, and pr
 
 ```
 Error: Unknown mode 'invalidmode'. Valid: assetcheck, buycheck, consultcheck, dealcheck,
-engagecheck, guaranteecheck, hirecheck, indemnitycheck, leasecheck, licensecheck, loancheck,
-loicheck, precheck, privacycheck, settlementcheck, subcheck, workcheck
+distrocheck, engagecheck, franchisecheck, guaranteecheck, hirecheck, indemnitycheck,
+leasecheck, licensecheck, loancheck, loicheck, opcheck, partnercheck, precheck,
+privacycheck, privacycheck_v2, settlementcheck, settlementcheck_v2, sponsorcheck,
+subcheck, workcheck
 ```
 
 The command exits with code 78 (configuration error).
@@ -150,7 +152,7 @@ The frozenset SHALL be the single source of truth for benchmark mode validation.
 A `ponytail:` comment SHALL document the design choice:
 `# ponytail: hard-coded mode list — source of truth for benchmark mode validation.`
 
-**Source**: [D-75], [the 22 product modes capability], [the Batch 2 product modes delivery]
+**Source**: [D-75], [the product-modes capability], [the Batch 2 product modes delivery]
 
 ### FR-2: Mode Validation at Parse Time (D-75)
 
@@ -296,7 +298,7 @@ document, use it. If not, create a minimal `.txt` fixture containing one clause 
 contract language appropriate to that mode's domain (e.g., a confidentiality clause for
 privacycheck). The fixture SHALL be committed as part of this spec's implementation.
 
-**Source**: [D-77], [the 22 product modes capability], [the Batch 2 product modes delivery]
+**Source**: [D-77], [the product-modes capability], [the Batch 2 product modes delivery]
 
 ### FR-7: Mode Coverage in Report
 
