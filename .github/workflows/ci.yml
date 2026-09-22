@@ -58,6 +58,9 @@ jobs:
       - uses: actions/checkout@v7
         with:
           submodules: recursive
+          # R15/D3: full history — the receipt-commit ancestry guard
+          # (tests/unit/test_benchmark_receipts.py) skips on a shallow clone.
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v10.1.0
         with:
           enable-cache: true

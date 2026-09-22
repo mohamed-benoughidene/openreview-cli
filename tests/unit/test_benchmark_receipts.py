@@ -330,3 +330,25 @@ def test_cuad_segmentation_numbers_match_the_receipt() -> None:
     assert f"token-F1 {metrics['token_f1_mean']:.3f}" in text
     assert f"{metrics['test_coverage_rate']:.2%} of {metrics['tests_with_span']:,} queries" in text
     assert f"{sample['documents_loaded']} of 462 documents" in text
+
+
+CI_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "ci.yml"
+
+
+def test_ci_checks_out_full_history_for_the_receipt_guard() -> None:
+    """R15/D3: the receipt-commit ancestry guard only runs on a full clone.
+
+    ``generated_commit_problems()`` opts out on a shallow clone, so CI must fetch
+    the full history for the guard to enforce anything.
+    """
+    import yaml
+
+    workflow = yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))
+    job = workflow["jobs"]["test"]
+    checkout = next(
+        step for step in job["steps"] if str(step.get("uses", "")).startswith("actions/checkout")
+    )
+    assert checkout.get("with", {}).get("fetch-depth") == 0, (
+        "the CI test job must check out full history (fetch-depth: 0); otherwise "
+        "the receipt-commit ancestry guard skips and CI coverage is not guaranteed"
+    )
