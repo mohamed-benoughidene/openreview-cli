@@ -1,0 +1,72 @@
+[
+  {
+    "path": "tests/fixtures/benchmark/assetcheck/doc_1.pdf",
+    "expected_categories": [
+      {
+        "category_id": "asset-description",
+        "expected_position": "acceptable"
+      },
+      {
+        "category_id": "exclusions",
+        "expected_position": "acceptable"
+      }
+    ],
+    "doc_index": 1
+  },
+  {
+    "path": "tests/fixtures/benchmark/assetcheck/doc_2.pdf",
+    "expected_categories": [
+      {
+        "category_id": "representations",
+        "expected_position": "acceptable"
+      },
+      {
+        "category_id": "price-and-title",
+        "expected_position": "preferred"
+      }
+    ],
+    "doc_index": 2
+  },
+  {
+    "path": "tests/fixtures/benchmark/assetcheck/doc_3.pdf",
+    "expected_categories": [
+      {
+        "category_id": "asset-description",
+        "expected_position": "acceptable"
+      },
+      {
+        "category_id": "exclusions",
+        "expected_position": "acceptable"
+      }
+    ],
+    "doc_index": 3
+  },
+  {
+    "path": "tests/fixtures/benchmark/assetcheck/doc_4.pdf",
+    "expected_categories": [
+      {
+        "category_id": "exclusions",
+        "expected_position": "acceptable"
+      },
+      {
+        "category_id": "representations",
+        "expected_position": "preferred"
+      }
+    ],
+    "doc_index": 4
+  },
+  {
+    "path": "tests/fixtures/benchmark/assetcheck/doc_5.pdf",
+    "expected_categories": [
+      {
+        "category_id": "price-and-title",
+        "expected_position": "walkaway"
+      },
+      {
+        "category_id": "as-is-regulatory",
+        "expected_position": "preferred"
+      }
+    ],
+    "doc_index": 5
+  }
+]

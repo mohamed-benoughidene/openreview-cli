@@ -9,21 +9,21 @@
 
 This feature resolves three deferred items (D-75, D-76, D-77) from the Batch 2 product modes delivery.
 It adds mode validation to the benchmark CLI, runs accuracy baselines against three research datasets
-for all 17 product modes, and adds end-to-end tests for 9 orphan modes that currently have only CLI routing.
+for all 24 product modes, and adds end-to-end tests for 9 orphan modes that currently have only CLI routing.
 
 **What it does:**
 
-1. **D-75 (mode whitelist):** A `VALID_MODES` frozenset in `benchmark/cli.py` enumerating all 17 product modes.
+1. **D-75 (mode whitelist):** A `VALID_MODES` frozenset in `benchmark/cli.py` enumerating all 24 product modes.
    The `--modes` option validates input against this set at parse time, emitting a clear error for unknown modes.
    The dead `mode` parameter in `runner.py:71` is removed.
-2. **D-76 (accuracy baseline):** The benchmark harness runs each of the 17 modes through CUAD, MAUD, and
+2. **D-76 (accuracy baseline):** The benchmark harness runs each of the 24 modes through CUAD, MAUD, and
    ContractNLI datasets. Baselines are recorded with a mock provider in CI (for regression detection) and
    with a real AI gateway provider (manual one-shot, results published to `docs/benchmarks/`).
 3. **D-77 (orphan E2E tests):** Nine orphan modes receive full end-to-end pipeline tests: parse fixture
    document → strip PII → run review → assert three-color output (Green/Amber/Red per clause).
    Tests mock the AI gateway to avoid network calls.
 
-Blueprint references: [the 22 product modes capability], [the Batch 2 product modes delivery],
+Blueprint references: [the product-modes capability], [the Batch 2 product modes delivery],
 [the multi-mode accuracy constraint], [the regression detection constraint].
 
 ### Deferred items resolved
@@ -31,7 +31,7 @@ Blueprint references: [the 22 product modes capability], [the Batch 2 product mo
 | Item | Description | Status |
 |------|-------------|--------|
 | D-75 | Benchmark mode whitelist (`VALID_MODES` frozenset) + dead param removal | Resolved by FR-1, FR-2, FR-3 |
-| D-76 | Accuracy baseline run (CUAD, MAUD, ContractNLI × 17 modes) | Resolved by FR-4, FR-5 |
+| D-76 | Accuracy baseline run (CUAD, MAUD, ContractNLI × 24 modes) | Resolved by FR-4, FR-5 |
 | D-77 | End-to-end pipeline tests for 9 orphan modes | Resolved by FR-6 |
 
 ## 2. Clarifications
@@ -60,8 +60,10 @@ The CLI validates each mode against `VALID_MODES`, rejects `invalidmode`, and pr
 
 ```
 Error: Unknown mode 'invalidmode'. Valid: assetcheck, buycheck, consultcheck, dealcheck,
-engagecheck, guaranteecheck, hirecheck, indemnitycheck, leasecheck, licensecheck, loancheck,
-loicheck, precheck, privacycheck, settlementcheck, subcheck, workcheck
+distrocheck, engagecheck, franchisecheck, guaranteecheck, hirecheck, indemnitycheck,
+leasecheck, licensecheck, loancheck, loicheck, opcheck, partnercheck, precheck,
+privacycheck, privacycheck_v2, settlementcheck, settlementcheck_v2, sponsorcheck,
+subcheck, workcheck
 ```
 
 The command exits with code 78 (configuration error).
@@ -69,7 +71,7 @@ The command exits with code 78 (configuration error).
 ### US-2: Accuracy Baseline Run (CI Mode)
 
 CI runs `openreview benchmark run --all --ci` on every push. The benchmark runner executes
-all 17 modes across CUAD, MAUD, and ContractNLI using the mock pipeline (`_mock_pipeline`).
+all 24 modes across CUAD, MAUD, and ContractNLI using the mock pipeline (`_mock_pipeline`).
 Results are compared against the stored baseline from the previous commit. A metric drop
 exceeding 2 percentage points F1 fails the CI check and blocks merge.
 
@@ -105,28 +107,52 @@ All 9 tests pass.
 ### FR-1: Mode Whitelist (D-75)
 
 The benchmark CLI SHALL define a `VALID_MODES` frozenset in
-`src/openreview_cli/benchmark/cli.py` containing all 17 product modes:
+`src/openreview_cli/benchmark/cli.py` containing all 24 product modes:
 
 | Category | Modes |
 |----------|-------|
 | 3 established modes | `precheck`, `hirecheck`, `dealcheck` |
 | 5 Batch 2 modes | `assetcheck`, `buycheck`, `engagecheck`, `guaranteecheck`, `loancheck` |
 | 9 orphan modes | `licensecheck`, `leasecheck`, `privacycheck`, `indemnitycheck`, `consultcheck`, `workcheck`, `loicheck`, `subcheck`, `settlementcheck` |
+| 5 Batch 3 modes | `franchisecheck`, `opcheck`, `partnercheck`, `sponsorcheck`, `distrocheck` |
+| 2 Tier 4 modes | `privacycheck_v2`, `settlementcheck_v2` |
 
 ```python
-VALID_MODES: frozenset[str] = frozenset({
-    "precheck", "hirecheck", "dealcheck",
-    "assetcheck", "buycheck", "engagecheck", "guaranteecheck", "loancheck",
-    "licensecheck", "leasecheck", "privacycheck", "indemnitycheck",
-    "consultcheck", "workcheck", "loicheck", "subcheck", "settlementcheck",
-})
+VALID_MODES: frozenset[str] = frozenset(
+    {
+        "precheck",
+        "hirecheck",
+        "dealcheck",
+        "assetcheck",
+        "buycheck",
+        "engagecheck",
+        "guaranteecheck",
+        "loancheck",
+        "licensecheck",
+        "leasecheck",
+        "privacycheck",
+        "indemnitycheck",
+        "consultcheck",
+        "workcheck",
+        "loicheck",
+        "subcheck",
+        "settlementcheck",
+        "franchisecheck",
+        "opcheck",
+        "partnercheck",
+        "sponsorcheck",
+        "distrocheck",
+        "privacycheck_v2",
+        "settlementcheck_v2",
+    }
+)
 ```
 
 The frozenset SHALL be the single source of truth for benchmark mode validation.
 A `ponytail:` comment SHALL document the design choice:
 `# ponytail: hard-coded mode list — source of truth for benchmark mode validation.`
 
-**Source**: [D-75], [the 22 product modes capability], [the Batch 2 product modes delivery]
+**Source**: [D-75], [the product-modes capability], [the Batch 2 product modes delivery]
 
 ### FR-2: Mode Validation at Parse Time (D-75)
 
@@ -179,7 +205,7 @@ def run_dataset(self, dataset_name: str, pipeline_fn: PipelineFn,
 
 ### FR-4: Mock Provider Baseline (D-76)
 
-The benchmark runner SHALL support executing all 17 modes against CUAD, MAUD, and ContractNLI
+The benchmark runner SHALL support executing all 24 modes against CUAD, MAUD, and ContractNLI
 datasets using the existing mock pipeline (`_mock_pipeline` in `cli.py:302-309`).
 
 Requirements:
@@ -187,7 +213,7 @@ Requirements:
 - The mock pipeline SHALL accept `text` and `category` parameters as before — mode-awareness
   is not required for mock mode since the mock returns constant values regardless.
 - The runner SHALL call `run_dataset()` for each mode in `BenchmarkConfig.modes`, producing
-  one `DatasetResult` per mode per dataset. With 17 modes × 3 datasets = 51 `DatasetResult` entries
+  one `DatasetResult` per mode per dataset. With 24 modes × 3 datasets = 72 `DatasetResult` entries
   (PII dataset adds one more when included).
 - The runner SHALL NOT crash on mode-specific discrepancies (all modes produce the same mock output).
 - CI regression detection (FR-5 of spec 010) SHALL work with mock-provider results — mock baselines
@@ -272,7 +298,7 @@ document, use it. If not, create a minimal `.txt` fixture containing one clause 
 contract language appropriate to that mode's domain (e.g., a confidentiality clause for
 privacycheck). The fixture SHALL be committed as part of this spec's implementation.
 
-**Source**: [D-77], [the 22 product modes capability], [the Batch 2 product modes delivery]
+**Source**: [D-77], [the product-modes capability], [the Batch 2 product modes delivery]
 
 ### FR-7: Mode Coverage in Report
 
@@ -293,9 +319,9 @@ aggregate numbers.
 | # | Criterion | Measure | Target | Verification |
 |---|-----------|---------|--------|-------------|
 | SC-1 | Mode validation rejects unknown modes | Exit code | 78 with error listing valid modes | Run `openreview benchmark run --modes=invalidmode` and assert exit 78 |
-| SC-2 | All 17 modes accepted without error | No crash, exit 0 | All modes pass validation | Run `openreview benchmark run --modes=<all 17 comma-separated>` and assert exit 0 |
+| SC-2 | All 24 modes accepted without error | No crash, exit 0 | All modes pass validation | Run `openreview benchmark run --modes=<all 24 comma-separated>` and assert exit 0 |
 | SC-3 | Dead `mode` param removed from `run_dataset()` | No `mode` in signature | Parameter removed without breaking callers | `git grep "run_dataset"` confirms no `mode=` callers; type checker passes |
-| SC-4 | Mock baseline produces 51 DatasetResult entries | 3 datasets × 17 modes | All entries non-empty | Run `--all`, inspect `run.results` length and structure |
+| SC-4 | Mock baseline produces 72 DatasetResult entries | 3 datasets × 24 modes | All entries non-empty | Run `--all`, inspect `run.results` length and structure |
 | SC-5 | Baseline JSON validates against BenchmarkRun schema | Schema compliance | No pydantic validation errors | Load JSON and validate against `BenchmarkRun` model |
 | SC-6 | All 9 orphan mode E2E tests pass | 9 tests | All green | `pytest tests/integration/test_orphan_modes_e2e.py -v` |
 | SC-7 | Each orphan test asserts three-color verdict | `color_verdict` in Green/Amber/Red | Every clause has valid color | Assertion per clause in E2E test |
@@ -317,7 +343,7 @@ aggregate numbers.
 ## 6. Key Entities
 
 ### VALID_MODES (frozenset)
-The authoritative list of 17 product modes. Defined as a module-level constant in
+The authoritative list of 24 product modes. Defined as a module-level constant in
 `benchmark/cli.py`. Reused by validation logic and report generation.
 
 ### Orphan Mode

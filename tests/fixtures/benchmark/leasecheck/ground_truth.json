@@ -4,11 +4,11 @@
     "expected_categories": [
       {
         "category_id": "rent-escalation",
-        "expected_position": "walkaway"
+        "expected_position": "preferred"
       },
       {
         "category_id": "maintenance-obligations",
-        "expected_position": "preferred"
+        "expected_position": "acceptable"
       }
     ],
     "doc_index": 1
@@ -18,11 +18,11 @@
     "expected_categories": [
       {
         "category_id": "subletting-assignment",
-        "expected_position": "preferred"
+        "expected_position": "acceptable"
       },
       {
         "category_id": "term-length-renewal",
-        "expected_position": "preferred"
+        "expected_position": "acceptable"
       }
     ],
     "doc_index": 2
@@ -32,11 +32,11 @@
     "expected_categories": [
       {
         "category_id": "operating-expenses",
-        "expected_position": "preferred"
+        "expected_position": "acceptable"
       },
       {
         "category_id": "security-deposit",
-        "expected_position": "preferred"
+        "expected_position": "acceptable"
       }
     ],
     "doc_index": 3

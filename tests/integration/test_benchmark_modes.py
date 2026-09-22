@@ -1,8 +1,8 @@
 """Benchmark mode validation tests (Group A — D-75).
 
 Tests:
-  - VALID_MODES frozenset membership (17 modes)
-  - Parse-time mode validation (reject unknown, accept all 17)
+  - VALID_MODES frozenset membership (24 modes)
+  - Parse-time mode validation (reject unknown, accept all 24)
   - Dead mode param removal from run_dataset()
   - Multi-mode dataset name convention
 """
@@ -21,7 +21,7 @@ from openreview_cli.benchmark.cli import VALID_MODES
 from openreview_cli.benchmark.models import BenchmarkConfig, DatasetResult
 from openreview_cli.benchmark.runner import BenchmarkRunner
 
-# 22 known modes from spec FR-1 (17 prior + 5 new L-4c)
+# 24 known modes: the 23 named product modes plus the precheck base mode.
 _KNOWN_MODES: frozenset[str] = frozenset(
     {
         "precheck",
@@ -46,6 +46,8 @@ _KNOWN_MODES: frozenset[str] = frozenset(
         "partnercheck",
         "sponsorcheck",
         "distrocheck",
+        "privacycheck_v2",
+        "settlementcheck_v2",
     }
 )
 
@@ -57,11 +59,14 @@ def _mock_pipeline(text: str, category: str) -> dict[str, object]:
 class TestValidModes:
     """VALID_MODES frozenset tests (T-A-03)."""
 
-    def test_valid_modes_contains_22_entries(self) -> None:
-        """Assert VALID_MODES has exactly 22 entries, all known."""
-        assert len(VALID_MODES) == 22
-        for mode in _KNOWN_MODES:
-            assert mode in VALID_MODES, f"Missing mode: {mode}"
+    def test_valid_modes_covers_all_named_modes_and_precheck(self) -> None:
+        """VALID_MODES must be the 23 named product modes plus the precheck base mode."""
+        from openreview_cli.app import _PRODUCT_MODES
+
+        named = {entry[0] for entry in _PRODUCT_MODES}
+        assert len(named) == 23
+        assert named | {"precheck"} == VALID_MODES
+        assert len(VALID_MODES) == 24
 
 
 class TestModeValidation:
@@ -80,11 +85,11 @@ class TestModeValidation:
         )
         assert "Unknown mode" in result.stderr, f"stderr: {result.stderr}"
 
-    def test_modes_validation_accepts_all_22(
+    def test_modes_validation_accepts_all_24(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Assert --modes=<all 22> succeeds (exit 0)."""
+        """Assert --modes=<all 24> succeeds (exit 0)."""
         _fake_items = [
             {
                 "example_id": "doc1_governing_law",

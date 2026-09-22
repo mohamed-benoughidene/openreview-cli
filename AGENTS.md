@@ -135,11 +135,8 @@ for k, v in result.metrics.items():
 ### PII throughput (corpus + stress)
 
 ```bash
-# WARNING: scripts/benchmark_pii_stripping.py has a stale detect_all_pages unpacking.
-# detect_all_pages returns 4-tuple (entities, warnings, failed_pages, error_messages).
-# The script unpacks 2 values → fix the 4 call sites before running:
-#   sed -i 's/entities, warnings = engine.detect_all_pages(\[clause\]/entities, warnings, _, _ = engine.detect_all_pages([clause]/' scripts/benchmark_pii_stripping.py
-# (repeat for the 3 other call sites at lines 96, 129, 132, 169)
+# PII throughput (corpus + stress). Writes to a gitignored path by default.
+# PASS --output to send the summary somewhere else.
 uv run python scripts/benchmark_pii_stripping.py
 ```
 
@@ -148,8 +145,9 @@ uv run python scripts/benchmark_pii_stripping.py
 ```bash
 # Needs: gateway configured (openreview gateway setup), OpenRouter key in auth.json
 # Labeled NDA corpus: tests/fixtures/review/nda-corpus-v1/nda-corpus-v1.json (12 clauses)
-# This session used: openrouter/anthropic/claude-sonnet-4.6 for extraction + reasoning,
-#                    voyage/voyage-3.5 for embedding, voyage/rerank-2.5 for reranking
+# The exact models used were not recorded in the source artifact
+# (receipt: docs/benchmarks/results/review-accuracy.json); configure the gateway
+# extraction + reasoning slots (and embedding/reranking, if enabled) as usual.
 # scripts/benchmark_review_accuracy.py is STRUCTURAL ONLY — it reads predicted_position
 # from the corpus JSON, does NOT call real LLMs. For real accuracy, use inline:
 uv run python -c "
@@ -179,14 +177,18 @@ print(f'F1={(2*tp/(2*tp+fp)).:.2%}' if total else 'no clauses matched')
 ### Product-mode pipeline wiring (mocked, deterministic)
 
 ```bash
-# Generates synthetic PDFs to tests/fixtures/benchmark/ (git-clean: check in or .gitignore)
-# No network, no API keys — mocks the AI Gateway entirely
+# Generates synthetic PDFs under tests/fixtures/benchmark/<mode>/ (tracked, byte-stable)
+# and the report under .benchmark-reports/ (gitignored). 23 named modes, mocked gateway.
+# --generate-only writes the fixtures and exits. Verify determinism: run it twice and
+# check `git status --porcelain tests/fixtures/benchmark`.
 uv run python scripts/benchmark_product_modes.py
 ```
 
 ### Known script issues
 
-- `scripts/benchmark_pii_stripping.py` — stale 2-tuple unpacking of `detect_all_pages` (now 4-tuple). Fix: `_, _, _ =` pattern at 4 call sites.
+- `scripts/benchmark_pii_stripping.py` - fixed 2026-09-22: unpacks the 4-tuple
+  `(entities, warnings, failed_pages, error_messages)`. Default output is
+  `.benchmark-reports/metrics-pii.json` (gitignored); use `--output` to change it.
 - `scripts/benchmark_review_accuracy.py` — structural only. Reads `predicted_position` from corpus JSON (line 97). Does not call real LLMs — see Review accuracy section above for inline version.
 - `openreview benchmark run --all --ci` — uses mock pipeline for CUAD/MAUD/ContractNLI. Only PII dataset uses real `PiiEngine`.
 

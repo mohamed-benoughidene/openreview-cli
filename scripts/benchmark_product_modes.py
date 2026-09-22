@@ -10,7 +10,9 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import gc
+import hashlib
 import json
 import re
 import time
@@ -101,7 +103,124 @@ MODE_CATEGORIES: dict[str, list[str]] = {
         "processing-instructions",
         "dpa-termination",
     ],
+    "distrocheck": [
+        "territory-exclusivity",
+        "minimum-purchase",
+        "pricing-inventory",
+        "ip-license",
+        "termination-noncompete",
+    ],
+    "franchisecheck": [
+        "franchise-fee-structure",
+        "territory-rights",
+        "renewal-termination",
+        "advertising-marketing-fund",
+        "transfer-assignment",
+    ],
+    "opcheck": [
+        "membership-structure",
+        "capital-contributions",
+        "profit-loss-allocation",
+        "voting-rights",
+        "transfer-dissolution",
+    ],
+    "partnercheck": [
+        "capital-profit-loss",
+        "management-authority",
+        "withdrawal-expulsion-dissolution",
+        "liability-indemnification",
+        "dispute-resolution",
+    ],
+    "sponsorcheck": [
+        "sponsorship-fee",
+        "sponsorship-benefits",
+        "ip-license",
+        "termination",
+        "indemnification",
+    ],
+    "assetcheck": [
+        "asset-description",
+        "exclusions",
+        "representations",
+        "price-and-title",
+        "as-is-regulatory",
+    ],
+    "buycheck": [
+        "purchase-price",
+        "asset-list",
+        "liabilities",
+        "reps-and-warranties",
+        "closing-conditions",
+    ],
+    "dealcheck": [
+        "payment-terms",
+        "deliverables-timeline",
+        "termination-rights",
+        "liability-indemnification",
+        "confidentiality",
+        "dispute-resolution",
+    ],
+    "engagecheck": [
+        "scope-of-work",
+        "fees-and-billing",
+        "ip-ownership",
+        "confidentiality",
+        "termination",
+    ],
+    "guaranteecheck": [
+        "guarantee-type",
+        "liability-scope",
+        "waiver-of-defenses",
+        "confession-of-judgment",
+        "release-conditions",
+    ],
+    "hirecheck": [
+        "compensation-benefits",
+        "termination-severance",
+        "ip-assignment",
+        "non-compete-solicit",
+        "confidentiality",
+        "dispute-resolution",
+    ],
+    "loancheck": [
+        "loan-terms",
+        "default-acceleration",
+        "collateral",
+        "covenants",
+        "cross-default",
+    ],
+    "privacycheck_v2": [
+        "processing-scope",
+        "sub-processor-management",
+        "breach-notification",
+        "retention-deletion",
+        "audit-rights",
+        "international-transfers",
+        "cross-border-transfer",
+        "sub-processor-change-notification",
+        "processing-instructions",
+        "dpa-termination",
+    ],
+    "settlementcheck_v2": [
+        "release-scope",
+        "payment-terms-timing",
+        "confidentiality-non-disparagement",
+        "waiver-unknown-claims",
+        "breach-consequences",
+        "structured-payment-obligations",
+        "class-action-procedures",
+        "multi-party-releases",
+        "regulatory-cooperation",
+    ],
 }
+
+_GENERIC_BODIES: list[str] = [
+    "The parties agree that the provisions of this Section apply as written in this Agreement.",
+    "Nothing in this Section limits any right or obligation expressly stated in this Agreement.",
+    "The obligations described in this Section take effect on the date of this Agreement.",
+    "This Section is governed by the terms stated in the main body of this Agreement.",
+    "The parties shall comply with the requirements set out in this Section.",
+]
 
 
 def _clause_text(category_id: str, position: str, idx: int) -> str:
@@ -253,7 +372,7 @@ def _clause_text(category_id: str, position: str, idx: int) -> str:
             "Consultant shall return or destroy all Client property and "
             "Confidential Information upon termination of this Agreement.",
             "The provisions of this Agreement that by their nature should survive "
-            "termination shall survive, including confidentiality and IP ownership.",
+            "shall survive, including those stated in this Section.",
         ],
         "binding-provisions": [
             "This Letter of Intent is intended to be non-binding except for the "
@@ -537,7 +656,7 @@ def _clause_text(category_id: str, position: str, idx: int) -> str:
             "Initial term of five years with two renewal options of five years "
             "each, and Tenant has the right of first refusal on adjacent space.",
             "Initial term of three years with three renewal options of three "
-            "years each at the same rent escalation terms.",
+            "years each on the same commercial terms as the initial term.",
             "Initial term of seven years with one five-year renewal option at "
             "fair market rent, renewable by written notice.",
             "Initial term of five years with one renewal option, provided Tenant "
@@ -691,24 +810,43 @@ def _clause_text(category_id: str, position: str, idx: int) -> str:
             "and Controller may not terminate for data protection breach.",
         ],
     }
-    body = bodies.get(category_id, [f"Standard clause text for {category_id}."])[idx % 5]
+    body = bodies.get(category_id, _GENERIC_BODIES)[idx % 5]
     # PONTAIL: marker at START so it's never truncated by page boundary.
     # Include raw category_id so match_category() via cat.id in text works.
     return f"[EXPECTED:{position}] [{category_id}] {cat_name} clause body: {body}"
 
 
+def _stable_offset(category_id: str) -> int:
+    """Process-stable offset for position cycling (PYTHONHASHSEED independent)."""
+    digest = hashlib.sha256(category_id.encode("utf-8")).digest()
+    return int.from_bytes(digest[:4], "big")
+
+
 def _expected_position(category_id: str, idx: int) -> str:
     """Cycle through positions to get coverage of all three."""
     positions = ["preferred", "acceptable", "walkaway", "acceptable", "preferred"]
-    return positions[(hash(category_id) + idx) % len(positions)]
+    return positions[(_stable_offset(category_id) + idx) % len(positions)]
 
 
-def _generate_pdfs() -> dict[str, list[dict[str, Any]]]:
+def _record_path(pdf_path: Path, fixtures_dir: Path) -> str:
+    """Repo-relative path recorded in ground_truth.json.
+
+    The record must not embed the run directory, otherwise two runs into
+    different directories produce different bytes.
+    """
+    try:
+        relative = pdf_path.relative_to(fixtures_dir)
+    except ValueError:
+        return pdf_path.as_posix()
+    return (FIXTURES / relative).as_posix()
+
+
+def _generate_pdfs(fixtures_dir: Path) -> dict[str, list[dict[str, Any]]]:
     """Generate 5 synthetic PDFs per mode. Returns {mode: [ground_truth_doc]}."""
     ground_truth: dict[str, list[dict[str, Any]]] = {}
 
     for mode, categories in MODE_CATEGORIES.items():
-        mode_dir = FIXTURES / mode
+        mode_dir = fixtures_dir / mode
         mode_dir.mkdir(parents=True, exist_ok=True)
         docs: list[dict[str, Any]] = []
 
@@ -743,7 +881,9 @@ def _generate_pdfs() -> dict[str, list[dict[str, Any]]]:
                 )
                 expected_categories.append({"category_id": cat_id, "expected_position": pos})
 
-            doc.save(str(pdf_path), garbage=1)
+            # no_new_id=True: PyMuPDF otherwise writes a fresh random trailer
+            # /ID[<..><..>] on every save, which changes every PDF byte.
+            doc.save(str(pdf_path), garbage=1, no_new_id=True)
             doc.close()
 
             docs.append(
@@ -759,11 +899,21 @@ def _generate_pdfs() -> dict[str, list[dict[str, Any]]]:
     return ground_truth
 
 
-def _save_ground_truth(ground_truth: dict[str, list[dict[str, Any]]]) -> None:
-    """Save ground truth JSON per mode."""
+def _save_ground_truth(ground_truth: dict[str, list[dict[str, Any]]], fixtures_dir: Path) -> None:
+    """Save ground truth JSON per mode with run-directory-independent paths."""
     for mode, docs in ground_truth.items():
-        gt_path = FIXTURES / mode / "ground_truth.json"
-        gt_path.write_text(json.dumps(docs, indent=2))
+        record = [
+            {
+                "path": _record_path(Path(doc["path"]), fixtures_dir),
+                "expected_categories": doc["expected_categories"],
+                "doc_index": doc["doc_index"],
+            }
+            for doc in docs
+        ]
+        gt_path = fixtures_dir / mode / "ground_truth.json"
+        # Trailing newline: the pre-commit end-of-file-fixer enforces it, so the
+        # committed fixture must match a fresh generation byte for byte.
+        gt_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
         print(f"  Wrote {gt_path}")
 
 
@@ -802,10 +952,14 @@ def _run_doc_pipeline(
     and clause adapter. Returns ReviewReport assessments list or None."""
     import asyncio
 
-    # Patch gateway
-    import openreview_cli.review._gateway as gw_mod
+    # Patch the gateway at its REAL binding sites. extraction and qa do
+    # `from openreview_cli.review._gateway import call_gateway_chat`, so they hold
+    # their own reference; rebinding `_gateway.call_gateway_chat` would not change
+    # what they call, and the pipeline would silently use the live gateway.
+    import openreview_cli.review.extraction as extraction_mod
+    import openreview_cli.review.qa as qa_mod
 
-    def _det_gw(slot: str, messages: list[dict[str, str]]) -> str:
+    def _det_gw(slot: str, messages: list[dict[str, str]], **_: Any) -> str:
         all_text = " ".join(m.get("content", "") for m in messages)
         m = re.search(r"\[EXPECTED:(\w+)\]", all_text)
         if slot == "extraction" and m:
@@ -830,9 +984,12 @@ def _run_doc_pipeline(
             }
         )
 
-    gw_mod.call_gateway_chat = _det_gw
+    original_extraction_gateway = extraction_mod.call_gateway_chat
+    original_qa_gateway = qa_mod.call_gateway_chat
+    extraction_mod.call_gateway_chat = _det_gw
+    qa_mod.call_gateway_chat = _det_gw
 
-    # Build pipeline manually — use our own StripStage adapter
+    # Build pipeline manually - use our own StripStage adapter
     from openreview_cli.pipeline.adapters.parse import ParseStage
     from openreview_cli.pipeline.runner import Pipeline
     from openreview_cli.review.pipeline import ReviewStage
@@ -860,6 +1017,9 @@ def _run_doc_pipeline(
         asyncio.run(pipeline.run({"document_path": doc_path}))
     except Exception:
         return None
+    finally:
+        extraction_mod.call_gateway_chat = original_extraction_gateway
+        qa_mod.call_gateway_chat = original_qa_gateway
 
     if review_stage.report is None:
         return None
@@ -914,17 +1074,29 @@ def _run_mode_benchmark(mode: str, docs: list[dict[str, Any]]) -> dict[str, Any]
     }
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--fixtures-dir", type=Path, default=FIXTURES)
+    parser.add_argument("--reports-dir", type=Path, default=REPORTS_DIR)
+    parser.add_argument(
+        "--generate-only",
+        action="store_true",
+        help="Write the synthetic fixtures and exit without running the pipeline.",
+    )
+    args = parser.parse_args(argv)
+
     print("=" * 60)
     print("Product Modes Accuracy Benchmark (Phase 10 / T077)")
     print("=" * 60)
 
-    # Generate synthetic PDFs
     print("\nGenerating synthetic PDFs...")
-    ground_truth = _generate_pdfs()
-    _save_ground_truth(ground_truth)
+    ground_truth = _generate_pdfs(args.fixtures_dir)
+    _save_ground_truth(ground_truth, args.fixtures_dir)
 
-    # Run benchmark for each mode
+    if args.generate_only:
+        print(f"\nGenerated {len(ground_truth)} mode directories under {args.fixtures_dir}")
+        return
+
     all_results: list[dict[str, Any]] = []
     print("\nRunning benchmarks...")
     for mode, docs in ground_truth.items():
@@ -933,7 +1105,6 @@ def main() -> None:
         all_results.append(result)
         print("DONE")
 
-    # Print summary
     print("\n" + "=" * 60)
     print("SUMMARY")
     print("=" * 60)
@@ -949,11 +1120,11 @@ def main() -> None:
             f"{r['processing_time_seconds']:>8.3f} {r['peak_memory_bytes']:>10}"
         )
 
-    # Save reports
-    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    report_path = REPORTS_DIR / "product_modes_benchmark.json"
+    args.reports_dir.mkdir(parents=True, exist_ok=True)
+    report_path = args.reports_dir / "product_modes_benchmark.json"
     report_path.write_text(
-        json.dumps({"benchmark": "product_modes_accuracy", "results": all_results}, indent=2)
+        json.dumps({"benchmark": "product_modes_accuracy", "results": all_results}, indent=2),
+        encoding="utf-8",
     )
     print(f"\nReport saved to {report_path}")
 

@@ -5,6 +5,7 @@ pipeline that can fail on overlapping Presidio detections. Reports entity
 detection stats, processing time, and memory.
 """
 
+import argparse
 import json
 import resource
 import sys
@@ -19,6 +20,7 @@ from openreview_cli.parsing.models import Clause, Document
 
 FIXTURES_DIR = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "pii"
 SEEDED_DIR = FIXTURES_DIR / "seeded_contracts"
+DEFAULT_OUTPUT = Path(".benchmark-reports/metrics-pii.json")
 
 
 def get_rusage_mb() -> float:
@@ -64,7 +66,16 @@ def generate_50_page_benchmark() -> tuple[list[Clause], Document]:
     return clauses, doc
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=DEFAULT_OUTPUT,
+        help="Destination for the summary JSON (default: .benchmark-reports/metrics-pii.json).",
+    )
+    args = parser.parse_args(argv)
+
     tracemalloc.start()
     from openreview_cli.pii.engine import PiiEngine
 
@@ -93,7 +104,9 @@ def main() -> None:
                 source_span=(0, len(text)),
             )
             t0 = time.perf_counter()
-            entities, warnings = engine.detect_all_pages([clause], threshold=0.7)
+            entities, warnings, _failed_pages, _error_messages = engine.detect_all_pages(
+                [clause], threshold=0.7
+            )
             duration = time.perf_counter() - t0
 
             type_counts = defaultdict(int)
@@ -126,10 +139,14 @@ def main() -> None:
     clauses_50, doc_50 = generate_50_page_benchmark()
 
     # Warm-up
-    _, _ = engine.detect_all_pages(clauses_50, threshold=0.7)
+    _warm_entities, _warm_warnings, _warm_failed, _warm_errors = engine.detect_all_pages(
+        clauses_50, threshold=0.7
+    )
 
     t0 = time.perf_counter()
-    entities_50, warnings_50 = engine.detect_all_pages(clauses_50, threshold=0.7)
+    entities_50, warnings_50, _failed_50, _errors_50 = engine.detect_all_pages(
+        clauses_50, threshold=0.7
+    )
     duration_50 = time.perf_counter() - t0
     mem_mb_50 = get_rusage_mb()
 
@@ -166,7 +183,7 @@ def main() -> None:
             source_paragraph=None,
             source_span=(0, len(text)),
         )
-        entities, w = engine.detect_all_pages([nc], threshold=0.7)
+        entities, w, _failed_edge, _errors_edge = engine.detect_all_pages([nc], threshold=0.7)
         print(f"  no_pii_document.txt: {len(entities)} entities, {w}", file=sys.stderr)
         results.append(
             {
@@ -205,8 +222,9 @@ def main() -> None:
         "peak_memory_tracemalloc_mb": round(peak_trace / 1024 / 1024, 1),
     }
 
-    out_path = Path("metrics-pii-v0.1.0.json")
-    with open(out_path, "w") as f:
+    out_path = args.output
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
         json.dump(
             {"summary": summary, "results": results, "errors": errors},
             f,

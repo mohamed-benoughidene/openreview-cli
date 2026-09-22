@@ -59,6 +59,8 @@ VALID_MODES: frozenset[str] = frozenset(
         "partnercheck",
         "sponsorcheck",
         "distrocheck",
+        "privacycheck_v2",
+        "settlementcheck_v2",
     }
 )
 

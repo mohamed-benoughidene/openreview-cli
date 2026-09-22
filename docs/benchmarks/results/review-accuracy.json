@@ -1,0 +1,28 @@
+{
+  "benchmark": "review-accuracy",
+  "command": "uv run python - <<'PY' (strip -> extract_clause -> verify_assessment on the labeled NDA corpus)",
+  "date": "2026-09-21",
+  "git_commit": "unknown (re-run predates this branch; the source artifact is gitignored)",
+  "models": "unrecorded in source artifact",
+  "sample": {
+    "corpus": "tests/fixtures/review/nda-corpus-v1/nda-corpus-v1.json",
+    "playbook": "precheck-nda-v1",
+    "n_clauses": 12
+  },
+  "metrics": {
+    "tp": 10,
+    "fp": 2,
+    "fn": 0,
+    "precision": 0.8333,
+    "recall": 1.0,
+    "f1": 0.9091,
+    "amber_rate": 0.1667,
+    "amber_count": 2,
+    "qa_caught": 2,
+    "qa_error_catch_rate": 1.0,
+    "api_calls": 24,
+    "total_elapsed_seconds": 80.7,
+    "avg_seconds_per_clause": 6.72
+  },
+  "notes": "Live paid run recorded 2026-09-21. No clause text is stored in the receipt. The published Total latency cell is deliberately left unchanged (open decision O5)."
+}

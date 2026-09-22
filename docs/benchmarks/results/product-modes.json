@@ -1,0 +1,184 @@
+{
+  "benchmark": "product-modes-wiring",
+  "command": "uv run python scripts/benchmark_product_modes.py",
+  "date": "2026-09-22",
+  "git_commit": "e844b98",
+  "models": "none (deterministic mocked gateway; recall measures mode to playbook category match)",
+  "sample": {
+    "kind": "synthetic",
+    "modes": 23,
+    "documents_per_mode": 5,
+    "expected_flags_per_mode": 10,
+    "playbooks": "src/openreview_cli/review/playbooks/*.yaml (bundled)"
+  },
+  "metrics": {
+    "worst_recall": 1.0,
+    "first_mode_seconds": 29.773,
+    "steady_state_seconds_min": 0.383,
+    "steady_state_seconds_max": 0.852,
+    "mode_results": [
+      {
+        "mode": "indemnitycheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 29.773
+      },
+      {
+        "mode": "consultcheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.521
+      },
+      {
+        "mode": "workcheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.566
+      },
+      {
+        "mode": "loicheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.584
+      },
+      {
+        "mode": "subcheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.547
+      },
+      {
+        "mode": "settlementcheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.548
+      },
+      {
+        "mode": "licensecheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.722
+      },
+      {
+        "mode": "leasecheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.712
+      },
+      {
+        "mode": "privacycheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.654
+      },
+      {
+        "mode": "distrocheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.509
+      },
+      {
+        "mode": "franchisecheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.492
+      },
+      {
+        "mode": "opcheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.477
+      },
+      {
+        "mode": "partnercheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.471
+      },
+      {
+        "mode": "sponsorcheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.493
+      },
+      {
+        "mode": "assetcheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.414
+      },
+      {
+        "mode": "buycheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.383
+      },
+      {
+        "mode": "dealcheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.535
+      },
+      {
+        "mode": "engagecheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.417
+      },
+      {
+        "mode": "guaranteecheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.41
+      },
+      {
+        "mode": "hirecheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.533
+      },
+      {
+        "mode": "loancheck",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.417
+      },
+      {
+        "mode": "privacycheck_v2",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.785
+      },
+      {
+        "mode": "settlementcheck_v2",
+        "expected_categories": 10,
+        "matched_categories": 10,
+        "recall": 1.0,
+        "processing_time_seconds": 0.852
+      }
+    ]
+  },
+  "notes": "Pipeline-wiring recall only: mode to playbook to category match (match_category pass 1) to flag, with a mocked gateway. Not real-model accuracy. Tier 2 and Tier 3 declared baselines are unchanged."
+}
