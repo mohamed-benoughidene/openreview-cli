@@ -170,6 +170,8 @@ Evaluated using `scripts/benchmark_contractnli.py` with NUPunkt sentence-boundar
 | **Overall span coverage** | **97.84%** (1,359 / 1,389 spans captured) |
 | Wall time | 5.58 s (~0.058 s / NDA) |
 
+Last verified: 2026-09-22 @ unknown (source corpus is gitignored; commit of the corpus snapshot is not recorded) (receipt: docs/benchmarks/results/contractnli-coverage.json).
+
 **Category coverage breakdown:**
 - `non-solicitation`: **100.00%**
 - `return-of-materials`: **100.00%**
