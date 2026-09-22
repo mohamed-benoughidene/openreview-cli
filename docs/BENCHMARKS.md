@@ -230,9 +230,26 @@ This measures **segmentation** (whether an expert-labeled span lies fully inside
 
 **Reproduction:** run `uv run python scripts/benchmark_cuad_segmentation.py` (writes `.benchmark-reports/cuad-segmentation.json`). To obtain the corpus, download CUAD v1 from [atticusprojectai.org/cuad](https://www.atticusprojectai.org/cuad) (CC BY 4.0), or run `uv run python scripts/benchmark_legalbenchrag.py` to fetch the LegalBench-RAG processed version to `/tmp/opencode/legalbenchrag_data/`. The corpus is gitignored (`data/` in `.gitignore`).
 
+## MAUD public benchmark (segmentation and timing)
+
+Parsing scale against the [MAUD](https://www.atticusprojectai.org/maud) dataset (CC BY 4.0): 150
+mergers-and-acquisitions agreement text files with 1,676 expert-labeled queries spanning 2,839 gold
+spans. Sentence segmentation via nupunkt (no LLM calls, local only).
+
+| Metric | Value |
+|---|---|
+| Documents | 150 (1,676 queries / 2,839 spans, all readable) |
+| Time | 160.6 s for the full clause-segmentation pass over 150 documents (~1.07 s/document) |
+
+Last verified: 2026-09-22 @ f7b08ba (receipt: docs/benchmarks/results/maud-segmentation.json).
+
+**Clause segmentation (measured).** The same reproducible run (`uv run python scripts/benchmark_cuad_segmentation.py --dataset maud`) loaded 150 of 150 documents and measured **80.38% of 2,839 spans** fully contained in a single detected clause, with query coverage of **85.62% of 1,676 queries** (at least one span contained). Enclosure tightness is low: mean **token-F1 0.183**, because the detector groups whole sentences under section headings (7 regex patterns). Mean token-F1 is taken over every evaluated span with a non-contained span counted as 0, so it is a deliberate conservative floor.
+
+This measures **segmentation**, not query-answering accuracy and not deal-point accuracy. The same corpus hash (`82ef159b87f73a9c68e7143fac88bf47ac212713b56617d7e87d6f1f0a781daf`) is pinned in the receipt. The corpus is gitignored (`data/` in `.gitignore`); MAUD is published by The Atticus Project (CC BY 4.0).
+
 ## Measured vs. not measured
 
-**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (94.4% recall), review accuracy on 12 NDA clauses through OpenRouter (90.9% F1), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale, timing, and clause segmentation), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,499 tests), accuracy-test suite (20 passed, 1 failed).
+**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (94.4% recall), review accuracy on 12 NDA clauses through OpenRouter (90.9% F1), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale, timing, and clause segmentation), MAUD public benchmark on 150 M&A documents (scale, timing, and clause segmentation), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,499 tests), accuracy-test suite (20 passed, 1 failed).
 
 **Not measured (methodology documented, no numbers invented):**
 
@@ -242,6 +259,7 @@ This measures **segmentation** (whether an expert-labeled span lies fully inside
 | Dense-retrieval / embedding throughput | needs local Ollama | run the retrieval path with `nomic-embed-text` |
 | Graph clustering | needs legal-bert download | `openreview graph` with `--cluster-clauses` |
 | Reranker effect | unmeasured — disabled by default | opt-in `--rerank` on a labeled retrieval corpus (a 26-query pilot was inconclusive) |
+| MAUD deal-point accuracy | no M&A playbook among the 23 named modes, so there is nothing to score against | author an M&A playbook, then run `openreview benchmark baseline --modes=<new mode>` |
 
 Benchmark-harness honesty: the `openreview benchmark run --all --ci` CLI uses a **mock pipeline by default** for CUAD/MAUD/ContractNLI datasets (real LLM integration deferred). The ContractNLI coverage benchmark above was run manually against the real nupunkt parser, not through the mock harness. PII benchmarks use the real `PiiEngine`. Hallucination detection uses a ROUGE-L lexical-overlap placeholder (EXPERIMENTAL default); a CG-DPO detector is planned but not shipped.
 

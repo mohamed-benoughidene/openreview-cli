@@ -45,6 +45,7 @@ EXPECTED_RECEIPTS = frozenset(
         "contractnli-live.json",
         "review-accuracy.json",
         "cuad-segmentation.json",
+        "maud-segmentation.json",
     }
 )
 FORBIDDEN_KEYS = frozenset({"citation", "clause_text", "document_text", "text", "original_value"})
@@ -54,7 +55,13 @@ FORBIDDEN_KEYS = frozenset({"citation", "clause_text", "document_text", "text", 
 # literal "unknown ..." commit and their recorded models (or the "unrecorded" admission).
 GENERATED_GIT_COMMIT = re.compile(r"^[0-9a-f]{7,40}$")
 GENERATED_RECEIPTS = frozenset(
-    {"pii-throughput.json", "pii-accuracy.json", "product-modes.json", "cuad-segmentation.json"}
+    {
+        "pii-throughput.json",
+        "pii-accuracy.json",
+        "product-modes.json",
+        "cuad-segmentation.json",
+        "maud-segmentation.json",
+    }
 )
 EXPECTED_MODELS: dict[str, Any] = {
     "pii-throughput.json": "none (local Presidio + spaCy en_core_web_lg)",
@@ -69,6 +76,7 @@ EXPECTED_MODELS: dict[str, Any] = {
     },
     "review-accuracy.json": "unrecorded in source artifact",
     "cuad-segmentation.json": "none (nupunkt sentence segmentation, local)",
+    "maud-segmentation.json": "none (nupunkt sentence segmentation, local)",
 }
 UNKNOWN_GIT_COMMITS: dict[str, str] = {
     "contractnli-coverage.json": (
@@ -90,6 +98,7 @@ TABLES: dict[str, str] = {
     "## ContractNLI public benchmark (real-world NDAs measured)": "contractnli-coverage.json",
     "### Live LLM extraction + QA verification on real ContractNLI NDAs": "contractnli-live.json",
     "## CUAD public benchmark (scale and timing)": "cuad-segmentation.json",
+    "## MAUD public benchmark (segmentation and timing)": "maud-segmentation.json",
 }
 
 
@@ -476,3 +485,14 @@ def test_receiptless_sections_say_so_explicitly() -> None:
         assert "No receipt by design" in bodies[heading], (
             f"{heading} publishes numbers with no receipt and no note (D1)"
         )
+
+
+def test_maud_segmentation_numbers_match_the_receipt() -> None:
+    payload = json.loads((RESULTS_DIR / "maud-segmentation.json").read_text(encoding="utf-8"))
+    metrics = payload["metrics"]
+    sample = payload["sample"]
+    text = _page()
+    assert f"{metrics['containment_rate']:.2%} of {sample['spans_evaluated']:,} spans" in text
+    assert f"token-F1 {metrics['token_f1_mean']:.3f}" in text
+    assert f"{metrics['test_coverage_rate']:.2%} of {metrics['tests_with_span']:,} queries" in text
+    assert f"{sample['documents_loaded']} of 150 documents" in text
