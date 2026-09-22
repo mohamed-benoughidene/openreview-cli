@@ -23,43 +23,13 @@ from textual.widgets import (
     Static,
 )
 
+from openreview_cli.product_modes import MODE_GROUPS
+
 logger = logging.getLogger(__name__)
 
-# 22 product modes grouped by category per FR-013
-PRODUCT_MODES: dict[str, list[str]] = {
-    "Basic": [
-        "precheck",
-    ],
-    "Employment": [
-        "hirecheck",
-        "consultcheck",
-        "engagecheck",
-        "workcheck",
-    ],
-    "Commercial": [
-        "dealcheck",
-        "leasecheck",
-        "licensecheck",
-        "buycheck",
-        "assetcheck",
-        "distrocheck",
-        "franchisecheck",
-        "partnercheck",
-        "guaranteecheck",
-    ],
-    "Specialized": [
-        "loicheck",
-        "subcheck",
-        "opcheck",
-        "privacycheck",
-        "loancheck",
-        "indemnitycheck",
-        "sponsorcheck",
-    ],
-    "Settlement": [
-        "settlementcheck",
-    ],
-}
+# Rendered from the single source of truth in openreview_cli/product_modes.py
+# (D7/R9): the 23 named modes plus the generic precheck mode, grouped per FR-013.
+PRODUCT_MODES: dict[str, list[str]] = {group: list(names) for group, names in MODE_GROUPS.items()}
 
 
 def _swap_content(container: Container, *new_children: Widget) -> None:

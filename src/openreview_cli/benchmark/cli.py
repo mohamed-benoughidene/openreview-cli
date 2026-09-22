@@ -23,6 +23,7 @@ from openreview_cli.benchmark.models import BenchmarkConfig, DatasetResult
 from openreview_cli.benchmark.report import print_terminal_report
 from openreview_cli.benchmark.runner import BenchmarkRunner
 from openreview_cli.config.paths import get_data_dir
+from openreview_cli.product_modes import GENERIC_MODE, PRODUCT_MODES
 
 benchmark_app = typer.Typer(
     name="benchmark",
@@ -34,34 +35,9 @@ VALID_DATASETS = frozenset({"cuad", "maud", "contract_nli", "pii"})
 VALID_FORMATS = frozenset({"terminal", "json"})
 VALID_HALLUCINATION_METHODS = frozenset({"lexical", "cg-dpo"})
 VALID_BENCHMARK_TIERS = frozenset({"maximum", "balanced", "performance", "all"})
-# ponytail: hard-coded mode list — source of truth for benchmark mode validation.
+# D7/R9: derived from the single source of truth, 24 = 23 named modes + precheck.
 VALID_MODES: frozenset[str] = frozenset(
-    {
-        "precheck",
-        "hirecheck",
-        "dealcheck",
-        "assetcheck",
-        "buycheck",
-        "engagecheck",
-        "guaranteecheck",
-        "loancheck",
-        "licensecheck",
-        "leasecheck",
-        "privacycheck",
-        "indemnitycheck",
-        "consultcheck",
-        "workcheck",
-        "loicheck",
-        "subcheck",
-        "settlementcheck",
-        "franchisecheck",
-        "opcheck",
-        "partnercheck",
-        "sponsorcheck",
-        "distrocheck",
-        "privacycheck_v2",
-        "settlementcheck_v2",
-    }
+    {GENERIC_MODE, *(mode.name for mode in PRODUCT_MODES if not mode.generic)}
 )
 
 console = Console()
