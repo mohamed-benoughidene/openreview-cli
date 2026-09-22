@@ -160,3 +160,13 @@ def test_generator_never_touches_the_hand_made_v2_fixture(tmp_path: Path) -> Non
 def test_default_paths_are_unchanged() -> None:
     assert Path("tests/fixtures/benchmark") == BENCH.FIXTURES
     assert Path(".benchmark-reports") == BENCH.REPORTS_DIR
+
+
+def test_committed_fixtures_match_a_fresh_generation(tmp_path: Path) -> None:
+    """The tracked fixtures must be exactly what the generator produces."""
+    fresh = _generate_into(tmp_path / "fresh")
+    for relative_path, digest in fresh.items():
+        committed = BENCH.FIXTURES / relative_path
+        assert committed.exists(), f"missing committed fixture: {committed}"
+        actual = hashlib.sha256(committed.read_bytes()).hexdigest()
+        assert actual == digest, f"stale committed fixture: {committed}"

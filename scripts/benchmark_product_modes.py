@@ -952,10 +952,14 @@ def _run_doc_pipeline(
     and clause adapter. Returns ReviewReport assessments list or None."""
     import asyncio
 
-    # Patch gateway
-    import openreview_cli.review._gateway as gw_mod
+    # Patch the gateway at its REAL binding sites. extraction and qa do
+    # `from openreview_cli.review._gateway import call_gateway_chat`, so they hold
+    # their own reference; rebinding `_gateway.call_gateway_chat` would not change
+    # what they call, and the pipeline would silently use the live gateway.
+    import openreview_cli.review.extraction as extraction_mod
+    import openreview_cli.review.qa as qa_mod
 
-    def _det_gw(slot: str, messages: list[dict[str, str]]) -> str:
+    def _det_gw(slot: str, messages: list[dict[str, str]], **_: Any) -> str:
         all_text = " ".join(m.get("content", "") for m in messages)
         m = re.search(r"\[EXPECTED:(\w+)\]", all_text)
         if slot == "extraction" and m:
@@ -980,9 +984,12 @@ def _run_doc_pipeline(
             }
         )
 
-    gw_mod.call_gateway_chat = _det_gw
+    original_extraction_gateway = extraction_mod.call_gateway_chat
+    original_qa_gateway = qa_mod.call_gateway_chat
+    extraction_mod.call_gateway_chat = _det_gw
+    qa_mod.call_gateway_chat = _det_gw
 
-    # Build pipeline manually — use our own StripStage adapter
+    # Build pipeline manually - use our own StripStage adapter
     from openreview_cli.pipeline.adapters.parse import ParseStage
     from openreview_cli.pipeline.runner import Pipeline
     from openreview_cli.review.pipeline import ReviewStage
@@ -1010,6 +1017,9 @@ def _run_doc_pipeline(
         asyncio.run(pipeline.run({"document_path": doc_path}))
     except Exception:
         return None
+    finally:
+        extraction_mod.call_gateway_chat = original_extraction_gateway
+        qa_mod.call_gateway_chat = original_qa_gateway
 
     if review_stage.report is None:
         return None

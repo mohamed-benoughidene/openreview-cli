@@ -1,0 +1,72 @@
+[
+  {
+    "path": "tests/fixtures/benchmark/franchisecheck/doc_1.pdf",
+    "expected_categories": [
+      {
+        "category_id": "franchise-fee-structure",
+        "expected_position": "walkaway"
+      },
+      {
+        "category_id": "territory-rights",
+        "expected_position": "preferred"
+      }
+    ],
+    "doc_index": 1
+  },
+  {
+    "path": "tests/fixtures/benchmark/franchisecheck/doc_2.pdf",
+    "expected_categories": [
+      {
+        "category_id": "renewal-termination",
+        "expected_position": "acceptable"
+      },
+      {
+        "category_id": "advertising-marketing-fund",
+        "expected_position": "acceptable"
+      }
+    ],
+    "doc_index": 2
+  },
+  {
+    "path": "tests/fixtures/benchmark/franchisecheck/doc_3.pdf",
+    "expected_categories": [
+      {
+        "category_id": "franchise-fee-structure",
+        "expected_position": "preferred"
+      },
+      {
+        "category_id": "territory-rights",
+        "expected_position": "acceptable"
+      }
+    ],
+    "doc_index": 3
+  },
+  {
+    "path": "tests/fixtures/benchmark/franchisecheck/doc_4.pdf",
+    "expected_categories": [
+      {
+        "category_id": "territory-rights",
+        "expected_position": "acceptable"
+      },
+      {
+        "category_id": "renewal-termination",
+        "expected_position": "acceptable"
+      }
+    ],
+    "doc_index": 4
+  },
+  {
+    "path": "tests/fixtures/benchmark/franchisecheck/doc_5.pdf",
+    "expected_categories": [
+      {
+        "category_id": "advertising-marketing-fund",
+        "expected_position": "preferred"
+      },
+      {
+        "category_id": "transfer-assignment",
+        "expected_position": "acceptable"
+      }
+    ],
+    "doc_index": 5
+  }
+]
