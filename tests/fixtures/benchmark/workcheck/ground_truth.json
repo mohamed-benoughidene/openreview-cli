@@ -4,7 +4,7 @@
     "expected_categories": [
       {
         "category_id": "worker-classification",
-        "expected_position": "acceptable"
+        "expected_position": "walkaway"
       },
       {
         "category_id": "ip-ownership",
@@ -18,11 +18,11 @@
     "expected_categories": [
       {
         "category_id": "payment-terms",
-        "expected_position": "preferred"
+        "expected_position": "walkaway"
       },
       {
         "category_id": "non-compete-restrictions",
-        "expected_position": "acceptable"
+        "expected_position": "preferred"
       }
     ],
     "doc_index": 2
@@ -32,7 +32,7 @@
     "expected_categories": [
       {
         "category_id": "worker-classification",
-        "expected_position": "acceptable"
+        "expected_position": "preferred"
       },
       {
         "category_id": "ip-ownership",
@@ -50,7 +50,7 @@
       },
       {
         "category_id": "payment-terms",
-        "expected_position": "walkaway"
+        "expected_position": "preferred"
       }
     ],
     "doc_index": 4
@@ -60,7 +60,7 @@
     "expected_categories": [
       {
         "category_id": "non-compete-restrictions",
-        "expected_position": "preferred"
+        "expected_position": "walkaway"
       },
       {
         "category_id": "termination",

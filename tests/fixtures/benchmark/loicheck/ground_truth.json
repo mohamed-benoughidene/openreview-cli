@@ -4,11 +4,11 @@
     "expected_categories": [
       {
         "category_id": "binding-provisions",
-        "expected_position": "preferred"
+        "expected_position": "walkaway"
       },
       {
         "category_id": "exclusivity-no-shop",
-        "expected_position": "walkaway"
+        "expected_position": "preferred"
       }
     ],
     "doc_index": 1
@@ -18,7 +18,7 @@
     "expected_categories": [
       {
         "category_id": "breakup-fees",
-        "expected_position": "acceptable"
+        "expected_position": "walkaway"
       },
       {
         "category_id": "due-diligence-access",
@@ -32,11 +32,11 @@
     "expected_categories": [
       {
         "category_id": "binding-provisions",
-        "expected_position": "acceptable"
+        "expected_position": "preferred"
       },
       {
         "category_id": "exclusivity-no-shop",
-        "expected_position": "preferred"
+        "expected_position": "acceptable"
       }
     ],
     "doc_index": 3
@@ -46,7 +46,7 @@
     "expected_categories": [
       {
         "category_id": "exclusivity-no-shop",
-        "expected_position": "preferred"
+        "expected_position": "acceptable"
       },
       {
         "category_id": "breakup-fees",
