@@ -25,7 +25,7 @@ Every number on this page was measured against the source tree this session, or 
 |---|---|
 | CLI startup | `uv run openreview --help` under `/usr/bin/time -v`, 3 runs |
 | PDF / DOCX parse | in-process timing of the parsing library (see `tests/` + `src/openreview_cli/parsing/`) |
-| PII corpus + stress | `uv run python scripts/benchmark_pii_stripping.py` (real `PiiEngine`) |
+| PII corpus + stress | `uv run python scripts/benchmark_pii_stripping.py --output .benchmark-reports/pii-throughput-raw.json` (real `PiiEngine`) |
 | PII accuracy | `uv run pytest tests/integration/test_benchmark_pii_accuracy.py` |
 | ContractNLI 95 NDAs | `uv run python scripts/benchmark_contractnli.py` |
 | Product-mode recall | `uv run python scripts/benchmark_product_modes.py` (mocked gateway, deterministic) |
@@ -41,7 +41,7 @@ Run each benchmark on your own machine to get comparable numbers the offline not
 | Parse 1-page PDF, library level, cold | 3.1–3.2 s | one-time nupunkt model load per process |
 | Parse 1-page PDF, library level, warm | 0.004 s | second parse in same process |
 | Parse 37 KB DOCX, warm process | 0.27 s, 3 clauses | in-process timing |
-| PII strip, 50-page synthetic stress | 2.95 s | 345 entities (see footprint below) |
+| PII strip, 50-page synthetic stress | 2.3823 s | 395 entities (see footprint below) |
 
 The cold-PDF number is dominated by a one-time sentence-segmentation model load (~3 s per process), not by PDF parsing itself.
 
@@ -51,16 +51,24 @@ The cold-PDF number is dominated by a one-time sentence-segmentation model load 
 |---|---|---|
 | CLI `--help` | ~43 MB | measurement above |
 | CLI parse (this sandbox) | ~410 MB | wall 14.0–44.4 s see [offline artifact](#environment-artifact-offline-registry-refresh) |
-| PII 50-page stress | ~1,730 MB | 345 entities, 2.95 s |
+| PII 50-page stress | ~1724 MB | 395 entities, 2.3823 s |
 
-The project's <100 MB memory budget (enforced by memory tests) applies to streaming pipeline paths parsers stream page-by-page and never load a full document. The parse CLI process peaked ~410 MB and the spaCy/PII path ~1.73 GB on the 50-page stress; both include one-time model loads, reported factually.
+The project's <100 MB memory budget (enforced by memory tests) applies to streaming pipeline paths parsers stream page-by-page and never load a full document. The parse CLI process peaked ~410 MB and the spaCy/PII path ~1724 MB on the 50-page stress; both include one-time model loads, reported factually.
 
 ## Throughput
 
 | Metric | Value | Method |
 |---|---|---|
-| PII corpus, 54 seeded contracts | 54/54 success, 1,733 entities, 70.4 s total (~1.3 s/doc avg) | `scripts/benchmark_pii_stripping.py`, real `PiiEngine` |
-| PII derived rate | ≈ 46 docs/min | derived: 54 docs / 70.4 s, single-process, engine init amortized across all docs |
+| PII corpus, 54 processed rows | 54/54 success, 1,918 entities, 73.906 s total (~1.4 s/row avg) | `scripts/benchmark_pii_stripping.py`, real `PiiEngine` |
+| PII derived rate | ~ 44 docs/min | derived: 54 rows / 73.906 s, single-process, engine init amortized across all rows |
+
+Last verified: 2026-09-22 @ b5f051a (receipt: docs/benchmarks/results/pii-throughput.json).
+
+Processed rows are not distinct files: `tests/fixtures/pii/seeded_contracts/` holds 53 `.txt` files
+(50 with ground-truth labels) and `no_pii_document.txt` is processed twice, once in the corpus loop
+and once in the part-3 edge-case pass. See
+[docs/benchmarks/results/pii-throughput.json](benchmarks/results/pii-throughput.json) for the
+file-level detail.
 
 Not measured: dense-retrieval/embedding throughput (needs a local Ollama server), graph clustering (needs a one-time legal-bert download).
 

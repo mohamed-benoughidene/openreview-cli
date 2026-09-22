@@ -1,0 +1,27 @@
+{
+  "benchmark": "pii-throughput",
+  "command": "uv run python scripts/benchmark_pii_stripping.py --output .benchmark-reports/pii-throughput-raw.json",
+  "date": "2026-09-22",
+  "git_commit": "b5f051a",
+  "models": "none (local Presidio + spaCy en_core_web_lg)",
+  "sample": {
+    "corpus": "tests/fixtures/pii/seeded_contracts",
+    "files": 53,
+    "processed_rows": 54,
+    "note": "Rows are processed documents, not distinct files: no_pii_document.txt runs once in the corpus loop and once in the part-3 edge-case pass."
+  },
+  "metrics": {
+    "total_documents": 54,
+    "success": 54,
+    "failed": 0,
+    "total_entities_detected": 1918,
+    "total_duration_s": 73.906,
+    "docs_per_min": 44,
+    "stress": {
+      "entity_count": 395,
+      "duration_s": 2.3823,
+      "peak_memory_rss_mb": 1723.9
+    }
+  },
+  "notes": "Metrics come from the script summary. Wall time and peak RSS are environment dependent. Supersedes the 2026-06-25 metrics-pii-v0.1.0.json throughput rows."
+}
