@@ -375,3 +375,17 @@ def test_legacy_metrics_json_are_gone_and_not_recreated() -> None:
         "scripts/benchmark_legalbenchrag.py still writes a tracked repo-root path"
     )
     assert ".benchmark-reports/metrics-legalbenchrag.json" in source
+
+
+def test_run_outputs_stay_untracked_and_the_policy_is_published() -> None:
+    """R6/D5: run outputs are never committed; receipts are the only evidence."""
+    for path in ("review_results", ".benchmark-reports"):
+        ignored, _ = _git(["check-ignore", "-q", path])
+        assert ignored, f"{path} must stay gitignored (D5)"
+        ok, tracked = _git(["ls-files", path])
+        assert ok
+        assert tracked == "", f"{path} contains tracked files (D5)"
+    assert "never committed" in _page(), (
+        "docs/BENCHMARKS.md must publish the run-output policy (D5) so the "
+        "gitignore decision is discoverable from the page"
+    )

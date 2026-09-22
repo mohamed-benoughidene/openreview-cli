@@ -29,6 +29,8 @@ draft/
 # OS files
 .DS_Store
 Thumbs.db
+# Run outputs are never committed (decision D5). The receipts under
+# docs/benchmarks/results/ are the committed evidence for every published number.
 review_results/
 .benchmark-reports/
 

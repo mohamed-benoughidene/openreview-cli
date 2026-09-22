@@ -31,6 +31,10 @@ Every number on this page was measured against the source tree this session, or 
 | Product-mode recall | `uv run python scripts/benchmark_product_modes.py` (mocked gateway, deterministic) |
 | Test collection | `uv run pytest --collect-only` |
 
+Run outputs are **never committed** (decision D5): `review_results/` and `.benchmark-reports/` are
+gitignored, and the committed evidence for every number on this page is a receipt under
+`docs/benchmarks/results/`, cited from the relevant section's `Last verified:` line.
+
 Run each benchmark on your own machine to get comparable numbers the offline note below shows how much environment can matter.
 
 ## Latency
