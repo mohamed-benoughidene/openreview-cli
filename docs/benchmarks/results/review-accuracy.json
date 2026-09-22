@@ -24,5 +24,5 @@
     "total_elapsed_seconds": 80.7,
     "avg_seconds_per_clause": 6.72
   },
-  "notes": "Live paid run recorded 2026-09-21. No clause text is stored in the receipt. The published Total latency cell is deliberately left unchanged (open decision O5)."
+  "notes": "Live paid run recorded 2026-09-21. No clause text is stored in the receipt. The latency cells here supersede the earlier 107.5 s / 9.0 s figures, which came from a superseded run (decision D1/R2)."
 }

@@ -125,7 +125,7 @@ Real `PiiEngine` (Presidio + spaCy `en_core_web_lg`) evaluated against `tests/fi
 | Precision | 76.0% | 545 / 717 predictions matched ground truth |
 | F1 | 84.2% | |
 | Per-type recall (structured recognizers) | AMOUNT 100%, TAX_ID 100%, REG_NUMBER 100%, EMAIL_ADDRESS 100%, PHONE_NUMBER 100%, ACCT 100%, ID_DOCUMENT 100%, DATE_TIME 100%, LOCATION 100% | Exact on the seeded corpus |
-| Per-type recall (NER) | ORGANIZATION 83.3% (64 / 84), PERSON 62.0% (31 / 50) | spaCy NER on **synthetic** entity names (e.g. `Name3 Smith`, `AutoCompanyB1`) real contract accuracy expected to differ |
+| Per-type recall (NER) | ORGANIZATION 83.3% (70 / 84), PERSON 62.0% (31 / 50) | spaCy NER on **synthetic** entity names (e.g. `Name3 Smith`, `AutoCompanyB1`) real contract accuracy expected to differ |
 
 Last verified: 2026-09-22 @ 02a3ceb (receipt: docs/benchmarks/results/pii-accuracy.json).
 
@@ -142,7 +142,7 @@ Real extraction + QA pipeline through OpenRouter (the model was not recorded in 
 | Recall | 100.00% | | 0 clauses left uncertain |
 | QA error-catch rate | 100.00% | ≥ 80% | ✓ QA disagreed on both wrong extractions |
 | Amber rate | 16.67% | ≤ 10% | ⚠ 2/12 flagged (both were actually wrong correct flagging, but rate above target) |
-| Total latency | 107.5 s | | avg 9.0 s/clause, 24 API calls |
+| Total latency | 80.7 s | | avg 6.72 s/clause, 24 API calls |
 
 Last verified: 2026-09-21 @ unknown (re-run predates this branch; the source artifact is gitignored) (receipt: docs/benchmarks/results/review-accuracy.json).
 
@@ -178,7 +178,7 @@ Evaluated using `scripts/benchmark_contractnli.py` with NUPunkt sentence-boundar
 | Real-world NDAs | 95 documents |
 | Total evaluated spans | 1,389 spans across 977 tests |
 | **Overall span coverage** | **97.84%** (1,359 / 1,389 spans captured) |
-| Wall time | 5.58 s (~0.058 s / NDA) |
+| Wall time | 5.79 s (~0.061 s / NDA) |
 
 Last verified: 2026-09-22 @ unknown (source corpus is gitignored; commit of the corpus snapshot is not recorded) (receipt: docs/benchmarks/results/contractnli-coverage.json).
 

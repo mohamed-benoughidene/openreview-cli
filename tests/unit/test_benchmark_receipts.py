@@ -389,3 +389,33 @@ def test_run_outputs_stay_untracked_and_the_policy_is_published() -> None:
         "docs/BENCHMARKS.md must publish the run-output policy (D5) so the "
         "gitignore decision is discoverable from the page"
     )
+
+
+def test_review_accuracy_latency_matches_the_receipt() -> None:
+    """R2/D1: the page's latency cell must equal the receipt, not an earlier run."""
+    metrics = json.loads((RESULTS_DIR / "review-accuracy.json").read_text(encoding="utf-8"))[
+        "metrics"
+    ]
+    text = _page()
+    assert f"{metrics['total_elapsed_seconds']} s" in text
+    assert f"{metrics['avg_seconds_per_clause']} s/clause" in text
+    assert "107.5 s" not in text, "the superseded latency cell must not survive"
+
+
+def test_contractnli_coverage_wall_time_matches_the_receipt() -> None:
+    """D1: 5.58 s on the page vs elapsed_seconds in the receipt is a silent contradiction."""
+    metrics = json.loads((RESULTS_DIR / "contractnli-coverage.json").read_text(encoding="utf-8"))[
+        "metrics"
+    ]
+    text = _page()
+    assert f"{metrics['elapsed_seconds']} s" in text
+    assert "5.58 s" not in text
+
+
+def test_pii_accuracy_per_type_numerators_match_the_receipt() -> None:
+    """D1: ORGANIZATION 83.3% (64/84) contradicts the receipt's 0.8333 over n=84."""
+    payload = json.loads((RESULTS_DIR / "pii-accuracy.json").read_text(encoding="utf-8"))
+    organization = payload["metrics"]["pii_recall_organization"]
+    numerator = round(organization["value"] * organization["n"])
+    text = _page()
+    assert f"ORGANIZATION {organization['value']:.1%} ({numerator} / {organization['n']})" in text
