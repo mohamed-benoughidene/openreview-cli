@@ -3,6 +3,12 @@
   "command": "uv run pytest --collect-only -q",
   "date": "2026-09-22",
   "git_commit": "45250dc",
+  "provenance": [
+    {
+      "path": "scripts/benchmark_local_metrics.py",
+      "sha256": "b72b7fb0e55b5c89bfa93bddb2fa58b939d932afddbd825b0cfe77c25cf290b5"
+    }
+  ],
   "models": "none (offline pytest collection; no model calls)",
   "sample": {
     "scope": "tests/ (pyproject testpaths)"
@@ -12,5 +18,5 @@
     "total_tests": 3544,
     "elapsed_seconds": 6.16
   },
-  "notes": "The count changes whenever a test is added, so the page cites it under a dated Last verified line instead of asserting equality; regenerate this receipt whenever the page is next edited."
+  "notes": "The count changes whenever a test is added, so the page cites it under a dated Last verified line instead of asserting equality; regenerate this receipt whenever the page is next edited. git_commit is informational; the top-level provenance pin is the authoritative content pin."
 }

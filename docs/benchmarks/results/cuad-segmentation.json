@@ -3,6 +3,12 @@
   "command": "uv run python scripts/benchmark_cuad_segmentation.py --output .benchmark-reports/cuad-segmentation.json",
   "date": "2026-09-22",
   "git_commit": "c5a982d",
+  "provenance": [
+    {
+      "path": "scripts/benchmark_cuad_segmentation.py",
+      "sha256": "2cccf4fada5847285be76355141c36704e4fb4ab6257495f66ba5e7f99f0b8f2"
+    }
+  ],
   "models": "none (nupunkt sentence segmentation, local)",
   "sample": {
     "corpus": "data/legalbenchrag/benchmarks/cuad.json (gitignored, not redistributed)",
@@ -21,5 +27,5 @@
     "missing_snippets": 0,
     "elapsed_seconds": 85.31
   },
-  "notes": "Corpus is gitignored (data/legalbenchrag/) and not redistributed; corpus_sha256 pins the exact file used. Wall time is machine-dependent. This measures segmentation (span containment and enclosure tightness), NOT query-answering accuracy. The detector groups whole sentences under section headings, so one detected clause often spans several labeled spans; enclosures are coarse, which is why token-F1 is low even where containment is high. All 462 referenced files now load: one corpus file_path is stored in NFD (decomposed) Unicode form while the file on disk is NFC, and the script resolves it by retrying the path under Unicode NFC normalization, so sample.unreadable_file_paths is empty. Mean token-F1 is taken over every evaluated span with a non-contained span counted as 0, so it is a deliberate conservative floor rather than an average over only the spans that were successfully contained."
+  "notes": "Corpus is gitignored (data/legalbenchrag/) and not redistributed; corpus_sha256 pins the exact file used. Wall time is machine-dependent. This measures segmentation (span containment and enclosure tightness), NOT query-answering accuracy. The detector groups whole sentences under section headings, so one detected clause often spans several labeled spans; enclosures are coarse, which is why token-F1 is low even where containment is high. All 462 referenced files now load: one corpus file_path is stored in NFD (decomposed) Unicode form while the file on disk is NFC, and the script resolves it by retrying the path under Unicode NFC normalization, so sample.unreadable_file_paths is empty. Mean token-F1 is taken over every evaluated span with a non-contained span counted as 0, so it is a deliberate conservative floor rather than an average over only the spans that were successfully contained. git_commit is informational; the top-level provenance pin is the authoritative content pin."
 }

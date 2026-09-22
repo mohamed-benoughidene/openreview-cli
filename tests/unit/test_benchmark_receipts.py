@@ -11,6 +11,7 @@ Models and git_commit are pinned per receipt so an "unrecorded model" or
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import subprocess
@@ -96,17 +97,22 @@ UNKNOWN_GIT_COMMITS: dict[str, str] = {
     ),
 }
 
-TABLES: dict[str, str] = {
-    "## Throughput": "pii-throughput.json",
-    "## Pipeline-wiring recall (mocked)": "product-modes.json",
-    "## PII accuracy (measured 50 seeded contracts)": "pii-accuracy.json",
-    "## Review accuracy (measured 12 labeled NDA clauses)": "review-accuracy.json",
-    "## ContractNLI public benchmark (real-world NDAs measured)": "contractnli-coverage.json",
-    "### Live LLM extraction + QA verification on real ContractNLI NDAs": "contractnli-live.json",
-    "## CUAD public benchmark (scale and timing)": "cuad-segmentation.json",
-    "## Accuracy signals": "accuracy-suite.json",
-    "## MAUD public benchmark (segmentation and timing)": "maud-segmentation.json",
-    "## Measured vs. not measured": "test-collection.json",
+# N5: a section may publish more than one receipt, so each heading maps to the
+# complete set its Last verified line must cite. "Measured vs. not measured"
+# publishes both the test-collection count and the accuracy-suite result.
+TABLES: dict[str, tuple[str, ...]] = {
+    "## Throughput": ("pii-throughput.json",),
+    "## Pipeline-wiring recall (mocked)": ("product-modes.json",),
+    "## PII accuracy (measured 50 seeded contracts)": ("pii-accuracy.json",),
+    "## Review accuracy (measured 12 labeled NDA clauses)": ("review-accuracy.json",),
+    "## ContractNLI public benchmark (real-world NDAs measured)": ("contractnli-coverage.json",),
+    "### Live LLM extraction + QA verification on real ContractNLI NDAs": (
+        "contractnli-live.json",
+    ),
+    "## CUAD public benchmark (scale and timing)": ("cuad-segmentation.json",),
+    "## Accuracy signals": ("accuracy-suite.json",),
+    "## MAUD public benchmark (segmentation and timing)": ("maud-segmentation.json",),
+    "## Measured vs. not measured": ("test-collection.json", "accuracy-suite.json"),
 }
 
 
@@ -182,6 +188,62 @@ def generated_commit_problems() -> list[str] | None:
         ancestor, _ = _git(["merge-base", "--is-ancestor", commit, "HEAD"])
         if not ancestor:
             problems.append(f"{name}: recorded git_commit {commit!r} is not an ancestor of HEAD")
+    return problems
+
+
+def _sha256_of(path: Path) -> str:
+    """Return the lowercase hex SHA-256 of ``path``'s bytes."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def provenance_entry_problems(
+    name: str, provenance: object, repo_root: Path = REPO_ROOT
+) -> list[str]:
+    """Validate one receipt's ``provenance`` content pin (Defect 2).
+
+    The pin is git-independent, so it works in a shallow clone where ancestry is
+    unknowable: each entry names a repo-relative ``path`` and the hex ``sha256``
+    of that file's bytes. Returns a list of human-readable problems (empty when
+    the pin is well formed and matches the working tree).
+    """
+    if not isinstance(provenance, list) or not provenance:
+        return [f"{name}: provenance is missing or empty"]
+    problems: list[str] = []
+    for entry in provenance:
+        if not isinstance(entry, dict):
+            problems.append(f"{name}: provenance entry is not an object")
+            continue
+        rel = entry.get("path")
+        digest = entry.get("sha256")
+        if not isinstance(rel, str) or not rel:
+            problems.append(f"{name}: provenance entry has no path")
+            continue
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+            problems.append(f"{name}: provenance entry for {rel!r} has no valid sha256")
+            continue
+        target = repo_root / rel
+        if not target.is_file():
+            problems.append(f"{name}: provenance path {rel!r} does not exist under the repo root")
+            continue
+        if _sha256_of(target) != digest:
+            problems.append(
+                f"{name}: provenance sha256 for {rel!r} does not match the current file"
+            )
+    return problems
+
+
+def provenance_problems() -> list[str]:
+    """Check that every generated receipt pins its producing content (Defect 2).
+
+    Unlike ``generated_commit_problems`` this needs no git history — it hashes
+    the named files in the working tree — so it enforces the same thing in a
+    shallow clone. A receipt whose metric-producing file changed without the
+    receipt being regenerated fails here.
+    """
+    problems: list[str] = []
+    for name in sorted(GENERATED_RECEIPTS):
+        payload = json.loads((RESULTS_DIR / name).read_text(encoding="utf-8"))
+        problems.extend(provenance_entry_problems(name, payload.get("provenance")))
     return problems
 
 
@@ -307,13 +369,46 @@ def test_generated_commit_problems_return_none_for_a_shallow_clone(
     assert generated_commit_problems() is None
 
 
+def test_generated_receipts_pin_their_producing_content() -> None:
+    """Defect 2: every generated receipt must carry a provenance pin that matches.
+
+    Presence, a resolvable path, and a matching sha256 are all required, so a
+    receipt that names a docs-only or specs-only commit no longer passes just
+    because that commit exists.
+    """
+    problems = provenance_problems()
+    assert not problems, "generated receipt provenance is untrustworthy: " + "; ".join(problems)
+
+
+def test_provenance_entry_problems_flag_a_wrong_hash() -> None:
+    """The content pin is non-vacuous: an intentionally wrong sha256 is reported."""
+    provenance = [{"path": "scripts/benchmark_local_metrics.py", "sha256": "0" * 64}]
+    problems = provenance_entry_problems("fake.json", provenance)
+    assert problems
+    assert "sha256" in problems[0] and "does not match" in problems[0]
+
+
+def test_provenance_entry_problems_flag_a_missing_path() -> None:
+    """A pin that names a file no longer in the tree is reported."""
+    provenance = [{"path": "scripts/does_not_exist.py", "sha256": "0" * 64}]
+    problems = provenance_entry_problems("fake.json", provenance)
+    assert problems and "does not exist" in problems[0]
+
+
+def test_provenance_entry_problems_reject_an_empty_pin() -> None:
+    """A receipt with no provenance entries is reported, not silently accepted."""
+    assert provenance_entry_problems("fake.json", None)
+    assert provenance_entry_problems("fake.json", [])
+
+
 def test_each_results_table_has_a_last_verified_line() -> None:
     text = _page()
-    for heading, receipt in TABLES.items():
+    for heading, receipts in TABLES.items():
         assert heading in text, f"missing heading: {heading}"
         section = _section_after(text, heading)
         assert "Last verified:" in section, f"no Last verified line under {heading}"
-        assert receipt in section, f"{heading} does not cite {receipt}"
+        for receipt in receipts:
+            assert receipt in section, f"{heading} does not cite {receipt}"
 
 
 def test_pii_throughput_numbers_match_the_receipt() -> None:
@@ -368,6 +463,50 @@ def test_ci_checks_out_full_history_for_the_receipt_guard() -> None:
     assert checkout.get("with", {}).get("fetch-depth") == 0, (
         "the CI test job must check out full history (fetch-depth: 0); otherwise "
         "the receipt-commit ancestry guard skips and CI coverage is not guaranteed"
+    )
+
+
+GUARD_TEST_FILE = Path("tests") / "unit" / "test_benchmark_receipts.py"
+
+
+def _pytest_run_commands(job: dict[str, Any]) -> list[str]:
+    """Return every ``run:`` command in a CI job that invokes pytest."""
+    return [str(step["run"]) for step in job["steps"] if "pytest" in str(step.get("run", ""))]
+
+
+def test_ci_test_job_collects_the_receipt_guard_file() -> None:
+    """N6: the fetch-depth check is moot if the job never collects the guard.
+
+    Assert the ``test`` job actually collects ``tests/unit/test_benchmark_receipts.py``
+    (today via ``pytest tests/unit/``), so moving the file out of the pytest
+    target or excluding it with ``--ignore``/``--deselect`` fails here.
+    """
+    import yaml
+
+    guard = GUARD_TEST_FILE.as_posix()
+    assert (REPO_ROOT / GUARD_TEST_FILE).is_file(), (
+        f"the receipt guard moved: {GUARD_TEST_FILE} is missing"
+    )
+    workflow = yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))
+    commands = _pytest_run_commands(workflow["jobs"]["test"])
+    assert commands, "the CI test job runs no pytest step"
+
+    def collects(command: str) -> bool:
+        tokens = command.split()
+        covered = any(
+            token == guard or guard.startswith(token.rstrip("/") + "/")
+            for token in tokens
+            if token.startswith("tests/")
+        )
+        excluded = any(
+            token == "-k" or token.startswith("--ignore") or token.startswith("--deselect")
+            for token in tokens
+        )
+        return covered and not excluded
+
+    assert any(collects(command) for command in commands), (
+        "the CI test job does not collect tests/unit/test_benchmark_receipts.py, so the "
+        "receipt guard would not run in CI: " + "; ".join(commands)
     )
 
 
@@ -440,6 +579,31 @@ def test_pii_accuracy_per_type_numerators_match_the_receipt() -> None:
     numerator = round(organization["value"] * organization["n"])
     text = _page()
     assert f"ORGANIZATION {organization['value']:.1%} ({numerator} / {organization['n']})" in text
+
+
+def test_pii_accuracy_overall_recall_matches_the_receipt() -> None:
+    """Defect 1: the overall recall cell must be the receipt value at one decimal.
+
+    The receipt stores 0.9435 and the page printed a rounded-up 94.4%, but
+    ``f"{0.9435:.1%}"`` is 94.3% (551 / 584 = 94.3493% agrees). A hand-rounded
+    literal contradicts both. The prose caveat in the same section repeats the
+    figure, so the section-contains check alone could pass while the Recall cell
+    stayed wrong — the cell itself is pinned too, and a single wrong character
+    there fails the second assertion.
+    """
+    recall = json.loads((RESULTS_DIR / "pii-accuracy.json").read_text(encoding="utf-8"))["metrics"][
+        "pii_recall"
+    ]
+    expected = f"{recall['value']:.1%}"
+    section = _section_after(_page(), "## PII accuracy (measured 50 seeded contracts)")
+    assert expected in section, (
+        "the PII accuracy section must print the receipt's overall recall verbatim "
+        f"({expected}); a hand-rounded literal contradicts the receipt"
+    )
+    assert f"| Recall | {expected} |" in section, (
+        f"the Recall row must carry {expected} verbatim; found "
+        f"{[line for line in section.splitlines() if line.startswith('| Recall ')]}"
+    )
 
 
 NO_RECEIPT_BY_DESIGN_HEADINGS: tuple[str, ...] = (

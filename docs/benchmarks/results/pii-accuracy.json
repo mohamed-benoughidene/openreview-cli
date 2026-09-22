@@ -2,7 +2,13 @@
   "benchmark": "pii-accuracy",
   "command": "uv run python - <<'PY' (BenchmarkRunner.run_pii with the real PiiEngine; see AGENTS.md 'PII accuracy (seeded corpus)')",
   "date": "2026-09-22",
-  "git_commit": "02a3ceb",
+  "git_commit": "6b95245",
+  "provenance": [
+    {
+      "path": "src/openreview_cli/benchmark/metrics_pii.py",
+      "sha256": "9e2c7938443fafd0d55a7cb8369157867bef6f5668ac6de03590638ae737aaaa"
+    }
+  ],
   "models": "none (local Presidio + spaCy en_core_web_lg)",
   "sample": {
     "corpus": "tests/fixtures/pii/seeded_contracts",
@@ -67,5 +73,5 @@
       "n": 50
     }
   },
-  "notes": "Synthetic seeded corpus. Per-entity-type keys are pii_recall_<type>."
+  "notes": "Synthetic seeded corpus. Per-entity-type keys are pii_recall_<type>. git_commit is informational; the top-level provenance pin is the authoritative content pin."
 }

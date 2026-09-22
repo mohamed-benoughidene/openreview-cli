@@ -3,6 +3,12 @@
   "command": "uv run python scripts/benchmark_pii_stripping.py --output .benchmark-reports/pii-throughput-raw.json",
   "date": "2026-09-22",
   "git_commit": "b5f051a",
+  "provenance": [
+    {
+      "path": "scripts/benchmark_pii_stripping.py",
+      "sha256": "5a19e0c44505ad0e20f16c5a773f9cb10d9e12451261c43df97b145551c36f39"
+    }
+  ],
   "models": "none (local Presidio + spaCy en_core_web_lg)",
   "sample": {
     "corpus": "tests/fixtures/pii/seeded_contracts",
@@ -23,5 +29,5 @@
       "peak_memory_rss_mb": 1723.9
     }
   },
-  "notes": "Metrics come from the script summary. Wall time and peak RSS are environment dependent. Supersedes the 2026-06-25 metrics-pii-v0.1.0.json throughput rows."
+  "notes": "Metrics come from the script summary. Wall time and peak RSS are environment dependent. Supersedes the 2026-06-25 metrics-pii-v0.1.0.json throughput rows. git_commit is informational; the top-level provenance pin is the authoritative content pin."
 }

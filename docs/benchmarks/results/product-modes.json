@@ -2,7 +2,13 @@
   "benchmark": "product-modes-wiring",
   "command": "uv run python scripts/benchmark_product_modes.py",
   "date": "2026-09-22",
-  "git_commit": "e844b98",
+  "git_commit": "859402f",
+  "provenance": [
+    {
+      "path": "scripts/benchmark_product_modes.py",
+      "sha256": "f836c5982441b1d1b8228ab6f15ea1be3d1fe279915ff71562046106fb24432c"
+    }
+  ],
   "models": "none (deterministic mocked gateway; recall measures mode to playbook category match)",
   "sample": {
     "kind": "synthetic",
@@ -180,5 +186,5 @@
       }
     ]
   },
-  "notes": "Pipeline-wiring recall only: mode to playbook to category match (match_category pass 1) to flag, with a mocked gateway. Not real-model accuracy. Tier 2 and Tier 3 declared baselines are unchanged."
+  "notes": "Pipeline-wiring recall only: mode to playbook to category match (match_category pass 1) to flag, through a deterministic mocked gateway. It proves the mode to playbook to category wiring path end to end; it says nothing about model quality or accuracy. The five modes with a declared baseline in docs/benchmarks/*.json carry no accuracy number and are unchanged by this run. git_commit is informational; the top-level provenance pin is the authoritative content pin."
 }

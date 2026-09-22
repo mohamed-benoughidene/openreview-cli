@@ -86,7 +86,7 @@ Not measured: dense-retrieval/embedding throughput (needs a local Ollama server)
 |---|---|---|
 | Product-mode recall, synthetic ground truth + MOCKED gateway | 23 modes x 5 docs, 100% recall (10 expected flags per mode: 2 per synthetic doc) | 0.4-0.9 s/mode after the first; first mode 29.8 s (one-time engine init) |
 
-Last verified: 2026-09-22 @ e844b98 (receipt: docs/benchmarks/results/product-modes.json).
+Last verified: 2026-09-22 @ 859402f (receipt: docs/benchmarks/results/product-modes.json).
 
 **Label this correctly:** this validates pipeline wiring (mode → playbook → match/extract/QA → flag) with a deterministic mocked gateway. All 23 named modes are covered by this mechanism. Both mock paths — `openreview benchmark baseline --provider mock` and `openreview benchmark run --ci` — are **mode-aware**: a mode's prediction is derived from its own bundled playbook, so a mode only "matches" the categories that playbook declares; only that per-mode `match` signal (surfaced as MAUD `comparison_f1`) diverges across modes, while the label/span metrics stay identical on the ContractNLI/CUAD mock datasets. It is a **wiring** stub: it proves that mode → playbook → category selection is wired end to end, and it proves nothing about model quality. Five modes have a declared baseline (`distrocheck`, `franchisecheck`, `opcheck`, `partnercheck`, `sponsorcheck` in `docs/benchmarks/*.json`) which publishes a fixture, an expected overall assessment and time budgets but **no accuracy number** — no model runs, so nothing is scored. Every other named mode has no declared baseline and is covered only by the mocked wiring run. Real-model accuracy was measured separately through OpenRouter see [Review accuracy](#review-accuracy-measured-12-labeled-nda-clauses) below. The `scripts/benchmark_review_accuracy.py` script is structural-only (does not make real LLM calls reads `predicted_position` from corpus).
 
@@ -103,7 +103,7 @@ Last verified: 2026-09-22 @ c420395 (receipt: docs/benchmarks/results/accuracy-s
 | `tests/integration/test_pii_accuracy.py` (2 tests) | Detects ≥5 PII entities on up-to-10 real CUAD contracts; 0 false positives on clean text | ✓ pass |
 | `tests/unit/test_tier_accuracy.py` (9 tests) | Tier precision/recall/F1 targets frozen + monotonically increasing + threshold ordering | ✓ pass |
 | `tests/integration/test_review_accuracy.py` (7 tests) | F1 / amber-rate / QA-catch formulas correct; benchmark script exists + has required structure | ✓ pass |
-| `tests/integration/test_benchmark_pii_accuracy.py` (3 tests) | Labeled-corpus PII precision/recall | ⚠ 1 failed: recall 94.4% below the 95% spec target |
+| `tests/integration/test_benchmark_pii_accuracy.py` (3 tests) | Labeled-corpus PII precision/recall | ⚠ 1 failed: recall 94.3% below the 95% spec target |
 
 **Tier accuracy targets** (design goals, not measured source: `gateway/tier_accuracy.py:42-57`):
 
@@ -123,15 +123,15 @@ Real `PiiEngine` (Presidio + spaCy `en_core_web_lg`) evaluated against `tests/fi
 
 | Metric | Value | Notes |
 |---|---|---|
-| Recall | 94.4% | 551 / 584 ground-truth entities matched |
+| Recall | 94.3% | 551 / 584 ground-truth entities matched |
 | Precision | 76.0% | 545 / 717 predictions matched ground truth |
 | F1 | 84.2% | |
 | Per-type recall (structured recognizers) | AMOUNT 100%, TAX_ID 100%, REG_NUMBER 100%, EMAIL_ADDRESS 100%, PHONE_NUMBER 100%, ACCT 100%, ID_DOCUMENT 100%, DATE_TIME 100%, LOCATION 100% | Exact on the seeded corpus |
 | Per-type recall (NER) | ORGANIZATION 83.3% (70 / 84), PERSON 62.0% (31 / 50) | spaCy NER on **synthetic** entity names (e.g. `Name3 Smith`, `AutoCompanyB1`) real contract accuracy expected to differ |
 
-Last verified: 2026-09-22 @ 02a3ceb (receipt: docs/benchmarks/results/pii-accuracy.json).
+Last verified: 2026-09-22 @ 6b95245 (receipt: docs/benchmarks/results/pii-accuracy.json).
 
-**Synthetic-data caveat:** the seeded corpus is artificially generated (`Name3 Smith`, `AutoCompanyB1`), so 94.4% describes synthetic documents, not real contracts. The remaining misses are concentrated in `PERSON` (62%) and `ORGANIZATION` (83%) — exactly the entities whose names are artificial. Treat these numbers as a baseline on synthetic data, not a real-contract guarantee.
+**Synthetic-data caveat:** the seeded corpus is artificially generated (`Name3 Smith`, `AutoCompanyB1`), so 94.3% describes synthetic documents, not real contracts. The remaining misses are concentrated in `PERSON` (62%) and `ORGANIZATION` (83%) — exactly the entities whose names are artificial. Treat these numbers as a baseline on synthetic data, not a real-contract guarantee.
 
 ## Review accuracy (measured 12 labeled NDA clauses)
 
@@ -251,9 +251,9 @@ This measures **segmentation**, not query-answering accuracy and not deal-point 
 
 ## Measured vs. not measured
 
-**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (94.4% recall), review accuracy on 12 NDA clauses through OpenRouter (90.9% F1), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale, timing, and clause segmentation), MAUD public benchmark on 150 M&A documents (scale, timing, and clause segmentation), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,544 tests), accuracy-test suite (20 passed, 1 failed).
+**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (94.3% recall), review accuracy on 12 NDA clauses through OpenRouter (90.9% F1), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale, timing, and clause segmentation), MAUD public benchmark on 150 M&A documents (scale, timing, and clause segmentation), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,544 tests), accuracy-test suite (20 passed, 1 failed).
 
-Last verified: 2026-09-22 @ 45250dc (receipt: docs/benchmarks/results/test-collection.json).
+Last verified: 2026-09-22 @ 45250dc (receipts: docs/benchmarks/results/test-collection.json; docs/benchmarks/results/accuracy-suite.json).
 
 **Not measured (methodology documented, no numbers invented):**
 
