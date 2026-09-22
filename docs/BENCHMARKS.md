@@ -45,7 +45,7 @@ Run each benchmark on your own machine to get comparable numbers the offline not
 
 The cold-PDF number is dominated by a one-time sentence-segmentation model load (~3 s per process), not by PDF parsing itself.
 
-No receipt: this table has no committed receipt artifact; attaching one is deferred.
+No dedicated receipt; the PII-stress row derives from docs/benchmarks/results/pii-throughput.json.
 
 ## Resource footprint
 
@@ -57,7 +57,7 @@ No receipt: this table has no committed receipt artifact; attaching one is defer
 
 The project's <100 MB memory budget (enforced by memory tests) applies to streaming pipeline paths parsers stream page-by-page and never load a full document. The parse CLI process peaked ~410 MB and the spaCy/PII path ~1724 MB on the 50-page stress; both include one-time model loads, reported factually.
 
-No receipt: this table has no committed receipt artifact; attaching one is deferred.
+No dedicated receipt; the PII-stress row derives from docs/benchmarks/results/pii-throughput.json.
 
 ## Throughput
 
@@ -84,7 +84,7 @@ Not measured: dense-retrieval/embedding throughput (needs a local Ollama server)
 
 Last verified: 2026-09-22 @ e844b98 (receipt: docs/benchmarks/results/product-modes.json).
 
-**Label this correctly:** this validates pipeline wiring (mode → playbook → match/extract/QA → flag) with a deterministic mocked gateway. 23 named modes are covered by this mechanism; Tier 2 modes have declared baselines only and Tier 3 modes are name-only (the mock baseline ignores the mode). It is **not** real-model accuracy. Real-model accuracy was measured separately through OpenRouter see [Review accuracy](#review-accuracy-measured-12-labeled-nda-clauses) below. The `scripts/benchmark_review_accuracy.py` script is structural-only (does not make real LLM calls reads `predicted_position` from corpus).
+**Label this correctly:** this validates pipeline wiring (mode → playbook → match/extract/QA → flag) with a deterministic mocked gateway. 23 named modes are covered by this mechanism; Tier 2 modes have declared baselines only. The generic `openreview benchmark run --ci` mock baseline ignores the mode (`_mock_pipeline` in `src/openreview_cli/benchmark/baseline.py` returns match True for everything), so that path proves nothing per mode. It is **not** real-model accuracy. Real-model accuracy was measured separately through OpenRouter see [Review accuracy](#review-accuracy-measured-12-labeled-nda-clauses) below. The `scripts/benchmark_review_accuracy.py` script is structural-only (does not make real LLM calls reads `predicted_position` from corpus).
 
 ## Accuracy signals
 

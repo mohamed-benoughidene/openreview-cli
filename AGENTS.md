@@ -145,8 +145,9 @@ uv run python scripts/benchmark_pii_stripping.py
 ```bash
 # Needs: gateway configured (openreview gateway setup), OpenRouter key in auth.json
 # Labeled NDA corpus: tests/fixtures/review/nda-corpus-v1/nda-corpus-v1.json (12 clauses)
-# This session used: openrouter/anthropic/claude-sonnet-4.6 for extraction + reasoning,
-#                    voyage/voyage-3.5 for embedding, voyage/rerank-2.5 for reranking
+# The exact models used were not recorded in the source artifact
+# (receipt: docs/benchmarks/results/review-accuracy.json); configure the gateway
+# extraction + reasoning slots (and embedding/reranking, if enabled) as usual.
 # scripts/benchmark_review_accuracy.py is STRUCTURAL ONLY — it reads predicted_position
 # from the corpus JSON, does NOT call real LLMs. For real accuracy, use inline:
 uv run python -c "
