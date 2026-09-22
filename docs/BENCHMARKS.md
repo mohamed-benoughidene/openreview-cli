@@ -136,6 +136,8 @@ Real extraction + QA pipeline through OpenRouter (`anthropic/claude-sonnet-4.6`)
 | Amber rate | 16.67% | ≤ 10% | ⚠ 2/12 flagged (both were actually wrong correct flagging, but rate above target) |
 | Total latency | 107.5 s | | avg 9.0 s/clause, 24 API calls |
 
+Last verified: 2026-09-21 @ unknown (re-run predates this branch; the source artifact is gitignored) (receipt: docs/benchmarks/results/review-accuracy.json).
+
 **Per-clause:** 10 correct positions, 2 wrong (both predicted `walkaway`/`preferred` when expected was `acceptable`). QA caught both wrong predictions. All 10 correct predictions had QA agree + no amber.
 
 **Small-corpus caveat:** 12 clauses is too small for high-confidence F1. These numbers are directionally correct but the true F1 confidence interval is wide. A larger corpus (>100 clauses) would tighten the estimate.
