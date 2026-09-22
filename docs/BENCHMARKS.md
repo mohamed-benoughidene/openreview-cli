@@ -211,22 +211,24 @@ Last verified: 2026-09-21 @ unknown (frozen live run predates this branch; the s
 
 ## CUAD public benchmark (scale and timing)
 
-Parsing scale against the [CUAD v1](https://www.atticusprojectai.org/cuad) dataset (CC BY 4.0): 462 commercial legal contracts with 4,042 expert-labeled clause spans from The Atticus Project. Sentence segmentation via nupunkt (no LLM calls, local only).
+Parsing scale against the [CUAD v1](https://www.atticusprojectai.org/cuad) dataset (CC BY 4.0): 462 commercial legal contracts with 4,042 expert-labeled queries spanning 6,247 gold spans from The Atticus Project. Sentence segmentation via nupunkt (no LLM calls, local only).
 
 | Metric | Value |
 |---|---|
-| Contracts | 462 (4,034 valid queries, 8 missing files with special chars) |
-| Time | 8.5 s (0.018 s/contract) |
+| Contracts | 462 (4,042 queries / 6,247 spans, all readable) |
+| Time | 85.3 s for the full clause-segmentation pass over 462 documents (~0.18 s/contract) |
 
-No receipt: this table has no committed receipt artifact; attaching one is deferred.
+Last verified: 2026-09-22 @ c5a982d (receipt: docs/benchmarks/results/cuad-segmentation.json).
 
-**Clause identification is not measured here.** An earlier version of this page reported "100% sentence-boundary recall"; that metric only checked whether a labeled span *starts inside* a detected sentence, which is true for any offset because the segmenter's sentence spans tile the whole document so it measured nothing. A meaningful metric (a labeled clause fully contained within one detected sentence) is not yet defined or reproducible enough to publish, and full clause-text matching is only approximate (~40%) because the detector groups sentences under section headings (7 regex patterns), merging individual CUAD spans into their parent clause.
+**Clause segmentation (measured).** A reproducible run (`scripts/benchmark_cuad_segmentation.py`) loaded 462 of 462 documents and measured **90.67% of 6,247 spans** fully contained in a single detected clause, with query coverage of **91.64% of 4,042 queries** (at least one span contained). Enclosure tightness is low: mean **token-F1 0.307**, because the detector groups whole sentences under section headings (7 regex patterns), so one detected clause often swallows several labeled spans. One corpus `file_path` is stored in NFD (decomposed) Unicode form while the file on disk is NFC; the script retries the path under Unicode NFC normalization, so every referenced document loads.
 
-**Reproduction:** download CUAD v1 from [atticusprojectai.org/cuad](https://www.atticusprojectai.org/cuad) (CC BY 4.0), or run `uv run python scripts/benchmark_legalbenchrag.py` to fetch the LegalBench-RAG processed version to `/tmp/opencode/legalbenchrag_data/`. The corpus is gitignored (`data/` in `.gitignore`).
+This measures **segmentation** (whether an expert-labeled span lies fully inside one detected clause, and how tightly that clause encloses it), **not query-answering accuracy**. High containment with coarse enclosures is the expected shape for a section-heading segmenter; the low token-F1 is the honest cost of that grouping, not a contradiction of the containment number.
+
+**Reproduction:** run `uv run python scripts/benchmark_cuad_segmentation.py` (writes `.benchmark-reports/cuad-segmentation.json`). To obtain the corpus, download CUAD v1 from [atticusprojectai.org/cuad](https://www.atticusprojectai.org/cuad) (CC BY 4.0), or run `uv run python scripts/benchmark_legalbenchrag.py` to fetch the LegalBench-RAG processed version to `/tmp/opencode/legalbenchrag_data/`. The corpus is gitignored (`data/` in `.gitignore`).
 
 ## Measured vs. not measured
 
-**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (94.4% recall), review accuracy on 12 NDA clauses through OpenRouter (90.9% F1), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale + timing only — clause identification not measured), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,499 tests), accuracy-test suite (20 passed, 1 failed).
+**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (94.4% recall), review accuracy on 12 NDA clauses through OpenRouter (90.9% F1), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale, timing, and clause segmentation), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,499 tests), accuracy-test suite (20 passed, 1 failed).
 
 **Not measured (methodology documented, no numbers invented):**
 

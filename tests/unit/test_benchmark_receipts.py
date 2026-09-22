@@ -31,7 +31,7 @@ RECEIPT_KEYS = {
 }
 MAX_RECEIPT_BYTES = 20_000
 
-# Decision D3: exactly these six receipts.
+# Decision D3: exactly these seven receipts.
 EXPECTED_RECEIPTS = frozenset(
     {
         "pii-throughput.json",
@@ -40,15 +40,18 @@ EXPECTED_RECEIPTS = frozenset(
         "contractnli-coverage.json",
         "contractnli-live.json",
         "review-accuracy.json",
+        "cuad-segmentation.json",
     }
 )
 FORBIDDEN_KEYS = frozenset({"citation", "clause_text", "document_text", "text", "original_value"})
 
-# Revision 3, R9: pin the honesty-critical metadata per receipt. The three generated
-# receipts carry a real hex commit; the three projected receipts must keep their
+# Revision 3, R9: pin the honesty-critical metadata per receipt. The generated
+# receipts carry a real hex commit; the projected receipts must keep their
 # literal "unknown ..." commit and their recorded models (or the "unrecorded" admission).
 GENERATED_GIT_COMMIT = re.compile(r"^[0-9a-f]{7,40}$")
-GENERATED_RECEIPTS = frozenset({"pii-throughput.json", "pii-accuracy.json", "product-modes.json"})
+GENERATED_RECEIPTS = frozenset(
+    {"pii-throughput.json", "pii-accuracy.json", "product-modes.json", "cuad-segmentation.json"}
+)
 EXPECTED_MODELS: dict[str, Any] = {
     "pii-throughput.json": "none (local Presidio + spaCy en_core_web_lg)",
     "pii-accuracy.json": "none (local Presidio + spaCy en_core_web_lg)",
@@ -61,6 +64,7 @@ EXPECTED_MODELS: dict[str, Any] = {
         "qa": "openrouter/anthropic/claude-sonnet-4.6",
     },
     "review-accuracy.json": "unrecorded in source artifact",
+    "cuad-segmentation.json": "none (nupunkt sentence segmentation, local)",
 }
 UNKNOWN_GIT_COMMITS: dict[str, str] = {
     "contractnli-coverage.json": (
@@ -81,6 +85,7 @@ TABLES: dict[str, str] = {
     "## Review accuracy (measured 12 labeled NDA clauses)": "review-accuracy.json",
     "## ContractNLI public benchmark (real-world NDAs measured)": "contractnli-coverage.json",
     "### Live LLM extraction + QA verification on real ContractNLI NDAs": "contractnli-live.json",
+    "## CUAD public benchmark (scale and timing)": "cuad-segmentation.json",
 }
 
 
@@ -111,7 +116,7 @@ def _iter_keys(node: Any) -> list[str]:
     return keys
 
 
-def test_results_dir_contains_exactly_the_six_expected_receipts() -> None:
+def test_results_dir_contains_exactly_the_expected_receipts() -> None:
     assert RESULTS_DIR.is_dir(), f"missing {RESULTS_DIR}"
     present = {path.name for path in RESULTS_DIR.glob("*.json")}
     assert present == EXPECTED_RECEIPTS, (
@@ -189,3 +194,14 @@ def test_product_mode_row_matches_the_receipt() -> None:
     text = _page()
     assert f"{len(metrics['mode_results'])} modes x 5 docs" in text
     assert f"{metrics['worst_recall']:.0%} recall" in text
+
+
+def test_cuad_segmentation_numbers_match_the_receipt() -> None:
+    payload = json.loads((RESULTS_DIR / "cuad-segmentation.json").read_text(encoding="utf-8"))
+    metrics = payload["metrics"]
+    sample = payload["sample"]
+    text = _page()
+    assert f"{metrics['containment_rate']:.2%} of {sample['spans_evaluated']:,} spans" in text
+    assert f"token-F1 {metrics['token_f1_mean']:.3f}" in text
+    assert f"{metrics['test_coverage_rate']:.2%} of {metrics['tests_with_span']:,} queries" in text
+    assert f"{sample['documents_loaded']} of 462 documents" in text

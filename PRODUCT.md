@@ -55,7 +55,7 @@ Unlike cloud-hosted SaaS legal tech platforms that require uploading raw agreeme
 
 - **Test Suite**: 332 test files covering unit, integration, memory profiling, and TUI flows.
 - **ContractNLI Real-World NDA Benchmark**: 95-NDA structural coverage at 97.84% (1,359 / 1,389 spans across 977 tests, all 5 standard PreCheck categories) via `scripts/benchmark_contractnli.py`. Live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs via Claude Sonnet 4.6 (OpenRouter): 0 uncertain, 1 preferred, 14 acceptable, QA agreement 6.67%, amber rate 93.33%, steady-state latency ~7.8 s/clause (frozen clause set; model recorded in the artifact).
-- **CUAD Commercial Benchmark**: Parsed 462 commercial contracts (4,042 labeled clause spans) via NUPunkt; clause identification is not yet measured with a meaningful, reproducible metric (`BENCHMARKS.md`).
+- **CUAD Commercial Benchmark**: Parsed 462 commercial contracts (4,042 expert-labeled queries across 6,247 spans) via NUPunkt; clause segmentation measured at 90.67% span containment (token-F1 0.307) with a committed receipt (`BENCHMARKS.md`).
 - **PII Corpus Accuracy**: Evaluated on 50 seeded contracts with 94.35% overall recall (100% on regex-based financial/tax/id identifiers, 62% on synthetic person names).
 - **Review Accuracy Signal**: 90.9% F1 / 100% QA catch rate measured against the 12-clause NDA corpus fixture (`nda-corpus-v1.json`) via real extraction + QA through OpenRouter; the model was not recorded in the source artifact.
 - **Knowledge Graph**: Complete structural AST graph in `graphify-out/` (7,967 nodes, 445 communities, zero import cycles).
