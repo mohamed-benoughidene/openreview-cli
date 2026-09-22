@@ -197,6 +197,8 @@ End-to-end extraction + QA on 15 distinct clauses drawn from 5 real ContractNLI 
 | Amber rate | 93.33% (14 / 15 flagged) |
 | Steady-state latency | ~7.8 s / clause (extraction + QA) |
 
+Last verified: 2026-09-21 @ unknown (frozen live run predates this branch; the source artifact is gitignored) (receipt: docs/benchmarks/results/contractnli-live.json).
+
 **Interpretation:** extraction coverage is strong (all 15 clauses resolved, 0 uncertain), but the QA verifier is extremely conservative on real-world clause phrasing it disagreed with 14 of 15, flagging nearly every clause even where the extractor was confident. This is a known pre-alpha signal: QA calibration is intentionally cautious and will tighten as the labeled corpus grows. Latency (~7.8 s/clause) is well within interactive-review tolerance. The QA disagreement rate is far higher than on the synthetic NDA corpus (see [Review accuracy](#review-accuracy-measured-12-labeled-nda-clauses)), so it is most likely a corpus/phrasing effect rather than a model-quality signal.
 
 **Reproduction:** `uv run python scripts/benchmark_contractnli_llm.py` with a configured OpenRouter API key. The run writes the exact model and the identity (SHA-256) of every evaluated clause into the output JSON; pass that file back with `--pin <report.json>` to re-evaluate the identical clause set.
