@@ -496,3 +496,15 @@ def test_maud_segmentation_numbers_match_the_receipt() -> None:
     assert f"token-F1 {metrics['token_f1_mean']:.3f}" in text
     assert f"{metrics['test_coverage_rate']:.2%} of {metrics['tests_with_span']:,} queries" in text
     assert f"{sample['documents_loaded']} of 150 documents" in text
+
+
+def test_page_states_what_the_mock_baseline_proves() -> None:
+    """R8/D6: the page may not claim the mock baseline ignores the mode, and the
+    superseded Tier 2 / Tier 3 vocabulary must be gone from the coverage prose."""
+    text = _page()
+    assert "ignores the mode" not in text
+    assert "returns match True for everything" not in text
+    assert "Tier 2" not in text and "Tier 3" not in text
+    assert "mode-aware" in text
+    for mode in ("distrocheck", "franchisecheck", "opcheck", "partnercheck", "sponsorcheck"):
+        assert mode in text, f"the five declared baselines must be named: {mode}"
