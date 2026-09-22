@@ -3,6 +3,16 @@
   "command": "uv run python - <<'PY' (strip -> extract_clause -> verify_assessment on the labeled NDA corpus)",
   "date": "2026-09-21",
   "git_commit": "unknown (re-run predates this branch; the source artifact is gitignored)",
+  "provenance": [
+    {
+      "path": "src/openreview_cli/review/extraction.py",
+      "sha256": "6c2f5858931e5fe03c1a846022b5a28c4fe3885315e8bb9498c6beaaa08fdd82"
+    },
+    {
+      "path": "src/openreview_cli/review/qa.py",
+      "sha256": "3dfa8d1e649ad3cd3a205fef95dbf4f6f7fe71e1df0c8ae6e9395884859027d3"
+    }
+  ],
   "models": "unrecorded in source artifact",
   "sample": {
     "corpus": "tests/fixtures/review/nda-corpus-v1/nda-corpus-v1.json",
@@ -24,5 +34,5 @@
     "total_elapsed_seconds": 80.7,
     "avg_seconds_per_clause": 6.72
   },
-  "notes": "Live paid run recorded 2026-09-21. No clause text is stored in the receipt. The latency cells here supersede the earlier 107.5 s / 9.0 s figures, which came from a superseded run (decision D1/R2)."
+  "notes": "Live paid run recorded 2026-09-21. No clause text is stored in the receipt. The latency cells here supersede the earlier 107.5 s / 9.0 s figures, which came from a superseded run (decision D1/R2). The provenance pin covers the current file content as of 2026-09-22, so it catches future drift; it cannot prove the historical revision that produced this number, because the run predates the recording of a commit and the source artifact is gitignored."
 }

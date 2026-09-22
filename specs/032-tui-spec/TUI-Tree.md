@@ -866,7 +866,7 @@ All modals are full-screen overlays with translucent backdrop behind.
 
 | Step | Screen | Key elements |
 |------|--------|--------------|
-| 1 | Pick Mode | Grouped list (5 groups, 22 modes), type-to-filter, expand/collapse groups |
+| 1 | Pick Mode | Grouped list (5 groups, 24 modes), type-to-filter, expand/collapse groups |
 | 2 | Pick Document | File picker (directory nav, type-to-filter, Ctrl+H toggle hidden) |
 | 3 | Pick Playbook | Optional override, filtered by mode, "Use default" pre-selected |
 | 4 | Confirm & Run | Summary table, checkboxes (override model, disable PII), Run button |

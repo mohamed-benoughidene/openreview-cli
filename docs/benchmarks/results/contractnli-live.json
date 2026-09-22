@@ -3,6 +3,12 @@
   "command": "uv run python scripts/benchmark_contractnli_llm.py --clauses 15 --ndas 5 --output review_results/contractnli_llm_frozen.json",
   "date": "2026-09-21",
   "git_commit": "unknown (frozen live run predates this branch; the source artifact is gitignored)",
+  "provenance": [
+    {
+      "path": "scripts/benchmark_contractnli_llm.py",
+      "sha256": "e970b84745a481a26b962cd9a9473edb3d400445ff21bbd533a5f8ebd8adf653"
+    }
+  ],
   "models": {
     "extraction": "openrouter/anthropic/claude-sonnet-4.6",
     "qa": "openrouter/anthropic/claude-sonnet-4.6"
@@ -107,5 +113,5 @@
     "total_elapsed_seconds": 117.52,
     "avg_seconds_per_clause": 7.83
   },
-  "notes": "Projection of the frozen live run. Clause text is excluded from this receipt."
+  "notes": "Projection of the frozen live run. Clause text is excluded from this receipt. The provenance pin covers the current file content as of 2026-09-22, so it catches future drift; it cannot prove the historical revision that produced this number, because the run predates the recording of a commit and the source artifact is gitignored."
 }

@@ -3,6 +3,12 @@
   "command": "uv run pytest tests/integration/test_pii_accuracy.py tests/unit/test_tier_accuracy.py tests/integration/test_review_accuracy.py tests/integration/test_benchmark_pii_accuracy.py -q",
   "date": "2026-09-22",
   "git_commit": "c420395",
+  "provenance": [
+    {
+      "path": "scripts/benchmark_local_metrics.py",
+      "sha256": "b72b7fb0e55b5c89bfa93bddb2fa58b939d932afddbd825b0cfe77c25cf290b5"
+    }
+  ],
   "models": "none (offline pytest; no model calls)",
   "sample": {
     "files": [
@@ -21,5 +27,5 @@
     "errors": 0,
     "elapsed_seconds": 49.52
   },
-  "notes": "The single failure is the labeled-corpus PII recall (94.4%), below the 95% spec target; it is a real pre-alpha signal, not a flake. Wall time is environment dependent."
+  "notes": "The single failure is the labeled-corpus PII recall (94.3%), below the 95% spec target; it is a real pre-alpha signal, not a flake. Wall time is environment dependent. git_commit is informational; the top-level provenance pin is the authoritative content pin."
 }

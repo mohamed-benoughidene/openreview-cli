@@ -44,7 +44,7 @@ Recorded 2026-07-11. Design choices for the full interactive TUI.
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Mode selection | Grouped (not flat list of 22) | Easier scanning. Groups: Basic, Employment, Commercial, Specialized. |
+| Mode selection | Grouped (not flat list of 24) | Easier scanning. Groups: Basic, Employment, Commercial, Specialized, Settlement. |
 | File picker | Filesystem browser (fzf-style) | Navigate dirs, type to filter. |
 | File picker start dir | Current working directory | Predictable. User navigates from there. |
 | Playbook picker | Optional, defaults to mode's default | Let user override but don't force. |
@@ -58,11 +58,11 @@ Recorded 2026-07-11. Design choices for the full interactive TUI.
 | Layout toggle | Split pane (list + detail) vs full scroll | User preference. |
 | Post-review actions | Export memo (md/json/docx), Back to home | Common next steps. |
 
-## Modes (22 product modes)
+## Modes (24 product modes: 23 named plus the base `precheck` mode)
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Display | Grouped by category | Less overwhelming than 22-item flat list. |
+| Display | Grouped by category | Less overwhelming than 24-item flat list. |
 | Groups | Basic, Employment, Commercial, Specialized, Settlement | Matches product line. |
 
 ### Mode groups (preliminary)

@@ -3,6 +3,12 @@
   "command": "uv run python scripts/benchmark_cuad_segmentation.py --dataset maud --output .benchmark-reports/maud-segmentation.json",
   "date": "2026-09-22",
   "git_commit": "f7b08ba",
+  "provenance": [
+    {
+      "path": "scripts/benchmark_cuad_segmentation.py",
+      "sha256": "2cccf4fada5847285be76355141c36704e4fb4ab6257495f66ba5e7f99f0b8f2"
+    }
+  ],
   "models": "none (nupunkt sentence segmentation, local)",
   "sample": {
     "corpus": "data/legalbenchrag/benchmarks/maud.json (gitignored, not redistributed)",
@@ -21,5 +27,5 @@
     "missing_snippets": 0,
     "elapsed_seconds": 160.55
   },
-  "notes": "Corpus is gitignored (data/legalbenchrag/) and not redistributed; corpus_sha256 pins the exact file used. Wall time is machine-dependent. This measures clause segmentation (span containment and enclosure tightness), NOT query-answering accuracy, and NOT deal-point accuracy: there is no M&A playbook among the 23 named modes, so no per-category or recall number comparable to the product-mode table can be produced without authoring one. Mean token-F1 is taken over every evaluated span with a non-contained span counted as 0."
+  "notes": "Corpus is gitignored (data/legalbenchrag/) and not redistributed; corpus_sha256 pins the exact file used. Wall time is machine-dependent. This measures clause segmentation (span containment and enclosure tightness), NOT query-answering accuracy, and NOT deal-point accuracy: there is no M&A playbook among the 23 named modes, so no per-category or recall number comparable to the product-mode table can be produced without authoring one. Mean token-F1 is taken over every evaluated span with a non-contained span counted as 0. git_commit is informational; the top-level provenance pin is the authoritative content pin."
 }

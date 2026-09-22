@@ -119,7 +119,7 @@ def accuracy_suite_receipt() -> dict[str, object]:
         },
         metrics={"exit_code": code, **parse_summary(output)},
         notes=(
-            "The single failure is the labeled-corpus PII recall (94.4%), below the 95% "
+            "The single failure is the labeled-corpus PII recall (94.3%), below the 95% "
             "spec target; it is a real pre-alpha signal, not a flake. Wall time is "
             "environment dependent."
         ),

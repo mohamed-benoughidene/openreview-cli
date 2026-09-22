@@ -3277,7 +3277,7 @@ The skeletons would have included:
 ### What would need to change to unblock
 
 1. Create the `scripts/benchmarks/` directory
-2. For each of the 22 modes (not just the original 6): create 5+ labelled test
+2. For each of the 23 named modes (24 including `precheck`, not just the original 6): create 5+ labelled test
    documents with known ground-truth assessments
 3. Create the accuracy benchmark skeleton scripts per mode
 4. Create the PII benchmark notes per mode
@@ -3401,9 +3401,9 @@ Ponytail marker at `src/openreview_cli/pii/engine.py` line 17.
 
 ### Resolution
 
-Spec 030 implemented `VALID_MODES` frozenset in `benchmark/cli.py` (FR-1), parse-time mode validation rejecting unknown modes with exit code 78 (FR-2), and removed the dead `mode` parameter from `BenchmarkRunner.run_dataset()` (FR-3). Each of the 22 product modes is now a named member of `VALID_MODES` — the whitelist is the single source of truth for benchmark mode validation.
+Spec 030 implemented `VALID_MODES` frozenset in `benchmark/cli.py` (FR-1), parse-time mode validation rejecting unknown modes with exit code 78 (FR-2), and removed the dead `mode` parameter from `BenchmarkRunner.run_dataset()` (FR-3). Each of the 23 named product modes (24 including `precheck`) is a named member of `VALID_MODES`, which is derived from the single source of truth in `product_modes.py`.
 
-The frozenset is hard-coded (`ponytail`: YAGNI over registry pattern). Mode changes require a constitutional amendment to update `VALID_MODES` alongside the new mode. The resolve happened at spec time and was implemented via the FR-1/FR-2/FR-3 changes.
+The list is derived from `product_modes.PRODUCT_MODES` (`ponytail`: YAGNI over a separate registry pattern). Mode changes are made in that single source of truth alongside the new mode. The resolve happened at spec time and was implemented via the FR-1/FR-2/FR-3 changes.
 
 ### What was needed to resolve
 
@@ -3574,11 +3574,11 @@ Spec 029 spec.md §Clarifications Session 2026-07-08: "CLI routing test only —
 
 Visible from spec 029 but not built:
 
-- **Benchmark whitelist + accuracy runs for all 22 modes**: CUAD, MAUD, and ContractNLI accuracy validation to establish empirical baselines (D-75 + D-76). The playbooks and prompts exist but their accuracy is unmeasured beyond the 5 new modes' smoke tests.
+- **Benchmark whitelist + accuracy runs for all 23 named modes (24 including `precheck`)**: CUAD, MAUD, and ContractNLI accuracy validation to establish empirical baselines (D-75 + D-76). The playbooks and prompts exist but their accuracy is unmeasured beyond the 5 new modes' smoke tests.
 
 - **End-to-end pipeline tests for orphan modes**: D-77 above. 9 orphan modes have CLI routing but no fixture-document integration tests. Their playbooks (created in specs 027/028) have never been exercised against a real document through the full pipeline.
 
-- **Per-mode confidence threshold tuning**: All 22 modes share the same Green/Amber/Red thresholds. Finance-heavy modes (LoanCheck, GuaranteeCheck) may benefit from stricter thresholds given the higher cost of false positives in lending documents.
+- **Per-mode confidence threshold tuning**: All 23 named modes (24 including `precheck`) share the same Green/Amber/Red thresholds. Finance-heavy modes (LoanCheck, GuaranteeCheck) may benefit from stricter thresholds given the higher cost of false positives in lending documents.
 
 - **Multi-party bilateral comparison for Batch 2 modes**: The 14 modes from Batch 1 (specs 027/028) and Batch 2 (spec 029) all support single-party review only. Bilateral comparison (spec 014) exists as a separate pipeline and has not been integrated with any of these modes.
 
@@ -3622,7 +3622,7 @@ The actual one-shot run was **not executed** as part of spec 030. Running it req
 
 1. A configured AI gateway provider (Ollama local is preferred — free, no API key)
 2. Network access (or local model loaded)
-3. ~30-60 minutes of wall-clock time (22 modes × 3 datasets × inference time per sample)
+3. ~30-60 minutes of wall-clock time (24 modes × 3 datasets × inference time per sample)
 4. A developer to commit the resulting JSON to `docs/benchmarks/`
 
 ### What would need to change to unblock
@@ -3666,7 +3666,7 @@ in the spec:
 
 ### Future features (not deferred — natural next steps visible from spec 030)
 
-- **Per-mode confidence threshold tuning**: All 22 modes share the same Green/Amber/Red
+- **Per-mode confidence threshold tuning**: All 23 named modes (24 including `precheck`) share the same Green/Amber/Red
   thresholds. Finance-heavy modes (LoanCheck, GuaranteeCheck) may benefit from stricter
   thresholds given the higher cost of false positives in lending documents. See D-69
   (Mode-Specific Confidence Thresholds) for the pre-existing deferred item on this topic.
