@@ -1,0 +1,71 @@
+{
+  "benchmark": "pii-accuracy",
+  "command": "uv run python - <<'PY' (BenchmarkRunner.run_pii with the real PiiEngine; see AGENTS.md 'PII accuracy (seeded corpus)')",
+  "date": "2026-09-22",
+  "git_commit": "02a3ceb",
+  "models": "none (local Presidio + spaCy en_core_web_lg)",
+  "sample": {
+    "corpus": "tests/fixtures/pii/seeded_contracts",
+    "ground_truth_file": "tests/fixtures/pii/seeded_contracts/ground_truth.json",
+    "documents": 50
+  },
+  "metrics": {
+    "pii_recall": {
+      "value": 0.9435,
+      "n": 584
+    },
+    "pii_precision": {
+      "value": 0.7601,
+      "n": 717
+    },
+    "pii_f1": {
+      "value": 0.8419,
+      "n": 584
+    },
+    "pii_recall_organization": {
+      "value": 0.8333,
+      "n": 84
+    },
+    "pii_recall_person": {
+      "value": 0.62,
+      "n": 50
+    },
+    "pii_recall_email_address": {
+      "value": 1.0,
+      "n": 50
+    },
+    "pii_recall_phone_number": {
+      "value": 1.0,
+      "n": 50
+    },
+    "pii_recall_location": {
+      "value": 1.0,
+      "n": 50
+    },
+    "pii_recall_date_time": {
+      "value": 1.0,
+      "n": 50
+    },
+    "pii_recall_amount": {
+      "value": 1.0,
+      "n": 50
+    },
+    "pii_recall_tax_id": {
+      "value": 1.0,
+      "n": 50
+    },
+    "pii_recall_acct": {
+      "value": 1.0,
+      "n": 50
+    },
+    "pii_recall_id_document": {
+      "value": 1.0,
+      "n": 50
+    },
+    "pii_recall_reg_number": {
+      "value": 1.0,
+      "n": 50
+    }
+  },
+  "notes": "Synthetic seeded corpus. Per-entity-type keys are pii_recall_<type>."
+}

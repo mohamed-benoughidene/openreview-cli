@@ -119,6 +119,8 @@ Real `PiiEngine` (Presidio + spaCy `en_core_web_lg`) evaluated against `tests/fi
 | Per-type recall (structured recognizers) | AMOUNT 100%, TAX_ID 100%, REG_NUMBER 100%, EMAIL_ADDRESS 100%, PHONE_NUMBER 100%, ACCT 100%, ID_DOCUMENT 100%, DATE_TIME 100%, LOCATION 100% | Exact on the seeded corpus |
 | Per-type recall (NER) | ORGANIZATION 83.3% (64 / 84), PERSON 62.0% (31 / 50) | spaCy NER on **synthetic** entity names (e.g. `Name3 Smith`, `AutoCompanyB1`) real contract accuracy expected to differ |
 
+Last verified: 2026-09-22 @ 02a3ceb (receipt: docs/benchmarks/results/pii-accuracy.json).
+
 **Synthetic-data caveat:** the seeded corpus is artificially generated (`Name3 Smith`, `AutoCompanyB1`), so 94.4% describes synthetic documents, not real contracts. The remaining misses are concentrated in `PERSON` (62%) and `ORGANIZATION` (83%) — exactly the entities whose names are artificial. Treat these numbers as a baseline on synthetic data, not a real-contract guarantee.
 
 ## Review accuracy (measured 12 labeled NDA clauses)
