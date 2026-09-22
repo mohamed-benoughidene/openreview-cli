@@ -86,7 +86,7 @@ Last verified: 2026-09-22 @ e844b98 (receipt: docs/benchmarks/results/product-mo
 
 Accuracy-tagged tests run in the standard test suite. Most are structural checks binary pass/fail assertions, not numeric precision/recall on a labeled corpus. The exception is `tests/integration/test_benchmark_pii_accuracy.py`, which runs the real `PiiEngine` against the labeled seeded corpus and computes precision/recall (see [PII accuracy](#pii-accuracy-measured-50-seeded-contracts)).
 
-**27 passed, 1 failed, 0 skipped** (79.2 s).
+**20 passed, 1 failed, 0 skipped** (48.4 s) for the four files below, run as `uv run pytest tests/integration/test_pii_accuracy.py tests/unit/test_tier_accuracy.py tests/integration/test_review_accuracy.py tests/integration/test_benchmark_pii_accuracy.py -q`.
 
 | Test file | What it validates | Result |
 |---|---|---|
@@ -220,7 +220,7 @@ Parsing scale against the [CUAD v1](https://www.atticusprojectai.org/cuad) datas
 
 ## Measured vs. not measured
 
-**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (94.4% recall), review accuracy on 12 NDA clauses through OpenRouter (90.9% F1), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale + timing only — clause identification not measured), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,477 tests), accuracy-test suite (27 passed, 1 failed).
+**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (94.4% recall), review accuracy on 12 NDA clauses through OpenRouter (90.9% F1), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale + timing only — clause identification not measured), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,499 tests), accuracy-test suite (20 passed, 1 failed).
 
 **Not measured (methodology documented, no numbers invented):**
 

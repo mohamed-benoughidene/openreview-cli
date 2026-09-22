@@ -12,7 +12,7 @@ openreview-cli runs entirely from the command line. It parses a contract, strips
 
 ## Status: alpha
 
-The core pipeline works and is tested (3,477 tests). Two numbers matter most if you're deciding whether to trust it with real documents right now.
+The core pipeline works and is tested (3,499 tests). Two numbers matter most if you're deciding whether to trust it with real documents right now.
 
 - Review accuracy: 90.9% F1 on 12 labeled NDA clauses (Claude Sonnet 4.6 via OpenRouter)
 - PII detection: 94.4% recall on 50 seeded contracts (spaCy `en_core_web_lg`)
