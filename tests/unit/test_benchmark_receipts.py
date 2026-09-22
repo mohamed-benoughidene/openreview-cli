@@ -16,6 +16,7 @@ import json
 import re
 import subprocess
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -232,17 +233,26 @@ def provenance_entry_problems(
     return problems
 
 
-def provenance_problems() -> list[str]:
-    """Check that every generated receipt pins its producing content (Defect 2).
+def provenance_problems(
+    receipts: Iterable[str] = EXPECTED_RECEIPTS,
+    results_dir: Path = RESULTS_DIR,
+) -> list[str]:
+    """Check that every receipt pins its producing content (Defect 2).
 
     Unlike ``generated_commit_problems`` this needs no git history — it hashes
     the named files in the working tree — so it enforces the same thing in a
-    shallow clone. A receipt whose metric-producing file changed without the
+    shallow clone. Coverage is deliberately every receipt in
+    ``EXPECTED_RECEIPTS``, not just the generated ones: a projected receipt
+    (one that keeps an "unknown ..." commit) still pins the code that produced
+    its numbers. A receipt whose metric-producing file changed without the
     receipt being regenerated fails here.
+
+    ``receipts`` and ``results_dir`` are injectable so a test can point the check
+    at a synthetic receipt set.
     """
     problems: list[str] = []
-    for name in sorted(GENERATED_RECEIPTS):
-        payload = json.loads((RESULTS_DIR / name).read_text(encoding="utf-8"))
+    for name in sorted(receipts):
+        payload = json.loads((results_dir / name).read_text(encoding="utf-8"))
         problems.extend(provenance_entry_problems(name, payload.get("provenance")))
     return problems
 
@@ -369,15 +379,37 @@ def test_generated_commit_problems_return_none_for_a_shallow_clone(
     assert generated_commit_problems() is None
 
 
-def test_generated_receipts_pin_their_producing_content() -> None:
-    """Defect 2: every generated receipt must carry a provenance pin that matches.
+def test_every_receipt_pins_its_producing_content() -> None:
+    """Defect 2: every receipt must carry a provenance pin that matches.
 
-    Presence, a resolvable path, and a matching sha256 are all required, so a
-    receipt that names a docs-only or specs-only commit no longer passes just
-    because that commit exists.
+    Presence, a resolvable path, and a matching sha256 are all required for the
+    projected receipts as well as the generated ones, so a receipt that names a
+    docs-only or specs-only commit no longer passes just because that commit
+    exists.
     """
     problems = provenance_problems()
-    assert not problems, "generated receipt provenance is untrustworthy: " + "; ".join(problems)
+    assert not problems, "receipt provenance is untrustworthy: " + "; ".join(problems)
+
+
+def test_provenance_problems_report_a_wrong_hash_in_a_projected_receipt(
+    tmp_path: Path,
+) -> None:
+    """The all-receipts coverage is non-vacuous: a wrong pin is reported.
+
+    A projected receipt (one that keeps an "unknown ..." commit) is checked by
+    the same path as a generated one, so handing ``provenance_problems`` a
+    receipt set whose pin names a real file but the wrong hash must surface a
+    problem rather than pass because the receipt is projected.
+    """
+    name = "review-accuracy.json"
+    payload = json.loads((RESULTS_DIR / name).read_text(encoding="utf-8"))
+    payload["provenance"] = [
+        {"path": "src/openreview_cli/review/extraction.py", "sha256": "0" * 64}
+    ]
+    (tmp_path / name).write_text(json.dumps(payload), encoding="utf-8")
+    problems = provenance_problems(receipts={name}, results_dir=tmp_path)
+    assert problems, "a wrong provenance hash in a projected receipt was not reported"
+    assert any("does not match" in problem for problem in problems)
 
 
 def test_provenance_entry_problems_flag_a_wrong_hash() -> None:

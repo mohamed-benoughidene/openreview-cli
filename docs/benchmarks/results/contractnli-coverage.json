@@ -3,6 +3,12 @@
   "command": "uv run python - <<'PY' (scripts/benchmark_contractnli.evaluate_contractnli_coverage)",
   "date": "2026-09-22",
   "git_commit": "unknown (source corpus is gitignored; commit of the corpus snapshot is not recorded)",
+  "provenance": [
+    {
+      "path": "scripts/benchmark_contractnli.py",
+      "sha256": "619cbdacf658851e5655567a325102d59ad16b799967edfad3873a37f6823b57"
+    }
+  ],
   "models": "none (nupunkt sentence segmentation, local)",
   "sample": {
     "corpus": "data/legalbenchrag/benchmarks/contractnli.json (gitignored, not redistributed)",
@@ -24,5 +30,5 @@
     },
     "elapsed_seconds": 5.79
   },
-  "notes": "Corpus is gitignored; the sha256 pins the exact file used. Wall time is machine dependent. The published \"Wall time\" cell is this run's elapsed_seconds (decision D1)."
+  "notes": "Corpus is gitignored; the sha256 pins the exact file used. Wall time is machine dependent. The published \"Wall time\" cell is this run's elapsed_seconds (decision D1). The provenance pin covers the current file content as of 2026-09-22, so it catches future drift; it cannot prove the historical revision that produced this number, because the run predates the recording of a commit and the source artifact is gitignored."
 }
