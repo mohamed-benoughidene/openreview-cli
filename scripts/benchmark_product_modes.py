@@ -10,6 +10,7 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import gc
 import hashlib
 import json
@@ -710,12 +711,25 @@ def _expected_position(category_id: str, idx: int) -> str:
     return positions[(_stable_offset(category_id) + idx) % len(positions)]
 
 
-def _generate_pdfs() -> dict[str, list[dict[str, Any]]]:
+def _record_path(pdf_path: Path, fixtures_dir: Path) -> str:
+    """Repo-relative path recorded in ground_truth.json.
+
+    The record must not embed the run directory, otherwise two runs into
+    different directories produce different bytes.
+    """
+    try:
+        relative = pdf_path.relative_to(fixtures_dir)
+    except ValueError:
+        return pdf_path.as_posix()
+    return (FIXTURES / relative).as_posix()
+
+
+def _generate_pdfs(fixtures_dir: Path) -> dict[str, list[dict[str, Any]]]:
     """Generate 5 synthetic PDFs per mode. Returns {mode: [ground_truth_doc]}."""
     ground_truth: dict[str, list[dict[str, Any]]] = {}
 
     for mode, categories in MODE_CATEGORIES.items():
-        mode_dir = FIXTURES / mode
+        mode_dir = fixtures_dir / mode
         mode_dir.mkdir(parents=True, exist_ok=True)
         docs: list[dict[str, Any]] = []
 
@@ -750,7 +764,9 @@ def _generate_pdfs() -> dict[str, list[dict[str, Any]]]:
                 )
                 expected_categories.append({"category_id": cat_id, "expected_position": pos})
 
-            doc.save(str(pdf_path), garbage=1)
+            # no_new_id=True: PyMuPDF otherwise writes a fresh random trailer
+            # /ID[<..><..>] on every save, which changes every PDF byte.
+            doc.save(str(pdf_path), garbage=1, no_new_id=True)
             doc.close()
 
             docs.append(
@@ -766,11 +782,21 @@ def _generate_pdfs() -> dict[str, list[dict[str, Any]]]:
     return ground_truth
 
 
-def _save_ground_truth(ground_truth: dict[str, list[dict[str, Any]]]) -> None:
-    """Save ground truth JSON per mode."""
+def _save_ground_truth(ground_truth: dict[str, list[dict[str, Any]]], fixtures_dir: Path) -> None:
+    """Save ground truth JSON per mode with run-directory-independent paths."""
     for mode, docs in ground_truth.items():
-        gt_path = FIXTURES / mode / "ground_truth.json"
-        gt_path.write_text(json.dumps(docs, indent=2))
+        record = [
+            {
+                "path": _record_path(Path(doc["path"]), fixtures_dir),
+                "expected_categories": doc["expected_categories"],
+                "doc_index": doc["doc_index"],
+            }
+            for doc in docs
+        ]
+        gt_path = fixtures_dir / mode / "ground_truth.json"
+        # Trailing newline: the pre-commit end-of-file-fixer enforces it, so the
+        # committed fixture must match a fresh generation byte for byte.
+        gt_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
         print(f"  Wrote {gt_path}")
 
 
@@ -921,17 +947,29 @@ def _run_mode_benchmark(mode: str, docs: list[dict[str, Any]]) -> dict[str, Any]
     }
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--fixtures-dir", type=Path, default=FIXTURES)
+    parser.add_argument("--reports-dir", type=Path, default=REPORTS_DIR)
+    parser.add_argument(
+        "--generate-only",
+        action="store_true",
+        help="Write the synthetic fixtures and exit without running the pipeline.",
+    )
+    args = parser.parse_args(argv)
+
     print("=" * 60)
     print("Product Modes Accuracy Benchmark (Phase 10 / T077)")
     print("=" * 60)
 
-    # Generate synthetic PDFs
     print("\nGenerating synthetic PDFs...")
-    ground_truth = _generate_pdfs()
-    _save_ground_truth(ground_truth)
+    ground_truth = _generate_pdfs(args.fixtures_dir)
+    _save_ground_truth(ground_truth, args.fixtures_dir)
 
-    # Run benchmark for each mode
+    if args.generate_only:
+        print(f"\nGenerated {len(ground_truth)} mode directories under {args.fixtures_dir}")
+        return
+
     all_results: list[dict[str, Any]] = []
     print("\nRunning benchmarks...")
     for mode, docs in ground_truth.items():
@@ -940,7 +978,6 @@ def main() -> None:
         all_results.append(result)
         print("DONE")
 
-    # Print summary
     print("\n" + "=" * 60)
     print("SUMMARY")
     print("=" * 60)
@@ -956,11 +993,11 @@ def main() -> None:
             f"{r['processing_time_seconds']:>8.3f} {r['peak_memory_bytes']:>10}"
         )
 
-    # Save reports
-    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    report_path = REPORTS_DIR / "product_modes_benchmark.json"
+    args.reports_dir.mkdir(parents=True, exist_ok=True)
+    report_path = args.reports_dir / "product_modes_benchmark.json"
     report_path.write_text(
-        json.dumps({"benchmark": "product_modes_accuracy", "results": all_results}, indent=2)
+        json.dumps({"benchmark": "product_modes_accuracy", "results": all_results}, indent=2),
+        encoding="utf-8",
     )
     print(f"\nReport saved to {report_path}")
 
