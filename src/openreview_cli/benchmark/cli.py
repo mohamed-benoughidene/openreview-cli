@@ -385,7 +385,8 @@ def benchmark_baseline(
     """Run accuracy baseline — mock (CI) or real provider.
 
     Produces precision/recall/F1 numbers across modes and datasets.
-    Mock mode returns constant predictions for deterministic CI results.
+    Mock mode derives each prediction from the chosen mode's own bundled
+    playbook (mode-aware, deterministic, no network).
     Real mode calls the configured AI provider.
     """
     from openreview_cli.benchmark.baseline import (
