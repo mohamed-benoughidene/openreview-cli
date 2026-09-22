@@ -1,7 +1,7 @@
 """BenchmarkStage — per-item processing stage for benchmark evaluation.
 
 Reads ``text`` and ``category`` from the shared context, produces a
-``prediction`` dict that mirrors the output of ``_mock_pipeline``.
+``prediction`` dict that mirrors the output of ``mock_pipeline_for_mode``.
 This stage replaces the ``PipelineFn`` callback when the benchmark runner
 is configured with a pipeline.
 """
@@ -25,7 +25,7 @@ class BenchmarkStage(Stage):
 
     Writes
         ``ctx["prediction"]`` — dict with keys ``match``, ``start``, ``end``,
-        ``label`` (matching the ``_mock_pipeline`` contract).
+        ``label`` (matching the ``mock_pipeline_for_mode`` contract).
     """
 
     name = "benchmark"

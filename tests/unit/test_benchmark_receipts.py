@@ -35,7 +35,7 @@ RECEIPT_KEYS = {
 }
 MAX_RECEIPT_BYTES = 20_000
 
-# Decision D3: exactly these seven receipts.
+# Decision D9: exactly these ten receipts.
 EXPECTED_RECEIPTS = frozenset(
     {
         "pii-throughput.json",
@@ -45,6 +45,9 @@ EXPECTED_RECEIPTS = frozenset(
         "contractnli-live.json",
         "review-accuracy.json",
         "cuad-segmentation.json",
+        "maud-segmentation.json",
+        "accuracy-suite.json",
+        "test-collection.json",
     }
 )
 FORBIDDEN_KEYS = frozenset({"citation", "clause_text", "document_text", "text", "original_value"})
@@ -54,7 +57,15 @@ FORBIDDEN_KEYS = frozenset({"citation", "clause_text", "document_text", "text", 
 # literal "unknown ..." commit and their recorded models (or the "unrecorded" admission).
 GENERATED_GIT_COMMIT = re.compile(r"^[0-9a-f]{7,40}$")
 GENERATED_RECEIPTS = frozenset(
-    {"pii-throughput.json", "pii-accuracy.json", "product-modes.json", "cuad-segmentation.json"}
+    {
+        "pii-throughput.json",
+        "pii-accuracy.json",
+        "product-modes.json",
+        "cuad-segmentation.json",
+        "maud-segmentation.json",
+        "accuracy-suite.json",
+        "test-collection.json",
+    }
 )
 EXPECTED_MODELS: dict[str, Any] = {
     "pii-throughput.json": "none (local Presidio + spaCy en_core_web_lg)",
@@ -69,6 +80,9 @@ EXPECTED_MODELS: dict[str, Any] = {
     },
     "review-accuracy.json": "unrecorded in source artifact",
     "cuad-segmentation.json": "none (nupunkt sentence segmentation, local)",
+    "maud-segmentation.json": "none (nupunkt sentence segmentation, local)",
+    "accuracy-suite.json": "none (offline pytest; no model calls)",
+    "test-collection.json": "none (offline pytest collection; no model calls)",
 }
 UNKNOWN_GIT_COMMITS: dict[str, str] = {
     "contractnli-coverage.json": (
@@ -90,6 +104,9 @@ TABLES: dict[str, str] = {
     "## ContractNLI public benchmark (real-world NDAs measured)": "contractnli-coverage.json",
     "### Live LLM extraction + QA verification on real ContractNLI NDAs": "contractnli-live.json",
     "## CUAD public benchmark (scale and timing)": "cuad-segmentation.json",
+    "## Accuracy signals": "accuracy-suite.json",
+    "## MAUD public benchmark (segmentation and timing)": "maud-segmentation.json",
+    "## Measured vs. not measured": "test-collection.json",
 }
 
 
@@ -330,3 +347,200 @@ def test_cuad_segmentation_numbers_match_the_receipt() -> None:
     assert f"token-F1 {metrics['token_f1_mean']:.3f}" in text
     assert f"{metrics['test_coverage_rate']:.2%} of {metrics['tests_with_span']:,} queries" in text
     assert f"{sample['documents_loaded']} of 462 documents" in text
+
+
+CI_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "ci.yml"
+
+
+def test_ci_checks_out_full_history_for_the_receipt_guard() -> None:
+    """R15/D3: the receipt-commit ancestry guard only runs on a full clone.
+
+    ``generated_commit_problems()`` opts out on a shallow clone, so CI must fetch
+    the full history for the guard to enforce anything.
+    """
+    import yaml
+
+    workflow = yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))
+    job = workflow["jobs"]["test"]
+    checkout = next(
+        step for step in job["steps"] if str(step.get("uses", "")).startswith("actions/checkout")
+    )
+    assert checkout.get("with", {}).get("fetch-depth") == 0, (
+        "the CI test job must check out full history (fetch-depth: 0); otherwise "
+        "the receipt-commit ancestry guard skips and CI coverage is not guaranteed"
+    )
+
+
+LEGACY_METRICS_JSONS = ("metrics-pii-v0.1.0.json", "metrics-v0.1.0.json")
+LEGALBENCHRAG_SCRIPT = REPO_ROOT / "scripts" / "benchmark_legalbenchrag.py"
+
+
+def test_legacy_metrics_json_are_gone_and_not_recreated() -> None:
+    """R4/D4: the two tracked v0.1.0 metrics dumps are removed and stay removed.
+
+    Nothing on the page consumes them; the reproducible receipts under
+    docs/benchmarks/results/ replaced them (versioned, key-checked, cited).
+    """
+    for name in LEGACY_METRICS_JSONS:
+        assert not (REPO_ROOT / name).exists(), f"{name} still exists on disk"
+    ok, tracked = _git(["ls-files", *LEGACY_METRICS_JSONS])
+    assert ok
+    assert tracked == "", f"legacy metrics JSONs are still tracked: {tracked}"
+    # And the writer that used to put one of them in the repo root must not do that again.
+    source = LEGALBENCHRAG_SCRIPT.read_text(encoding="utf-8")
+    assert 'Path("metrics-v0.1.0.json")' not in source, (
+        "scripts/benchmark_legalbenchrag.py still writes a tracked repo-root path"
+    )
+    assert ".benchmark-reports/metrics-legalbenchrag.json" in source
+
+
+def test_run_outputs_stay_untracked_and_the_policy_is_published() -> None:
+    """R6/D5: run outputs are never committed; receipts are the only evidence."""
+    for path in ("review_results", ".benchmark-reports"):
+        # A trailing slash makes git treat the path as a directory, so the
+        # ``review_results/`` pattern matches even when the directory is absent
+        # (e.g. a fresh CI clone); without it, a missing path is treated as a
+        # file and the directory pattern does not match (D5).
+        ignored, _ = _git(["check-ignore", "-q", f"{path}/"])
+        assert ignored, f"{path} must stay gitignored (D5)"
+        ok, tracked = _git(["ls-files", path])
+        assert ok
+        assert tracked == "", f"{path} contains tracked files (D5)"
+    assert "never committed" in _page(), (
+        "docs/BENCHMARKS.md must publish the run-output policy (D5) so the "
+        "gitignore decision is discoverable from the page"
+    )
+
+
+def test_review_accuracy_latency_matches_the_receipt() -> None:
+    """R2/D1: the page's latency cell must equal the receipt, not an earlier run."""
+    metrics = json.loads((RESULTS_DIR / "review-accuracy.json").read_text(encoding="utf-8"))[
+        "metrics"
+    ]
+    text = _page()
+    assert f"{metrics['total_elapsed_seconds']} s" in text
+    assert f"{metrics['avg_seconds_per_clause']} s/clause" in text
+    assert "107.5 s" not in text, "the superseded latency cell must not survive"
+
+
+def test_contractnli_coverage_wall_time_matches_the_receipt() -> None:
+    """D1: 5.58 s on the page vs elapsed_seconds in the receipt is a silent contradiction."""
+    metrics = json.loads((RESULTS_DIR / "contractnli-coverage.json").read_text(encoding="utf-8"))[
+        "metrics"
+    ]
+    text = _page()
+    assert f"{metrics['elapsed_seconds']} s" in text
+    assert "5.58 s" not in text
+
+
+def test_pii_accuracy_per_type_numerators_match_the_receipt() -> None:
+    """D1: ORGANIZATION 83.3% (64/84) contradicts the receipt's 0.8333 over n=84."""
+    payload = json.loads((RESULTS_DIR / "pii-accuracy.json").read_text(encoding="utf-8"))
+    organization = payload["metrics"]["pii_recall_organization"]
+    numerator = round(organization["value"] * organization["n"])
+    text = _page()
+    assert f"ORGANIZATION {organization['value']:.1%} ({numerator} / {organization['n']})" in text
+
+
+NO_RECEIPT_BY_DESIGN_HEADINGS: tuple[str, ...] = (
+    "## Latency",
+    "## Resource footprint",
+    "## Full pipeline demo (qualitative measured)",
+    "## Environment artifact: offline registry refresh",
+)
+
+
+def _sections(text: str) -> list[tuple[str, str]]:
+    """Split the page into (heading, body) pairs; a body ends at the next heading."""
+    sections: list[tuple[str, str]] = []
+    heading: str | None = None
+    body: list[str] = []
+    for line in text.splitlines():
+        if line.startswith("#"):
+            if heading is not None:
+                sections.append((heading, "\n".join(body)))
+            heading, body = line, []
+        elif heading is not None:
+            body.append(line)
+    if heading is not None:
+        sections.append((heading, "\n".join(body)))
+    return sections
+
+
+def test_every_last_verified_line_is_covered_by_tables() -> None:
+    """D9: a section may not carry a Last verified line that the guard ignores."""
+    guarded = {
+        heading
+        for heading, body in _sections(_page())
+        if any(line.strip().startswith("Last verified:") for line in body.splitlines())
+    }
+    assert guarded == set(TABLES), (
+        f"unguarded Last verified sections: {sorted(guarded - set(TABLES))}; "
+        f"guarded headings without a Last verified line: {sorted(set(TABLES) - guarded)}"
+    )
+
+
+def test_every_published_receipt_is_registered() -> None:
+    """Every receipt cited on the page is in EXPECTED_RECEIPTS, and vice versa."""
+    cited = set(re.findall(r"docs/benchmarks/results/([A-Za-z0-9_.-]+\.json)", _page()))
+    assert cited == EXPECTED_RECEIPTS, (
+        f"cited but unregistered: {sorted(cited - EXPECTED_RECEIPTS)}; "
+        f"registered but never cited: {sorted(EXPECTED_RECEIPTS - cited)}"
+    )
+
+
+def test_receiptless_sections_say_so_explicitly() -> None:
+    """D1: a number-bearing section with no receipt must say why, in place."""
+    bodies = dict(_sections(_page()))
+    for heading in NO_RECEIPT_BY_DESIGN_HEADINGS:
+        assert heading in bodies, f"missing heading: {heading}"
+        assert "No receipt by design" in bodies[heading], (
+            f"{heading} publishes numbers with no receipt and no note (D1)"
+        )
+
+
+def test_maud_segmentation_numbers_match_the_receipt() -> None:
+    payload = json.loads((RESULTS_DIR / "maud-segmentation.json").read_text(encoding="utf-8"))
+    metrics = payload["metrics"]
+    sample = payload["sample"]
+    text = _page()
+    assert f"{metrics['containment_rate']:.2%} of {sample['spans_evaluated']:,} spans" in text
+    assert f"token-F1 {metrics['token_f1_mean']:.3f}" in text
+    assert f"{metrics['test_coverage_rate']:.2%} of {metrics['tests_with_span']:,} queries" in text
+    assert f"{sample['documents_loaded']} of 150 documents" in text
+
+
+def test_page_states_what_the_mock_baseline_proves() -> None:
+    """R8/D6: the page may not claim the mock baseline ignores the mode, and the
+    superseded Tier 2 / Tier 3 vocabulary must be gone from the coverage prose."""
+    text = _page()
+    assert "ignores the mode" not in text
+    assert "returns match True for everything" not in text
+    assert "Tier 2" not in text and "Tier 3" not in text
+    assert "mode-aware" in text
+    for mode in ("distrocheck", "franchisecheck", "opcheck", "partnercheck", "sponsorcheck"):
+        assert mode in text, f"the five declared baselines must be named: {mode}"
+
+
+def test_accuracy_suite_numbers_match_the_receipt() -> None:
+    metrics = json.loads((RESULTS_DIR / "accuracy-suite.json").read_text(encoding="utf-8"))[
+        "metrics"
+    ]
+    text = _page()
+    assert (
+        f"{metrics['passed']} passed, {metrics['failed']} failed, {metrics['skipped']} skipped"
+        in text
+    )
+    assert f"({metrics['elapsed_seconds']} s)" in text
+
+
+def test_test_collection_receipt_is_registered_and_cited() -> None:
+    """R7: the collection count is receipt-backed in both places it is published."""
+    payload = json.loads((RESULTS_DIR / "test-collection.json").read_text(encoding="utf-8"))
+    count = payload["metrics"]["total_tests"]
+    page = _page()
+    assert f"{count:,} tests" in page
+    assert "Last verified:" in _section_after(page, "## Measured vs. not measured")
+    assert "test-collection.json" in _section_after(page, "## Measured vs. not measured")
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    assert f"{count:,} tests" in readme, "README and the page must agree on the count"

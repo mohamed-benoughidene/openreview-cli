@@ -16,6 +16,7 @@ from openreview_cli.config.loader import get_config_value, load_config, set_conf
 from openreview_cli.config.paths import get_config_dir, get_data_dir, get_log_dir
 from openreview_cli.errors import EXIT_USAGE, config_error
 from openreview_cli.gateway.redaction import install_on_root_handlers
+from openreview_cli.product_modes import PRODUCT_MODES as _PRODUCT_MODE_SPECS
 from openreview_cli.storage.clients import (
     add_client,
     client_has_reviews,
@@ -3341,121 +3342,7 @@ def _register_product_mode(
 
 
 _PRODUCT_MODES: list[tuple[str, str, str]] = [
-    (
-        "licensecheck",
-        "Review a SaaS/software license agreement with LicenseCheck.",
-        "Path to a SaaS/software license agreement (PDF or DOCX).",
-    ),
-    (
-        "leasecheck",
-        "Review a commercial lease agreement with LeaseCheck.",
-        "Path to a commercial lease agreement (PDF or DOCX).",
-    ),
-    (
-        "privacycheck",
-        "Review a Data Processing Agreement with PrivacyCheck.",
-        "Path to a Data Processing Agreement (PDF or DOCX).",
-    ),
-    (
-        "privacycheck_v2",
-        "Review a Data Processing Agreement (v2) with PrivacyCheck.",
-        "Path to a Data Processing Agreement (PDF or DOCX).",
-    ),
-    (
-        "dealcheck",
-        "Review a vendor/service agreement with DealCheck.",
-        "Path to a vendor or service agreement (PDF or DOCX).",
-    ),
-    (
-        "hirecheck",
-        "Review an employment agreement with HireCheck.",
-        "Path to an employment agreement (PDF or DOCX).",
-    ),
-    (
-        "indemnitycheck",
-        "Review an indemnification agreement with IndemnityCheck.",
-        "Path to an indemnification agreement (PDF or DOCX).",
-    ),
-    (
-        "consultcheck",
-        "Review a consulting services agreement with ConsultCheck.",
-        "Path to a consulting services agreement (PDF or DOCX).",
-    ),
-    (
-        "workcheck",
-        "Review an independent contractor/work-for-hire agreement with WorkCheck.",
-        "Path to an independent contractor agreement (PDF or DOCX).",
-    ),
-    (
-        "loicheck",
-        "Review a letter of intent or MOU with LOICheck.",
-        "Path to a letter of intent or MOU (PDF or DOCX).",
-    ),
-    (
-        "subcheck",
-        "Review a subcontractor agreement with SubCheck.",
-        "Path to a subcontractor agreement (PDF or DOCX).",
-    ),
-    (
-        "settlementcheck",
-        "Review a settlement/release agreement with SettlementCheck.",
-        "Path to a settlement or release agreement (PDF or DOCX).",
-    ),
-    (
-        "settlementcheck_v2",
-        "Review a complex settlement/release agreement (v2) with SettlementCheck.",
-        "Path to a complex settlement or release agreement (PDF or DOCX).",
-    ),
-    (
-        "assetcheck",
-        "Review an asset transfer/assignment agreement with AssetCheck.",
-        "Path to an asset transfer or assignment agreement (PDF or DOCX).",
-    ),
-    (
-        "buycheck",
-        "Review an asset purchase/business acquisition agreement with BuyCheck.",
-        "Path to an asset purchase or acquisition agreement (PDF or DOCX).",
-    ),
-    (
-        "engagecheck",
-        "Review a professional services engagement letter with EngageCheck.",
-        "Path to an engagement letter (PDF or DOCX).",
-    ),
-    (
-        "guaranteecheck",
-        "Review a personal guarantee/suretyship agreement with GuaranteeCheck.",
-        "Path to a personal guarantee or suretyship agreement (PDF or DOCX).",
-    ),
-    (
-        "loancheck",
-        "Review a loan agreement/promissory note with LoanCheck.",
-        "Path to a loan agreement or promissory note (PDF or DOCX).",
-    ),
-    (
-        "franchisecheck",
-        "Review a franchise agreement or franchise disclosure document.",
-        "Path to a franchise agreement or FDD (PDF or DOCX).",
-    ),
-    (
-        "opcheck",
-        "Review an Operating Agreement (LLC governance document).",
-        "Path to an operating agreement (PDF or DOCX).",
-    ),
-    (
-        "partnercheck",
-        "Review a general or limited partnership agreement.",
-        "Path to a partnership agreement (PDF or DOCX).",
-    ),
-    (
-        "sponsorcheck",
-        "Review a sponsorship agreement.",
-        "Path to a sponsorship agreement (PDF or DOCX).",
-    ),
-    (
-        "distrocheck",
-        "Review a distribution or reseller agreement.",
-        "Path to a distribution agreement (PDF or DOCX).",
-    ),
+    (mode.name, mode.help, mode.path_help) for mode in _PRODUCT_MODE_SPECS if not mode.generic
 ]
 
 for _mode_name, _mode_help, _mode_path_help in _PRODUCT_MODES:

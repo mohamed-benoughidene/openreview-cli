@@ -1,0 +1,25 @@
+{
+  "benchmark": "maud-segmentation",
+  "command": "uv run python scripts/benchmark_cuad_segmentation.py --dataset maud --output .benchmark-reports/maud-segmentation.json",
+  "date": "2026-09-22",
+  "git_commit": "f7b08ba",
+  "models": "none (nupunkt sentence segmentation, local)",
+  "sample": {
+    "corpus": "data/legalbenchrag/benchmarks/maud.json (gitignored, not redistributed)",
+    "corpus_sha256": "82ef159b87f73a9c68e7143fac88bf47ac212713b56617d7e87d6f1f0a781daf",
+    "documents_loaded": 150,
+    "spans_evaluated": 2839,
+    "unreadable_file_paths": []
+  },
+  "metrics": {
+    "spans_contained": 2282,
+    "containment_rate": 0.803804,
+    "token_f1_mean": 0.182747,
+    "tests_with_span": 1676,
+    "tests_any_span_contained": 1435,
+    "test_coverage_rate": 0.856205,
+    "missing_snippets": 0,
+    "elapsed_seconds": 160.55
+  },
+  "notes": "Corpus is gitignored (data/legalbenchrag/) and not redistributed; corpus_sha256 pins the exact file used. Wall time is machine-dependent. This measures clause segmentation (span containment and enclosure tightness), NOT query-answering accuracy, and NOT deal-point accuracy: there is no M&A playbook among the 23 named modes, so no per-category or recall number comparable to the product-mode table can be produced without authoring one. Mean token-F1 is taken over every evaluated span with a non-contained span counted as 0."
+}

@@ -1,0 +1,25 @@
+{
+  "benchmark": "accuracy-suite",
+  "command": "uv run pytest tests/integration/test_pii_accuracy.py tests/unit/test_tier_accuracy.py tests/integration/test_review_accuracy.py tests/integration/test_benchmark_pii_accuracy.py -q",
+  "date": "2026-09-22",
+  "git_commit": "c420395",
+  "models": "none (offline pytest; no model calls)",
+  "sample": {
+    "files": [
+      "tests/integration/test_pii_accuracy.py",
+      "tests/unit/test_tier_accuracy.py",
+      "tests/integration/test_review_accuracy.py",
+      "tests/integration/test_benchmark_pii_accuracy.py"
+    ],
+    "network": "disabled by pytest addopts (--disable-socket --allow-unix-socket)"
+  },
+  "metrics": {
+    "exit_code": 1,
+    "passed": 20,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "elapsed_seconds": 49.52
+  },
+  "notes": "The single failure is the labeled-corpus PII recall (94.4%), below the 95% spec target; it is a real pre-alpha signal, not a flake. Wall time is environment dependent."
+}

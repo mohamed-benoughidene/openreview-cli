@@ -215,7 +215,9 @@ def main() -> None:
         error_cats[e["category"]] = error_cats.get(e["category"], 0) + 1
     summary["error_categories"] = error_cats
 
-    out_path = Path("metrics-v0.1.0.json")
+    # D4/D5: run output goes to a gitignored path, never the repo root.
+    out_path = Path(".benchmark-reports/metrics-legalbenchrag.json")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w") as f:
         json.dump(
             {"summary": summary, "results": results, "errors": errors}, f, indent=2, default=str

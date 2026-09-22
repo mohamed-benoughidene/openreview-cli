@@ -173,7 +173,7 @@ def test_evaluate_scores_a_tiny_corpus(tmp_path: Path, monkeypatch: pytest.Monke
     _write_tiny_corpus(corpus_path, corpus_root)
     monkeypatch.setattr(SCRIPT, "segment", _fake_segment_for_corpus)
 
-    result = SCRIPT.evaluate(corpus_path, corpus_root, "tiny-subset")
+    result = SCRIPT.evaluate(corpus_path, corpus_root, "tiny-subset", "cuad-segmentation")
 
     assert set(result) == _RESULT_KEYS
     assert result["benchmark"] == "cuad-segmentation"

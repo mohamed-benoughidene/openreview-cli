@@ -8,7 +8,8 @@
     "corpus": "data/legalbenchrag/benchmarks/contractnli.json (gitignored, not redistributed)",
     "corpus_sha256": "bc60963c4880e3db3141e96f3a7b75e1dbe195cba8f10f0658872f43430fc77a",
     "unique_ndas": 95,
-    "total_examples": 1389
+    "total_examples": 1389,
+    "tests_evaluated": 977
   },
   "metrics": {
     "total_evaluated_spans": 1389,
@@ -23,5 +24,5 @@
     },
     "elapsed_seconds": 5.79
   },
-  "notes": "Corpus is gitignored; the sha256 pins the exact file used. Wall time is machine dependent. The published \"Wall time\" cell in the \"ContractNLI public benchmark (real-world NDAs measured)\" table in docs/BENCHMARKS.md (5.58 s) records the earlier pinned run and is left unchanged; if elapsed_seconds differs from it, that is expected."
+  "notes": "Corpus is gitignored; the sha256 pins the exact file used. Wall time is machine dependent. The published \"Wall time\" cell is this run's elapsed_seconds (decision D1)."
 }
