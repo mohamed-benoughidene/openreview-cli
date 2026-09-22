@@ -397,7 +397,11 @@ def test_legacy_metrics_json_are_gone_and_not_recreated() -> None:
 def test_run_outputs_stay_untracked_and_the_policy_is_published() -> None:
     """R6/D5: run outputs are never committed; receipts are the only evidence."""
     for path in ("review_results", ".benchmark-reports"):
-        ignored, _ = _git(["check-ignore", "-q", path])
+        # A trailing slash makes git treat the path as a directory, so the
+        # ``review_results/`` pattern matches even when the directory is absent
+        # (e.g. a fresh CI clone); without it, a missing path is treated as a
+        # file and the directory pattern does not match (D5).
+        ignored, _ = _git(["check-ignore", "-q", f"{path}/"])
         assert ignored, f"{path} must stay gitignored (D5)"
         ok, tracked = _git(["ls-files", path])
         assert ok
