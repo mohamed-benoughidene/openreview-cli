@@ -13,9 +13,11 @@ that ``PdfParser.parse`` uses, called here on whole-document text with
 This is a *segmentation* measurement (span containment / enclosure tightness),
 NOT query-answering accuracy.
 
-Measured 2026-09-22: 462 of 462 documents, 6,247 spans, 90.67% containment,
-token-F1 0.307, query coverage 91.64%. See
-``docs/benchmarks/results/cuad-segmentation.json``.
+Measured 2026-09-22 CUAD: 462 of 462 documents, 6,247 spans, 90.67% containment, token-F1 0.307,
+query coverage 91.64%; MAUD (``--dataset maud``): 150 documents, 2,839 spans, 80.38% containment,
+token-F1 0.183, query coverage 85.62%. See
+``docs/benchmarks/results/cuad-segmentation.json`` and
+``docs/benchmarks/results/maud-segmentation.json``.
 """
 
 from __future__ import annotations
@@ -41,9 +43,17 @@ from openreview_cli.parsing.clause_detector import (
 )
 from openreview_cli.parsing.models import Clause
 
-DEFAULT_CORPUS = "data/legalbenchrag/benchmarks/cuad.json"
-DEFAULT_CORPUS_ROOT = "data/legalbenchrag/corpus"
-DEFAULT_OUTPUT = ".benchmark-reports/cuad-segmentation.json"
+CORPORA: dict[str, tuple[Path, Path]] = {
+    "cuad": (Path("data/legalbenchrag/benchmarks/cuad.json"), Path("data/legalbenchrag/corpus")),
+    "maud": (Path("data/legalbenchrag/benchmarks/maud.json"), Path("data/legalbenchrag/corpus")),
+}
+DEFAULT_REPORTS_DIR = Path(".benchmark-reports")
+# Backwards-compatible aliases, DERIVED from CORPORA (decision: keep the old names so
+# tests/unit/test_cuad_segmentation_script.py:204-208 keeps passing unchanged instead of
+# being rewritten for a pure rename). They are always the CUAD defaults.
+DEFAULT_CORPUS: Path = CORPORA["cuad"][0]
+DEFAULT_CORPUS_ROOT: Path = CORPORA["cuad"][1]
+DEFAULT_OUTPUT: Path = DEFAULT_REPORTS_DIR / "cuad-segmentation.json"
 
 
 def load_document_text(corpus_root: Path, file_path: str) -> str | None:
@@ -90,7 +100,9 @@ def containing_clause(clauses: list[Clause], start: int, end: int) -> Clause | N
     )
 
 
-def evaluate(corpus_path: Path, corpus_root: Path, corpus_label: str) -> dict[str, Any]:
+def evaluate(
+    corpus_path: Path, corpus_root: Path, corpus_label: str, benchmark: str
+) -> dict[str, Any]:
     """Run the segmentation benchmark and return a JSON-serializable result."""
     payload: Any = json.loads(corpus_path.read_text(encoding="utf-8"))
     tests: list[Any] = payload["tests"]
@@ -147,7 +159,7 @@ def evaluate(corpus_path: Path, corpus_root: Path, corpus_label: str) -> dict[st
 
     documents_loaded = sum(1 for entry in cache.values() if entry is not None)
     return {
-        "benchmark": "cuad-segmentation",
+        "benchmark": benchmark,
         "corpus": corpus_label,
         "corpus_sha256": hashlib.sha256(corpus_path.read_bytes()).hexdigest(),
         "documents_loaded": documents_loaded,
@@ -167,30 +179,37 @@ def evaluate(corpus_path: Path, corpus_root: Path, corpus_label: str) -> dict[st
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    """Parse command-line arguments."""
+    """Parse command-line arguments; ``--dataset`` selects the default corpus pair."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--corpus",
-        default=DEFAULT_CORPUS,
-        help=f"Path to the CUAD benchmark JSON (default: {DEFAULT_CORPUS}).",
+        "--dataset",
+        choices=sorted(CORPORA),
+        default="cuad",
+        help="Benchmark corpus to use (default: cuad).",
     )
+    parser.add_argument("--corpus", default=None, help="Override the benchmark JSON path.")
+    parser.add_argument("--corpus-root", default=None, help="Override the corpus text root.")
     parser.add_argument(
-        "--corpus-root",
-        default=DEFAULT_CORPUS_ROOT,
-        help=f"Root directory of the corpus text files (default: {DEFAULT_CORPUS_ROOT}).",
+        "--output", default=None, help="Raw result JSON path (default: .benchmark-reports/)."
     )
-    parser.add_argument(
-        "--output",
-        default=DEFAULT_OUTPUT,
-        help=f"Where to write the raw result JSON (default: {DEFAULT_OUTPUT}).",
+    args = parser.parse_args(argv)
+    default_corpus, default_root = CORPORA[args.dataset]
+    args.corpus = Path(args.corpus) if args.corpus else default_corpus
+    args.corpus_root = Path(args.corpus_root) if args.corpus_root else default_root
+    args.output = (
+        Path(args.output)
+        if args.output
+        else DEFAULT_REPORTS_DIR / f"{args.dataset}-segmentation.json"
     )
-    return parser.parse_args(argv)
+    return args
 
 
 def main(argv: Sequence[str] | None = None) -> None:
     """Run the CUAD segmentation benchmark and write the raw result JSON."""
     args = parse_args(argv)
-    result = evaluate(Path(args.corpus), Path(args.corpus_root), args.corpus)
+    result = evaluate(
+        args.corpus, args.corpus_root, str(args.corpus), f"{args.dataset}-segmentation"
+    )
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -198,7 +217,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
 
-    print("--- CUAD clause-segmentation results ---")
+    print(f"--- {args.dataset.upper()} clause-segmentation results ---")
     print(f"Documents loaded:     {result['documents_loaded']}")
     print(f"Spans evaluated:      {result['spans_evaluated']}")
     print(
