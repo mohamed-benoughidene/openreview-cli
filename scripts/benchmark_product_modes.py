@@ -11,6 +11,7 @@ Usage:
 from __future__ import annotations
 
 import gc
+import hashlib
 import json
 import re
 import time
@@ -697,10 +698,16 @@ def _clause_text(category_id: str, position: str, idx: int) -> str:
     return f"[EXPECTED:{position}] [{category_id}] {cat_name} clause body: {body}"
 
 
+def _stable_offset(category_id: str) -> int:
+    """Process-stable offset for position cycling (PYTHONHASHSEED independent)."""
+    digest = hashlib.sha256(category_id.encode("utf-8")).digest()
+    return int.from_bytes(digest[:4], "big")
+
+
 def _expected_position(category_id: str, idx: int) -> str:
     """Cycle through positions to get coverage of all three."""
     positions = ["preferred", "acceptable", "walkaway", "acceptable", "preferred"]
-    return positions[(hash(category_id) + idx) % len(positions)]
+    return positions[(_stable_offset(category_id) + idx) % len(positions)]
 
 
 def _generate_pdfs() -> dict[str, list[dict[str, Any]]]:
