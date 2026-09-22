@@ -7,25 +7,47 @@
 
 ## Entity: VALID_MODES (frozenset[str])
 
-A module-level constant in `benchmark/cli.py` enumerating all 17 product modes.
+A module-level constant in `benchmark/cli.py` enumerating all 24 product modes.
 Single source of truth for benchmark mode validation.
 
 ```python
-VALID_MODES: frozenset[str] = frozenset({
-    "precheck", "hirecheck", "dealcheck",
-    "assetcheck", "buycheck", "engagecheck", "guaranteecheck", "loancheck",
-    "licensecheck", "leasecheck", "privacycheck", "indemnitycheck",
-    "consultcheck", "workcheck", "loicheck", "subcheck", "settlementcheck",
-})
+VALID_MODES: frozenset[str] = frozenset(
+    {
+        "precheck",
+        "hirecheck",
+        "dealcheck",
+        "assetcheck",
+        "buycheck",
+        "engagecheck",
+        "guaranteecheck",
+        "loancheck",
+        "licensecheck",
+        "leasecheck",
+        "privacycheck",
+        "indemnitycheck",
+        "consultcheck",
+        "workcheck",
+        "loicheck",
+        "subcheck",
+        "settlementcheck",
+        "franchisecheck",
+        "opcheck",
+        "partnercheck",
+        "sponsorcheck",
+        "distrocheck",
+        "privacycheck_v2",
+        "settlementcheck_v2",
+    }
+)
 ```
 
 **Source**: FR-1, spec §4.1, BUNDLED_PLAYBOOKS keys in `playbook.py:20-37`.
 
 ### Validation Rules
 
-- All 17 entries match the keys in `BUNDLED_PLAYBOOKS` dict (source of truth for
+- All 24 entries match the keys in `BUNDLED_PLAYBOOKS` dict (source of truth for
   playbook-mode mapping)
-- `len(VALID_MODES)` = 17. A constitutional amendment that adds/removes a mode
+- `len(VALID_MODES)` = 24. A constitutional amendment that adds/removes a mode
   must update this constant in the same PR
 - A `ponytail:` comment documents the design choice:
   `# ponytail: hard-coded — single source of truth for benchmark mode validation.`
@@ -62,7 +84,7 @@ class BenchmarkConfig:
     baseline_ref: str | None = None
 ```
 
-**FR-4 implication**: `modes` will contain all 17 modes when `--all` is used.
+**FR-4 implication**: `modes` will contain all 24 modes when `--all` is used.
 Runner must iterate over all modes in `config.modes` per-dataset.
 
 ---
@@ -90,7 +112,7 @@ requires structured mode data).
 ## Entity: BaselineResult (NEW — FR-5)
 
 New dataclass for capturing per-mode-per-dataset baseline metrics.
-Represents one cell in the baseline matrix: 17 modes × 3 datasets = 51 cells.
+Represents one cell in the baseline matrix: 24 modes × 3 datasets = 72 cells.
 
 ```python
 @dataclass
@@ -171,8 +193,8 @@ for mode in mode_list:
     run.results.append(result)
 ```
 
-This produces `17 modes × N datasets` DatasetResult entries. For `--all`:
-- 17 modes × 3 datasets (CUAD, MAUD, ContractNLI) = 51 results
+This produces `24 modes × N datasets` DatasetResult entries. For `--all`:
+- 24 modes × 3 datasets (CUAD, MAUD, ContractNLI) = 72 results
 - Plus PII dataset when included (1 result, mode-agnostic)
 
 ---
