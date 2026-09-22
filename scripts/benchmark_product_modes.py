@@ -103,7 +103,124 @@ MODE_CATEGORIES: dict[str, list[str]] = {
         "processing-instructions",
         "dpa-termination",
     ],
+    "distrocheck": [
+        "territory-exclusivity",
+        "minimum-purchase",
+        "pricing-inventory",
+        "ip-license",
+        "termination-noncompete",
+    ],
+    "franchisecheck": [
+        "franchise-fee-structure",
+        "territory-rights",
+        "renewal-termination",
+        "advertising-marketing-fund",
+        "transfer-assignment",
+    ],
+    "opcheck": [
+        "membership-structure",
+        "capital-contributions",
+        "profit-loss-allocation",
+        "voting-rights",
+        "transfer-dissolution",
+    ],
+    "partnercheck": [
+        "capital-profit-loss",
+        "management-authority",
+        "withdrawal-expulsion-dissolution",
+        "liability-indemnification",
+        "dispute-resolution",
+    ],
+    "sponsorcheck": [
+        "sponsorship-fee",
+        "sponsorship-benefits",
+        "ip-license",
+        "termination",
+        "indemnification",
+    ],
+    "assetcheck": [
+        "asset-description",
+        "exclusions",
+        "representations",
+        "price-and-title",
+        "as-is-regulatory",
+    ],
+    "buycheck": [
+        "purchase-price",
+        "asset-list",
+        "liabilities",
+        "reps-and-warranties",
+        "closing-conditions",
+    ],
+    "dealcheck": [
+        "payment-terms",
+        "deliverables-timeline",
+        "termination-rights",
+        "liability-indemnification",
+        "confidentiality",
+        "dispute-resolution",
+    ],
+    "engagecheck": [
+        "scope-of-work",
+        "fees-and-billing",
+        "ip-ownership",
+        "confidentiality",
+        "termination",
+    ],
+    "guaranteecheck": [
+        "guarantee-type",
+        "liability-scope",
+        "waiver-of-defenses",
+        "confession-of-judgment",
+        "release-conditions",
+    ],
+    "hirecheck": [
+        "compensation-benefits",
+        "termination-severance",
+        "ip-assignment",
+        "non-compete-solicit",
+        "confidentiality",
+        "dispute-resolution",
+    ],
+    "loancheck": [
+        "loan-terms",
+        "default-acceleration",
+        "collateral",
+        "covenants",
+        "cross-default",
+    ],
+    "privacycheck_v2": [
+        "processing-scope",
+        "sub-processor-management",
+        "breach-notification",
+        "retention-deletion",
+        "audit-rights",
+        "international-transfers",
+        "cross-border-transfer",
+        "sub-processor-change-notification",
+        "processing-instructions",
+        "dpa-termination",
+    ],
+    "settlementcheck_v2": [
+        "release-scope",
+        "payment-terms-timing",
+        "confidentiality-non-disparagement",
+        "waiver-unknown-claims",
+        "breach-consequences",
+        "structured-payment-obligations",
+        "class-action-procedures",
+        "multi-party-releases",
+        "regulatory-cooperation",
+    ],
 }
+
+_GENERIC_BODIES: list[str] = [
+    "The parties agree that the provisions of this Section apply as written in this Agreement.",
+    "Nothing in this Section limits any right or obligation expressly stated in this Agreement.",
+    "The obligations described in this Section take effect on the date of this Agreement.",
+    "This Section is governed by the terms stated in the main body of this Agreement.",
+    "The parties shall comply with the requirements set out in this Section.",
+]
 
 
 def _clause_text(category_id: str, position: str, idx: int) -> str:
@@ -255,7 +372,7 @@ def _clause_text(category_id: str, position: str, idx: int) -> str:
             "Consultant shall return or destroy all Client property and "
             "Confidential Information upon termination of this Agreement.",
             "The provisions of this Agreement that by their nature should survive "
-            "termination shall survive, including confidentiality and IP ownership.",
+            "shall survive, including those stated in this Section.",
         ],
         "binding-provisions": [
             "This Letter of Intent is intended to be non-binding except for the "
@@ -539,7 +656,7 @@ def _clause_text(category_id: str, position: str, idx: int) -> str:
             "Initial term of five years with two renewal options of five years "
             "each, and Tenant has the right of first refusal on adjacent space.",
             "Initial term of three years with three renewal options of three "
-            "years each at the same rent escalation terms.",
+            "years each on the same commercial terms as the initial term.",
             "Initial term of seven years with one five-year renewal option at "
             "fair market rent, renewable by written notice.",
             "Initial term of five years with one renewal option, provided Tenant "
@@ -693,7 +810,7 @@ def _clause_text(category_id: str, position: str, idx: int) -> str:
             "and Controller may not terminate for data protection breach.",
         ],
     }
-    body = bodies.get(category_id, [f"Standard clause text for {category_id}."])[idx % 5]
+    body = bodies.get(category_id, _GENERIC_BODIES)[idx % 5]
     # PONTAIL: marker at START so it's never truncated by page boundary.
     # Include raw category_id so match_category() via cat.id in text works.
     return f"[EXPECTED:{position}] [{category_id}] {cat_name} clause body: {body}"
