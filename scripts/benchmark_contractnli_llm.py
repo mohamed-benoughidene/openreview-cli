@@ -5,6 +5,7 @@ across real-world NDAs from data/legalbenchrag against precheck-nda-v1 playbook.
 """
 
 import argparse
+import hashlib
 import json
 import sys
 import time
@@ -23,10 +24,34 @@ from openreview_cli.review.playbook import load_bundled
 from openreview_cli.review.qa import verify_assessment
 
 
+def _clause_hash(text: str) -> str:
+    return hashlib.sha256(text.strip().encode("utf-8")).hexdigest()
+
+
+def _configured_model(slot: str) -> str:
+    """Return the configured primary model for a gateway slot."""
+    from openreview_cli.config.loader import load_config
+    from openreview_cli.config.paths import get_config_dir
+
+    cfg = load_config(get_config_dir() / "config.yml")
+    return str(cfg["gateway"]["models"][slot]["primary"])
+
+
+def _load_pin(pin_path: str) -> list[str]:
+    """Load a frozen clause list: a prior report JSON or a bare list of hashes."""
+    data = json.loads(Path(pin_path).read_text(encoding="utf-8"))
+    if isinstance(data, dict) and "selected_clauses" in data:
+        return [c["clause_sha256"] for c in data["selected_clauses"]]
+    if isinstance(data, list):
+        return [c["clause_sha256"] if isinstance(c, dict) else str(c) for c in data]
+    raise ValueError(f"Unrecognised pin file: {pin_path}")
+
+
 def run_llm_evaluation(
     max_clauses: int = 25,
     sample_ndas: int | None = None,
     output_file: str | None = None,
+    pin: str | None = None,
 ) -> dict:
     """Run extraction and QA on real NDA clauses using configured Gateway models."""
     playbook = load_bundled()
@@ -49,10 +74,29 @@ def run_llm_evaluation(
             seen_texts.add(ans)
             distinct_items.append(it)
 
-    if max_clauses and max_clauses < len(distinct_items):
-        eval_items = distinct_items[:max_clauses]
+    if pin:
+        pinned_hashes = _load_pin(pin)
+        by_hash = {_clause_hash(it.get("ground_truth_answer", "")): it for it in distinct_items}
+        missing = [h for h in pinned_hashes if h not in by_hash]
+        if missing:
+            raise ValueError(f"{len(missing)} pinned clause(s) not found in the dataset")
+        eval_items = [by_hash[h] for h in pinned_hashes]
     else:
-        eval_items = distinct_items
+        limit = max_clauses or len(distinct_items)
+        # Spread clauses across documents (round-robin) so the sample is not
+        # dominated by whichever NDA happens to sort first.
+        by_doc: dict[str, list[dict]] = {}
+        for it in distinct_items:
+            by_doc.setdefault(it.get("file_path", ""), []).append(it)
+        eval_items = []
+        depth = 0
+        while len(eval_items) < limit and any(len(d) > depth for d in by_doc.values()):
+            for doc_items in by_doc.values():
+                if len(doc_items) > depth:
+                    eval_items.append(doc_items[depth])
+                    if len(eval_items) >= limit:
+                        break
+            depth += 1
 
     print(f"Starting live LLM evaluation on {len(eval_items)} distinct real-world NDA clauses...")
     pii_engine = PiiEngine(threshold=0.7)
@@ -155,6 +199,16 @@ def run_llm_evaluation(
         else 0.0,
         "total_elapsed_seconds": round(total_time, 2),
         "avg_seconds_per_clause": round(avg_latency, 2),
+        "extraction_model": _configured_model("extraction"),
+        "qa_model": _configured_model("reasoning"),
+        "selected_clauses": [
+            {
+                "id": it.get("example_id"),
+                "document": Path(it.get("file_path", "")).name,
+                "clause_sha256": _clause_hash(it.get("ground_truth_answer", "")),
+            }
+            for it in eval_items
+        ],
         "results": all_results,
     }
 
@@ -177,6 +231,12 @@ def main() -> None:
     )
     parser.add_argument("--ndas", type=int, default=None, help="Limit to N unique NDAs")
     parser.add_argument(
+        "--pin",
+        type=str,
+        default=None,
+        help="Prior report JSON or hash list; re-evaluates exactly those clauses",
+    )
+    parser.add_argument(
         "--output",
         type=str,
         default="review_results/contractnli_llm_benchmark.json",
@@ -185,11 +245,16 @@ def main() -> None:
     args = parser.parse_args()
 
     results = run_llm_evaluation(
-        max_clauses=args.clauses, sample_ndas=args.ndas, output_file=args.output
+        max_clauses=args.clauses,
+        sample_ndas=args.ndas,
+        output_file=args.output,
+        pin=args.pin,
     )
     print("\n==========================================")
     print("ContractNLI Live LLM Evaluation Summary")
     print("==========================================")
+    print(f"Extraction model: {results['extraction_model']}")
+    print(f"QA model: {results['qa_model']}")
     print(f"Total Evaluated Clauses: {results['total_evaluated_clauses']}")
     print(f"Category Distribution: {results['category_distribution']}")
     print(f"Position Distribution: {results['positions']}")
