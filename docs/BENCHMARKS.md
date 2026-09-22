@@ -94,7 +94,9 @@ Last verified: 2026-09-22 @ e844b98 (receipt: docs/benchmarks/results/product-mo
 
 Accuracy-tagged tests run in the standard test suite. Most are structural checks binary pass/fail assertions, not numeric precision/recall on a labeled corpus. The exception is `tests/integration/test_benchmark_pii_accuracy.py`, which runs the real `PiiEngine` against the labeled seeded corpus and computes precision/recall (see [PII accuracy](#pii-accuracy-measured-50-seeded-contracts)).
 
-**20 passed, 1 failed, 0 skipped** (48.4 s) for the four files below, run as `uv run pytest tests/integration/test_pii_accuracy.py tests/unit/test_tier_accuracy.py tests/integration/test_review_accuracy.py tests/integration/test_benchmark_pii_accuracy.py -q`.
+**20 passed, 1 failed, 0 skipped** (49.52 s) for the four files below, run as `uv run pytest tests/integration/test_pii_accuracy.py tests/unit/test_tier_accuracy.py tests/integration/test_review_accuracy.py tests/integration/test_benchmark_pii_accuracy.py -q`.
+
+Last verified: 2026-09-22 @ c420395 (receipt: docs/benchmarks/results/accuracy-suite.json).
 
 | Test file | What it validates | Result |
 |---|---|---|

@@ -46,6 +46,7 @@ EXPECTED_RECEIPTS = frozenset(
         "review-accuracy.json",
         "cuad-segmentation.json",
         "maud-segmentation.json",
+        "accuracy-suite.json",
     }
 )
 FORBIDDEN_KEYS = frozenset({"citation", "clause_text", "document_text", "text", "original_value"})
@@ -61,6 +62,7 @@ GENERATED_RECEIPTS = frozenset(
         "product-modes.json",
         "cuad-segmentation.json",
         "maud-segmentation.json",
+        "accuracy-suite.json",
     }
 )
 EXPECTED_MODELS: dict[str, Any] = {
@@ -77,6 +79,7 @@ EXPECTED_MODELS: dict[str, Any] = {
     "review-accuracy.json": "unrecorded in source artifact",
     "cuad-segmentation.json": "none (nupunkt sentence segmentation, local)",
     "maud-segmentation.json": "none (nupunkt sentence segmentation, local)",
+    "accuracy-suite.json": "none (offline pytest; no model calls)",
 }
 UNKNOWN_GIT_COMMITS: dict[str, str] = {
     "contractnli-coverage.json": (
@@ -98,6 +101,7 @@ TABLES: dict[str, str] = {
     "## ContractNLI public benchmark (real-world NDAs measured)": "contractnli-coverage.json",
     "### Live LLM extraction + QA verification on real ContractNLI NDAs": "contractnli-live.json",
     "## CUAD public benchmark (scale and timing)": "cuad-segmentation.json",
+    "## Accuracy signals": "accuracy-suite.json",
     "## MAUD public benchmark (segmentation and timing)": "maud-segmentation.json",
 }
 
@@ -508,3 +512,15 @@ def test_page_states_what_the_mock_baseline_proves() -> None:
     assert "mode-aware" in text
     for mode in ("distrocheck", "franchisecheck", "opcheck", "partnercheck", "sponsorcheck"):
         assert mode in text, f"the five declared baselines must be named: {mode}"
+
+
+def test_accuracy_suite_numbers_match_the_receipt() -> None:
+    metrics = json.loads((RESULTS_DIR / "accuracy-suite.json").read_text(encoding="utf-8"))[
+        "metrics"
+    ]
+    text = _page()
+    assert (
+        f"{metrics['passed']} passed, {metrics['failed']} failed, {metrics['skipped']} skipped"
+        in text
+    )
+    assert f"({metrics['elapsed_seconds']} s)" in text
