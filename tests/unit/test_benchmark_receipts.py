@@ -35,7 +35,7 @@ RECEIPT_KEYS = {
 }
 MAX_RECEIPT_BYTES = 20_000
 
-# Decision D3: exactly these seven receipts.
+# Decision D9: exactly these ten receipts.
 EXPECTED_RECEIPTS = frozenset(
     {
         "pii-throughput.json",
@@ -47,6 +47,7 @@ EXPECTED_RECEIPTS = frozenset(
         "cuad-segmentation.json",
         "maud-segmentation.json",
         "accuracy-suite.json",
+        "test-collection.json",
     }
 )
 FORBIDDEN_KEYS = frozenset({"citation", "clause_text", "document_text", "text", "original_value"})
@@ -63,6 +64,7 @@ GENERATED_RECEIPTS = frozenset(
         "cuad-segmentation.json",
         "maud-segmentation.json",
         "accuracy-suite.json",
+        "test-collection.json",
     }
 )
 EXPECTED_MODELS: dict[str, Any] = {
@@ -80,6 +82,7 @@ EXPECTED_MODELS: dict[str, Any] = {
     "cuad-segmentation.json": "none (nupunkt sentence segmentation, local)",
     "maud-segmentation.json": "none (nupunkt sentence segmentation, local)",
     "accuracy-suite.json": "none (offline pytest; no model calls)",
+    "test-collection.json": "none (offline pytest collection; no model calls)",
 }
 UNKNOWN_GIT_COMMITS: dict[str, str] = {
     "contractnli-coverage.json": (
@@ -103,6 +106,7 @@ TABLES: dict[str, str] = {
     "## CUAD public benchmark (scale and timing)": "cuad-segmentation.json",
     "## Accuracy signals": "accuracy-suite.json",
     "## MAUD public benchmark (segmentation and timing)": "maud-segmentation.json",
+    "## Measured vs. not measured": "test-collection.json",
 }
 
 
@@ -524,3 +528,15 @@ def test_accuracy_suite_numbers_match_the_receipt() -> None:
         in text
     )
     assert f"({metrics['elapsed_seconds']} s)" in text
+
+
+def test_test_collection_receipt_is_registered_and_cited() -> None:
+    """R7: the collection count is receipt-backed in both places it is published."""
+    payload = json.loads((RESULTS_DIR / "test-collection.json").read_text(encoding="utf-8"))
+    count = payload["metrics"]["total_tests"]
+    page = _page()
+    assert f"{count:,} tests" in page
+    assert "Last verified:" in _section_after(page, "## Measured vs. not measured")
+    assert "test-collection.json" in _section_after(page, "## Measured vs. not measured")
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    assert f"{count:,} tests" in readme, "README and the page must agree on the count"
