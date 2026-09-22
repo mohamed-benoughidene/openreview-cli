@@ -76,8 +76,15 @@ class BenchmarkRunner:
         dataset_name: str,
         pipeline_fn: PipelineFn,
         slot_name: str = "default",
+        mode: str | None = None,
     ) -> DatasetResult:
-        """Run a single dataset through a model pipeline."""
+        """Run a single dataset through a model pipeline.
+
+        ``mode`` (R10) is the product mode the pipeline was built for. It is
+        recorded in ``dataset_name`` as ``<dataset>::<mode>`` so a per-mode result
+        can never be silently attributed to another mode; callers that are
+        mode-agnostic (``run_all``) pass ``None`` and keep the bare dataset name.
+        """
         if dataset_name == "pii":
             raise ValueError("Use run_pii() for PII evaluation")
 
@@ -101,7 +108,7 @@ class BenchmarkRunner:
                 MetricDatum(
                     example_id=item.get("example_id", ""),
                     predicted=prediction,
-                    ground_truth=item.get("ground_truth_spans", []),
+                    ground_truth=item.get("ground_truth_spans") or item.get("ground_truth", []),
                     is_correct=False,
                     latency_ms=elapsed,
                 )
@@ -164,7 +171,7 @@ class BenchmarkRunner:
             metrics["avg_latency_ms"] = avg_latency(latencies)
 
         return DatasetResult(
-            dataset_name=dataset_name,
+            dataset_name=f"{dataset_name}::{mode}" if mode is not None else dataset_name,
             dataset_version="v1",
             n_examples=len(data_items),
             metrics=metrics,

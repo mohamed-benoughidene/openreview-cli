@@ -13,7 +13,7 @@ import typer
 from rich.console import Console
 
 from openreview_cli.benchmark._utils import _FIXTURES_DIR, _detect_git_branch, _detect_git_commit
-from openreview_cli.benchmark.baseline import _mock_pipeline
+from openreview_cli.benchmark.baseline import mock_pipeline_for_mode
 from openreview_cli.benchmark.hallu_detect import (
     CGDPODetector,
     HallucinationDetector,
@@ -251,7 +251,7 @@ def benchmark_run(
             pii_result.dataset_name = f"pii::tier={t}"
             run.results.append(pii_result)
 
-    # For other datasets, use a mock pipeline (real LLM integration deferred)
+    # For other datasets, use the mode-aware mock pipeline (real LLM integration deferred).
     for dataset in dataset_list:
         if dataset == "pii":
             continue
@@ -259,9 +259,9 @@ def benchmark_run(
             tagged_name = f"{dataset}::{mode}"
             if verbose:
                 typer.echo(f"Running dataset: {tagged_name}")
+            mode_pipeline = mock_pipeline_for_mode(mode)
             try:
-                result = runner.run_dataset(dataset, _mock_pipeline)
-                result.dataset_name = tagged_name
+                result = runner.run_dataset(dataset, mode_pipeline, mode=mode)
                 run.results.append(result)
             except Exception as e:
                 typer.echo(f"Error running dataset {tagged_name}: {e}", err=True)

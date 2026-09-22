@@ -7,7 +7,7 @@ from typing import Any
 
 from openreview_cli.benchmark._utils import _FIXTURES_DIR, _detect_git_branch, _detect_git_commit
 from openreview_cli.benchmark.models import BenchmarkConfig
-from openreview_cli.benchmark.runner import BenchmarkRunner
+from openreview_cli.benchmark.runner import BenchmarkRunner, PipelineFn
 from openreview_cli.llm_json import strip_fences
 
 
@@ -35,8 +35,31 @@ class BaselineReport:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-def _mock_pipeline(text: str, category: str) -> dict[str, object]:
-    return {"start": 0, "end": 0, "category": category, "label": "entailment", "match": True}
+def mock_pipeline_for_mode(mode: str) -> PipelineFn:
+    """Deterministic, mode-aware stub for the mock baseline (R10/D6).
+
+    The mode selects its bundled playbook and the playbook's categories decide
+    which dataset items the stub claims to match, so two modes no longer score
+    identically on the same dataset. No network and no model calls: the stub is
+    fully deterministic, which is what makes it usable in CI.
+
+    Raises ``KeyError`` for a mode with no bundled playbook — a typo must be loud,
+    not silently "match nothing".
+    """
+    from openreview_cli.review.playbook import BUNDLED_PLAYBOOKS, load_playbook
+
+    categories = frozenset(c.id for c in load_playbook(BUNDLED_PLAYBOOKS[mode]).categories)
+
+    def pipeline(text: str, category: str) -> dict[str, Any]:
+        return {
+            "start": 0,
+            "end": 0,
+            "category": category,
+            "label": "entailment",
+            "match": category in categories,
+        }
+
+    return pipeline
 
 
 def _build_baseline_result(
@@ -68,9 +91,10 @@ def run_mock_baseline(modes: list[str], datasets: list[str] | None = None) -> li
         if dataset == "pii":
             continue
         for mode in modes:
+            # Built outside the try: an unknown mode must raise, not degrade silently.
+            pipeline = mock_pipeline_for_mode(mode)
             try:
-                dr = runner.run_dataset(dataset, _mock_pipeline)
-                dr.dataset_name = f"{dataset}::{mode}"
+                dr = runner.run_dataset(dataset, pipeline, mode=mode)
                 results.append(_build_baseline_result(mode, dataset, dr))
             except Exception:
                 results.append(BaselineResult(mode=mode, dataset=f"{dataset}::{mode}"))
@@ -119,8 +143,7 @@ def run_real_baseline(
         for mode in modes:
             pipeline = build_gateway_pipeline(mode)
             try:
-                dr = runner.run_dataset(dataset, pipeline)
-                dr.dataset_name = f"{dataset}::{mode}"
+                dr = runner.run_dataset(dataset, pipeline, mode=mode)
                 mode_results.append(_build_baseline_result(mode, dataset, dr))
             except Exception:
                 mode_results.append(BaselineResult(mode=mode, dataset=f"{dataset}::{mode}"))

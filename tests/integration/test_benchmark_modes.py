@@ -3,7 +3,7 @@
 Tests:
   - VALID_MODES frozenset membership (24 modes)
   - Parse-time mode validation (reject unknown, accept all 24)
-  - Dead mode param removal from run_dataset()
+  - run_dataset() mode parameter is present and used (R10; supersedes D-75)
   - Multi-mode dataset name convention
 """
 
@@ -114,18 +114,19 @@ class TestModeValidation:
         assert result.exit_code == 0, f"stdout: {result.stdout}\nstderr: {result.stderr}"
 
 
-class TestDeadParam:
-    """run_dataset() mode param tests (T-A-04)."""
+class TestModeParam:
+    """run_dataset() mode param tests (R10)."""
 
-    def test_run_dataset_no_mode_param(self) -> None:
-        """Assert run_dataset signature does not accept mode= keyword."""
+    def test_run_dataset_accepts_a_used_mode_param(self) -> None:
+        """R10 supersedes D-75: ``mode`` is back, and it is used, not dead."""
         sig = inspect.signature(BenchmarkRunner.run_dataset)
-        assert "mode" not in sig.parameters, f"run_dataset() still has mode param: {sig}"
+        assert "mode" in sig.parameters, f"run_dataset() lost its mode param: {sig}"
+        assert sig.parameters["mode"].default is None
 
     def test_run_dataset_call_without_mode(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Assert run_dataset works without mode= keyword."""
+        """A mode-agnostic call still works and keeps the bare dataset name."""
         monkeypatch.setattr(
             "openreview_cli.benchmark.datasets.cuad.load_cuad_dataset",
             lambda cache_dir=None: iter(
