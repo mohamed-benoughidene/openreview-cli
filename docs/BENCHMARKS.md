@@ -279,4 +279,6 @@ The CLI in this sandbox took 14.0–44.4 s wall to parse a PDF an artifact of en
 
 Per-review and per-day cost limits are configurable (defaults: 100¢/review, 1,000¢/day, warn-only). Costs are computed from response tokens via `litellm.completion_cost` and written to the SQLite `cost_logs` table (non-fatal on error). See `openreview gateway costs` and `openreview gateway set --help`.
 
+**No receipt by design:** these are configuration defaults, not measured benchmark results, so there is no reproducible artifact to pin. For actual spend, read the `cost_logs` table via `openreview gateway costs --today`.
+
 See also: [README.md](README.md) (overview) · [ARCHITECTURE.md](ARCHITECTURE.md) (how the pieces fit).
