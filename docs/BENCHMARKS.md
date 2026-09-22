@@ -45,6 +45,8 @@ Run each benchmark on your own machine to get comparable numbers the offline not
 
 The cold-PDF number is dominated by a one-time sentence-segmentation model load (~3 s per process), not by PDF parsing itself.
 
+No receipt: this table has no committed receipt artifact; attaching one is deferred.
+
 ## Resource footprint
 
 | Path | Peak RSS | Context |
@@ -54,6 +56,8 @@ The cold-PDF number is dominated by a one-time sentence-segmentation model load 
 | PII 50-page stress | ~1724 MB | 395 entities, 2.3823 s |
 
 The project's <100 MB memory budget (enforced by memory tests) applies to streaming pipeline paths parsers stream page-by-page and never load a full document. The parse CLI process peaked ~410 MB and the spaCy/PII path ~1724 MB on the 50-page stress; both include one-time model loads, reported factually.
+
+No receipt: this table has no committed receipt artifact; attaching one is deferred.
 
 ## Throughput
 
@@ -125,7 +129,7 @@ Last verified: 2026-09-22 @ 02a3ceb (receipt: docs/benchmarks/results/pii-accura
 
 ## Review accuracy (measured 12 labeled NDA clauses)
 
-Real extraction + QA pipeline through OpenRouter (`anthropic/claude-sonnet-4.6`) against `tests/fixtures/review/nda-corpus-v1/nda-corpus-v1.json` with `precheck-nda-v1` playbook. 24 API calls (per-clause extraction + QA).
+Real extraction + QA pipeline through OpenRouter (the model was not recorded in the source artifact) against `tests/fixtures/review/nda-corpus-v1/nda-corpus-v1.json` with `precheck-nda-v1` playbook. 24 API calls (per-clause extraction + QA).
 
 | Metric | Value | Target (spec) | Status |
 |---|---|---|---|
@@ -213,6 +217,8 @@ Parsing scale against the [CUAD v1](https://www.atticusprojectai.org/cuad) datas
 |---|---|
 | Contracts | 462 (4,034 valid queries, 8 missing files with special chars) |
 | Time | 8.5 s (0.018 s/contract) |
+
+No receipt: this table has no committed receipt artifact; attaching one is deferred.
 
 **Clause identification is not measured here.** An earlier version of this page reported "100% sentence-boundary recall"; that metric only checked whether a labeled span *starts inside* a detected sentence, which is true for any offset because the segmenter's sentence spans tile the whole document so it measured nothing. A meaningful metric (a labeled clause fully contained within one detected sentence) is not yet defined or reproducible enough to publish, and full clause-text matching is only approximate (~40%) because the detector groups sentences under section headings (7 regex patterns), merging individual CUAD spans into their parent clause.
 
