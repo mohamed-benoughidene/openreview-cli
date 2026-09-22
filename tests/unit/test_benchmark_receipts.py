@@ -352,3 +352,26 @@ def test_ci_checks_out_full_history_for_the_receipt_guard() -> None:
         "the CI test job must check out full history (fetch-depth: 0); otherwise "
         "the receipt-commit ancestry guard skips and CI coverage is not guaranteed"
     )
+
+
+LEGACY_METRICS_JSONS = ("metrics-pii-v0.1.0.json", "metrics-v0.1.0.json")
+LEGALBENCHRAG_SCRIPT = REPO_ROOT / "scripts" / "benchmark_legalbenchrag.py"
+
+
+def test_legacy_metrics_json_are_gone_and_not_recreated() -> None:
+    """R4/D4: the two tracked v0.1.0 metrics dumps are removed and stay removed.
+
+    Nothing on the page consumes them; the reproducible receipts under
+    docs/benchmarks/results/ replaced them (versioned, key-checked, cited).
+    """
+    for name in LEGACY_METRICS_JSONS:
+        assert not (REPO_ROOT / name).exists(), f"{name} still exists on disk"
+    ok, tracked = _git(["ls-files", *LEGACY_METRICS_JSONS])
+    assert ok
+    assert tracked == "", f"legacy metrics JSONs are still tracked: {tracked}"
+    # And the writer that used to put one of them in the repo root must not do that again.
+    source = LEGALBENCHRAG_SCRIPT.read_text(encoding="utf-8")
+    assert 'Path("metrics-v0.1.0.json")' not in source, (
+        "scripts/benchmark_legalbenchrag.py still writes a tracked repo-root path"
+    )
+    assert ".benchmark-reports/metrics-legalbenchrag.json" in source

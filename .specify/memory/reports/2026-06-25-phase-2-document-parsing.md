@@ -31,7 +31,7 @@ We built the document parser — the part that reads a PDF or DOCX contract and 
 - `tests/` — 103 new tests across 10 files
 - `tests/fixtures/` — 9 PDF + 5 DOCX synthetic test contracts
 - `scripts/benchmark_legalbenchrag.py` — benchmark runner for real-world contracts
-- `metrics-v0.1.0.json` — benchmark results
+- `metrics-v0.1.0.json` — benchmark results (**removed 2026-09-22, decision D4**; the script now writes `.benchmark-reports/metrics-legalbenchrag.json`, which is gitignored)
 
 ### What was verified
 
@@ -437,7 +437,7 @@ Tests follow the same pattern as Phase 1: minimal setup, one assertion per test,
 
 ### `scripts/benchmark_legalbenchrag.py` — the benchmark runner
 
-A utility script that downloads the LegalBench-RAG corpus (714 real contract text files), converts them to PDF, runs the parser against all of them, and records metrics. Outputs `metrics-v0.1.0.json` with per-file timing, clause counts, and error rates. Also handles CUAD v1 native PDFs and DOCX conversion.
+A utility script that downloads the LegalBench-RAG corpus (714 real contract text files), converts them to PDF, runs the parser against all of them, and records metrics. Outputs `.benchmark-reports/metrics-legalbenchrag.json` with per-file timing, clause counts, and error rates. Also handles CUAD v1 native PDFs and DOCX conversion. (Before 2026-09-22 this wrote `metrics-v0.1.0.json`; that file and `metrics-pii-v0.1.0.json` were deleted — decision D4 — and replaced by receipts under `docs/benchmarks/results/`.)
 
 ### `tests/fixtures/` — synthetic test contracts
 
@@ -461,7 +461,7 @@ A utility script that downloads the LegalBench-RAG corpus (714 real contract tex
 - `flat_document.docx` — 5 plain paragraphs, no headings
 - `with_images.docx` — heading + text + `<w:drawing>` image element + more text
 
-### `metrics-v0.1.0.json` — benchmark artifact
+### `metrics-v0.1.0.json` — benchmark artifact (removed 2026-09-22, decision D4; superseded by `docs/benchmarks/results/pii-throughput.json`)
 
 Contains per-file metrics from all three benchmark runs:
 - LegalBench-RAG: 661 files, 100%, 50,378 clauses, 34.6s
