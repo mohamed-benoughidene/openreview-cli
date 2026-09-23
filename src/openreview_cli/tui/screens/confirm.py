@@ -58,4 +58,5 @@ class ConfirmModal(ModalScreen[bool]):
 
     def on_key(self, event: Any) -> None:
         if event.key == "escape":
+            event.stop()
             self.dismiss(False)

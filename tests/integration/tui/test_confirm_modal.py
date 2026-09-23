@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 
 async def test_confirm_modal_yes_returns_true() -> None:
     """Pressing Yes dismisses with True."""
@@ -107,3 +109,76 @@ async def test_non_danger_modal_keeps_focusing_yes_and_enter_returns_true() -> N
         await pilot.pause()
 
     assert results == [True]
+
+
+async def test_escape_on_confirmation_does_not_pop_the_screen_underneath(
+    isolated_xdg: dict[str, Path],
+) -> None:
+    """A handled Escape must not also reach the screen underneath.
+
+    ``PiiDataScreen`` binds ``escape`` to ``pop_screen``; without stopping the
+    key event in the modal, one Escape both cancels the deletion and closes the
+    stored-PII list. The modal must swallow the key.
+    """
+    import sqlite3
+    from datetime import UTC, datetime
+
+    from textual.widgets import ListView
+
+    from openreview_cli.pii.cache import PiiCache
+    from openreview_cli.tui.app import OpenReviewApp
+    from openreview_cli.tui.screens.confirm import ConfirmModal
+    from openreview_cli.tui.screens.pii_data import PiiDataScreen
+
+    doc_hash = "c1d2e3f4" + "0" * 56
+    db_path = isolated_xdg["db_path"]
+    review_dir = isolated_xdg["data_dir"] / "reviews" / doc_hash[:12]
+    review_dir.mkdir(parents=True, exist_ok=True)
+    mapping = review_dir / "pii_map.enc"
+    stripped = review_dir / "stripped.txt"
+    mapping.write_text("{}", encoding="utf-8")
+    stripped.write_text("hello", encoding="utf-8")
+    PiiCache(db_path).put(doc_hash, "cfg", str(stripped), str(mapping))
+    conn = sqlite3.connect(str(db_path))
+    try:
+        conn.execute(
+            "INSERT INTO pii_audit_trail "
+            "(document_hash, timestamp, entity_count, entity_type_distribution, "
+            " processing_time_ms, config_hash, status, failed_pages) "
+            "VALUES (?, ?, 3, '{}', 0, 'cfg', 'success', '[]')",
+            (doc_hash, datetime.now(UTC).isoformat()),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        app.push_screen(PiiDataScreen())
+        await pilot.pause()
+
+        # 1. the stored-PII screen is live and showing the seeded row
+        assert isinstance(app.screen, PiiDataScreen)
+        list_view = app.screen.query_one("#pii-list", ListView)
+        assert len(list_view.children) == 1
+
+        # 2. the delete confirmation is open on top of it
+        list_view.index = 0
+        await pilot.pause()
+        await pilot.press("d")
+        await pilot.pause()
+        assert isinstance(app.screen, ConfirmModal)
+
+        # 3. Escape cancels the deletion and stays on the stored-PII screen
+        await pilot.press("escape")
+        await pilot.pause()
+
+        assert isinstance(app.screen, PiiDataScreen)
+
+    conn = sqlite3.connect(str(db_path))
+    try:
+        remaining = {row[0] for row in conn.execute("SELECT document_hash FROM pii_cache")}
+    finally:
+        conn.close()
+    assert remaining == {doc_hash}
+    assert mapping.exists()
