@@ -2442,7 +2442,7 @@ ML-based detection would train or fine-tune a model to classify clause pairs as 
 
 ### Spec references
 
-Spec 025 spec.md §Explicitly excluded (line 326): "ML-based cross-reference detection (deferred to future spec)."
+Spec 025 spec.md §Explicitly excluded (line 328): "ML-based cross-reference detection (deferred to future spec)."
 Spec 025 plan.md §Deferred Tasks (line 260): "ML-based cross-reference detection (deferred to future spec)."
 Spec 025 spec.md §Scope Boundaries (line 317): "Heuristic-only metric computation (no ML)."
 
@@ -2561,7 +2561,7 @@ Multi-contract comparison would allow users to:
 
 ### Spec references
 
-Spec 025 spec.md §Explicitly excluded (line 333): "Multi-contract graph comparison."
+Spec 025 spec.md §Explicitly excluded (line 335): "Multi-contract graph comparison."
 Spec 025 plan.md §Deferred Tasks (line 257): "Multi-contract graph comparison (excluded by spec)."
 
 ### Future features (not deferred — natural next steps)
@@ -2602,7 +2602,7 @@ Visual rendering would:
 ### Spec references
 
 Spec 025 spec.md §Explicitly excluded (line 301): "Graphviz / DOT rendering."
-Spec 025 spec.md §Explicitly excluded (line 329): "Visual graph rendering (DOT, SVG, PNG)."
+Spec 025 spec.md §Explicitly excluded (line 331): "Visual graph rendering (DOT, SVG, PNG)."
 Spec 025 plan.md §Deferred Tasks (line 259): "Visual graph rendering (DOT/SVG/PNG — excluded by spec)."
 
 ### Future features (not deferred — natural next steps)
@@ -2689,7 +2689,7 @@ Persistent SQLite storage would:
 ### Spec references
 
 Spec 025 spec.md §Explicitly excluded (line 307): "Persistence beyond JSON files (no SQLite schema changes)."
-Spec 025 spec.md §Scope Boundaries (line 332): "Persistent graph storage in SQLite (JSON files only)."
+Spec 025 spec.md §Explicitly excluded (line 334): "Persistent graph storage in SQLite (JSON files only)."
 Spec 025 plan.md §Deferred Tasks (line 261): "Persistent graph storage in SQLite (JSON files only per spec)."
 Spec 025 research.md §4 (line 91): "Persistence beyond JSON files (no SQLite schema changes)."
 
@@ -2730,7 +2730,7 @@ Real-time graph building would:
 
 ### Spec references
 
-Spec 025 spec.md §Explicitly excluded (line 331): "Real-time graph building during parse streaming."
+Spec 025 spec.md §Explicitly excluded (line 333): "Real-time graph building during parse streaming."
 Spec 025 spec.md §Assumptions (line 287): "The existing `parsing` module produces valid clause lists. Graph building is a downstream consumer, not a parser."
 
 ---
@@ -2817,8 +2817,8 @@ These features would enable:
 
 ### Spec references
 
-Spec 025 spec.md §Explicitly excluded (line 327): "GRPO training pipeline."
-Spec 025 spec.md §Explicitly excluded (line 328): "GPU support."
+Spec 025 spec.md §Explicitly excluded (line 329): "GRPO training pipeline."
+Spec 025 spec.md §Explicitly excluded (line 330): "GPU support."
 Spec 025 spec.md §Scope Boundaries (line 317): "Heuristic-only metric computation (no ML)."
 
 ---
