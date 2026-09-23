@@ -108,7 +108,7 @@ class PlaybookDetailScreen(Screen[None]):
         data = get_playbook_history_via_tui(self._playbook_id)
         self.app.push_screen(
             VersionHistoryScreen(
-                playbook_id=self._playbook_id,
+                item_id=self._playbook_id,
                 rows=data["rows"],
                 current_version=data["current_version"],
             )
@@ -176,18 +176,21 @@ class VersionHistoryScreen(ModalScreen[None]):
 
     def __init__(
         self,
-        playbook_id: str,
+        item_id: str,
         rows: list[dict[str, Any]],
         current_version: int,
     ) -> None:
         super().__init__()
-        self._playbook_id = playbook_id
+        self._item_id = item_id
         self._rows = rows
         self._current_version = current_version
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            yield Label(f"Version history: {self._playbook_id}", id="vhistory-title")
+            # markup=False: a prompt name is user-authored and may contain
+            # bracketed expressions (e.g. "[Party A]") that the markup parser
+            # would otherwise consume.  Behavior-neutral for playbook ids.
+            yield Label(f"Version history: {self._item_id}", id="vhistory-title", markup=False)
             yield ListView(id="vhistory-list")
             yield Horizontal(
                 Button("View diff", id="btn-diff-v", variant="default"),
@@ -233,11 +236,15 @@ class VersionHistoryScreen(ModalScreen[None]):
         from openreview_cli.tui.domain.playbooks import get_playbook_version_diff
 
         try:
-            diff = get_playbook_version_diff(self._playbook_id, v1, v2)
+            diff = get_playbook_version_diff(self._item_id, v1, v2)
         except Exception as exc:
             self.notify(f"Diff error: {exc}", timeout=3)
             return
-        self.app.push_screen(VersionDiffScreen(self._playbook_id, diff))
+        self.app.push_screen(VersionDiffScreen(self._item_id, diff))
+
+    def on_key(self, event: Any) -> None:
+        if event.key == "escape":
+            self.dismiss()
 
 
 class VersionDiffScreen(ModalScreen[None]):

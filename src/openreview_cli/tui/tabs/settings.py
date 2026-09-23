@@ -243,7 +243,7 @@ class SettingsTab(Vertical):
                 "",
                 "[bold]Accessibility[/bold]",
                 "Keyboard navigation is fully supported: Tab / Shift+Tab, number keys "
-                '(1-5), arrow keys, Enter, Escape, "/" for search, and Ctrl-C to quit.',
+                '(1-6), arrow keys, Enter, Escape, "/" for search, and Ctrl-C to quit.',
                 "[dim]Screen reader support is not yet available in v1.[/dim]",
             ]
         )
