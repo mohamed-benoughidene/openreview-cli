@@ -61,8 +61,9 @@ def _confirm_subject(row: dict[str, Any]) -> str:
     if filename:
         return f"{filename} ({document_hash[:12]}...)"
     created = str(row.get("created_at") or "")[:10]
-    when = f"reviewed on {created}" if created else "with no review date recorded"
-    return f"the document {when} ({_UNKNOWN_FILENAME}) ({document_hash[:12]}...)"
+    if created:
+        return f"the document reviewed on {created}"
+    return "the document with no review date recorded"
 
 
 def _confirm_message(row: dict[str, Any]) -> str:
@@ -70,9 +71,15 @@ def _confirm_message(row: dict[str, Any]) -> str:
     document_hash = str(row["document_hash"])
     entities = row.get("entity_count") or 0
     noun = "entity" if entities == 1 else "entities"
+    # The fallback stays out of the subject line so it never stacks a second
+    # parenthetical there; it goes on its own line under the hash instead.
+    filename_note = (
+        "" if row.get("filename") else "No source filename was recorded for this record.\n"
+    )
     return (
         f"Permanently delete the stored PII data for {_confirm_subject(row)}?\n\n"
         f"Document hash: {document_hash}\n"
+        f"{filename_note}"
         f"{entities} redacted {noun} recorded. Artifacts: "
         f"{_artifacts_dir(row)}\n\n"
         f"The encrypted mapping is the only way to reverse the redaction "

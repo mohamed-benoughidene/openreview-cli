@@ -7,6 +7,7 @@ fixture), not placeholders, so the screen is proven against the same data
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -320,6 +321,13 @@ async def test_confirmation_names_the_recorded_file(
         assert "Acme_NDA_v3.pdf" in message
         assert HASH_A in message  # the full 64-char hash is still present
         assert "cannot be undone" in message
+        # the known-filename subject keeps its single (hash prefix) parenthetical
+        assert f"Acme_NDA_v3.pdf ({HASH_A[:12]}...)" in message
+        # no filename fallback line is added when the file is known
+        assert "No source filename was recorded" not in message
+        assert ") (" not in message
+        for line in message.splitlines():
+            assert line.count("(") <= 1, line
 
 
 async def test_row_without_a_filename_shows_the_fallback_and_still_deletes(
@@ -344,8 +352,28 @@ async def test_row_without_a_filename_shows_the_fallback_and_still_deletes(
 
         assert isinstance(app.screen, ConfirmModal)
         message = str(app.screen.query_one("#confirm-message", Label).render())
-        assert "not recorded" in message
         assert HASH_A in message
+        assert "cannot be undone" in message
+
+        lines = message.splitlines()
+        # the subject is a clean noun phrase: no "filename not recorded"
+        # parenthetical and no hash prefix stacked onto it
+        subject = lines[0]
+        assert re.fullmatch(
+            r"Permanently delete the stored PII data for the document reviewed on "
+            r"\d{4}-\d{2}-\d{2}\?",
+            subject,
+        ), subject
+        assert HASH_A[:12] not in subject
+        assert "filename not recorded" not in subject
+        # the explanation is its own body line, right under the full hash
+        hash_index = next(i for i, line in enumerate(lines) if line.startswith("Document hash:"))
+        assert lines[hash_index] == f"Document hash: {HASH_A}"
+        assert lines[hash_index + 1] == "No source filename was recorded for this record."
+        # no line stacks two parentheticals
+        assert ") (" not in message
+        for line in lines:
+            assert line.count("(") <= 1, line
 
         await pilot.click("#yes")
         await pilot.pause()
