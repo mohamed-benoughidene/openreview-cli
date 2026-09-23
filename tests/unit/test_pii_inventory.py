@@ -15,7 +15,7 @@ import pytest
 from typer.testing import CliRunner
 
 from openreview_cli.pii.cache import PiiCache
-from openreview_cli.pii.inventory import list_pii_documents
+from openreview_cli.pii.inventory import list_pii_documents, list_pii_filenames
 from openreview_cli.pii.models import PiiResult
 from openreview_cli.pii.persist import write_audit_trail_row
 from openreview_cli.storage import init_database
@@ -142,6 +142,27 @@ def test_ordered_newest_cache_row_first(db: Path, tmp_path: Path) -> None:
     rows = list_pii_documents(db)
 
     assert [row["document_hash"] for row in rows] == ["f" * 64, "e" * 64]
+
+
+def test_list_pii_filenames_returns_the_mapping(db: Path, tmp_path: Path) -> None:
+    """The filename lookup maps each hash to the filename recorded at write time."""
+    _seed_mapping(db, "a" * 64, tmp_path)  # no filename recorded
+    PiiCache(db).put("b" * 64, "cfg", "/r.json", "/m.json", filename="Acme_NDA_v3.pdf")
+
+    assert list_pii_filenames(db) == {"b" * 64: "Acme_NDA_v3.pdf"}
+
+
+def test_list_pii_filenames_skips_null_and_empty(db: Path) -> None:
+    """Rows written before this change (NULL) and empty strings are unknown."""
+    PiiCache(db).put("a" * 64, "cfg", "/r.json", "/m.json")  # NULL
+    PiiCache(db).put("b" * 64, "cfg", "/r.json", "/m.json", filename="")  # empty
+    PiiCache(db).put("c" * 64, "cfg", "/r.json", "/m.json", filename="keep.pdf")
+
+    assert list_pii_filenames(db) == {"c" * 64: "keep.pdf"}
+
+
+def test_list_pii_filenames_empty_db_returns_empty_dict(db: Path) -> None:
+    assert list_pii_filenames(db) == {}
 
 
 def test_reader_is_a_pure_query_and_needs_the_schema(tmp_path: Path) -> None:

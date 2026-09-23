@@ -1,5 +1,6 @@
 """PiiCache — config-change detection over the pii_cache table."""
 
+import sqlite3
 from pathlib import Path
 
 from openreview_cli.pii.cache import PiiCache
@@ -31,3 +32,33 @@ def test_is_valid_only_when_config_matches(tmp_path: Path) -> None:
     assert c.is_valid("h" * 64, "cfg-v1") is True
     assert c.is_valid("h" * 64, "cfg-v2") is False
     assert c.is_valid("other", "cfg-v1") is False
+
+
+def test_put_stores_filename_and_roundtrips(tmp_path: Path) -> None:
+    """The document filename recorded at write time round-trips on read."""
+    c = _cache(tmp_path)
+    c.put("h" * 64, "cfghash", "/r.json", "/m.json", filename="Acme_NDA_v3.pdf")
+    row = c.get("h" * 64)
+    assert row is not None
+    assert row["filename"] == "Acme_NDA_v3.pdf"
+
+
+def test_put_without_filename_stores_null(tmp_path: Path) -> None:
+    """Callers that omit the filename keep working and store NULL."""
+    c = _cache(tmp_path)
+    c.put("h" * 64, "cfghash", "/r.json", "/m.json")
+    row = c.get("h" * 64)
+    assert row is not None
+    assert row["filename"] is None
+
+
+def test_migration_adds_filename_column(tmp_path: Path) -> None:
+    """A broken 014 migration must be caught: the column exists on a fresh db."""
+    db = tmp_path / "t.db"
+    init_database(db)
+    conn = sqlite3.connect(str(db))
+    try:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(pii_cache)")}
+    finally:
+        conn.close()
+    assert "filename" in columns

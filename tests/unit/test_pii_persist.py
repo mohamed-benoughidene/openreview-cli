@@ -10,6 +10,7 @@ strip records one ``pii_audit_trail`` row; a clean document records
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import sqlite3
 from pathlib import Path
@@ -18,7 +19,11 @@ import pytest
 
 from openreview_cli.pii.cache import PiiCache
 from openreview_cli.pii.models import PiiEntity, PiiResult
-from openreview_cli.pii.persist import persist_pii_result, write_audit_trail_row
+from openreview_cli.pii.persist import (
+    persist_pii_for_document,
+    persist_pii_result,
+    write_audit_trail_row,
+)
 from openreview_cli.storage import init_database
 
 
@@ -202,6 +207,48 @@ def test_persist_pii_result_records_an_audit_row_for_a_clean_document(
     assert not (review_dir / "pii_map.enc").exists()
 
 
+def test_persist_pii_result_stores_the_filename(tmp_path: Path) -> None:
+    """persist_pii_result threads an explicit filename into the cache row."""
+    db = tmp_path / "t.db"
+    init_database(db)
+    review_dir = tmp_path / "reviews" / ("h" * 12)
+
+    persist_pii_result(
+        db,
+        document_hash="h" * 64,
+        config_hash="cfg-hash",
+        pii_result=_result_with_mapping(),
+        review_dir=review_dir,
+        encryption_key="test-key-1234567890123456",
+        filename="Acme_NDA_v3.pdf",
+    )
+
+    cache_row = PiiCache(db).get("h" * 64)
+    assert cache_row is not None
+    assert cache_row["filename"] == "Acme_NDA_v3.pdf"
+
+
+def test_persist_pii_for_document_stores_the_source_basename(
+    tmp_path: Path, isolated_xdg: dict[str, Path]
+) -> None:
+    """The document path's BASENAME is stored, never the fuller path.
+
+    A full path can carry a client name; the governance database must not
+    become the place that leaks it.
+    """
+    doc_dir = tmp_path / "x"
+    doc_dir.mkdir()
+    doc_path = doc_dir / "Acme_NDA_v3.pdf"
+    doc_path.write_bytes(b"%PDF-1.4\nseed\n")
+
+    persist_pii_for_document(doc_path, _result_with_mapping())
+
+    document_hash = hashlib.sha256(doc_path.read_bytes()).hexdigest()
+    cache_row = PiiCache(isolated_xdg["db_path"]).get(document_hash)
+    assert cache_row is not None
+    assert cache_row["filename"] == "Acme_NDA_v3.pdf"
+
+
 # ── StripStage integration ───────────────────────────────────────────────
 
 
@@ -250,6 +297,7 @@ def test_strip_stage_persists_pii_result(tmp_path: Path, monkeypatch: pytest.Mon
         "Hello [PARTY_A] and [PERSON_1]"
     )
     assert Path(cache_row["mapping_path"]).exists()
+    assert cache_row["filename"] == doc_path.name
 
     conn = sqlite3.connect(str(db))
     conn.row_factory = sqlite3.Row

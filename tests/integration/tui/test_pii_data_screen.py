@@ -31,7 +31,13 @@ def _item_text(item: ListItem) -> str:
         return str(item.render())
 
 
-def _seed(db_path: Path, tmp_path: Path, doc_hash: str, entities: int) -> tuple[Path, Path]:
+def _seed(
+    db_path: Path,
+    tmp_path: Path,
+    doc_hash: str,
+    entities: int,
+    filename: str | None = None,
+) -> tuple[Path, Path]:
     """Write the real encrypted-mapping artifacts + cache/audit rows."""
     review_dir = tmp_path / "reviews" / doc_hash[:12]
     review_dir.mkdir(parents=True, exist_ok=True)
@@ -39,7 +45,7 @@ def _seed(db_path: Path, tmp_path: Path, doc_hash: str, entities: int) -> tuple[
     stripped = review_dir / "stripped.txt"
     mapping.write_text("{}", encoding="utf-8")
     stripped.write_text("hello", encoding="utf-8")
-    PiiCache(db_path).put(doc_hash, "cfg", str(stripped), str(mapping))
+    PiiCache(db_path).put(doc_hash, "cfg", str(stripped), str(mapping), filename=filename)
     conn = sqlite3.connect(str(db_path))
     try:
         conn.execute(
@@ -275,3 +281,73 @@ async def test_expiring_row_is_labelled(isolated_xdg: dict[str, Path], tmp_path:
 
         text = _item_text(next(iter(screen.query_one("#pii-list", ListView).children)))
         assert "expires" in text
+
+
+async def test_row_leads_with_the_recorded_filename(
+    isolated_xdg: dict[str, Path], tmp_path: Path
+) -> None:
+    """A row whose filename was recorded shows it, with the hash tiebreaker."""
+    db_path = isolated_xdg["db_path"]
+    _seed(db_path, tmp_path, HASH_A, 4, filename="Acme_NDA_v3.pdf")
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _open_screen(pilot, app)
+
+        text = _item_text(next(iter(screen.query_one("#pii-list", ListView).children)))
+        assert "Acme_NDA_v3.pdf" in text
+        assert HASH_A[:12] in text
+
+
+async def test_confirmation_names_the_recorded_file(
+    isolated_xdg: dict[str, Path], tmp_path: Path
+) -> None:
+    """The delete confirmation names the file and keeps the full hash."""
+    db_path = isolated_xdg["db_path"]
+    _seed(db_path, tmp_path, HASH_A, 4, filename="Acme_NDA_v3.pdf")
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _open_screen(pilot, app)
+        screen.query_one("#pii-list", ListView).index = 0
+        await pilot.pause()
+
+        await pilot.click("#btn-delete-pii")
+        await pilot.pause()
+
+        assert isinstance(app.screen, ConfirmModal)
+        message = str(app.screen.query_one("#confirm-message", Label).render())
+        assert "Acme_NDA_v3.pdf" in message
+        assert HASH_A in message  # the full 64-char hash is still present
+        assert "cannot be undone" in message
+
+
+async def test_row_without_a_filename_shows_the_fallback_and_still_deletes(
+    isolated_xdg: dict[str, Path], tmp_path: Path
+) -> None:
+    """Records written before this change (no filename) show a clear fallback."""
+    db_path = isolated_xdg["db_path"]
+    _seed(db_path, tmp_path, HASH_A, 4)  # no filename recorded
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _open_screen(pilot, app)
+
+        text = _item_text(next(iter(screen.query_one("#pii-list", ListView).children)))
+        assert "filename not recorded" in text
+
+        # the modal still opens and names the date rather than inventing a file
+        screen.query_one("#pii-list", ListView).index = 0
+        await pilot.pause()
+        await pilot.click("#btn-delete-pii")
+        await pilot.pause()
+
+        assert isinstance(app.screen, ConfirmModal)
+        message = str(app.screen.query_one("#confirm-message", Label).render())
+        assert "not recorded" in message
+        assert HASH_A in message
+
+        await pilot.click("#yes")
+        await pilot.pause()
+
+        assert _cache_hashes(db_path) == set()

@@ -141,6 +141,7 @@ class StripStage(Stage):
                 pii_result=pii_result,
                 review_dir=review_dir,
                 encryption_key=encryption_key,
+                filename=doc_path.name,
             )
         except Exception as exc:
             logger.warning("PII persistence failed (non-fatal): %s", exc)

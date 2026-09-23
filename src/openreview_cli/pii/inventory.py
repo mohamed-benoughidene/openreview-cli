@@ -60,4 +60,25 @@ def list_pii_documents(db_path: Path, include_audit_only: bool = False) -> list[
     return [dict(row) for row in rows]
 
 
-__all__ = ["list_pii_documents"]
+def list_pii_filenames(db_path: Path) -> dict[str, str]:
+    """Return ``{document_hash: filename}`` for cache rows that recorded one.
+
+    ``filename`` was added by migration 014; rows written before it (and rows
+    written by a caller that had no filename to hand) hold ``NULL`` and are
+    omitted.  Callers that may run before the schema exists must call
+    ``openreview_cli.storage.init_database`` first, exactly like
+    :func:`list_pii_documents`.
+    """
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    try:
+        rows = conn.execute(
+            "SELECT document_hash, filename FROM pii_cache "
+            "WHERE filename IS NOT NULL AND filename != ''"
+        ).fetchall()
+    finally:
+        conn.close()
+    return {str(row["document_hash"]): str(row["filename"]) for row in rows}
+
+
+__all__ = ["list_pii_documents", "list_pii_filenames"]

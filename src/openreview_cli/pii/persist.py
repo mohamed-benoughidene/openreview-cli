@@ -93,6 +93,7 @@ def persist_pii_result(
     review_dir: Path,
     encryption_key: str,
     ttl_days: int = 30,
+    filename: str | None = None,
 ) -> None:
     """Persist a PII stripping result to the PII governance lifecycle.
 
@@ -109,6 +110,9 @@ def persist_pii_result(
         review_dir: Directory for the encrypted mapping + stripped text files.
         encryption_key: Key used to encrypt the mapping file.
         ttl_days: Cache expiry in days (default 30).
+        filename: Optional basename of the source document.  Recorded so the
+            stored-PII surfaces can name a record instead of only hashing it.
+            Keep it the basename: a full path can carry a client name.
     """
     if pii_result.mapping:
         mapping_path = write_pii_mapping(pii_result.mapping, review_dir, encryption_key)
@@ -122,6 +126,7 @@ def persist_pii_result(
             str(review_result_path),
             str(mapping_path),
             ttl_days=ttl_days,
+            filename=filename,
         )
 
     write_audit_trail_row(
@@ -184,6 +189,7 @@ def persist_pii_for_document(
             pii_result=pii_result,
             review_dir=review_dir,
             encryption_key=encryption_key,
+            filename=doc_path.name,
         )
     except Exception as exc:
         logger.warning("PII persistence failed (non-fatal): %s", exc)

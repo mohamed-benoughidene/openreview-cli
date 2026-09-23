@@ -25,15 +25,21 @@ def list_stored_pii_via_tui() -> list[dict[str, Any]]:
     """Return stored PII records, newest first.
 
     Each row carries document_hash, created_at, expiry_at, entity_count and
-    mapping_path. The schema is created on demand so the screen also works
-    when it is opened before any command has initialized the database.
+    mapping_path, plus ``filename`` (the source document's basename, or
+    ``None`` for records written before migration 014). The schema is created
+    on demand so the screen also works when it is opened before any command
+    has initialized the database.
     """
-    from openreview_cli.pii.inventory import list_pii_documents
+    from openreview_cli.pii.inventory import list_pii_documents, list_pii_filenames
     from openreview_cli.storage import init_database
 
     db_path = get_db_path()
     init_database(db_path)
-    return list_pii_documents(db_path)
+    rows = list_pii_documents(db_path)
+    filenames = list_pii_filenames(db_path)
+    for row in rows:
+        row["filename"] = filenames.get(str(row["document_hash"]))
+    return rows
 
 
 def delete_pii_document_via_tui(document_hash: str) -> dict[str, bool | int]:

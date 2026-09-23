@@ -32,13 +32,17 @@ _EMPTY_MESSAGE = (
 )
 
 
+_UNKNOWN_FILENAME = "filename not recorded"
+
+
 def _row_label(row: dict[str, Any]) -> str:
     entities = row.get("entity_count") or 0
     noun = "entity" if entities == 1 else "entities"
     created = str(row.get("created_at") or "")[:10] or "—"
     expires = str(row.get("expiry_at") or "")[:10] or "—"
+    filename = row.get("filename") or _UNKNOWN_FILENAME
     return (
-        f"{str(row['document_hash'])[:12]}   {entities} {noun}   "
+        f"{filename}   {str(row['document_hash'])[:12]}   {entities} {noun}   "
         f"created {created}   expires {expires}"
     )
 
@@ -48,6 +52,32 @@ def _artifacts_dir(row: dict[str, Any]) -> str:
     if mapping_path:
         return str(Path(str(mapping_path)).parent)
     return f"reviews/{str(row['document_hash'])[:12]}"
+
+
+def _confirm_subject(row: dict[str, Any]) -> str:
+    """Name the record being deleted: the file, or its review date if unknown."""
+    document_hash = str(row["document_hash"])
+    filename = row.get("filename")
+    if filename:
+        return f"{filename} ({document_hash[:12]}...)"
+    created = str(row.get("created_at") or "")[:10]
+    when = f"reviewed on {created}" if created else "with no review date recorded"
+    return f"the document {when} ({_UNKNOWN_FILENAME}) ({document_hash[:12]}...)"
+
+
+def _confirm_message(row: dict[str, Any]) -> str:
+    """Build the permanent-delete confirmation, naming the file when known."""
+    document_hash = str(row["document_hash"])
+    entities = row.get("entity_count") or 0
+    noun = "entity" if entities == 1 else "entities"
+    return (
+        f"Permanently delete the stored PII data for {_confirm_subject(row)}?\n\n"
+        f"Document hash: {document_hash}\n"
+        f"{entities} redacted {noun} recorded. Artifacts: "
+        f"{_artifacts_dir(row)}\n\n"
+        f"The encrypted mapping is the only way to reverse the redaction "
+        f"in this document, so this cannot be undone."
+    )
 
 
 class PiiDataScreen(Screen[None]):
@@ -136,8 +166,6 @@ class PiiDataScreen(Screen[None]):
             return
 
         document_hash = str(row["document_hash"])
-        entities = row.get("entity_count") or 0
-        noun = "entity" if entities == 1 else "entities"
 
         def _on_confirmed(confirmed: bool | None) -> None:
             if confirmed:
@@ -146,12 +174,7 @@ class PiiDataScreen(Screen[None]):
         self.app.push_screen(
             ConfirmModal(
                 "Delete stored PII",
-                f"Permanently delete the stored PII data for document "
-                f"{document_hash}?\n\n"
-                f"{entities} redacted {noun} recorded. Artifacts: "
-                f"{_artifacts_dir(row)}\n\n"
-                f"The encrypted mapping is the only way to reverse the redaction "
-                f"in this document, so this cannot be undone.",
+                _confirm_message(row),
                 danger=True,
             ),
             _on_confirmed,
