@@ -460,7 +460,7 @@ contract comparison. This is an open research problem.
 ### Blueprint references
 
 Spec 014 §9, blueprint §8 R-7 (bilateral is opt-in experimental),
-research gap documented in research.md §R1.
+research gap documented in research.md §RQ-1.
 
 ---
 
@@ -1102,7 +1102,7 @@ would:
 ### Blueprint references
 
 Spec 018 §5 (Adoption Strategy), plan.md checklist item 4,
-research.md §4. The review pipeline adoption is the v1 proof point;
+research.md Task 5. The review pipeline adoption is the v1 proof point;
 bilateral and benchmark follow when they need the pipeline guarantees.
 
 ---
@@ -2480,7 +2480,6 @@ Advanced querying would provide a structured way to search, filter, and navigate
 
 ### Spec references
 
-Spec 025 research.md §4 (line 93): "No query capability... Advanced querying is deferred."
 Spec 025 spec.md §Scope Boundaries: "Interactive graph exploration" explicitly excluded.
 
 ### Future features (not deferred — natural next steps)
@@ -2522,7 +2521,7 @@ A formal validation study would require a labelled dataset of contracts with exp
 
 ### Spec references
 
-Spec 025 research.md §5 (line 109): "A formal validation study would require a labelled dataset of contracts with expert-assigned quality scores. This is out of scope for v1."
+Spec 025 research.md §5 (line 108): "A formal validation study would require a labelled dataset of contracts with expert-assigned quality scores. This is out of scope for v1."
 Spec 025 plan.md risk register (line 233): "Health score weights not validated empirically."
 
 ### Future features (not deferred — natural next steps)
@@ -2691,7 +2690,6 @@ Persistent SQLite storage would:
 Spec 025 spec.md §Explicitly excluded (line 307): "Persistence beyond JSON files (no SQLite schema changes)."
 Spec 025 spec.md §Explicitly excluded (line 334): "Persistent graph storage in SQLite (JSON files only)."
 Spec 025 plan.md §Deferred Tasks (line 261): "Persistent graph storage in SQLite (JSON files only per spec)."
-Spec 025 research.md §4 (line 91): "Persistence beyond JSON files (no SQLite schema changes)."
 
 ### Future features (not deferred — natural next steps)
 
@@ -3751,5 +3749,50 @@ spec 031 (L-4c, Product Modes Batch 3). D-78 covers the same task for the 17 spe
 ### Affected files
 
 `docs/benchmarks/{franchisecheck,opcheck,partnercheck,sponsorcheck,distrocheck}.json`
+
+---
+
+## D-81: Clause Hierarchy Detection (graph parent_child edges are never populated)
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | Spec 025 (contract graph modeling) — parent_child edge / clause-hierarchy extraction |
+| **Deferred at** | 2026-09-23 |
+| **Trigger** | TUI clause-graph summary screen — a real document scores 98/100 because the graph is always flat |
+| **Status** | Open — every real document produces a flat graph, so the health score is not yet meaningful |
+
+### Description
+
+`ClauseHierarchyBuilder.build()` turns `Clause.parent_id` into `parent_child` edges (`src/openreview_cli/graph/builder.py:83-92`), and the five heuristic metrics (`src/openreview_cli/graph/metrics.py:106-114`) plus the 0-100 health score (`src/openreview_cli/graph/health.py:44-87`) are computed from the resulting graph. If `parent_id` is never set, the graph carries no `parent_child` edges and the hierarchy-derived metrics are meaningless.
+
+No producer ever sets `parent_id` — every producer hard-codes it to `None`:
+
+- `src/openreview_cli/parsing/clause_detector.py:128` and `:149` (both branches of `build_hierarchy()`)
+- `src/openreview_cli/parsing/docx_parser.py:173` and `:206`
+- `src/openreview_cli/grounding/discriminator.py:93`
+- `src/openreview_cli/pii/engine.py:554` (the synthetic single-clause wrapper; `:466` and `:486` merely propagate an existing value)
+
+Measured on the real pipeline (`parse_document` → `ClauseHierarchyBuilder` → `compute_metrics` → `compute_health`) for `tests/fixtures/nda_with_pii.pdf`: 5 nodes, 0 edges, 0 `parent_child` edges, `density` 0.0, `max_depth` 1, `orphan_ratio` 0.0, `broken_ref_count` 0, `definition_coverage` 1.0, health score **98/100**. A synthetic 6-clause document with `parent_id` set yields `max_depth` 3, `density` 0.133, `orphan_ratio` 0.333 and a score of **85/100** — a document with genuine structure scores *lower*.
+
+Three of the five metrics are structurally pinned at their best values whenever there is no hierarchy, so the score is near-maximal for almost any real document:
+
+- `max_depth` is pinned at 1 (`metrics.py:34-62`): with no `parent_child` edges every node is a root (`src/openreview_cli/graph/models.py:46-51`), so the longest path is a single node.
+- `orphan_ratio` is pinned at 0 (`metrics.py:65-72`): `orphan_ids` requires a node that is a `parent_child` *source* but not a *target* (`models.py:53-65`), and there are no such edges.
+- `broken_ref_count` is pinned at 0 (`metrics.py:75-81`): `cross_ref` targets are only ever taken from the node index built in `builder.py:113-133`, so a `cross_ref` edge can never point at a missing node.
+
+Only `density` and `definition_coverage` can move, and both are computed from `cross_ref`/`def_ref` detection rather than from hierarchy.
+
+The TUI summary screen states this limitation directly beneath the score (`src/openreview_cli/tui/screens/graph.py:148-150`, text at `:45-48`): "No clause hierarchy was detected in this document (clause parsers assign no parent section), so this score is near-maximal for almost any flat graph."
+
+### What would need to change to unblock
+
+1. Derive hierarchy during clause detection — assign `parent_id` (or emit explicit parent links) from the numbering/heading structure. Note that `src/openreview_cli/graph/builder.py` already carries the numbering patterns in `_LABEL_PATTERNS` (`builder.py:21`) and derives a *level* from them in `_extract_label_and_level` (`builder.py:39-50`), but it never derives a parent id and it runs in the graph builder, after parsing.
+2. Choose the source of truth. Spec 025 assumes the parsing engine is authoritative for hierarchy (`specs/025-contract-graph-modeling/research.md:19`, `spec.md:158`); decide whether hierarchy is computed in the parsers (`parsing/clause_detector.py`, `parsing/docx_parser.py`) or reconstructed in the graph builder from headings/levels.
+3. Re-baseline `MAX_EXPECTED_DEPTH` (`health.py:11`) and `DEFAULT_WEIGHTS` (`health.py:16`) once real hierarchies exist, so the depth and orphan penalties are calibrated against real documents instead of a flat graph (research.md §5 notes the formula is uncalibrated — `research.md:108`).
+4. Add a real-document fixture with genuine hierarchy that pins the measured metrics (e.g. assert `parent_child` edge count > 0 and `max_depth` ≥ 2), so the flat-graph result cannot silently return.
+
+### Spec references
+
+Spec 025 does not cover hierarchy extraction — it assumes it. `spec.md:158` states the hierarchy edges are "derived from `Clause.parent_id` which is populated by `clause_detector.build_hierarchy()`", and `spec.md:282` lists `parent_id` as a pre-existing input field; `research.md:13` (Decision 0) makes the same assumption. That assumption is false: `clause_detector.build_hierarchy()` sets `parent_id=None` (`clause_detector.py:128`, `:149`). No line in spec 025 specifies how hierarchy is extracted from a real document.
 
 ---
