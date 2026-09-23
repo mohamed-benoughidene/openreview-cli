@@ -97,6 +97,34 @@ async def test_prompt_diff_screen_renders_real_unified_diff(store: PromptStore) 
         assert "+unique-newer-line" in rendered, rendered
 
 
+async def test_prompt_history_screen_dismisses_on_escape(store: PromptStore) -> None:
+    """Pressing Escape pops the history modal (inherited from VersionHistoryScreen)."""
+    store.create("greeting", "one\n")
+    store.update("greeting", "two\n")
+
+    history = get_prompt_history_via_tui("greeting")
+
+    from openreview_cli.tui.app import OpenReviewApp
+    from openreview_cli.tui.screens.prompt_detail import PromptHistoryScreen
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        app.push_screen(
+            PromptHistoryScreen(
+                prompt_name="greeting",
+                rows=history["rows"],
+                current_version=history["current_version"],
+            )
+        )
+        await pilot.pause()
+        assert isinstance(app.screen, PromptHistoryScreen)
+
+        await pilot.press("escape")
+        await pilot.pause()
+
+        assert not any(isinstance(s, PromptHistoryScreen) for s in app._screen_stack)
+
+
 async def test_prompt_history_view_diff_opens_diff_screen(store: PromptStore) -> None:
     """Clicking 'View diff' pushes a PromptDiffScreen for the selected pair."""
     store.create("greeting", "one\n")

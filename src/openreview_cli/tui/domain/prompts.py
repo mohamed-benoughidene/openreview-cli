@@ -33,8 +33,9 @@ def _normalize_created_at(value: Any) -> str:
 def list_prompts_via_tui() -> list[dict[str, Any]]:
     """List prompts as dicts shaped ``{name, latest_version, created_at}``.
 
-    Requests an explicit ``per_page=100`` so the store's default 25-item cap
-    cannot silently hide prompts from the TUI.
+    Requests an explicit ``per_page=100``, so it returns up to 100 prompts.
+    Prompts beyond the first 100 are not included (the store's default 25-item
+    cap is not the limiting factor here, but a cap of 100 still applies).
     """
     prompts = _store().list(per_page=100)
     return [

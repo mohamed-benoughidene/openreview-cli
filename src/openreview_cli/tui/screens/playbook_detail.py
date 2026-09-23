@@ -242,6 +242,10 @@ class VersionHistoryScreen(ModalScreen[None]):
             return
         self.app.push_screen(VersionDiffScreen(self._item_id, diff))
 
+    def on_key(self, event: Any) -> None:
+        if event.key == "escape":
+            self.dismiss()
+
 
 class VersionDiffScreen(ModalScreen[None]):
     """Full-screen version diff view (FR-029)."""
