@@ -443,3 +443,28 @@ class TestSettingsTab:
             await pilot.click("#section-about")
             await pilot.pause()
             assert app.query_one("#manage-pii", Button).display is False
+
+    # ── Every section stays reachable at the smallest viewport ──────
+
+    async def test_every_section_is_reachable_at_the_smallest_viewport(
+        self, isolated_xdg: dict[str, Path]
+    ) -> None:
+        """Each section button switches the pane at 80x24 (clipping regression guard)."""
+        expected = {
+            "section-gateway": "Model Slots",
+            "section-configuration": "Config file:",
+            "section-pricing-tier": "Pricing Tier",
+            "section-pii-data": "Stored PII data",
+            "section-about": __version__,
+        }
+
+        app = OpenReviewApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.press("5")
+            await pilot.pause()
+
+            for section_id, phrase in expected.items():
+                await pilot.click(f"#{section_id}")
+                await pilot.pause()
+                text = app.query_one("#section-content-display", Static).content
+                assert phrase in text, f"{section_id} did not render {phrase!r}: {text!r}"

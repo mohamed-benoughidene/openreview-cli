@@ -29,7 +29,7 @@ class SettingsTab(Vertical):
     DEFAULT_CSS: ClassVar[str] = """
     SettingsTab { padding: 1; }
     #sections-list { width: 28; border: solid $primary; padding: 0 1; }
-    #sections-list > Button { width: 100%; margin: 0 0 1 0; }
+    #sections-list > Button { width: 100%; margin: 0; }
     #section-content-display { width: 1fr; padding: 0 2; overflow-y: auto; }
     """
 
