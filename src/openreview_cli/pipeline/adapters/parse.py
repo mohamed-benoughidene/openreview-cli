@@ -26,6 +26,9 @@ class ParseStage(Stage):
     name = "parse"
     critical = True
 
+    def __init__(self, *, allow_password_prompt: bool = True) -> None:
+        self.allow_password_prompt = allow_password_prompt
+
     async def run(self, ctx: PipelineContext) -> dict[str, Any]:
         from openreview_cli.parsing.stream import parse_document
 
@@ -34,7 +37,9 @@ class ParseStage(Stage):
             raise StageError("document_path is empty or None")
 
         try:
-            document, clauses = await asyncio.to_thread(parse_document, path)
+            document, clauses = await asyncio.to_thread(
+                parse_document, path, allow_password_prompt=self.allow_password_prompt
+            )
         except Exception as exc:
             raise StageError(f"ParseStage failed: {exc}") from exc
 

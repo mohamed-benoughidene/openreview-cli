@@ -67,11 +67,13 @@ def _parser_for(path: str | Path) -> PdfParser | DocxParser:
     )
 
 
-def stream_clauses(path: str | Path) -> Iterator[Clause]:
-    yield from _parser_for(path).parse()
+def stream_clauses(path: str | Path, *, allow_password_prompt: bool = True) -> Iterator[Clause]:
+    yield from _parser_for(path).parse(allow_password_prompt=allow_password_prompt)
 
 
-def parse_document(path: str | Path) -> tuple[Document, list[Clause]]:
+def parse_document(
+    path: str | Path, *, allow_password_prompt: bool = True
+) -> tuple[Document, list[Clause]]:
     import time
 
     from openreview_cli.parsing.clause_detector import annotate_clauses
@@ -79,7 +81,7 @@ def parse_document(path: str | Path) -> tuple[Document, list[Clause]]:
     start = time.perf_counter()
     path = Path(path)
     parser = _parser_for(path)
-    clauses = list(parser.parse())
+    clauses = list(parser.parse(allow_password_prompt=allow_password_prompt))
 
     warnings = annotate_clauses(clauses)
     # Timestamp taken after the annotation pass so the O(total-text) pass is

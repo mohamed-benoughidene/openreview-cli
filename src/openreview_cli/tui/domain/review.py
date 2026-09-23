@@ -39,6 +39,7 @@ def run_review_via_tui(
     verbose: bool = False,
     client_id: str | None = None,
     cancel_requested: bool = False,
+    allow_password_prompt: bool = False,
     progress_callback: ProgressCallback | None = None,
 ) -> list[ReviewReport]:
     """Run a review from the TUI with PII stripping enabled by default."""
@@ -57,6 +58,7 @@ def run_review_via_tui(
         verbose=verbose,
         confidence_threshold=confidence_threshold,
         mode=mode,
+        allow_password_prompt=allow_password_prompt,
         progress_callback=progress_callback,
     )
 

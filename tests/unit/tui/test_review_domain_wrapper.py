@@ -64,6 +64,7 @@ class TestReviewDomainWrapper:
             verbose=True,
             confidence_threshold=0.8,
             mode="hirecheck",
+            allow_password_prompt=False,
             progress_callback=None,
         )
 

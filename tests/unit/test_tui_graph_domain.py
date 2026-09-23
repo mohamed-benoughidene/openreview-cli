@@ -98,6 +98,44 @@ def test_password_protected_pdf_raises_without_prompting(
     assert elapsed < 5.0
 
 
+def test_encrypted_pdf_with_configured_password_returns_summary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A correct ``OPENREVIEW_PDF_PASSWORD`` opens the PDF instead of refusing it.
+
+    The removed pymupdf guard rejected every ``needs_pass`` document outright,
+    ignoring the password the rest of the app honours. Delegating to
+    ``parse_document(..., allow_password_prompt=False)`` restores that: the
+    parser authenticates with the env password and the summary is returned, all
+    without reaching ``getpass``.
+    """
+    import pymupdf
+
+    pdf_path = tmp_path / "locked.pdf"
+    doc: Any = pymupdf.open()  # type: ignore[no-untyped-call]
+    page = doc.new_page()
+    page.insert_text((72, 72), "Article 1. Confidential information.")
+    doc.save(
+        str(pdf_path),
+        encryption=pymupdf.PDF_ENCRYPT_AES_256,  # type: ignore[attr-defined]
+        owner_pw="owner-secret",
+        user_pw="user-secret",
+    )
+    doc.close()
+
+    def _fail_prompt(*_args: Any, **_kwargs: Any) -> str:
+        pytest.fail("graph_summary_via_tui prompted for a PDF password")
+
+    monkeypatch.setattr("getpass.getpass", _fail_prompt)
+    monkeypatch.setenv("OPENREVIEW_PDF_PASSWORD", "user-secret")
+
+    summary = graph_summary_via_tui(pdf_path)
+
+    assert isinstance(summary, GraphSummary)
+    assert summary.filename == "locked.pdf"
+    assert summary.node_count == 1
+
+
 def test_docx_without_clauses_returns_empty_summary(tmp_path: Path) -> None:
     docx_path = tmp_path / "blank.docx"
     Document().save(str(docx_path))

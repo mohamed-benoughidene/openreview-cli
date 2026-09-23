@@ -51,7 +51,7 @@ def run_negotiation_via_tui(
     else:
         playbook = load_bundled()
 
-    _doc, clauses = parse_document(str(path))
+    _doc, clauses = parse_document(str(path), allow_password_prompt=False)
 
     assessments: list[ClauseAssessment] = []
     for clause in clauses:
