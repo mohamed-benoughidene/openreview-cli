@@ -34,7 +34,7 @@ class HomeTab(Container):
         yield Static("Welcome to openreview", id="welcome")
         with Horizontal(id="actions"):
             yield Button("New review", id="btn-new-review", variant="primary")
-            yield Button("Import document", id="btn-import-doc", variant="default")
+            yield Button("Start review", id="btn-import-doc", variant="default")
         yield Static("Recent reviews", id="recent-header")
         yield Button(
             "No reviews yet. Start one with New review.",
