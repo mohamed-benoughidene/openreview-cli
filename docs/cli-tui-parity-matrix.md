@@ -2,8 +2,8 @@
 
 Generated from live source by `scripts/parity/build_parity_matrix.py`. Every row cites a source file and a line number.
 
-- Commit: `08a4e06`
-- Generated at: 2026-09-23T20:32:36+00:00
+- Commit: `1dd7c4a`
+- Generated at: 2026-09-23T21:15:04+00:00
 - CLI framework: Typer 0.26.7
 - TUI framework: Textual 8.2.8
 - Python: 3.12.3
@@ -22,10 +22,10 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 |---|---|
 | CLI inventory rows | 556 |
 | TUI inventory rows | 107 |
-| Shared call argument rows | 84 |
-| Compared shared call argument pairs | 42 |
-| Default-value mismatches | 1 |
-| Parity join rows | 139 |
+| Shared call argument rows | 89 |
+| Compared shared call argument pairs | 44 |
+| Default-value mismatches | 3 |
+| Parity join rows | 141 |
 | Needs human confirmation | 32 |
 | Hidden single-key bindings | 139 |
 | Unmatched CLI items | 93 |
@@ -709,48 +709,50 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 
 | Match | CLI item | CLI source | TUI item | TUI source | Default mismatch |
 |---|---|---|---|---|---|
-| MISMATCH-ABSENT | --grounding-mode (precheck review) | src/openreview_cli/app.py:1335 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:50 | strict (CLI src/openreview_cli/app.py:1335) vs NOT PASSED (TUI src/openreview_cli/tui/domain/review.py:50) |
+| MISMATCH-ABSENT | --grounding-mode (precheck review) | src/openreview_cli/app.py:1335 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | strict (CLI src/openreview_cli/app.py:1335) vs NOT PASSED (TUI src/openreview_cli/tui/domain/review.py:51) |
+| MISMATCH-ABSENT | precheck review (allow_password_prompt) | src/openreview_cli/app.py:1327 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:61 | NOT PASSED (CLI src/openreview_cli/app.py:1327) vs False (TUI src/openreview_cli/tui/domain/review.py:61) |
+| MISMATCH-ABSENT | product modes (allow_password_prompt) | src/openreview_cli/app.py:3392 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:61 | NOT PASSED (CLI src/openreview_cli/app.py:3392) vs False (TUI src/openreview_cli/tui/domain/review.py:61) |
 | SHARED-CALL | --align-only (precheck compare) | src/openreview_cli/app.py:1948 | no TUI control for align_only | (none) | none |
 | SHARED-CALL | --allow-partial-pii (precheck compare) | src/openreview_cli/app.py:1945 | no TUI control for allow_partial_pii | (none) | none |
-| SHARED-CALL | --allow-partial-pii (precheck review) | src/openreview_cli/app.py:1338 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:50 | none |
+| SHARED-CALL | --allow-partial-pii (precheck review) | src/openreview_cli/app.py:1338 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
 | SHARED-CALL | --comparison-model (precheck compare) | src/openreview_cli/app.py:1950 | no TUI control for comparison_model | (none) | none |
 | SHARED-CALL | --confidence-threshold (precheck compare) | src/openreview_cli/app.py:1947 | no TUI control for confidence_threshold | (none) | none |
-| SHARED-CALL | --confidence-threshold (precheck review) | src/openreview_cli/app.py:1336 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:58 | none |
+| SHARED-CALL | --confidence-threshold (precheck review) | src/openreview_cli/app.py:1336 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:59 | none |
 | SHARED-CALL | --extraction-model (precheck compare) | src/openreview_cli/app.py:1942 | no TUI control for extraction_model | (none) | none |
-| SHARED-CALL | --extraction-model (precheck review) | src/openreview_cli/app.py:1331 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:54 | none |
+| SHARED-CALL | --extraction-model (precheck review) | src/openreview_cli/app.py:1331 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:55 | none |
 | SHARED-CALL | --grounding-mode (precheck compare) | src/openreview_cli/app.py:1949 | no TUI control for grounding_mode | (none) | none |
 | SHARED-CALL | --no-pii (precheck compare) | src/openreview_cli/app.py:1944 | no TUI control for no_pii | (none) | none |
-| SHARED-CALL | --no-pii (precheck review) | src/openreview_cli/app.py:1333 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:56 | none |
-| SHARED-CALL | --playbook-path (precheck review) | src/openreview_cli/app.py:1329 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:52 | none |
+| SHARED-CALL | --no-pii (precheck review) | src/openreview_cli/app.py:1333 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:57 | none |
+| SHARED-CALL | --playbook-path (precheck review) | src/openreview_cli/app.py:1329 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:53 | none |
 | SHARED-CALL | --verbose (precheck compare) | src/openreview_cli/app.py:1946 | no TUI control for verbose | (none) | none |
-| SHARED-CALL | --verbose (precheck review) | src/openreview_cli/app.py:1334 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:57 | none |
+| SHARED-CALL | --verbose (precheck review) | src/openreview_cli/app.py:1334 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:58 | none |
 | SHARED-CALL | --version-label-a (precheck compare) | src/openreview_cli/app.py:1951 | no TUI control for version_label_a | (none) | none |
 | SHARED-CALL | --version-label-b (precheck compare) | src/openreview_cli/app.py:1952 | no TUI control for version_label_b | (none) | none |
 | SHARED-CALL | precheck compare (doc_a_path) | src/openreview_cli/app.py:1939 | no TUI control for doc_a_path | (none) | none |
 | SHARED-CALL | precheck compare (doc_b_path) | src/openreview_cli/app.py:1940 | no TUI control for doc_b_path | (none) | none |
 | SHARED-CALL | precheck compare (playbook) | src/openreview_cli/app.py:1941 | no TUI control for playbook | (none) | none |
 | SHARED-CALL | precheck compare (qa_model) | src/openreview_cli/app.py:1943 | no TUI control for qa_model | (none) | none |
-| SHARED-CALL | precheck review (mode) | src/openreview_cli/app.py:1337 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:59 | none |
-| SHARED-CALL | precheck review (mode_threshold_overrides) | src/openreview_cli/app.py:1327 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:50 | none |
-| SHARED-CALL | precheck review (paths) | src/openreview_cli/app.py:1328 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
-| SHARED-CALL | precheck review (playbook_id) | src/openreview_cli/app.py:1330 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:53 | none |
-| SHARED-CALL | precheck review (progress_callback) | src/openreview_cli/app.py:1327 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:60 | none |
-| SHARED-CALL | precheck review (qa_model) | src/openreview_cli/app.py:1332 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:55 | none |
-| SHARED-CALL | precheck review (session_id) | src/openreview_cli/app.py:1327 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:50 | none |
-| SHARED-CALL | product modes (allow_partial_pii) | src/openreview_cli/app.py:3402 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:50 | none |
-| SHARED-CALL | product modes (confidence_threshold) | src/openreview_cli/app.py:3399 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:58 | none |
-| SHARED-CALL | product modes (extraction_model) | src/openreview_cli/app.py:3395 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:54 | none |
-| SHARED-CALL | product modes (grounding_mode) | src/openreview_cli/app.py:3392 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:50 | none |
-| SHARED-CALL | product modes (mode) | src/openreview_cli/app.py:3401 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:59 | none |
-| SHARED-CALL | product modes (mode_threshold_overrides) | src/openreview_cli/app.py:3400 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:50 | none |
-| SHARED-CALL | product modes (no_pii) | src/openreview_cli/app.py:3397 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:56 | none |
-| SHARED-CALL | product modes (paths) | src/openreview_cli/app.py:3393 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
-| SHARED-CALL | product modes (playbook_id) | src/openreview_cli/app.py:3392 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:53 | none |
-| SHARED-CALL | product modes (playbook_path) | src/openreview_cli/app.py:3394 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:52 | none |
-| SHARED-CALL | product modes (progress_callback) | src/openreview_cli/app.py:3392 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:60 | none |
-| SHARED-CALL | product modes (qa_model) | src/openreview_cli/app.py:3396 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:55 | none |
-| SHARED-CALL | product modes (session_id) | src/openreview_cli/app.py:3392 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:50 | none |
-| SHARED-CALL | product modes (verbose) | src/openreview_cli/app.py:3398 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:57 | none |
+| SHARED-CALL | precheck review (mode) | src/openreview_cli/app.py:1337 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:60 | none |
+| SHARED-CALL | precheck review (mode_threshold_overrides) | src/openreview_cli/app.py:1327 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
+| SHARED-CALL | precheck review (paths) | src/openreview_cli/app.py:1328 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:52 | none |
+| SHARED-CALL | precheck review (playbook_id) | src/openreview_cli/app.py:1330 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:54 | none |
+| SHARED-CALL | precheck review (progress_callback) | src/openreview_cli/app.py:1327 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:62 | none |
+| SHARED-CALL | precheck review (qa_model) | src/openreview_cli/app.py:1332 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:56 | none |
+| SHARED-CALL | precheck review (session_id) | src/openreview_cli/app.py:1327 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
+| SHARED-CALL | product modes (allow_partial_pii) | src/openreview_cli/app.py:3402 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
+| SHARED-CALL | product modes (confidence_threshold) | src/openreview_cli/app.py:3399 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:59 | none |
+| SHARED-CALL | product modes (extraction_model) | src/openreview_cli/app.py:3395 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:55 | none |
+| SHARED-CALL | product modes (grounding_mode) | src/openreview_cli/app.py:3392 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
+| SHARED-CALL | product modes (mode) | src/openreview_cli/app.py:3401 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:60 | none |
+| SHARED-CALL | product modes (mode_threshold_overrides) | src/openreview_cli/app.py:3400 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
+| SHARED-CALL | product modes (no_pii) | src/openreview_cli/app.py:3397 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:57 | none |
+| SHARED-CALL | product modes (paths) | src/openreview_cli/app.py:3393 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:52 | none |
+| SHARED-CALL | product modes (playbook_id) | src/openreview_cli/app.py:3392 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:54 | none |
+| SHARED-CALL | product modes (playbook_path) | src/openreview_cli/app.py:3394 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:53 | none |
+| SHARED-CALL | product modes (progress_callback) | src/openreview_cli/app.py:3392 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:62 | none |
+| SHARED-CALL | product modes (qa_model) | src/openreview_cli/app.py:3396 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:56 | none |
+| SHARED-CALL | product modes (session_id) | src/openreview_cli/app.py:3392 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
+| SHARED-CALL | product modes (verbose) | src/openreview_cli/app.py:3398 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:58 | none |
 | CERTAIN | --allow-partial-pii (option) | src/openreview_cli/app.py:3263 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
 | CERTAIN | --cluster-clauses (option) | src/openreview_cli/app.py:2638 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:311 | none |
 | CERTAIN | --no-pii (option) | src/openreview_cli/app.py:3266 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
@@ -851,7 +853,9 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 
 ## Default-value mismatches
 
-- `run_review.grounding_mode` (MISMATCH-ABSENT): CLI `strict` at src/openreview_cli/app.py:1335 (precheck review) against TUI `NOT PASSED` at src/openreview_cli/tui/domain/review.py:50 (openreview_cli.tui.domain.review.run_review_via_tui). Callee default: `None`.
+- `run_review.grounding_mode` (MISMATCH-ABSENT): CLI `strict` at src/openreview_cli/app.py:1335 (precheck review) against TUI `NOT PASSED` at src/openreview_cli/tui/domain/review.py:51 (openreview_cli.tui.domain.review.run_review_via_tui). Callee default: `None`.
+- `run_review.allow_password_prompt` (MISMATCH-ABSENT): CLI `NOT PASSED` at src/openreview_cli/app.py:1327 (precheck review) against TUI `False` at src/openreview_cli/tui/domain/review.py:61 (openreview_cli.tui.domain.review.run_review_via_tui). Callee default: `True`.
+- `run_review.allow_password_prompt` (MISMATCH-ABSENT): CLI `NOT PASSED` at src/openreview_cli/app.py:3392 (product modes) against TUI `False` at src/openreview_cli/tui/domain/review.py:61 (openreview_cli.tui.domain.review.run_review_via_tui). Callee default: `True`.
 
 ## Shared call sites without a counterpart
 
@@ -872,13 +876,13 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 
 ## Unresolved shared call arguments
 
-- `run_review.paths`: CLI `REQUIRED` (src/openreview_cli/app.py:1328) against TUI `paths` (src/openreview_cli/tui/domain/review.py:51).
-- `run_review.paths`: CLI `[path]` (src/openreview_cli/app.py:3393) against TUI `paths` (src/openreview_cli/tui/domain/review.py:51).
-- `run_review.playbook_path`: CLI `resolved_playbook_path` (src/openreview_cli/app.py:3394) against TUI `None` (src/openreview_cli/tui/domain/review.py:52).
-- `run_review.extraction_model`: CLI `extraction_model or 'extraction'` (src/openreview_cli/app.py:1331) against TUI `extraction` (src/openreview_cli/tui/domain/review.py:54).
-- `run_review.no_pii`: CLI `no_pii` (src/openreview_cli/app.py:3397) against TUI `False` (src/openreview_cli/tui/domain/review.py:56).
-- `run_review.mode_threshold_overrides`: CLI `mode_threshold_overrides` (src/openreview_cli/app.py:3400) against TUI `NOT PASSED` (src/openreview_cli/tui/domain/review.py:50).
-- `run_review.mode`: CLI `mode` (src/openreview_cli/app.py:3401) against TUI `precheck` (src/openreview_cli/tui/domain/review.py:59).
+- `run_review.paths`: CLI `REQUIRED` (src/openreview_cli/app.py:1328) against TUI `paths` (src/openreview_cli/tui/domain/review.py:52).
+- `run_review.paths`: CLI `[path]` (src/openreview_cli/app.py:3393) against TUI `paths` (src/openreview_cli/tui/domain/review.py:52).
+- `run_review.playbook_path`: CLI `resolved_playbook_path` (src/openreview_cli/app.py:3394) against TUI `None` (src/openreview_cli/tui/domain/review.py:53).
+- `run_review.extraction_model`: CLI `extraction_model or 'extraction'` (src/openreview_cli/app.py:1331) against TUI `extraction` (src/openreview_cli/tui/domain/review.py:55).
+- `run_review.no_pii`: CLI `no_pii` (src/openreview_cli/app.py:3397) against TUI `False` (src/openreview_cli/tui/domain/review.py:57).
+- `run_review.mode_threshold_overrides`: CLI `mode_threshold_overrides` (src/openreview_cli/app.py:3400) against TUI `NOT PASSED` (src/openreview_cli/tui/domain/review.py:51).
+- `run_review.mode`: CLI `mode` (src/openreview_cli/app.py:3401) against TUI `precheck` (src/openreview_cli/tui/domain/review.py:60).
 
 ## Needs human confirmation
 
@@ -1226,11 +1230,11 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 | command | 82 |
 | default-state | 10 |
 | group | 11 |
-| mismatch | 1 |
+| mismatch | 3 |
 | option | 390 |
 | screen | 23 |
-| shared-call-arg | 84 |
-| total | 748 |
+| shared-call-arg | 89 |
+| total | 755 |
 
 Regenerate with:
 
