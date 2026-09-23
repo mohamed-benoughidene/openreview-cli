@@ -82,6 +82,9 @@ _MIN_NAME_TOKEN_LENGTH = 3
 # Recursion guard for name and conditional resolution chains.
 _MAX_RESOLVE_DEPTH = 4
 
+# "prompt" is deliberately not generic: it is a product domain noun (the
+# prompt library feature), not generic UI chrome, so "prompt history" matches
+# "PromptHistoryScreen".
 GENERIC_TOKENS = frozenset(
     {
         "get",
@@ -141,7 +144,6 @@ GENERIC_TOKENS = frozenset(
         "api",
         "key",
         "model",
-        "prompt",
         "history",
         "version",
         "check",
@@ -1189,11 +1191,27 @@ def build_join(cli_rows: list[dict[str, Any]], tui_rows: list[dict[str, Any]]) -
 
     unmatched_cli = [item for item in cli_items if _key(item) not in matched_cli]
     unmatched_tui = [item for item in tui_items if _key(item) not in matched_tui]
-    kept = [pair for pair in human if not _is_short_key_binding(pair)]
+
+    # Report the strongest classification per CLI item: a certain match does not
+    # also generate a generic-overlap human row. A generic-token-only pair is
+    # only noise once the same CLI item is already matched with certainty
+    # elsewhere in this join. The unmatched computation above still sees every
+    # human pair, so this only trims the reported human list.
+    certain_cli = {(pair["cli_kind"], pair["cli_item"]) for pair in certain}
+    visible = [pair for pair in human if not _is_short_key_binding(pair)]
+    kept = [
+        pair
+        for pair in visible
+        if not (
+            str(pair["reason"]).startswith("generic token only")
+            and (pair["cli_kind"], pair["cli_item"]) in certain_cli
+        )
+    ]
+    hidden = sum(1 for pair in human if _is_short_key_binding(pair))
     return {
         "certain": certain,
         "human": kept,
-        "human_hidden": len(human) - len(kept),
+        "human_hidden": hidden,
         "unmatched_cli": unmatched_cli,
         "unmatched_tui": unmatched_tui,
     }

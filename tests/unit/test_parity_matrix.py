@@ -258,6 +258,87 @@ def test_generic_mode_token_never_creates_a_certain_match(matrix: dict[str, Any]
         assert "--mode-threshold" not in pair["cli_flags"]
 
 
+def _command_row(name: str, line_number: int) -> dict[str, Any]:
+    return {
+        "name": name,
+        "type": "command",
+        "owner": "prompt",
+        "help_text": "",
+        "flags_or_actions": [],
+        "default_value": "",
+        "source_file": "src/openreview_cli/prompts/cli.py",
+        "line_number": line_number,
+    }
+
+
+def _screen_row(name: str, line_number: int) -> dict[str, Any]:
+    return {
+        "name": name,
+        "type": "screen",
+        "owner": "openreview_cli.tui.screens.prompt_detail",
+        "help_text": "",
+        "flags_or_actions": [],
+        "default_value": "",
+        "source_file": "src/openreview_cli/tui/screens/prompt_detail.py",
+        "line_number": line_number,
+    }
+
+
+def test_prompt_domain_noun_joins_prompt_commands_to_prompt_screens() -> None:
+    """``prompt`` is a domain noun, so the prompt commands match the prompt screens.
+
+    Regression guard for the GENERIC_TOKENS entry: while ``prompt`` was generic
+    the CLI ``prompt history`` could only ever reach ``NEEDS-HUMAN`` against
+    ``PromptHistoryScreen``.
+    """
+    module = _load_script("parity_build_matrix_prompt_tokens", SCRIPT_PATH)
+    join = module.build_join(
+        [_command_row("prompt history", 189), _command_row("prompt diff", 127)],
+        [_screen_row("PromptHistoryScreen", 23), _screen_row("PromptDiffScreen", 49)],
+    )
+    pairs = {(pair["cli_item"], pair["tui_item"]): pair for pair in join["certain"]}
+    for cli_item, tui_item in (
+        ("prompt history", "PromptHistoryScreen"),
+        ("prompt diff", "PromptDiffScreen"),
+    ):
+        assert (cli_item, tui_item) in pairs, f"{cli_item} never became CERTAIN"
+        pair = pairs[(cli_item, tui_item)]
+        assert pair["match"] == "CERTAIN"
+        assert "prompt" in pair["shared_tokens"]
+
+
+def test_certain_match_suppresses_the_generic_overlap_human_row() -> None:
+    """A certain match is the strongest classification; its generic overlap is dropped.
+
+    ``prompt history`` matches ``PromptHistoryScreen`` on the ``prompt`` domain
+    noun. The unrelated playbook ``VersionHistoryScreen`` shares only the generic
+    ``history`` token, so that generic-overlap human row must not be reported
+    once the CLI item is already matched with certainty.
+    """
+    module = _load_script("parity_build_matrix_generic_overlap", SCRIPT_PATH)
+    join = module.build_join(
+        [_command_row("prompt history", 189)],
+        [_screen_row("PromptHistoryScreen", 23), _screen_row("VersionHistoryScreen", 166)],
+    )
+    pairs = {(pair["cli_item"], pair["tui_item"]): pair for pair in join["certain"]}
+    assert ("prompt history", "PromptHistoryScreen") in pairs
+    assert pairs[("prompt history", "PromptHistoryScreen")]["match"] == "CERTAIN"
+    assert all(pair["cli_item"] != "prompt history" for pair in join["human"])
+
+
+def test_prompt_history_is_certain_and_absent_from_needs_human(matrix: dict[str, Any]) -> None:
+    """``prompt history`` is matched against the prompt screens, never a human row."""
+    certain = {
+        (pair["cli_item"], pair["tui_item"])
+        for pair in matrix["join"]
+        if pair["match"] == "CERTAIN"
+    }
+    assert ("prompt history", "PromptHistoryScreen") in certain
+    assert ("prompt history", "PromptDiffScreen") in certain
+    human_cli = {pair["cli_item"] for pair in matrix["needs_human_confirmation"]}
+    assert "prompt history" not in human_cli
+
+
 def test_needs_human_confirmation_is_populated(matrix: dict[str, Any]) -> None:
     human = matrix["needs_human_confirmation"]
     assert human
