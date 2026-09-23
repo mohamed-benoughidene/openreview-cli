@@ -52,7 +52,7 @@ class PdfParser:
         self.title: str | None = None
         self.company: str | None = None
 
-    def parse(self) -> Iterator[Clause]:
+    def parse(self, *, allow_password_prompt: bool = True) -> Iterator[Clause]:
         import pymupdf
 
         from openreview_cli.parsing.clause_detector import (
@@ -93,7 +93,7 @@ class PdfParser:
                         message="This contract is password-protected.",
                         action="The password in OPENREVIEW_PDF_PASSWORD was incorrect. Set the correct password or provide an unlocked copy.",
                     )
-            elif sys.stdin.isatty():
+            elif allow_password_prompt and sys.stdin.isatty():
                 import getpass
 
                 try:
@@ -121,7 +121,7 @@ class PdfParser:
                     exit_code=8,
                     category="password_protected",
                     message="This contract is password-protected.",
-                    action="Enter the password or provide an unlocked copy.",
+                    action="Set OPENREVIEW_PDF_PASSWORD or provide an unlocked copy.",
                 )
 
         with contextlib.suppress(Exception):

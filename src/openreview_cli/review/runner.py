@@ -37,6 +37,7 @@ def run_review(  # noqa: PLR0912
     mode: str = "precheck",
     session_id: str | None = None,
     allow_partial_pii: bool = False,
+    allow_password_prompt: bool = True,
     progress_callback: ProgressCallback | None = None,
 ) -> list[ReviewReport]:
     """Run the PAKTON 3-agent review pipeline on one or more documents.
@@ -82,6 +83,10 @@ def run_review(  # noqa: PLR0912
         (``parse`` / ``strip`` / ``review`` transitions).  Called from the
         thread running the pipeline, so UI consumers must marshal onto their
         own thread.
+    allow_password_prompt : bool
+        Forwarded to ``ParseStage`` so a password-protected PDF may prompt
+        when ``True`` (standalone CLI) and never prompts when ``False``
+        (TUI, where stdin is owned by Textual).
 
     Returns
     -------
@@ -144,6 +149,7 @@ def run_review(  # noqa: PLR0912
                 mode=mode,
                 session_id=doc_session_id,
                 allow_partial_pii=allow_partial_pii,
+                allow_password_prompt=allow_password_prompt,
                 progress_callback=progress_callback,
             )
         except Exception as exc:
@@ -224,6 +230,7 @@ def _run_review_doc_pipeline(
     mode: str = "precheck",
     session_id: str | None = None,
     allow_partial_pii: bool = False,
+    allow_password_prompt: bool = True,
     progress_callback: ProgressCallback | None = None,
 ) -> tuple[ReviewReport, list[Any]] | None:
     """Run a pipeline for a single document using the pipeline framework.
@@ -307,7 +314,7 @@ def _run_review_doc_pipeline(
         provider_list=provider_list,
     )
 
-    stages: list[Any] = [ParseStage()]
+    stages: list[Any] = [ParseStage(allow_password_prompt=allow_password_prompt)]
     if not no_pii:
         stages.append(StripStage(no_pii=False, allow_partial=allow_partial_pii))
     stages.append(review_stage)
