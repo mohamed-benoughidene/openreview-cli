@@ -149,3 +149,32 @@ async def test_progress_screen_completes_to_result() -> None:
                     result_screen = s
                     break
             assert result_screen is not None, "ResultScreen should be on screen stack"
+
+
+@pytest.mark.asyncio
+async def test_progress_screen_passes_document_paths_to_result() -> None:
+    """The reviewed paths reach ResultScreen so `g` can open the clause graph."""
+    from pathlib import Path
+
+    from openreview_cli.tui.app import OpenReviewApp
+    from openreview_cli.tui.screens.progress import ProgressScreen
+    from openreview_cli.tui.screens.result import ResultScreen
+
+    mock_report = MagicMock()
+    mock_report.assessments = []
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        with patch("openreview_cli.tui.domain.review.run_review_via_tui") as mock_run:
+            mock_run.return_value = [mock_report]
+            app.push_screen(ProgressScreen(paths=["alpha.pdf", "beta.pdf"], mode="precheck"))
+            for _ in range(6):
+                await pilot.pause()
+
+            result_screen = None
+            for s in app._screen_stack:
+                if isinstance(s, ResultScreen):
+                    result_screen = s
+                    break
+            assert result_screen is not None, "ResultScreen should be on screen stack"
+            assert result_screen._document_paths == [Path("alpha.pdf"), Path("beta.pdf")]

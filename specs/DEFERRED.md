@@ -2620,7 +2620,7 @@ Spec 025 plan.md §Deferred Tasks (line 259): "Visual graph rendering (DOT/SVG/P
 | **Deferred from** | Spec 025 (contract graph modeling) — explicitly excluded |
 | **Deferred at** | 2026-07-06 |
 | **Trigger** | Spec boundary — CLI-only constraint prevents interactive browsing |
-| **Status** | Unblocked — but requires constitutional review against Principle II (CLI-Only) |
+| **Status** | Partially delivered — a read-only metrics/health summary screen ships in the TUI (see §Partial delivery); interactive browsing remains deferred |
 
 ### Description
 
@@ -2629,6 +2629,14 @@ The graph can be inspected via the `view` command (static ASCII tree) and `metri
 Interactive exploration would need either:
 - A TUI (terminal user interface) using a library like Textual or Rich's live display
 - A local web interface opened in the browser (constitutional question: does a local web page violate the "no web server" rule?)
+
+### Partial delivery
+
+A read-only screen, `GraphSummaryScreen` (`src/openreview_cli/tui/screens/graph.py`), now renders the five structural metrics and the 0-100 health score for the document of a finished review; it is reached with `g` on the result screen. It runs the same parse → build → metrics → health pipeline as `openreview graph metrics` and `openreview graph health`, re-parsing the document on demand.
+
+Still deferred in this item: interactive browsing — expanding a node's connections, searching by text, filtering by edge type, following cross-references. D-57 also remains untouched: this screen renders text, not DOT/SVG/PNG.
+
+Known limitation: no clause parser populates `Clause.parent_id`, so a graph built from a real PDF or DOCX is flat (zero `parent_child` edges), three of the five metrics sit at their best values, and the score reads ~98 for almost any document. The screen says so beneath the score.
 
 ### What would need to change to unblock
 
@@ -2640,7 +2648,7 @@ Interactive exploration would need either:
 
 ### Spec references
 
-Spec 025 spec.md §Explicitly excluded (line 330): "Interactive graph exploration."
+Spec 025 spec.md §Explicitly excluded (line 332): "Interactive graph exploration." — *annotated as partially delivered.*
 
 ---
 

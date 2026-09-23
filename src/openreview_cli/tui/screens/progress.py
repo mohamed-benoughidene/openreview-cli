@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import pathlib
 import time
 from typing import Any
 
@@ -172,7 +173,17 @@ class ProgressScreen(Screen[None]):
 
             def _show_result() -> None:
                 self.app.pop_screen()
-                self.app.push_screen(ResultScreen(reports=reports, mode=self._mode))
+                self.app.push_screen(
+                    ResultScreen(
+                        reports=reports,
+                        mode=self._mode,
+                        # Paths let the result screen open the clause graph
+                        # (`g`) for the document currently in view.
+                        document_paths=(
+                            [pathlib.Path(p) for p in self._paths] if self._paths else None
+                        ),
+                    )
+                )
 
             self.app.call_later(_show_result)
 

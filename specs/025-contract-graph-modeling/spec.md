@@ -317,6 +317,7 @@ openreview graph view <graph.json> [--color]
 - Heuristic-only metric computation (no ML)
 - 0-100 health score with configurable weights
 - ASCII text tree view
+- Read-only TUI clause-graph summary screen (five metrics and the health score for a reviewed document) — *added after the spec: see DEFERRED.md D-58.*
 - JSON serialisation of graph and metrics
 - Persistent graph storage in SQLite via `storage/database.py` (`save_graph()`, `load_graph()`) and `graph_nodes`/`graph_edges`/`graph_meta` tables (migration 008). JSON file output remains the default; `--store` flag on `graph build` enables SQLite persistence. See research.md §6 (replaces §4).
 - Unit tests (`tests/unit/test_graph_*.py`)
@@ -328,7 +329,7 @@ openreview graph view <graph.json> [--color]
 - GRPO training pipeline
 - GPU support
 - Visual graph rendering (DOT, SVG, PNG)
-- Interactive graph exploration
+- Interactive graph exploration — *Partially delivered by D-58: a read-only metrics-and-health summary screen ships in the TUI for a reviewed document; interactive browsing itself remains excluded.*
 - Real-time graph building during parse streaming
 - Persistent graph storage in SQLite (JSON files only) — *Implemented by D-59: SQLite storage is now available as opt-in via `--store` flag on `graph build`. JSON files remain the default.*
 - Multi-contract graph comparison
