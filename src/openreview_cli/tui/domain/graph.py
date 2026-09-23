@@ -5,16 +5,24 @@ Runs the same pipeline the CLI uses -- ``parse_document`` ->
 the TUI and the CLI can never disagree about a document's numbers.
 
 Every import of ``openreview_cli.parsing`` / ``openreview_cli.graph`` is made
-inside ``graph_summary_via_tui`` (with ``pymupdf`` inside the PDF guard): the
-TUI keeps non-trivial module-level imports out of its startup path, matching
-the policy documented in ``openreview_cli.tui.domain.pii``.
+inside ``graph_summary_via_tui``: the TUI keeps non-trivial module-level imports
+out of its startup path, matching the policy documented in
+``openreview_cli.tui.domain.pii``.
+
+The screen must never prompt for a password: Textual owns stdin, so a
+``getpass`` prompt would block the worker thread forever. The parser owns that
+rule now, so this module passes ``allow_password_prompt=False`` and lets
+``parse_document`` raise ``ParseError`` for an encrypted PDF. A former local
+guard opened the PDF with pymupdf and refused it outright, which additionally
+rejected documents a configured ``OPENREVIEW_PDF_PASSWORD`` could have opened --
+inconsistent with the rest of the app, which honours that variable.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from openreview_cli.graph.metrics import GraphMetrics
@@ -32,42 +40,16 @@ class GraphSummary:
     score: int
 
 
-def _guard_password_protected_pdf(path: Path) -> None:
-    """Raise a ``ParseError`` for an encrypted PDF before parsing it.
-
-    ``PdfParser.parse`` prompts for a password via ``getpass`` when stdin is a
-    TTY; in the running TUI stdin *is* a TTY, so that prompt would block the
-    worker thread forever. Opening the PDF here first lets the screen refuse an
-    encrypted document deterministically, without ever prompting.
-
-    Only regular files are inspected: a directory named ``*.pdf`` is left to
-    ``parse_document`` so it surfaces as the usual ``OSError``.
-    """
-    if path.suffix.lower() != ".pdf" or not path.is_file():
-        return
-
-    import pymupdf
-
-    from openreview_cli.parsing.models import ParseError, ParseErrorCategory
-
-    document: Any = pymupdf.open(str(path))  # type: ignore[no-untyped-call]
-    try:
-        if document.needs_pass:
-            raise ParseError(
-                exit_code=8,
-                category=ParseErrorCategory.password_protected,
-                message="This contract is password-protected.",
-                action="Provide an unlocked copy of the document.",
-            )
-    finally:
-        document.close()
-
-
 def graph_summary_via_tui(document_path: Path) -> GraphSummary:
     """Parse *document_path* and summarise its clause graph and health.
 
     Returns the real ``GraphMetrics`` object and the real ``HealthScore.score``
     read off ``compute_health`` -- no weight or formula is recomputed here.
+
+    ``parse_document`` is called with ``allow_password_prompt=False``: the
+    screen must never prompt, so an encrypted document is refused by the parser
+    (honouring ``OPENREVIEW_PDF_PASSWORD`` when one is configured) instead of
+    blocking the worker on ``getpass``.
 
     Raises:
         FileNotFoundError: The path does not exist.
@@ -84,9 +66,8 @@ def graph_summary_via_tui(document_path: Path) -> GraphSummary:
     path = Path(document_path)
     if not path.exists():
         raise FileNotFoundError(f"No file found at '{path}'.")
-    _guard_password_protected_pdf(path)
 
-    _document, clauses = parse_document(path)
+    _document, clauses = parse_document(path, allow_password_prompt=False)
     graph = ClauseHierarchyBuilder().build(clauses)
     metrics = compute_metrics(graph)
     score = compute_health(metrics).score
