@@ -212,9 +212,18 @@ def test_markdown_has_the_required_sections(markdown: str) -> None:
         assert heading in markdown, f"missing section: {heading}"
 
 
-def test_only_the_grounding_parameter_mismatches(matrix: dict[str, Any]) -> None:
+def test_only_the_known_parameter_mismatches(matrix: dict[str, Any]) -> None:
+    """Exactly the two intentional CLI/TUI divergences are reported.
+
+    ``grounding_mode`` is the original default-value mismatch. The
+    ``allow_password_prompt`` divergence is deliberate: the TUI must never
+    prompt for a PDF password because Textual owns stdin, while the standalone
+    CLI may prompt. The matrix row documents that divergence. Pinning the exact
+    set keeps the guard a tripwire: it still fails if any *third* parameter ever
+    diverges silently.
+    """
     params = {row["param"] for row in _rows(matrix, "mismatch")}
-    assert params == {"grounding_mode"}
+    assert params == {"grounding_mode", "allow_password_prompt"}
 
 
 def test_product_mode_call_site_is_labelled(matrix: dict[str, Any]) -> None:

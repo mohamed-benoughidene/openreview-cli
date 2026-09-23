@@ -116,7 +116,8 @@ class DocxParser:
         self.title: str | None = None
         self.company: str | None = None
 
-    def parse(self) -> Iterator[Clause]:
+    def parse(self, *, allow_password_prompt: bool = True) -> Iterator[Clause]:
+        """DOCX has no password concept; the flag exists so both parsers share one call interface."""
         from docx import Document
 
         try:
