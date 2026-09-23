@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pathlib
 from typing import TYPE_CHECKING, ClassVar
 
 from textual.app import ComposeResult
@@ -52,6 +53,7 @@ class ResultScreen(Screen[None]):
         Binding("l", "toggle_layout", "Toggle layout"),
         Binding("t", "open_amber_queue", "Triage"),
         Binding("m", "open_amber_queue", "Amber queue", show=False),
+        Binding("g", "open_clause_graph", "Clause graph"),
         Binding("]", "next_doc", "Next document"),
         Binding("[", "prev_doc", "Prev document"),
         Binding("right", "next_page", "Next page"),
@@ -64,11 +66,16 @@ class ResultScreen(Screen[None]):
         reports: list[ReviewReport],
         mode: str = "precheck",
         error: str | None = None,
+        document_paths: list[pathlib.Path] | None = None,
     ) -> None:
         super().__init__()
         self._reports = reports
         self._mode = mode
         self._error = error
+        # Paths of the reviewed documents, in report order. Optional: the
+        # history/search/client call sites load a saved report and genuinely
+        # have no path to offer. Empty/None disables the clause-graph binding.
+        self._document_paths = document_paths
         self._layout_split = True
         self._export_format: str = "md"
         self._right_labels: dict[str, Label] = {}
@@ -273,6 +280,53 @@ class ResultScreen(Screen[None]):
 
     def action_close(self) -> None:
         self.app.pop_screen()
+
+    # ── Clause graph ──────────────────────────────────────────────────
+
+    def _document_path_for_active_report(self) -> pathlib.Path | None:
+        """On-disk path of the document currently in view, or ``None``.
+
+        ``run_review_via_tui`` returns reports in input order, so the clamped
+        batch index lines up with ``document_paths[index]``. It can, however,
+        drop documents it failed to process, so the report batch may be shorter
+        than the path batch; when the positional path does not name the report
+        in view we fall back to matching the report filename to a basename.
+        """
+        if not self._document_paths:
+            return None
+        report = self._active_report()
+        if report is None:
+            return None
+        index = min(max(self._current_report, 0), len(self._reports) - 1)
+        filename = self._report_filename(report)
+        if index < len(self._document_paths) and self._document_paths[index].name == filename:
+            return self._document_paths[index]
+        for candidate in self._document_paths:
+            if candidate.name == filename:
+                return candidate
+        if index < len(self._document_paths):
+            return self._document_paths[index]
+        return None
+
+    def action_open_clause_graph(self) -> None:
+        """Open the read-only clause-graph summary for the active document."""
+        path = self._document_path_for_active_report()
+        if path is None:
+            return
+        from openreview_cli.tui.screens.graph import GraphSummaryScreen
+
+        self.app.push_screen(GraphSummaryScreen(path))
+
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        """Disable the clause-graph binding when no document path is known.
+
+        Unavailable for saved-report screens (no ``document_paths``), empty
+        batches and error screens, and when the active index runs past the end
+        of the supplied paths. Never raises on an error screen.
+        """
+        if action == "open_clause_graph":
+            return self._document_path_for_active_report() is not None
+        return super().check_action(action, parameters)
 
     def action_open_amber_queue(self) -> None:
         """Open the interactive amber triage screen (Phase 5)."""
