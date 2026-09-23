@@ -38,6 +38,7 @@ class PiiCache:
         review_result_path: str,
         mapping_path: str,
         ttl_days: int = 30,
+        filename: str | None = None,
     ) -> None:
         now = datetime.now(UTC)
         expiry = now + timedelta(days=ttl_days)
@@ -45,8 +46,9 @@ class PiiCache:
         try:
             conn.execute(
                 "INSERT OR REPLACE INTO pii_cache "
-                "(document_hash, config_hash, review_result_path, mapping_path, created_at, expiry_at) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
+                "(document_hash, config_hash, review_result_path, mapping_path, "
+                " created_at, expiry_at, filename) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
                     document_hash,
                     config_hash,
@@ -54,6 +56,7 @@ class PiiCache:
                     mapping_path,
                     now.isoformat(),
                     expiry.isoformat(),
+                    filename,
                 ),
             )
             conn.commit()

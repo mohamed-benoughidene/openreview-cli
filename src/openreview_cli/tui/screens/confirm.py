@@ -40,6 +40,16 @@ class ConfirmModal(ModalScreen[bool]):
                 )
                 yield Button("No", id="no")
 
+    def on_mount(self) -> None:
+        """Focus "No" for destructive prompts.
+
+        Textual focuses the first focusable widget (the "Yes" button) by
+        default; on a permanent action that makes a stray Enter confirm the
+        deletion by reflex.
+        """
+        if self._danger:
+            self.query_one("#no", Button).focus()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "yes":
             self.dismiss(True)
@@ -48,4 +58,5 @@ class ConfirmModal(ModalScreen[bool]):
 
     def on_key(self, event: Any) -> None:
         if event.key == "escape":
+            event.stop()
             self.dismiss(False)

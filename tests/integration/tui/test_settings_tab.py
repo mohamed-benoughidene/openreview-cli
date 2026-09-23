@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import sqlite3
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import pytest
 from textual.widgets import Button, Static
 
 from openreview_cli import __version__
+from openreview_cli.pii.cache import PiiCache
 from openreview_cli.tui.app import OpenReviewApp
+from openreview_cli.tui.screens.pii_data import PiiDataScreen
 
 MOCK_SLOTS: dict[str, dict[str, Any]] = {
     "reasoning": {"provider": "openai", "model": "gpt-4o", "configured": True},
@@ -42,6 +47,29 @@ def patch_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
+def _seed_stored_pii(db_path: Path, doc_hash: str, base_dir: Path, entities: int = 3) -> None:
+    """Write the real encrypted-mapping artifacts + cache/audit rows."""
+    review_dir = base_dir / "reviews" / doc_hash[:12]
+    review_dir.mkdir(parents=True, exist_ok=True)
+    mapping = review_dir / "pii_map.enc"
+    stripped = review_dir / "stripped.txt"
+    mapping.write_text("{}", encoding="utf-8")
+    stripped.write_text("hello", encoding="utf-8")
+    PiiCache(db_path).put(doc_hash, "cfg", str(stripped), str(mapping))
+    conn = sqlite3.connect(str(db_path))
+    try:
+        conn.execute(
+            "INSERT INTO pii_audit_trail "
+            "(document_hash, timestamp, entity_count, entity_type_distribution, "
+            " processing_time_ms, config_hash, status, failed_pages) "
+            "VALUES (?, ?, ?, '{}', 0, 'cfg', 'success', '[]')",
+            (doc_hash, datetime.now(UTC).isoformat(), entities),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 class TestSettingsTab:
     """T028 — Settings tab integration tests."""
 
@@ -64,6 +92,7 @@ class TestSettingsTab:
                 "section-gateway",
                 "section-configuration",
                 "section-pricing-tier",
+                "section-pii-data",
                 "section-about",
             ):
                 btn = app.query_one(f"#{section_id}")
@@ -348,3 +377,94 @@ class TestSettingsTab:
             assert "Screen reader" in text, text
             assert "Keyboard" in text, text
             assert "Privacy" in text, text
+
+    # ── PII data section: entry point to the stored-PII screen ──────
+
+    async def test_pii_data_section_reports_what_is_stored(
+        self, isolated_xdg: dict[str, Path]
+    ) -> None:
+        """The section states how many documents still have a stored mapping."""
+        _seed_stored_pii(isolated_xdg["db_path"], "c0ffee12" + "0" * 56, isolated_xdg["data_dir"])
+
+        app = OpenReviewApp()
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.press("5")
+            await pilot.pause()
+            await pilot.click("#section-pii-data")
+            await pilot.pause()
+
+            text = str(app.query_one("#section-content-display", Static).render())
+            assert "Stored PII data" in text, text
+            assert "1 document" in text, text
+            assert app.query_one("#manage-pii", Button).display is True
+
+    async def test_pii_data_section_handles_an_empty_store(
+        self, isolated_xdg: dict[str, Path]
+    ) -> None:
+        app = OpenReviewApp()
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.press("5")
+            await pilot.pause()
+            await pilot.click("#section-pii-data")
+            await pilot.pause()
+
+            text = str(app.query_one("#section-content-display", Static).render())
+            assert "No documents with stored PII data" in text, text
+
+    async def test_manage_pii_button_opens_the_stored_pii_screen(
+        self, isolated_xdg: dict[str, Path]
+    ) -> None:
+        _seed_stored_pii(isolated_xdg["db_path"], "c0ffee12" + "0" * 56, isolated_xdg["data_dir"])
+
+        app = OpenReviewApp()
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.press("5")
+            await pilot.pause()
+            await pilot.click("#section-pii-data")
+            await pilot.pause()
+            await pilot.click("#manage-pii")
+            await pilot.pause()
+
+            assert isinstance(app.screen, PiiDataScreen)
+
+    async def test_manage_pii_button_is_hidden_outside_its_section(
+        self, isolated_xdg: dict[str, Path]
+    ) -> None:
+        app = OpenReviewApp()
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.press("5")
+            await pilot.pause()
+            assert app.query_one("#manage-pii", Button).display is False
+
+            await pilot.click("#section-pii-data")
+            await pilot.pause()
+            assert app.query_one("#manage-pii", Button).display is True
+
+            await pilot.click("#section-about")
+            await pilot.pause()
+            assert app.query_one("#manage-pii", Button).display is False
+
+    # ── Every section stays reachable at the smallest viewport ──────
+
+    async def test_every_section_is_reachable_at_the_smallest_viewport(
+        self, isolated_xdg: dict[str, Path]
+    ) -> None:
+        """Each section button switches the pane at 80x24 (clipping regression guard)."""
+        expected = {
+            "section-gateway": "Model Slots",
+            "section-configuration": "Config file:",
+            "section-pricing-tier": "Pricing Tier",
+            "section-pii-data": "Stored PII data",
+            "section-about": __version__,
+        }
+
+        app = OpenReviewApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.press("5")
+            await pilot.pause()
+
+            for section_id, phrase in expected.items():
+                await pilot.click(f"#{section_id}")
+                await pilot.pause()
+                text = app.query_one("#section-content-display", Static).content
+                assert phrase in text, f"{section_id} did not render {phrase!r}: {text!r}"

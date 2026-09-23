@@ -35,6 +35,33 @@ def _seed(db: Path, doc_hash: str, tmp_path: Path, expired: bool) -> tuple[Path,
     return mapping, review
 
 
+def _seed_review_dir(db: Path, doc_hash: str, tmp_path: Path, expired: bool = False) -> Path:
+    """Seed a row whose mapping+result live inside a real review directory.
+
+    Mirrors what ``strip_and_persist`` leaves on disk: the encrypted mapping,
+    the stripped text, and the legacy ``pii_audit.json`` all in
+    ``<data_dir>/reviews/<hash[:12]>/``.
+    """
+    review_dir = tmp_path / "reviews" / doc_hash[:12]
+    review_dir.mkdir(parents=True)
+    (review_dir / "pii_map.enc").write_bytes(b"encrypted")
+    (review_dir / "stripped.txt").write_text("stripped")
+    (review_dir / "pii_audit.json").write_text("{}")
+    PiiCache(db).put(
+        doc_hash,
+        "cfg",
+        str(review_dir / "stripped.txt"),
+        str(review_dir / "pii_map.enc"),
+    )
+    if expired:
+        past = (datetime.now(UTC) - timedelta(days=1)).isoformat()
+        conn = sqlite3.connect(str(db))
+        conn.execute("UPDATE pii_cache SET expiry_at = ? WHERE document_hash = ?", (past, doc_hash))
+        conn.commit()
+        conn.close()
+    return review_dir
+
+
 def _clean_result() -> PiiResult:
     return PiiResult(
         stripped_text="Hello world",
@@ -164,3 +191,35 @@ def test_cli_pii_delete_removes_a_clean_document_audit_row(
     assert "Audit trail: removed (1 records)" in result.output
     assert "No PII data found" not in result.output
     assert _audit_count(db_path, "d" * 64) == 0
+
+
+def test_delete_pii_data_removes_legacy_review_dir_leftovers(db: Path, tmp_path: Path) -> None:
+    review_dir = _seed_review_dir(db, "1" * 64, tmp_path)
+    out = delete_pii_data(db, "1" * 64)
+    assert out["mapping_removed"] is True
+    assert not (review_dir / "pii_map.enc").exists()
+    assert not (review_dir / "stripped.txt").exists()
+    assert not (review_dir / "pii_audit.json").exists()
+    assert not review_dir.exists()
+
+
+def test_delete_pii_data_keeps_unrelated_files_in_review_dir(db: Path, tmp_path: Path) -> None:
+    review_dir = _seed_review_dir(db, "2" * 64, tmp_path)
+    memo = review_dir / "memo.md"
+    memo.write_text("keep me")
+    out = delete_pii_data(db, "2" * 64)
+    assert out["mapping_removed"] is True
+    assert not (review_dir / "pii_map.enc").exists()
+    assert not (review_dir / "pii_audit.json").exists()
+    assert memo.read_text() == "keep me"
+    assert review_dir.is_dir()
+
+
+def test_cleanup_expired_removes_legacy_review_dir_leftovers(db: Path, tmp_path: Path) -> None:
+    review_dir = _seed_review_dir(db, "3" * 64, tmp_path, expired=True)
+    assert cleanup_expired(db) == 1
+    assert not (review_dir / "pii_map.enc").exists()
+    assert not (review_dir / "stripped.txt").exists()
+    assert not (review_dir / "pii_audit.json").exists()
+    assert not review_dir.exists()
+    assert PiiCache(db).get("3" * 64) is None
