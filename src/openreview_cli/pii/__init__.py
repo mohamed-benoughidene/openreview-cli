@@ -10,6 +10,7 @@ from openreview_cli.pii.encryption import (
     encrypt_pii_mapping,
 )
 from openreview_cli.pii.engine import PiiEngine, strip_and_persist, strip_pii, strip_pii_clauses
+from openreview_cli.pii.inventory import list_pii_documents
 from openreview_cli.pii.mapping import (
     delete_pii_mapping,
     ensure_encryption_key,
@@ -46,6 +47,7 @@ __all__ = [
     "derive_key",
     "encrypt_pii_mapping",
     "ensure_encryption_key",
+    "list_pii_documents",
     "persist_pii_result",
     "read_pii_mapping",
     "strip_and_persist",

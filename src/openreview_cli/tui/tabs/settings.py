@@ -43,6 +43,7 @@ class SettingsTab(Vertical):
                 yield Button("Gateway", id="section-gateway")
                 yield Button("Configuration", id="section-configuration")
                 yield Button("Pricing tier", id="section-pricing-tier")
+                yield Button("PII data", id="section-pii-data")
                 yield Button("About", id="section-about")
             with Vertical(id="section-content"):
                 yield Static(id="section-content-display")
@@ -51,6 +52,7 @@ class SettingsTab(Vertical):
                     yield Button("Copy config path", id="copy-config-path", classes="copy-btn")
                     yield Button("Copy docs URL", id="copy-doc-url", classes="copy-btn")
                 yield Button("Run setup wizard", id="run-wizard", variant="primary")
+                yield Button("View stored PII data", id="manage-pii")
 
     def on_mount(self) -> None:
         self._show_section("gateway")
@@ -61,6 +63,8 @@ class SettingsTab(Vertical):
             self._show_section(btn_id[len("section-") :])
         elif btn_id == "run-wizard":
             self._open_wizard()
+        elif btn_id == "manage-pii":
+            self._open_pii_data()
         elif btn_id == "copy-db-path":
             self._copy_path("database")
         elif btn_id == "copy-config-path":
@@ -95,6 +99,11 @@ class SettingsTab(Vertical):
 
         self.app.push_screen(GatewayWizard(), _on_done)
 
+    def _open_pii_data(self) -> None:
+        from openreview_cli.tui.screens.pii_data import PiiDataScreen
+
+        self.app.push_screen(PiiDataScreen())
+
     # ── section rendering ───────────────────────────────────────
 
     def _show_section(self, section: str) -> None:
@@ -103,6 +112,7 @@ class SettingsTab(Vertical):
         display.update(self._text_for(section))
         self.query_one("#copy-buttons-row").display = section == "about"
         self.query_one("#run-wizard", Button).display = section == "gateway"
+        self.query_one("#manage-pii", Button).display = section == "pii-data"
 
     def _text_for(self, section: str) -> str:
         renderer = _SECTION_RENDERERS.get(section)
@@ -248,12 +258,43 @@ class SettingsTab(Vertical):
             ]
         )
 
+    def _pii_data_text(self) -> str:
+        """Render the read-only stored-PII summary."""
+        from openreview_cli.tui.domain.pii import list_stored_pii_via_tui
+
+        rows = list_stored_pii_via_tui()
+        if not rows:
+            return "\n".join(
+                [
+                    "[bold]Stored PII data[/bold]",
+                    "",
+                    "No documents with stored PII data.",
+                    "",
+                    "Entries appear here once a review has redacted personal "
+                    "information. The encrypted mapping of what was replaced is "
+                    "kept locally so a redaction can be read back.",
+                ]
+            )
+
+        count = len(rows)
+        noun = "document" if count == 1 else "documents"
+        return "\n".join(
+            [
+                "[bold]Stored PII data[/bold]",
+                "",
+                f"{count} {noun} with a stored PII mapping.",
+                "",
+                "Use [bold]View stored PII data[/bold] to open the list.",
+            ]
+        )
+
 
 _SECTION_RENDERERS.update(
     {
         "gateway": SettingsTab._gateway_text,
         "configuration": SettingsTab._config_text,
         "pricing-tier": SettingsTab._pricing_text,
+        "pii-data": SettingsTab._pii_data_text,
         "about": SettingsTab._about_text,
     }
 )

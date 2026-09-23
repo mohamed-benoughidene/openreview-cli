@@ -511,40 +511,11 @@ def pii_list(
 ) -> None:
     _validate_enum(format, ("table", "json"), "format")
 
-    import sqlite3
-
     from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.pii.inventory import list_pii_documents
 
     db_path = get_data_dir() / "openreview.db"
-    conn = sqlite3.connect(str(db_path))
-    conn.row_factory = sqlite3.Row
-    try:
-        audit_aggregate = (
-            "SELECT document_hash, entity_count, MAX(timestamp) as max_ts "
-            "FROM pii_audit_trail GROUP BY document_hash"
-        )
-        base = (
-            "SELECT pc.document_hash, pc.created_at, pc.expiry_at, "
-            "COALESCE(pat.entity_count, 0) as entity_count, "
-            "pc.mapping_path "
-            "FROM pii_cache pc "
-            "LEFT JOIN (" + audit_aggregate + ") pat "
-            "ON pc.document_hash = pat.document_hash "
-        )
-        if all_flag:
-            query = (
-                base + "UNION ALL "
-                "SELECT pat.document_hash, pat.max_ts, NULL, pat.entity_count, NULL "
-                "FROM (" + audit_aggregate + ") pat "
-                "WHERE NOT EXISTS "
-                "(SELECT 1 FROM pii_cache pc WHERE pc.document_hash = pat.document_hash) "
-                "ORDER BY created_at DESC"
-            )
-        else:
-            query = base + "ORDER BY pc.created_at DESC"
-        rows = conn.execute(query).fetchall()
-    finally:
-        conn.close()
+    rows = list_pii_documents(db_path, include_audit_only=all_flag)
 
     if format == "json":
         import json
