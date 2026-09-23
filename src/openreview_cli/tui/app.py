@@ -29,6 +29,7 @@ class OpenReviewApp(App[None]):
         ("4", "show_tab('playbooks')", "Playbooks"),
         ("5", "show_tab('settings')", "Settings"),
         ("/", "open_search", "Search"),
+        ("6", "show_tab('prompts')", "Prompts"),
     ]
 
     def __init__(self) -> None:
@@ -41,6 +42,7 @@ class OpenReviewApp(App[None]):
         from openreview_cli.tui.tabs.clients import ClientsTab
         from openreview_cli.tui.tabs.home import HomeTab
         from openreview_cli.tui.tabs.playbooks import PlaybooksTab
+        from openreview_cli.tui.tabs.prompts import PromptsTab
         from openreview_cli.tui.tabs.review import ReviewTab
         from openreview_cli.tui.tabs.settings import SettingsTab
 
@@ -56,6 +58,8 @@ class OpenReviewApp(App[None]):
                 yield PlaybooksTab()
             with TabPane("Settings", id="settings"):
                 yield SettingsTab()
+            with TabPane("Prompts", id="prompts"):
+                yield PromptsTab()
         with Horizontal(id="status-bar"):
             yield Static("Client: —", id="status-client")
             yield Static("Privacy: —", id="status-privacy")
