@@ -18,10 +18,10 @@ def _get_neg_wizard(app):
 
 
 async def _open_negotiation_wizard(app, pilot):
-    """Click 'New negotiation' button on Review tab, get wizard."""
-    # Navigate to Review tab via Home button
-    btn = app.query_one("#btn-new-review")
-    btn.press()
+    """Switch to the Review tab, click 'New negotiation' button, get wizard."""
+    # Switch to the Review tab via the number key — the Home 'New review'
+    # button now opens the review wizard directly instead of switching tabs.
+    await pilot.press("2")
     await pilot.pause()
     # Click "New negotiation" button
     neg_btn = app.query_one("#btn-new-negotiation")

@@ -34,7 +34,6 @@ class HomeTab(Container):
         yield Static("Welcome to openreview", id="welcome")
         with Horizontal(id="actions"):
             yield Button("New review", id="btn-new-review", variant="primary")
-            yield Button("Import document", id="btn-import-doc", variant="default")
         yield Static("Recent reviews", id="recent-header")
         yield Button(
             "No reviews yet. Start one with New review.",
@@ -116,11 +115,6 @@ class HomeTab(Container):
         self.app.push_screen(ResultScreen(reports=[report], mode=r.get("mode", "precheck")))
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        """Handle quick action button presses."""
-        if event.button.id == "btn-new-review":
-            self.app.action_show_tab("review")  # type: ignore[attr-defined]
-        elif event.button.id == "btn-import-doc":
-            self.app.push_screen(ReviewWizard())
-            self.app.action_show_tab("review")  # type: ignore[attr-defined]
-        elif event.button.id == "empty-state":
+        """Open the review wizard for the Home quick-action buttons."""
+        if event.button.id in ("btn-new-review", "empty-state"):
             self.app.push_screen(ReviewWizard())

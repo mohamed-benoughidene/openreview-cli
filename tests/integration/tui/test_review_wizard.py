@@ -18,16 +18,12 @@ def _get_wizard(app):
 
 
 async def _home_and_open_wizard(app, pilot):
-    """Click Home new-review button, then click Review tab's button to push wizard."""
+    """Click the Home 'New review' button, which pushes the review wizard."""
     btn = app.query_one("#btn-new-review")
     btn.press()
     await pilot.pause()
-    # Now on Review tab, click its New review button
-    review_btn = app.query_one("#btn-new-review-tab")
-    await pilot.click(review_btn)
-    await pilot.pause()
     wizard = _get_wizard(app)
-    assert wizard is not None, "Wizard should be pushed after clicking Review tab button"
+    assert wizard is not None, "Wizard should be pushed after clicking Home 'New review'"
     return wizard
 
 

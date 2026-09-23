@@ -1,6 +1,6 @@
 """Integration tests for T023 — end-to-end flow wiring.
 
-HomeTab → ReviewTab → wizard → ProgressScreen → ResultScreen → close → HomeTab.
+HomeTab → wizard → ProgressScreen → ResultScreen → close → HomeTab.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_home_to_review_to_wizard_to_progress_to_result() -> None:
-    """End-to-end: Home → New review → Review tab → wizard → progress → result."""
+    """End-to-end: Home → New review → wizard → progress → result."""
     from openreview_cli.tui.app import OpenReviewApp
     from openreview_cli.tui.screens.result import ResultScreen
 
@@ -50,18 +50,9 @@ async def test_home_to_review_to_wizard_to_progress_to_result() -> None:
             mock_report.summary.avg_effective_confidence = 0.95
             mock_run.return_value = [mock_report]
 
-            # Click HomeTab New review
+            # Click HomeTab New review — opens the wizard directly.
             btn = app.query_one("#btn-new-review")
             btn.press()
-            await pilot.pause()
-
-            # Should switch to Review tab
-            tabs = app.query_one("#tabs")
-            assert tabs.active == "review", "Should switch to Review tab"
-
-            # Click Review tab New review button
-            review_btn = app.query_one("#btn-new-review-tab")
-            await pilot.click(review_btn)
             await pilot.pause()
 
             # Wizard should be on screen stack

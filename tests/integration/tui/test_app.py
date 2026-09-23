@@ -156,14 +156,9 @@ async def test_full_review_workflow() -> None:
             mock_report.summary.avg_effective_confidence = 0.95
             mock_run.return_value = [mock_report]
 
-            # Launch TUI -> click New review on Home tab (switches to Review tab)
+            # Launch TUI -> click New review on Home tab (pushes the wizard)
             btn = app.query_one("#btn-new-review")
             btn.press()
-            await pilot.pause()
-
-            # Click New review on Review tab (pushes wizard)
-            review_btn = app.query_one("#btn-new-review-tab")
-            await pilot.click(review_btn)
             await pilot.pause()
 
             # Find wizard from screen stack
@@ -537,8 +532,8 @@ async def test_global_search_escape_closes() -> None:
         )
 
 
-async def test_import_document_button_pushes_wizard() -> None:
-    """Home tab 'Import document' button pushes ReviewWizard."""
+async def test_home_new_review_button_pushes_wizard() -> None:
+    """Home tab 'New review' button pushes ReviewWizard."""
     from openreview_cli.tui.app import OpenReviewApp
     from openreview_cli.tui.screens.review_wizard import ReviewWizard
 
@@ -548,12 +543,12 @@ async def test_import_document_button_pushes_wizard() -> None:
         # On Home tab (default)
         tabs = app.query_one("#tabs", TabbedContent)
         assert tabs.active == "home"
-        # Click the Import document button
-        await pilot.click("#btn-import-doc")
+        # Click the Home 'New review' button
+        await pilot.click("#btn-new-review")
         await pilot.pause()
         # ReviewWizard should now be on the screen stack
         assert any(isinstance(s, ReviewWizard) for s in app._screen_stack), (
-            "ReviewWizard should be open after clicking 'Import document'"
+            "ReviewWizard should be open after clicking the Home 'New review' button"
         )
 
 
@@ -624,10 +619,6 @@ async def test_sigterm_mid_review_cancels_cleanly() -> None:
                     # test_full_review_workflow pattern).
                     btn = app.query_one("#btn-new-review")
                     btn.press()
-                    await pilot.pause()
-
-                    review_btn = app.query_one("#btn-new-review-tab")
-                    await pilot.click(review_btn)
                     await pilot.pause()
 
                     wizard: ReviewWizard | None = None
