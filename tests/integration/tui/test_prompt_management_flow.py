@@ -295,27 +295,16 @@ async def test_bindings_screen_matches_the_database_row(store: PromptStore) -> N
 # ── test ──
 
 
-async def test_test_command_validates_versions_and_never_dispatches(
-    store: PromptStore,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """``test``: an unknown version is refused; a valid one shows the roadmap notice.
+async def test_test_command_refuses_unknown_version(store: PromptStore) -> None:
+    """``test``: an unknown version is refused inline, with the store's message.
 
-    The no-dispatch proof is real: ``Gateway.chat`` (``gateway/router.py``) is
-    patched to record-and-raise, and the test asserts it is never called.
+    The run button is clicked exactly once.  A second ``pilot.click`` on the
+    same button within ``Button.active_effect_duration`` (0.2s) is dropped by
+    ``Button._on_click`` while the ``-active`` class is set, so this test must
+    not rely on a second click landing; the valid-version case is its own test.
     """
     store.create("greeting", "one")
     store.update("greeting", "two")
-
-    from openreview_cli.gateway.router import Gateway
-
-    dispatched: list[Any] = []
-
-    def _boom(self: Any, *args: Any, **kwargs: Any) -> str:
-        dispatched.append((args, kwargs))
-        raise AssertionError("dispatched")
-
-    monkeypatch.setattr(Gateway, "chat", _boom)
 
     from openreview_cli.tui.app import OpenReviewApp
     from openreview_cli.tui.screens.prompt_test import PromptTestModal
@@ -345,6 +334,49 @@ async def test_test_command_validates_versions_and_never_dispatches(
         assert "version 99 not found" in error
         assert str(modal.query_one("#prompt-test-notice", Static).render()) == ""
         assert isinstance(app.screen, PromptTestModal)
+        assert app.is_running
+
+
+async def test_test_command_valid_versions_render_notice_and_never_dispatch(
+    store: PromptStore,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``test``: a valid version shows the honest roadmap notice; no dispatch.
+
+    The no-dispatch proof is real: ``Gateway.chat`` (``gateway/router.py``) is
+    patched to record-and-raise, and the test asserts it is never called.  The
+    run button is clicked exactly once (see the sibling refusal test for why a
+    second click would be dropped).
+    """
+    store.create("greeting", "one")
+    store.update("greeting", "two")
+
+    from openreview_cli.gateway.router import Gateway
+
+    dispatched: list[Any] = []
+
+    def _boom(self: Any, *args: Any, **kwargs: Any) -> str:
+        dispatched.append((args, kwargs))
+        raise AssertionError("dispatched")
+
+    monkeypatch.setattr(Gateway, "chat", _boom)
+
+    from openreview_cli.tui.app import OpenReviewApp
+    from openreview_cli.tui.screens.prompt_test import PromptTestModal
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.press("6")
+        await pilot.pause()
+        await _highlight(pilot, app, index=0)
+
+        await pilot.click("#btn-test-prompt")
+        await pilot.pause()
+
+        modal = app.screen
+        assert isinstance(modal, PromptTestModal)
+        versions = modal.query_one("#prompt-test-versions", Input)
+        assert versions.value == "2"
 
         # A valid version shows the honest roadmap notice.
         versions.value = "1,2"

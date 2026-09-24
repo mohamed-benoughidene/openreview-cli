@@ -5,9 +5,11 @@ isolated XDG data directory materialized by ``isolated_xdg`` â€” no data mocks â
 except for the one state the schema cannot represent (a prompt with zero
 versions), which is mocked explicitly and noted at its test.
 
-The overwrite-confirmation test drives the real ``PromptsTab`` entry point
+The overwrite-confirmation tests drive the real ``PromptsTab`` entry point
 (``#btn-bind-prompt``) because the *caller* performs the bind: asserting that a
 declined overwrite leaves the database untouched is only meaningful end to end.
+Decline and accept are separate tests because each clicks ``#bind-confirm``
+exactly once (see the note on the declined test).
 """
 
 from __future__ import annotations
@@ -298,8 +300,16 @@ async def test_bind_modal_vanished_prompt_reports_message(store: PromptStore) ->
         assert app.is_running
 
 
-async def test_bind_overwrite_confirms_and_writes_only_on_yes(store: PromptStore) -> None:
-    """An already-bound slot requires a danger confirm; the write happens on Yes."""
+async def test_bind_overwrite_declined_writes_nothing(store: PromptStore) -> None:
+    """An already-bound slot requires a danger confirm; declining writes nothing.
+
+    ``#bind-confirm`` is clicked exactly once.  Textual's ``Button._on_click``
+    (``_button.py:416``) drops a click while the button carries ``-active``,
+    which lasts ``active_effect_duration`` (0.2s, ``_button.py:370``), so a
+    second click on the *same* instance is timing-dependent: it lands only if
+    the intervening work happens to outlast 0.2s.  The accepted path is its own
+    single-click test below rather than a second click here.
+    """
     store.create("greeting", "hi")
     store.create("other", "other content")
     store.bind("reasoning", "other", 1)
@@ -321,6 +331,7 @@ async def test_bind_overwrite_confirms_and_writes_only_on_yes(store: PromptStore
         app.screen.query_one("#bind-version", Select).value = 1
         await pilot.pause()
 
+        # One click: the modal pushes a danger confirm rather than dismissing.
         await pilot.click("#bind-confirm")
         await pilot.pause()
 
@@ -335,11 +346,42 @@ async def test_bind_overwrite_confirms_and_writes_only_on_yes(store: PromptStore
         assert {binding.slot: binding.prompt_name for binding in store.bindings()} == {
             "reasoning": "other"
         }
+        assert app.is_running
 
-        # Confirm: dismiss with the payload; the tab caller performs the write.
+
+async def test_bind_overwrite_accepted_writes_new_binding(store: PromptStore) -> None:
+    """The overwrite confirm dismissed on Yes hands the write to the tab caller.
+
+    ``#bind-confirm`` is clicked exactly once, for the reason given on the
+    declined sibling above.
+    """
+    store.create("greeting", "hi")
+    store.create("other", "other content")
+    store.bind("reasoning", "other", 1)
+
+    from openreview_cli.tui.app import OpenReviewApp
+    from openreview_cli.tui.screens.confirm import ConfirmModal
+    from openreview_cli.tui.screens.prompt_bindings import PromptBindModal
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.press("6")
+        await pilot.pause()
+        await _highlight(pilot, app)
+        await pilot.click("#btn-bind-prompt")
+        await pilot.pause()
+
+        assert isinstance(app.screen, PromptBindModal)
+        app.screen.query_one("#bind-slot", Select).value = "reasoning"
+        app.screen.query_one("#bind-version", Select).value = 1
+        await pilot.pause()
+
+        # One click: the modal pushes a danger confirm rather than dismissing.
         await pilot.click("#bind-confirm")
         await pilot.pause()
         assert isinstance(app.screen, ConfirmModal)
+
+        # Confirm: dismiss with the payload; the tab caller performs the write.
         await pilot.click("#yes")
         await pilot.pause()
         assert app.is_running
