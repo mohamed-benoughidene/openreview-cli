@@ -1,8 +1,9 @@
 """Integration tests for US3-US7: Playbook CLI commands and --playbook flag.
 
 Tests T024, T030, T033, T038, T043.
-NOTE: These tests use the real database (shared state). Tests that require
-empty DB state or specific version numbers should use unique playbook IDs.
+NOTE: Most of these tests use the real database (shared state); tests that
+require empty DB state or specific version numbers either use unique playbook
+IDs or the ``isolated_xdg`` fixture (which redirects the data dir to a tmp_path).
 """
 
 from __future__ import annotations
@@ -184,11 +185,14 @@ class TestPlaybookShow:
         assert result.exit_code == 2
         assert "not found" in result.stderr.lower() or "Error" in result.stderr
 
-    def test_show_nonexistent_version_gives_error(self, tmp_path: Path) -> None:
+    def test_show_nonexistent_version_gives_error(
+        self, tmp_path: Path, isolated_xdg: dict[str, Path]
+    ) -> None:
         yaml_content = _unique_yaml("show-version-err")
         path = tmp_path / "test.yaml"
         path.write_text(yaml_content)
-        runner.invoke(app, ["playbook", "import", str(path)])
+        import_result = runner.invoke(app, ["playbook", "import", str(path)])
+        assert import_result.exit_code == 0, f"stdout: {import_result.stdout}"
 
         pb_id = "show-version-err-" + str(_COUNTER[0])
         result = runner.invoke(app, ["playbook", "show", pb_id, "99"])
