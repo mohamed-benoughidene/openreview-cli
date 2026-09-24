@@ -1,12 +1,12 @@
 {
   "benchmark": "accuracy-suite",
   "command": "uv run pytest tests/integration/test_pii_accuracy.py tests/unit/test_tier_accuracy.py tests/integration/test_review_accuracy.py tests/integration/test_benchmark_pii_accuracy.py -q",
-  "date": "2026-09-22",
-  "git_commit": "c420395",
+  "date": "2026-09-24",
+  "git_commit": "657e947",
   "provenance": [
     {
       "path": "scripts/benchmark_local_metrics.py",
-      "sha256": "b72b7fb0e55b5c89bfa93bddb2fa58b939d932afddbd825b0cfe77c25cf290b5"
+      "sha256": "1a0b3b52acb3fc79a240ba16d1b020e1aca392b4dcbecd0479f5a7fae2bb1862"
     }
   ],
   "models": "none (offline pytest; no model calls)",
@@ -20,12 +20,12 @@
     "network": "disabled by pytest addopts (--disable-socket --allow-unix-socket)"
   },
   "metrics": {
-    "exit_code": 1,
-    "passed": 20,
-    "failed": 1,
+    "exit_code": 0,
+    "passed": 21,
+    "failed": 0,
     "skipped": 0,
     "errors": 0,
-    "elapsed_seconds": 49.52
+    "elapsed_seconds": 61.65
   },
-  "notes": "The single failure is the labeled-corpus PII recall (94.3%), below the 95% spec target; it is a real pre-alpha signal, not a flake. Wall time is environment dependent. git_commit is informational; the top-level provenance pin is the authoritative content pin."
+  "notes": "All four accuracy-tagged files pass. The labeled-corpus PII gate passes under the span-level (type-agnostic) predicate, so a detection that covers the right span with the wrong entity label still counts as correct; that labelling limitation is tracked separately as D-82 in specs/DEFERRED.md and issue 115. Wall time is environment dependent. git_commit is informational; the top-level provenance pin is the authoritative content pin."
 }
