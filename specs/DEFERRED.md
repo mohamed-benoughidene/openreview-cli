@@ -669,7 +669,7 @@ Spec 014 FR-3 (comparison agent reuses extraction slot).
 | **Deferred from** | Benchmark harness / spec 010 — ponytail comment in `benchmark/cli.py` |
 | **Deferred at** | 2026-07-04 |
 | **Trigger** | Ponytail — no real prompt templates exist yet for comparison |
-| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
+| **Status** | **Open** (corrected from a 2026-07-09 "Resolved" marking). Only the statistics module exists; the route, the registry, the runner, the comparison table and the wiring do not. |
 
 ### Description
 
@@ -684,6 +684,14 @@ Prompt A/B testing would:
    better and by how much
 5. Allow regression-style comparison against stored baselines
 
+**Current state (verified against the live code):** only the statistics module
+exists (`benchmark/prompt_ab.py`, providing `mcnemar_test` and
+`compare_variants`). It has no caller under `src/`; only the integration test at
+`tests/integration/test_benchmark_prompt_ab.py` exercises it. The ponytail
+comment still stands at `benchmark/cli.py:271`, and `--prompt-variant`
+(`benchmark/cli.py:73`) is never read in the `run` command. The variant
+registry, the A/B runner, the comparison table and the CLI wiring do not exist.
+
 ### What would need to change to unblock
 
 1. Restore the prompt A/B route in `benchmark/cli.py` (the `cli.py` comment
@@ -695,7 +703,7 @@ Prompt A/B testing would:
 
 ### Blueprint references
 
-`src/openreview_cli/benchmark/cli.py` line 225 ponytail comment. Spec 009
+`src/openreview_cli/benchmark/cli.py` line 271 ponytail comment. Spec 009
 (prompt management) would provide the template infrastructure. Spec 010
 (benchmark harness) is the natural home for this feature.
 
