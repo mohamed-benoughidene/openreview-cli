@@ -159,3 +159,111 @@ async def test_g_falls_back_to_a_basename_match_when_a_report_was_dropped() -> N
 
         assert isinstance(app.screen, GraphSummaryScreen)
         assert app.screen._document_path == paths[1]
+
+
+# ── Button affordance ─────────────────────────────────────────────────
+# The `g` binding is invisible on screen (the app-level Footer renders only the
+# app's own bindings), so the row carries a button instead. It must track the
+# very condition that enables the binding: a known on-disk path for the
+# document in view.
+
+
+@pytest.mark.asyncio
+async def test_clause_graph_button_opens_the_screen() -> None:
+    """A visible button, not just the `g` binding, reaches the graph screen."""
+    path = Path("/reviews/button/reviewed.pdf")
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _push_result(
+            app, pilot, ResultScreen(reports=[_report("reviewed.pdf")], document_paths=[path])
+        )
+        assert screen.query("#btn-clause-graph")
+
+        await pilot.click("#btn-clause-graph")
+        await pilot.pause()
+
+        assert isinstance(app.screen, GraphSummaryScreen)
+        assert app.screen._document_path == path
+
+
+@pytest.mark.asyncio
+async def test_clause_graph_button_is_absent_without_document_paths() -> None:
+    """Saved-report screens (no paths) must not offer the button either."""
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _push_result(app, pilot, ResultScreen(reports=[_report("reviewed.pdf")]))
+
+        assert screen.check_action("open_clause_graph", ()) is False
+        assert not screen.query("#btn-clause-graph")
+
+
+@pytest.mark.asyncio
+async def test_clause_graph_button_is_absent_on_an_error_screen() -> None:
+    """An error screen has no reports; compose must not raise and shows no button."""
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _push_result(
+            app,
+            pilot,
+            ResultScreen(
+                reports=[],
+                mode="precheck",
+                error="pipeline exploded",
+                # Paths are known but there is no report to name one: the button
+                # keys off the report in view, not off `_document_paths`.
+                document_paths=[Path("/reviews/error/gone.pdf")],
+            ),
+        )
+
+        assert screen.check_action("open_clause_graph", ()) is False
+        assert not screen.query("#btn-clause-graph")
+
+
+@pytest.mark.asyncio
+async def test_clause_graph_button_follows_the_active_document_in_a_batch() -> None:
+    """After paging with `]`, the button opens the path of the document in view."""
+    paths = [Path("/reviews/button-batch/one.pdf"), Path("/reviews/button-batch/two.pdf")]
+    reports = [_report("one.pdf"), _report("two.pdf")]
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        await _push_result(app, pilot, ResultScreen(reports=reports, document_paths=paths))
+
+        await pilot.press("]")
+        await pilot.pause()
+
+        screen = app.screen
+        assert isinstance(screen, ResultScreen)
+        assert screen._current_report == 1
+        assert screen.query("#btn-clause-graph")
+
+        await pilot.click("#btn-clause-graph")
+        await pilot.pause()
+
+        assert isinstance(app.screen, GraphSummaryScreen)
+        assert app.screen._document_path == paths[1]
+
+
+@pytest.mark.asyncio
+async def test_clause_graph_button_is_present_and_clickable_at_the_smallest_viewport() -> None:
+    """The button must stay inside the nav row at the smallest supported size."""
+    path = Path("/reviews/small/reviewed.pdf")
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(80, 24)) as pilot:
+        screen = await _push_result(
+            app, pilot, ResultScreen(reports=[_report("reviewed.pdf")], document_paths=[path])
+        )
+
+        button = screen.query_one("#btn-clause-graph")
+        assert button is not None
+        # Fully on screen: not clipped off the right edge of the nav row.
+        assert button.region.width > 0
+        assert button.region.right <= 80
+
+        await pilot.click("#btn-clause-graph")
+        await pilot.pause()
+
+        assert isinstance(app.screen, GraphSummaryScreen)
+        assert app.screen._document_path == path
