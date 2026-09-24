@@ -19,6 +19,7 @@ from typing import Any
 import pytest
 from textual.widgets import Button, Input, Label, ListItem, ListView, Static
 
+from openreview_cli.retrieval.errors import IndexCorruptError
 from openreview_cli.tui.app import OpenReviewApp
 from openreview_cli.tui.domain import retrieval as _retrieval
 from openreview_cli.tui.screens.retrieve import RetrieveScreen
@@ -28,6 +29,8 @@ PASSWORD_FIXTURE = Path("pdf") / "password_protected.pdf"
 
 FIRST_RUN = "No document selected. Enter a path above, then Chunk and Ingest before searching."
 NOT_INDEXED = "Not indexed yet. Press Ingest to build the index."
+DAMAGED = "This document's index is damaged. Press Clear index, then Ingest to rebuild it."
+INTERRUPTED = "An earlier Ingest was interrupted. Press Ingest to rebuild the index."
 CHUNKED_PREFIX = f"Chunked {FIXTURE_NAME} - "
 
 
@@ -94,6 +97,37 @@ def _seed_index(db_dir: Path, fixture: Path, chunks: list[dict[str, Any]]) -> tu
     document_id, db_path = _retrieval.resolve_document(fixture, db_dir=db_dir)
     _retrieval.ingest_chunks(chunks, db_path, document_id=document_id)
     return document_id, db_path
+
+
+def _seed_state(db_dir: Path, fixture: Path, status: str | None) -> Path:
+    """Create the index file, with one ``index_meta`` row - or with none.
+
+    ``status=None`` leaves the schema in place but inserts no row, which is the
+    state an interrupted writer or a stray ``sqlite3.connect`` leaves behind.
+    """
+    from openreview_cli.retrieval.storage import RetrievalStorage
+
+    document_id, db_path = _retrieval.resolve_document(fixture, db_dir=db_dir)
+    with RetrievalStorage(db_path) as storage:
+        storage.create_schema()
+        if status is not None:
+            storage.conn.execute(
+                "INSERT INTO index_meta (document_id, document_path, index_version, "
+                "index_status, chunk_count, method, db_size_bytes) "
+                "VALUES (?, ?, 1, ?, 0, 'sparse', 0)",
+                (document_id, str(db_path), status),
+            )
+            storage.conn.commit()
+    return db_path
+
+
+def _set_stored_status(db_path: Path, status: str) -> None:
+    """Rewrite the stored ``index_status`` of an existing index."""
+    from openreview_cli.retrieval.storage import RetrievalStorage
+
+    with RetrievalStorage(db_path) as storage:
+        storage.conn.execute("UPDATE index_meta SET index_status=?", (status,))
+        storage.conn.commit()
 
 
 def _chunk(text: str, structural: str = "Confidentiality") -> dict[str, Any]:
@@ -288,6 +322,184 @@ async def test_a_result_row_keeps_contract_brackets_verbatim(
         rows = await _result_rows(pilot, screen)
         assert rows, "the seeded chunk must be retrievable"
         assert any("[Party A]" in row for row in rows), rows
+
+
+# --------------------------------------------------------------------------
+# Index states: no meta row, corrupt, interrupted (T5 / D3)
+# --------------------------------------------------------------------------
+
+
+async def test_a_db_with_no_index_meta_row_shows_not_indexed(
+    fixtures_dir: Path, tmp_path: Path, isolated_xdg: dict[str, Path]
+) -> None:
+    """The engine raises ``IndexNotFoundError`` for this state - *not* the
+    corrupt one - so the copy is the ordinary not-indexed message."""
+    db_dir = tmp_path / "indexes"
+    fixture = fixtures_dir / FIXTURE_NAME
+    db_path = _seed_state(db_dir, fixture, None)
+    assert db_path.exists(), "the premise is a file on disk with no index_meta row"
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _open_screen(pilot, app, db_dir)
+        _set_path(screen, str(fixture))
+
+        await screen.on_input_submitted(_submit(screen, "#retrieve-query", "confidentiality"))
+
+        assert _status(screen) == NOT_INDEXED
+        assert DAMAGED not in _status(screen)
+        assert isinstance(app.screen, RetrieveScreen)
+        assert app._exception is None
+
+
+async def test_a_stored_corrupt_status_shows_the_damaged_message(
+    fixtures_dir: Path, tmp_path: Path, isolated_xdg: dict[str, Path]
+) -> None:
+    db_dir = tmp_path / "indexes"
+    fixture = fixtures_dir / FIXTURE_NAME
+    _seed_state(db_dir, fixture, "corrupt")
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _open_screen(pilot, app, db_dir)
+        _set_path(screen, str(fixture))
+
+        await screen.on_input_submitted(_submit(screen, "#retrieve-query", "confidentiality"))
+
+        assert _status(screen) == DAMAGED
+        # The engine's copy names a shell command that cannot fix this index,
+        # because that command addresses a different one (D4).
+        assert "openreview ingest" not in _status(screen)
+        assert isinstance(app.screen, RetrieveScreen)
+        assert app._exception is None
+
+
+async def test_a_stored_ingesting_status_shows_interrupted_not_corrupt(
+    fixtures_dir: Path, tmp_path: Path, isolated_xdg: dict[str, Path]
+) -> None:
+    """An interrupted build is not damage: nothing is broken, and D7 rebuilds
+    it, so calling it "corrupt" would send the user to Clear for no reason."""
+    db_dir = tmp_path / "indexes"
+    fixture = fixtures_dir / FIXTURE_NAME
+    _seed_state(db_dir, fixture, "ingesting")
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _open_screen(pilot, app, db_dir)
+        _set_path(screen, str(fixture))
+
+        await screen.on_input_submitted(_submit(screen, "#retrieve-query", "confidentiality"))
+
+        status = _status(screen)
+        assert status == INTERRUPTED
+        assert "corrupt" not in status.lower()
+        assert "damaged" not in status.lower()
+        assert isinstance(app.screen, RetrieveScreen)
+        assert app._exception is None
+
+
+async def test_a_search_that_loses_the_index_mid_flight_reports_not_indexed(
+    monkeypatch: pytest.MonkeyPatch,
+    fixtures_dir: Path,
+    tmp_path: Path,
+    isolated_xdg: dict[str, Path],
+) -> None:
+    """D3 layer 2, reproduced for real rather than stubbed: the file disappears
+    between the meta read and the engine call, so the engine's own
+    ``IndexNotFoundError`` fires in a state where layer 1 had just seen a
+    healthy index."""
+    db_dir = tmp_path / "indexes"
+    fixture = fixtures_dir / FIXTURE_NAME
+    _seed_index(db_dir, fixture, [_chunk("The confidentiality obligation survives.")])
+    real_search = _retrieval.search
+
+    def _vanish(db_path: Path, query: str, *, top_k: int | None = None) -> Any:
+        _retrieval.clear_index(db_path)  # gone by the time the engine looks
+        return real_search(db_path, query, top_k=top_k)
+
+    monkeypatch.setattr(_retrieval, "search", _vanish)
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _open_screen(pilot, app, db_dir)
+        _set_path(screen, str(fixture))
+
+        await screen.on_input_submitted(_submit(screen, "#retrieve-query", "confidentiality"))
+
+        assert _status(screen) == NOT_INDEXED
+        assert "openreview ingest" not in _status(screen)
+        assert isinstance(app.screen, RetrieveScreen)
+        assert app._exception is None
+
+
+async def test_a_corrupt_engine_error_is_mapped_by_type_not_by_message(
+    monkeypatch: pytest.MonkeyPatch,
+    fixtures_dir: Path,
+    tmp_path: Path,
+    isolated_xdg: dict[str, Path],
+) -> None:
+    """The screen must never read ``.message`` off these errors: both are bare
+    ``Exception`` subclasses (``retrieval/errors.py``) with no such attribute, so
+    a read would raise ``AttributeError`` from inside the ``except`` block - the
+    exact crash D3's mapping exists to prevent.
+
+    The stub is deliberate. The real engine's only ``IndexCorruptError`` site
+    keys off the stored status, which the meta read would then agree with, so
+    this branch cannot be reached by seeding a row; it is the defensive branch
+    that the class's own "incompatible schema" wording could one day reach.
+    """
+    db_dir = tmp_path / "indexes"
+    fixture = fixtures_dir / FIXTURE_NAME
+    _seed_index(db_dir, fixture, [_chunk("The confidentiality obligation survives.")])
+
+    def _raise_corrupt(db_path: Path, query: str, *, top_k: int | None = None) -> Any:
+        raise IndexCorruptError(
+            "Index database is corrupt. Re-run `openreview ingest <file>` to rebuild."
+        )
+
+    monkeypatch.setattr(_retrieval, "search", _raise_corrupt)
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _open_screen(pilot, app, db_dir)
+        _set_path(screen, str(fixture))
+
+        await screen.on_input_submitted(_submit(screen, "#retrieve-query", "confidentiality"))
+
+        assert _status(screen) == DAMAGED
+        # Neither the engine's wording nor a traceback reaches the user.
+        assert "openreview ingest" not in _status(screen)
+        assert "Re-run" not in _status(screen)
+        assert isinstance(app.screen, RetrieveScreen)
+        assert app._exception is None
+
+
+async def test_searching_after_clear_reports_not_indexed_and_keeps_no_stale_rows(
+    fixtures_dir: Path, tmp_path: Path, isolated_xdg: dict[str, Path]
+) -> None:
+    """D14: the list is cleared at the start of *every* search, so a search that
+    cannot run never leaves the previous query's rows claiming to be results."""
+    db_dir = tmp_path / "indexes"
+    fixture = fixtures_dir / FIXTURE_NAME
+    _seed_index(db_dir, fixture, [_chunk("The confidentiality obligation survives.")])
+    _, db_path = _retrieval.resolve_document(fixture, db_dir=db_dir)
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _open_screen(pilot, app, db_dir)
+        _set_path(screen, str(fixture))
+
+        await screen.on_input_submitted(_submit(screen, "#retrieve-query", "confidentiality"))
+        assert await _result_rows(pilot, screen), "the seeded index must be searchable first"
+
+        _retrieval.clear_index(db_path)
+
+        await screen.on_input_submitted(_submit(screen, "#retrieve-query", "confidentiality"))
+
+        assert _status(screen) == NOT_INDEXED
+        assert await _result_rows(pilot, screen) == [], "stale rows from a deleted index"
+        assert isinstance(app.screen, RetrieveScreen)
+        assert app._exception is None
 
 
 # --------------------------------------------------------------------------

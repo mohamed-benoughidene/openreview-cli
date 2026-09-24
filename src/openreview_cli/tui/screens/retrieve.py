@@ -247,6 +247,11 @@ class RetrieveScreen(Screen[None]):
             return
         self._set_busy(True)
         try:
+            # D14: every search starts from an empty list. Clearing only on the
+            # success path would let a search that cannot run - not indexed,
+            # corrupt, interrupted, no query - leave the previous query's rows
+            # on screen claiming to be its results.
+            self._clear_results()
             db_path = await self._resolve_selected()
             if db_path is None:
                 return
@@ -263,7 +268,6 @@ class RetrieveScreen(Screen[None]):
                 self._fail(NO_QUERY_MESSAGE, severity="warning")
                 return
 
-            self._clear_results()
             self._set_status("● Searching...")
             top_k = _retrieval.configured_top_k()
             try:
