@@ -669,7 +669,7 @@ Spec 014 FR-3 (comparison agent reuses extraction slot).
 | **Deferred from** | Benchmark harness / spec 010 — ponytail comment in `benchmark/cli.py` |
 | **Deferred at** | 2026-07-04 |
 | **Trigger** | Ponytail — no real prompt templates exist yet for comparison |
-| **Status** | ✅ **Resolved** — 2026-07-09 (spec implementation batch) |
+| **Status** | **Open** (corrected from a 2026-07-09 "Resolved" marking). Only the statistics module exists; the route, the registry, the runner, the comparison table and the wiring do not. |
 
 ### Description
 
@@ -684,6 +684,14 @@ Prompt A/B testing would:
    better and by how much
 5. Allow regression-style comparison against stored baselines
 
+**Current state (verified against the live code):** only the statistics module
+exists (`benchmark/prompt_ab.py`, providing `mcnemar_test` and
+`compare_variants`). It has no caller under `src/`; only the integration test at
+`tests/integration/test_benchmark_prompt_ab.py` exercises it. The ponytail
+comment still stands at `benchmark/cli.py:271`, and `--prompt-variant`
+(`benchmark/cli.py:73`) is never read in the `run` command. The variant
+registry, the A/B runner, the comparison table and the CLI wiring do not exist.
+
 ### What would need to change to unblock
 
 1. Restore the prompt A/B route in `benchmark/cli.py` (the `cli.py` comment
@@ -695,7 +703,7 @@ Prompt A/B testing would:
 
 ### Blueprint references
 
-`src/openreview_cli/benchmark/cli.py` line 225 ponytail comment. Spec 009
+`src/openreview_cli/benchmark/cli.py` line 271 ponytail comment. Spec 009
 (prompt management) would provide the template infrastructure. Spec 010
 (benchmark harness) is the natural home for this feature.
 
@@ -3794,5 +3802,62 @@ The TUI summary screen states this limitation directly beneath the score (`src/o
 ### Spec references
 
 Spec 025 does not cover hierarchy extraction — it assumes it. `spec.md:158` states the hierarchy edges are "derived from `Clause.parent_id` which is populated by `clause_detector.build_hierarchy()`", and `spec.md:282` lists `parent_id` as a pre-existing input field; `research.md:13` (Decision 0) makes the same assumption. That assumption is false: `clause_detector.build_hierarchy()` sets `parent_id=None` (`clause_detector.py:128`, `:149`). No line in spec 025 specifies how hierarchy is extracted from a real document.
+
+---
+
+## D-82: Wrong Entity Type on a Redacted Span (Misleading Placeholder)
+
+| Field | Value |
+|-------|-------|
+| **Deferred from** | PII accuracy predicate / spec 004 FR-006 (R8 amendment) |
+| **Deferred at** | 2026-09-24 |
+| **Trigger** | FR-006 was changed from type-strict to span-level (type-agnostic), so a wrong entity type on a redacted span is no longer scored as an error |
+| **Status** | Open - the span is still redacted (privacy holds), but the placeholder misleads the reader about what was removed |
+
+### Description
+
+The PII engine can attach the wrong entity type to a span. When two recognizers fire on the same characters, the same value receives two placeholders and the wrong one can win the text substitution. The span is still redacted, so no PII leaks; the defect is that the reader is told the wrong kind of data was removed.
+
+Mechanism (verified on this branch):
+
+1. `src/openreview_cli/pii/engine.py` sends each clause to Presidio plus the custom recognizers in `src/openreview_cli/pii/recognizers.py`. The custom TAX_ID pattern `\b\d{2}-\d{7}\b` and Presidio's built-in DATE_TIME recognizer both match `11-7654320`, so `detect_on_page` returns two entities over the same span (TAX_ID score 1.0, DATE_TIME score 0.85).
+2. `assign_placeholders` (`src/openreview_cli/pii/placeholders.py`) groups entities by placeholder prefix, so the one value gets both `DATE_1` and `TAX_ID_1`.
+3. `strip_pii` (`src/openreview_cli/pii/engine.py:315-332`) replaces values longest-first, and `assign_placeholders` emits the prefix groups in alphabetical order, so `DATE_1` is applied before `TAX_ID_1`. The substitution site shows `[DATE_1]` even though the correct, higher-scoring label is TAX_ID. The `[TAX_ID_1]` placeholder is then appended at the end of the text by the "ensure every placeholder appears" loop (`engine.py:329-332`).
+
+### Reproduction (real engine, 2026-09-24)
+
+Minimal input, `PiiEngine(threshold=0.7)`:
+
+- input:  `Tax ID is 11-7654320`
+- output: `Tax ID is [DATE_1] [TAX_ID_1]`
+
+Committed fixture `tests/fixtures/pii/seeded_contracts/auto/auto_contract_1.txt`, through the public `strip_pii` API with `strip_metadata=False`:
+
+- input:  `... Tax ID is 11-7654320. Bank account is ...`
+- output: `... Tax ID is [DATE_1]. Bank account is ...` (the tail of the output also carries a stray `[TAX_ID_1]`)
+
+This is the documented example reproduced exactly. `tests/fixtures/pii/seeded_contracts/ground_truth.json` records `11-7654320` as type `TAX_ID`, and the reader sees `[DATE_1]`. The same run renders the phone number `555-0101` as `[DATE_3]` and the registration number `REG-100001` as `[PARTY_E]`.
+
+### Why the accuracy metric no longer catches it
+
+The previous FR-006 predicate was type-strict: `_values_match` in `src/openreview_cli/benchmark/metrics_pii.py` returns False when a detection's type differs from the ground-truth type, so every wrong-type detection is a precision false positive. Measured on the seeded corpus (717 detections, `PiiEngine(threshold=0.7)`): 138 detections carry a span that matches a ground-truth entity of a different type, and type-strict precision is 0.7601 (545/717), matching the alpha notes.
+
+The span-level (type-agnostic) predicate adopted for FR-006 counts a detection whenever its span matches, whatever label it carries. Those same 138 detections are then credited and precision rises to 0.9526 (683/717). The metric stops penalising the wrong label, so this defect is invisible to it: no test, gate, or report will surface a wrong-type placeholder again.
+
+### Impact
+
+- Privacy impact: none. The span is redacted either way; the raw value never reaches the reader or a provider.
+- Quality impact: the placeholder misleads. A reader, or a downstream model, told `[DATE_1]` believes a date was removed when a tax ID was. Because the accuracy metric no longer scores the label, nothing else reports it.
+
+### What would need to change to unblock
+
+1. Decide the placeholder for a multi-type span. Prefer the highest-scoring detection (here TAX_ID at 1.0) over the alphabetically first prefix, or emit one placeholder per span and record the losing labels only in the audit trail.
+2. Fix `assign_placeholders` and/or the replacement order in `strip_pii` so a span with several entity types yields a single correct placeholder at the substitution site, and stop appending the loser to the end of the text.
+3. Add a regression test pinning the placeholder for `Tax ID is 11-7654320` to `[TAX_ID_1]`, so a type-agnostic accuracy metric cannot hide a future regression.
+4. Optionally keep a type-aware signal (for example a per-type precision breakdown) alongside the span-level accuracy predicate, so a wrong-type label stays visible somewhere.
+
+### Spec references
+
+Spec 004 FR-006 (PII accuracy validation). The type-agnostic predicate adopted for FR-006 is what de-scores this item; this entry is that decision's cross-reference. `benchmark/metrics_pii.py` (`_values_match`, `evaluate_pii_accuracy`); `src/openreview_cli/pii/placeholders.py` (`assign_placeholders`); `src/openreview_cli/pii/engine.py:315-332`. Corpus: `tests/fixtures/pii/seeded_contracts/`. Issue 115 is the tracking issue for this wrong-type-placeholder defect.
 
 ---

@@ -11,6 +11,7 @@ Tests cover:
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 from collections.abc import Generator
 from datetime import UTC
@@ -18,11 +19,40 @@ from pathlib import Path
 
 import pytest
 import yaml
+from typer.core import TyperGroup, TyperOption
+from typer.main import get_command
 from typer.testing import CliRunner
 
 from openreview_cli.app import app
 
 runner = CliRunner()
+
+# Typer forces terminal mode — and therefore ANSI styling — whenever
+# ``GITHUB_ACTIONS`` (or ``FORCE_COLOR`` / ``PY_COLORS``) is set, and Rich then
+# emits the highlighted option token as several separately-styled spans, e.g.
+# ``\x1b[1;36m-\x1b[0m\x1b[1;36m-format\x1b[0m``.  The literal ``--format``
+# therefore never appears in the raw captured output even though the user
+# plainly sees it.  Strip styling before matching.
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+
+
+def _visible(output: str) -> str:
+    """Return CLI output with ANSI styling removed — i.e. what the user reads."""
+    return _ANSI_RE.sub("", output)
+
+
+def _registered_options(*command_path: str) -> set[str]:
+    """Option strings registered on a command, read from the Click command tree.
+
+    Independent of how the Rich-rendered ``--help`` is laid out (terminal
+    width, colour depth, terminal detection), unlike scraping the box output.
+    """
+    command = get_command(app)
+    for name in command_path:
+        assert isinstance(command, TyperGroup), f"'{name}' is not a command group"
+        command = command.commands[name]
+    return {opt for param in command.params if isinstance(param, TyperOption) for opt in param.opts}
+
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 FIXTURE_PLAYBOOK = FIXTURES_DIR / "playbooks" / "precheck-nda-v1.yaml"
@@ -157,15 +187,24 @@ class TestUS3JsonOutput:
     """T028: Integration test for --format json and --output."""
 
     def test_format_json_option_exists(self) -> None:
-        """--help should show --format option."""
-        result = runner.invoke(app, ["precheck", "review", "--help"])
-        assert "--format" in result.output
-        assert "json" in result.output
+        """--format (with its json value) is registered and reaches --help."""
+        assert "--format" in _registered_options("precheck", "review")
+
+        # Pin the width so the rendered box cannot wrap the option name.
+        result = runner.invoke(app, ["precheck", "review", "--help"], env={"COLUMNS": "200"})
+        assert result.exit_code == 0
+        visible = _visible(result.output)
+        assert "--format" in visible
+        assert "json" in visible
 
     def test_output_option_exists(self) -> None:
-        """--help should show --output option."""
-        result = runner.invoke(app, ["precheck", "review", "--help"])
-        assert "--output" in result.output
+        """--output is registered on `precheck review` and reaches --help."""
+        assert "--output" in _registered_options("precheck", "review")
+
+        # Pin the width so the rendered box cannot wrap the option name.
+        result = runner.invoke(app, ["precheck", "review", "--help"], env={"COLUMNS": "200"})
+        assert result.exit_code == 0
+        assert "--output" in _visible(result.output)
 
 
 # ── US5: Batch review ─────────────────────────────────────

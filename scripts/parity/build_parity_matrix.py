@@ -26,7 +26,9 @@ asserted, because a prose overlap is weaker evidence than a name match.
 
 Part C renders the markdown. Every echoed source string is sanitized to plain
 ASCII, and the renderer refuses to emit a row without a source file or with a
-line number below 1.
+line number below 1. Table C prints the shared name token that produced each
+certain match, next to a note stating that a certain match is a name join and
+not proof that the TUI implements the command.
 
 Comparison statuses are ``MATCH``, ``MISMATCH``, ``MISMATCH-ABSENT`` (one side
 present, one side absent, values differ), ``UNRESOLVED`` (a ``computed`` side)
@@ -1256,6 +1258,18 @@ def _summarize(values: list[str], limit: int = 4) -> str:
 # Rendering (Part C)
 # --------------------------------------------------------------------------
 
+# The reader meets Table C here. The note qualifies the CERTAIN claim before the
+# rows are read, so a name join is not mistaken for a functional proof.
+TABLE_C_NOTE = (
+    "Note: `CERTAIN` in this table means only that the CLI item and the TUI item share a "
+    "significant name token, printed in the `Shared token` column. It is a name join, not "
+    "evidence that the TUI implements the command: a row that matched on the bare domain "
+    "token `prompt` records a shared noun, not a functional correspondence. The only "
+    "functional comparison in this document is the shared-call comparison for the two "
+    "targeted functions `run_review` and `run_comparison`, where each CLI and TUI call site "
+    "is compared argument by argument."
+)
+
 
 def check_rows(rows: list[dict[str, Any]]) -> list[str]:
     """Return a problem description for every row without usable provenance."""
@@ -1377,6 +1391,7 @@ def _build_table_c(data: dict[str, Any]) -> list[dict[str, str]]:
             rows.append(
                 {
                     "match": match,
+                    "shared_token": "n/a",
                     "cli_item": cli_item,
                     "cli_source": cli_source,
                     "tui_item": tui_item,
@@ -1391,6 +1406,7 @@ def _build_table_c(data: dict[str, Any]) -> list[dict[str, str]]:
         rows.append(
             {
                 "match": "CERTAIN",
+                "shared_token": ", ".join(str(token) for token in pair.get("shared_tokens", [])),
                 "cli_item": f"{pair['cli_item']} ({pair['cli_kind']})",
                 "cli_source": str(pair["cli_source"]),
                 "tui_item": f"{pair['tui_item']} ({pair['tui_kind']})",
@@ -1507,14 +1523,19 @@ def render_markdown(data: dict[str, Any]) -> str:
 
     lines.append("## Table C: parity join")
     lines.append("")
-    lines.append("| Match | CLI item | CLI source | TUI item | TUI source | Default mismatch |")
-    lines.append("|---|---|---|---|---|---|")
+    lines.append(TABLE_C_NOTE)
+    lines.append("")
+    lines.append(
+        "| Match | Shared token | CLI item | CLI source | TUI item | TUI source | Default mismatch |"
+    )
+    lines.append("|---|---|---|---|---|---|---|")
     for row in table_c:
         lines.append(
             "| "
             + " | ".join(
                 [
                     _cell(row["match"]),
+                    _cell(row["shared_token"]),
                     _cell(row["cli_item"]),
                     _cell(row["cli_source"]),
                     _cell(row["tui_item"]),

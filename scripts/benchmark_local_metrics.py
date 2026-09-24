@@ -107,7 +107,7 @@ def _receipt(
 
 
 def accuracy_suite_receipt() -> dict[str, object]:
-    """Measure the four accuracy-tagged test files (one of them fails by design)."""
+    """Measure the four accuracy-tagged test files (all pass under the span-level predicate)."""
     code, output = run_pytest([*ACCURACY_SUITE_FILES, "-q"])
     return _receipt(
         benchmark="accuracy-suite",
@@ -119,9 +119,11 @@ def accuracy_suite_receipt() -> dict[str, object]:
         },
         metrics={"exit_code": code, **parse_summary(output)},
         notes=(
-            "The single failure is the labeled-corpus PII recall (94.3%), below the 95% "
-            "spec target; it is a real pre-alpha signal, not a flake. Wall time is "
-            "environment dependent."
+            "All four accuracy-tagged files pass. The labeled-corpus PII gate passes "
+            "under the span-level (type-agnostic) predicate, so a detection that covers "
+            "the right span with the wrong entity label still counts as correct; that "
+            "labelling limitation is tracked separately as D-82 in specs/DEFERRED.md and "
+            "issue 115. Wall time is environment dependent."
         ),
     )
 

@@ -336,8 +336,8 @@ def _run_pii_evaluation(
         for ent in entities:
             results.append(
                 {
-                    "value": ent.text if hasattr(ent, "text") else str(ent),
-                    "type": ent.label if hasattr(ent, "label") else "UNKNOWN",
+                    "value": ent.original_value,
+                    "type": ent.entity_type,
                 }
             )
         return results

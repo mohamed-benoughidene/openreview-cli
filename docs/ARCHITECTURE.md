@@ -16,6 +16,7 @@ The tool serves two audiences through the same codebase:
 - [AI Gateway](#ai-gateway)
 - [Retrieval and chunking](#retrieval-and-chunking)
 - [Negotiation, comparison, graph](#negotiation-comparison-graph)
+- [Prompt management](#prompt-management)
 - [Spec-driven development](#spec-driven-development)
 - [Honest limitations](#honest-limitations)
 
@@ -90,6 +91,12 @@ Pipeline flow: parse → strip → review writes cost rows to the app DB (the TU
 - **Bilateral comparison** (`precheck compare`): experimental. RCBSF 5-dimension divergence taxonomy (category/location/evidence/issue/suggestion), 3-tier heading alignment, LLM comparison agent. Documented accuracy ceiling ≤ 64% F1 (a ceiling recorded in `PRODUCT.md`, not a [BENCHMARKS.md](BENCHMARKS.md) measurement).
 - **Contract graph** (`openreview graph`): directed clause graph (`parent_child`, `cross_ref`, `def_ref` edges); 0–100 health score from 5 structural metrics (density, depth, orphan ratio, broken refs, definition coverage); ASCII tree view; graph diff; optional `legal-bert` + HDBSCAN clustering (`--cluster-clauses`, first-time model download).
 
+## Prompt management
+
+Prompts are versioned rows in the app DB (`prompt_versions`, `prompt_bindings`) owned by `PromptStore` (`prompts/store.py`). A prompt has a name and a version history that only grows (each update appends the next version, with content, tags and description), and it can be bound to one of the six gateway slots; `PromptStore.resolve(slot)` returns the bound version's content. The CLI surface is `openreview prompt` (create, update, list, show, delete, diff, bind, unbind, bindings, history, test, export, import, optimize).
+
+The TUI adds a Prompts tab (`tui/tabs/prompts.py`, registered in `tui/app.py`): a filterable list with `+ New prompt`, `+ Import` and `Export all` in the toolbar, plus a selection-gated action row (edit, bind, bindings, test, export, delete). Create and edit share one form screen (`screens/prompt_form.py`); bindings, test, export and import each have their own screen. The export modal covers one prompt (the action row) or the whole library (the `Export all` toolbar button, which needs no selected row). Every TUI action goes through the `tui/domain/prompts.py` wrappers, the only layer that touches `PromptStore`; they translate store and filesystem errors to `ValueError`, so no exception reaches a Textual handler. Import validates through the same `parse_prompts_yaml` the CLI uses (`prompts/io.py`), so the TUI and the CLI cannot disagree about a document.
+
 ## Spec-driven development
 
 Development is driven by spec-kit: requirements land as specs in `specs/`, get plans, then implementation. 33 spec directories (001–034; 023 absent), including:
@@ -121,6 +128,8 @@ Deferred work is tracked in `specs/DEFERRED.md` check it before touching any mod
 - **Regex tokenizer** approximates tokens; chunk sizes are estimates, not model-precise counts.
 - **Benchmark harness**: CUAD/MAUD/ContractNLI paths use a mock pipeline by default (real LLM integration deferred); PII benchmarks use the real engine. Hallucination detection is a ROUGE-L lexical-overlap placeholder (EXPERIMENTAL default).
 - **`prompt test` (A/B) and `prompt optimize` are roadmap stubs** the prompt storage, versioning, bindings, and YAML import/export are real; the A/B and optimization commands are not shipped features.
+- **TUI prompt `test` is not an A/B**: the Prompts tab `test` action validates the prompt and each named version against the store, then reports the same roadmap notice the CLI prints; it never calls a model.
+- **TUI prompt list is capped at 100**: `list_prompts_via_tui` requests `per_page=100`, so prompts beyond the first 100 are not shown (the `Export all` modal reports the uncapped total from `count_prompts_via_tui`).
 - **Negotiation uses a simplified local path** (heading-match + defaults), not the full review pipeline no LLM, no clause grounding.
 - **Bilateral comparison has a documented accuracy ceiling ≤ 64% F1** (recorded in `PRODUCT.md`; not measured in [BENCHMARKS.md](BENCHMARKS.md)) and is experimental.
 - **PII audit trail is never empty**: metadata redaction is on by default, so the filename (`FILENAME`, plus `AUTHOR`/`TITLE`/`COMPANY` when present) is always redacted and `entity_count` is at least 1. A document whose body carries no PII therefore still writes the encrypted mapping, `stripped.txt` and the `pii_cache` row; the empty-mapping branch that would skip those artifacts is unreachable under default settings.

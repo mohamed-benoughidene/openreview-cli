@@ -184,7 +184,9 @@ def test_custom_two_stage_e2e(monkeypatch: pytest.MonkeyPatch) -> None:
     """Compose ParseStage + ChunkStage with monkeypatched internals."""
     from openreview_cli.pipeline.adapters import ChunkStage, ParseStage
 
-    def fake_parse_document(_path: str) -> tuple[Any, list[Any]]:
+    def fake_parse_document(
+        _path: str, *, allow_password_prompt: bool = True
+    ) -> tuple[Any, list[Any]]:
         return (
             {"name": "test_doc.pdf", "pages": 1},
             [{"id": 0, "text": "This is clause one."}, {"id": 1, "text": "This is clause two."}],

@@ -1,12 +1,12 @@
 {
   "benchmark": "pii-accuracy",
   "command": "uv run python - <<'PY' (BenchmarkRunner.run_pii with the real PiiEngine; see AGENTS.md 'PII accuracy (seeded corpus)')",
-  "date": "2026-09-22",
-  "git_commit": "6b95245",
+  "date": "2026-09-24",
+  "git_commit": "882568c",
   "provenance": [
     {
       "path": "src/openreview_cli/benchmark/metrics_pii.py",
-      "sha256": "9e2c7938443fafd0d55a7cb8369157867bef6f5668ac6de03590638ae737aaaa"
+      "sha256": "24166676066e2e4a5dcb49c58b161cc00e0d2a9e3b4efcbf34b69a04e536c277"
     }
   ],
   "models": "none (local Presidio + spaCy en_core_web_lg)",
@@ -17,15 +17,15 @@
   },
   "metrics": {
     "pii_recall": {
-      "value": 0.9435,
+      "value": 0.964,
       "n": 584
     },
     "pii_precision": {
-      "value": 0.7601,
+      "value": 0.9526,
       "n": 717
     },
     "pii_f1": {
-      "value": 0.8419,
+      "value": 0.9583,
       "n": 584
     },
     "pii_recall_organization": {
@@ -33,7 +33,7 @@
       "n": 84
     },
     "pii_recall_person": {
-      "value": 0.62,
+      "value": 0.86,
       "n": 50
     },
     "pii_recall_email_address": {

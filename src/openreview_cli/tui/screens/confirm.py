@@ -22,16 +22,23 @@ class ConfirmModal(ModalScreen[bool]):
     ConfirmModal Button { margin: 0 1; }
     """
 
-    def __init__(self, title: str, message: str, danger: bool = False) -> None:
+    def __init__(
+        self,
+        title: str,
+        message: str,
+        danger: bool = False,
+        markup: bool = False,
+    ) -> None:
         super().__init__()
         self._title = title
         self._message = message
         self._danger = danger
+        self._markup = markup
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            yield Label(self._title, id="confirm-title")
-            yield Label(self._message, id="confirm-message")
+            yield Label(self._title, id="confirm-title", markup=self._markup)
+            yield Label(self._message, id="confirm-message", markup=self._markup)
             with Horizontal():
                 yield Button(
                     "Yes",

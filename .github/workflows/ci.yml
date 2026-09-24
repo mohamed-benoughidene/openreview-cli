@@ -16,6 +16,7 @@ on:
 # Median baselines (2026-07, Ubuntu 24.04 GHA runner, 2 vCPU):
 #   lint ~0.3 min   ·  types ~0.8 min   ·  test ~5 min
 #   memory ~1.5 min  ·  tui ~25 min     ·  benchmark ~3 min
+#   integration ~9 min  (measured locally 2026-09-24; GHA median pending)
 
 jobs:
   lint:
@@ -89,6 +90,30 @@ jobs:
       - run: uv sync --frozen
       - run: uv pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl
       - run: uv run pytest -m memory -v
+
+  # Integration tests that are neither memory- nor slow-marked (auto-marked
+  # `fast` by tests/conftest.py).  No other job selects them, so this is the
+  # only place they run.
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TRANSFORMERS_OFFLINE: "1"
+      HF_HUB_OFFLINE: "1"
+      HF_DATASETS_OFFLINE: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - uses: astral-sh/setup-uv@v10.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - run: uv sync --frozen
+      # spaCy model needed by integration PII tests; without it Presidio tries to
+      # download at test time, which the pytest-socket block (addopts) rejects
+      - run: uv pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl
+      - run: uv run pytest tests/integration/ -q -m "not memory and not slow" --ignore=tests/integration/tui
 
   tui:
     runs-on: ubuntu-latest

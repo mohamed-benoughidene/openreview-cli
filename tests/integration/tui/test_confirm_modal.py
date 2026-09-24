@@ -182,3 +182,66 @@ async def test_escape_on_confirmation_does_not_pop_the_screen_underneath(
         conn.close()
     assert remaining == {doc_hash}
     assert mapping.exists()
+
+
+async def test_confirmation_message_renders_bracketed_text_literally() -> None:
+    """A message with lowercase brackets is rendered verbatim, not eaten as markup.
+
+    Rich parses ``[clause]`` as a (bogus) style tag and consumes it, so the
+    literal text would silently vanish from the rendered label. Confirmation
+    text is user-authored (prompt names, slot names); the modal must render it
+    literally by default. The assertion is on the *rendered* label, so it
+    proves the markup was not consumed rather than restating the argument.
+    """
+    from textual.widgets import Label
+
+    from openreview_cli.tui.app import OpenReviewApp
+    from openreview_cli.tui.screens.confirm import ConfirmModal
+
+    app = OpenReviewApp()
+    message = "Delete prompt 'notes [clause] draft'? This cannot be undone."
+
+    async with app.run_test(size=(120, 40)) as pilot:
+        app.push_screen(ConfirmModal("Delete prompt", message, danger=True))
+        await pilot.pause()
+        rendered = str(app.screen.query_one("#confirm-message", Label).render())
+
+    assert "[clause]" in rendered
+    assert rendered == message
+
+
+async def test_confirmation_title_renders_bracketed_text_literally() -> None:
+    """The title is literal by default too - both labels carry the parameter."""
+    from textual.widgets import Label
+
+    from openreview_cli.tui.app import OpenReviewApp
+    from openreview_cli.tui.screens.confirm import ConfirmModal
+
+    app = OpenReviewApp()
+    title = "Confirm [clause]"
+
+    async with app.run_test(size=(120, 40)) as pilot:
+        app.push_screen(ConfirmModal(title, "Confirm?"))
+        await pilot.pause()
+        rendered = str(app.screen.query_one("#confirm-title", Label).render())
+
+    assert "[clause]" in rendered
+    assert rendered == title
+
+
+async def test_markup_true_still_allows_markup() -> None:
+    """``markup=True`` opts back in, so the parameter is real, not hard-coded off."""
+    from textual.widgets import Label
+
+    from openreview_cli.tui.app import OpenReviewApp
+    from openreview_cli.tui.screens.confirm import ConfirmModal
+
+    app = OpenReviewApp()
+
+    async with app.run_test(size=(120, 40)) as pilot:
+        app.push_screen(ConfirmModal("Title", "[b]bold[/b] message", markup=True))
+        await pilot.pause()
+        rendered = str(app.screen.query_one("#confirm-message", Label).render())
+
+    assert "[b]" not in rendered
+    assert rendered == "bold message"
