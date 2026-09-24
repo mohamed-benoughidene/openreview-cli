@@ -164,11 +164,11 @@ The tab, not just the screen, says what it is for: `RetrieveTab` renders `Search
 
 Five functions, no more: no `human_size` (no size display, D10), no `is_indexed` (one code path; the screen reads the meta it already has), no notices return (always empty under sparse), no `clear() -> bool` wrapper (the screen calls `clear_index` and re-reads status).
 
-- [ ] **Step 1: Write the failing tests** under `isolated_xdg`, always passing `db_dir` explicitly: identity is stable, 64 hex chars, and differs when the bytes differ; chunking the fixture yields at least one dict carrying every key `_normalize_chunk` reads (`id`, `text`, `source_clause_title`, `source_clause_level`, `char_offset_start`, `char_offset_end`, `parent_chunk_id`, `structural_location`); `index_meta` returns `None` for a path that does not exist **and creates no file** (assert the directory listing is unchanged - this is the regression guard for fact 4); a missing document raises `FileNotFoundError` and a directory raises before parsing; after `ingest_chunks` the meta says `indexed` with the right chunk count; `search` on an un-indexed path raises `IndexNotFoundError`; `search` after ingest returns results for a phrase in the document.
-- [ ] **Step 2: Run and confirm they fail** (module does not exist).
-- [ ] **Step 3: Implement the adapter.** No logic of its own beyond identity and the adapters above. No `openreview_cli.gateway.router` import; no Textual import.
-- [ ] **Step 4: Run** `uv run pytest tests/unit/tui/test_retrieval_domain.py -q`.
-- [ ] **Step 5: Commit** `feat(tui): add a retrieval domain adapter for the TUI`.
+- [x] **Step 1: Write the failing tests** under `isolated_xdg`, always passing `db_dir` explicitly: identity is stable, 64 hex chars, and differs when the bytes differ; chunking the fixture yields at least one dict carrying every key `_normalize_chunk` reads (`id`, `text`, `source_clause_title`, `source_clause_level`, `char_offset_start`, `char_offset_end`, `parent_chunk_id`, `structural_location`); `index_meta` returns `None` for a path that does not exist **and creates no file** (assert the directory listing is unchanged - this is the regression guard for fact 4); a missing document raises `FileNotFoundError` and a directory raises before parsing; after `ingest_chunks` the meta says `indexed` with the right chunk count; `search` on an un-indexed path raises `IndexNotFoundError`; `search` after ingest returns results for a phrase in the document.
+- [x] **Step 2: Run and confirm they fail** (module does not exist).
+- [x] **Step 3: Implement the adapter.** No logic of its own beyond identity and the adapters above. No `openreview_cli.gateway.router` import; no Textual import.
+- [x] **Step 4: Run** `uv run pytest tests/unit/tui/test_retrieval_domain.py -q`.
+- [x] **Step 5: Commit** `feat(tui): add a retrieval domain adapter for the TUI`.
 
 ### Task 3: The guided screen
 
