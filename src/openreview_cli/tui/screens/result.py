@@ -206,6 +206,12 @@ class ResultScreen(Screen[None]):
                         id="btn-amber-queue",
                         variant="warning",
                     )
+                # Discoverable affordance for the `g` binding: rendered under the
+                # exact condition that enables it, so the button and the binding
+                # can never disagree. `compose` clamped `_current_report` above,
+                # and the helper is a no-op (never raises) on empty/error screens.
+                if self._document_path_for_active_report() is not None:
+                    yield Button("Clause graph", id="btn-clause-graph", variant="default")
                 yield Button("Close", id="btn-close", variant="default")
                 if total_pages > 1:
                     yield Button(
@@ -433,6 +439,8 @@ class ResultScreen(Screen[None]):
             self.action_close()
         elif btn_id == "btn-amber-queue":
             self.action_open_amber_queue()
+        elif btn_id == "btn-clause-graph":
+            self.action_open_clause_graph()
         elif btn_id == "btn-export":
             self.query_one("#step-content", Container).display = False
             self.query_one("#export-view", Container).display = True
