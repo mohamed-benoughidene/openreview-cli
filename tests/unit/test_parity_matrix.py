@@ -212,6 +212,73 @@ def test_markdown_has_the_required_sections(markdown: str) -> None:
         assert heading in markdown, f"missing section: {heading}"
 
 
+def _table_c_cells(markdown: str) -> tuple[list[str], list[list[str]]]:
+    """Return the Table C header cells and its data row cells."""
+    lines = markdown.splitlines()
+    start = lines.index("## Table C: parity join")
+    end = next(index for index in range(start + 1, len(lines)) if lines[index].startswith("## "))
+    table = [line for line in lines[start:end] if line.startswith("| ")]
+    cells = [[cell.strip() for cell in line.strip().strip("|").split("|")] for line in table]
+    return cells[0], cells[1:]
+
+
+def test_table_c_note_states_what_certain_means(markdown: str) -> None:
+    """The note qualifies the CERTAIN claim where the reader meets Table C."""
+    lines = markdown.splitlines()
+    start = lines.index("## Table C: parity join")
+    header = next(index for index in range(start, len(lines)) if lines[index].startswith("| Match"))
+    note = "\n".join(lines[start + 1 : header])
+    assert "`CERTAIN`" in note
+    assert "share a significant name token" in note
+    assert "not evidence that the TUI implements the command" in note
+    assert "shared-call comparison" in note
+    assert "run_review" in note and "run_comparison" in note
+    assert "`Shared token`" in note
+
+
+def test_table_c_certain_rows_carry_their_shared_token(
+    markdown: str, matrix: dict[str, Any]
+) -> None:
+    """Every CERTAIN row prints the name token that produced the match."""
+    header, rows = _table_c_cells(markdown)
+    assert header == [
+        "Match",
+        "Shared token",
+        "CLI item",
+        "CLI source",
+        "TUI item",
+        "TUI source",
+        "Default mismatch",
+    ]
+    match_index = header.index("Match")
+    token_index = header.index("Shared token")
+    cli_index = header.index("CLI item")
+    tui_index = header.index("TUI item")
+
+    expected: dict[tuple[str, str], set[str]] = {}
+    for pair in matrix["join"]:
+        key = (
+            f"{pair['cli_item']} ({pair['cli_kind']})",
+            f"{pair['tui_item']} ({pair['tui_kind']})",
+        )
+        expected.setdefault(key, set()).add(", ".join(pair["shared_tokens"]))
+
+    certain = [row for row in rows if row[match_index] == "CERTAIN"]
+    assert certain
+    for row in certain:
+        assert row[token_index] and row[token_index] != "n/a"
+        key = (row[cli_index], row[tui_index])
+        assert key in expected, f"unexpected certain row: {row}"
+        assert row[token_index] in expected[key]
+
+    prompt_rows = [row for row in certain if "prompt" in row[token_index].split(", ")]
+    assert prompt_rows, "no CERTAIN row printed the prompt name token"
+
+    other = [row for row in rows if row[match_index] != "CERTAIN"]
+    assert other
+    assert all(row[token_index] == "n/a" for row in other)
+
+
 def test_only_the_known_parameter_mismatches(matrix: dict[str, Any]) -> None:
     """Exactly the two intentional CLI/TUI divergences are reported.
 
