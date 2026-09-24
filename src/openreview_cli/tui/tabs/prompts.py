@@ -88,7 +88,13 @@ class PromptsTab(Static):
     def _load(self) -> None:
         from openreview_cli.tui.domain.prompts import list_prompts_via_tui
 
-        self._prompts_data = list_prompts_via_tui()
+        try:
+            self._prompts_data = list_prompts_via_tui()
+        except Exception as exc:
+            # A store failure on the list path must never reach a Textual
+            # handler; report it and leave the current list untouched.
+            self.notify(f"Load failed: {exc}", severity="error", markup=False)
+            return
         filter_text = self.query_one("#prompt-filter", Input).value
 
         if filter_text:
@@ -335,7 +341,12 @@ class PromptsTab(Static):
     def _open_history(self, name: str) -> None:
         from openreview_cli.tui.domain.prompts import get_prompt_history_via_tui
 
-        data = get_prompt_history_via_tui(name)
+        try:
+            data = get_prompt_history_via_tui(name)
+        except Exception as exc:
+            # A store failure reading history must never reach a Textual handler.
+            self.notify(f"History failed: {exc}", severity="error", markup=False)
+            return
         if not data["found"]:
             # markup=False: the name is user-authored content.
             self.notify(f"Prompt '{name}' not found.", timeout=3, markup=False)

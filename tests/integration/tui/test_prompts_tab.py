@@ -516,6 +516,77 @@ async def test_delete_failure_leaves_app_running(
     assert [p.name for p in store.list()] == ["keep"]
 
 
+# ── Read-path boundary (Defect 2) ──
+
+
+async def test_load_failure_notifies_and_keeps_app_running(
+    store: PromptStore,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failure inside ``_load`` is reported, never fatal.
+
+    ``list_prompts_via_tui`` translates store failures into ``ValueError``, and
+    ``_load`` catches that so no read error reaches a Textual handler.
+    """
+    store.create("greeting", "hi")
+
+    def _boom(*args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+        raise sqlite3.IntegrityError("boom")
+
+    monkeypatch.setattr("openreview_cli.tui.domain.prompts.list_prompts_via_tui", _boom)
+
+    from openreview_cli.tui.app import OpenReviewApp
+
+    app = OpenReviewApp()
+    notifications: list[tuple[str, dict[str, Any]]] = []
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.press("6")
+        await pilot.pause()
+
+        # Capture what the tab reports without letting the real toast machinery run.
+        app.notify = lambda msg, **kw: notifications.append((msg, kw))  # type: ignore[method-assign]
+
+        # A filter edit drives the real ``Input.Changed`` -> ``_load`` path.
+        app.query_one("#prompt-filter", Input).value = "greeting"
+        await pilot.pause()
+
+        assert app.is_running
+        assert any("Load failed" in msg for msg, _ in notifications)
+        assert notifications[-1][1].get("severity") == "error"
+        assert notifications[-1][1].get("markup") is False
+
+
+async def test_open_history_failure_notifies_and_keeps_app_running(
+    store: PromptStore,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failure reading history is reported, never fatal."""
+    store.create("greeting", "hi")
+
+    def _boom(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise sqlite3.IntegrityError("boom")
+
+    monkeypatch.setattr("openreview_cli.tui.domain.prompts.get_prompt_history_via_tui", _boom)
+
+    from openreview_cli.tui.app import OpenReviewApp
+
+    app = OpenReviewApp()
+    notifications: list[tuple[str, dict[str, Any]]] = []
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.press("6")
+        await pilot.pause()
+        await _highlight(pilot, app, index=0)
+
+        app.notify = lambda msg, **kw: notifications.append((msg, kw))  # type: ignore[method-assign]
+        await pilot.press("enter")
+        await pilot.pause()
+
+        assert app.is_running
+        assert any("History failed" in msg for msg, _ in notifications)
+        assert notifications[-1][1].get("severity") == "error"
+        assert notifications[-1][1].get("markup") is False
+
+
 # ── Layout ──
 
 

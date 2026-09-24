@@ -408,6 +408,8 @@ _BOUNDARY_CASES = [
     ("update_prompt_via_tui", "update", lambda w: w("name", "content")),
     ("delete_prompt_via_tui", "delete", lambda w: w("name")),
     ("get_prompt_detail_via_tui", "export", lambda w: w("name")),
+    ("list_prompts_via_tui", "list", lambda w: w()),
+    ("get_prompt_history_via_tui", "export", lambda w: w("name")),
     ("list_bindings_via_tui", "bindings", lambda w: w()),
     ("bind_prompt_via_tui", "bind", lambda w: w("reasoning", "name", 1)),
     ("unbind_prompt_via_tui", "unbind", lambda w: w("reasoning")),
@@ -434,6 +436,40 @@ def test_boundary_is_total(
     monkeypatch.setattr(PromptStore, store_method, _raiser(exc_type("boom")))
     with pytest.raises(ValueError):
         invoke(wrapper)
+
+
+# --- Defect 2: the read path is part of the total boundary -------------------
+#
+# Regression: ``list_prompts_via_tui`` had no ``try/except`` at all and
+# ``get_prompt_history_via_tui`` caught only ``ValueError``, so a
+# ``sqlite3.Error`` or ``OSError`` raised by the store escaped the boundary and
+# could reach a Textual handler (terminating the app).  Both read wrappers now
+# translate any unexpected failure into ``ValueError`` naming the operation,
+# while a *missing prompt* still yields ``found=False`` instead of raising.
+
+
+def test_list_translates_store_error_to_value_error(
+    monkeypatch: pytest.MonkeyPatch, isolated_xdg: dict[str, Path]
+) -> None:
+    monkeypatch.setattr(PromptStore, "list", _raiser(sqlite3.IntegrityError("boom")))
+    with pytest.raises(ValueError, match="list prompts"):
+        list_prompts_via_tui()
+
+
+def test_history_translates_store_error_to_value_error(
+    monkeypatch: pytest.MonkeyPatch, isolated_xdg: dict[str, Path]
+) -> None:
+    monkeypatch.setattr(PromptStore, "export", _raiser(sqlite3.IntegrityError("boom")))
+    with pytest.raises(ValueError, match="history"):
+        get_prompt_history_via_tui("greeting")
+
+
+def test_history_missing_prompt_still_found_false_after_boundary_fix(
+    isolated_xdg: dict[str, Path],
+) -> None:
+    """A missing prompt is not an error: it stays ``found=False``, never raises."""
+    result = get_prompt_history_via_tui("does-not-exist")
+    assert result == {"rows": [], "current_version": 0, "found": False}
 
 
 # --- Defect 2: import runs the SAME validator the CLI runs -------------------

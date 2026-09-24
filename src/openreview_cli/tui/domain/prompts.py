@@ -4,10 +4,14 @@ Resolves the data directory at call time (never at import) so per-test
 ``XDG_*`` overrides in the ``isolated_xdg`` fixture are honored.
 
 This is the only layer that touches ``PromptStore``.  The boundary is
-**total**: every mutating wrapper catches ``Exception`` and re-raises
-``ValueError`` naming the operation, so no store, filesystem or YAML error
-can reach a Textual handler.  ``get_prompt_detail_via_tui`` returns
-``found=False`` for a missing name instead of raising, and
+**total**: every wrapper catches ``Exception`` and re-raises ``ValueError``
+naming the operation — the read path (``list_prompts_via_tui``,
+``get_prompt_history_via_tui``) as well as the mutating one — so no store,
+filesystem or YAML error can reach a Textual handler.
+``get_prompt_detail_via_tui`` and ``get_prompt_history_via_tui`` return
+``found=False`` for a *missing* name instead of raising;
+``get_prompt_version_diff`` propagates the store's ``ValueError`` for a
+missing version (its screen handler catches it); and
 ``import_prompts_via_tui`` reports per-item failures in its result rather
 than raising.
 """
@@ -48,8 +52,12 @@ def list_prompts_via_tui() -> list[dict[str, Any]]:
     Requests an explicit ``per_page=100``, so it returns up to 100 prompts.
     Prompts beyond the first 100 are not included (the store's default 25-item
     cap is not the limiting factor here, but a cap of 100 still applies).
+    Any failure is translated to ``ValueError`` naming the operation.
     """
-    prompts = _store().list(per_page=100)
+    try:
+        prompts = _store().list(per_page=100)
+    except Exception as exc:
+        raise ValueError(f"list prompts failed: {exc}") from exc
     return [
         {
             "name": p.name,
@@ -67,12 +75,15 @@ def get_prompt_history_via_tui(name: str) -> dict[str, Any]:
     enumerated through ``PromptStore.export`` (ordered by version) rather than
     ``range(1, latest + 1)``, so imported prompts with gaps or non-1-based
     numbering are handled without raising.  A missing prompt yields
-    ``{"rows": [], "current_version": 0, "found": False}``.
+    ``{"rows": [], "current_version": 0, "found": False}``; any other failure
+    is translated to ``ValueError`` naming the operation.
     """
     try:
         data = _store().export(name)
     except ValueError:
         return {"rows": [], "current_version": 0, "found": False}
+    except Exception as exc:
+        raise ValueError(f"get prompt history for '{name}' failed: {exc}") from exc
 
     # ``export(name)`` returns a single dict when a name is supplied.
     assert isinstance(data, dict)
