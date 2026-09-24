@@ -10,6 +10,9 @@ Tests:
 from pathlib import Path
 from typing import Any
 
+import pytest
+
+from openreview_cli.benchmark.datasets import contract_nli as contract_nli_module
 from openreview_cli.benchmark.datasets.contract_nli import (
     HYPOTHESIS_CATEGORY_MAP,
     NLI_CLASSES,
@@ -18,6 +21,31 @@ from openreview_cli.benchmark.datasets.contract_nli import (
 )
 from openreview_cli.benchmark.models import BenchmarkConfig
 from openreview_cli.benchmark.runner import BenchmarkRunner
+
+
+def _skip_if_corpus_absent() -> None:
+    """Skip when the gitignored LegalBench-RAG corpus is not on this machine.
+
+    ``load_contract_nli_dataset`` searches ``data/legalbenchrag/`` (gitignored via
+    ``data/`` in ``.gitignore``) and ``/tmp/opencode/legalbenchrag_data/`` before
+    falling back to an HTTP download of ``CONTRACT_NLI_URL``. pytest runs with
+    ``--disable-socket`` (see ``addopts``), so on a clean runner — where the
+    corpus is absent — that download is blocked and the test would error.
+
+    Skip explicitly, naming the corpus and how to obtain it, rather than
+    attempting the blocked download. When the corpus *is* present the loader runs
+    for real and any failure propagates: no exception is swallowed.
+    """
+    if contract_nli_module._find_local_legalbenchrag_dir() is None:
+        pytest.skip(
+            "LegalBench-RAG ContractNLI corpus not found (searched "
+            "data/legalbenchrag/ and /tmp/opencode/legalbenchrag_data/). The "
+            "loader would fall back to downloading CONTRACT_NLI_URL, which "
+            "pytest's --disable-socket blocks on a clean runner. Obtain it with "
+            "`uv run python scripts/benchmark_legalbenchrag.py` (fetches the "
+            "LegalBench-RAG corpus to /tmp/opencode/legalbenchrag_data/) or place "
+            "it under data/legalbenchrag/ (gitignored)."
+        )
 
 
 def _mock_pipeline(text: str, category: str) -> dict[str, Any]:
@@ -54,6 +82,7 @@ class TestContractNLIIntegration:
 
     def test_contractnli_local_loader(self) -> None:
         """Assert dataset loads from local data/legalbenchrag if available."""
+        _skip_if_corpus_absent()
         items = list(load_contract_nli_dataset())
         assert len(items) > 0
 
@@ -69,6 +98,7 @@ class TestContractNLIIntegration:
 
     def test_benchmark_runner_contractnli_dataset(self, tmp_path: Path) -> None:
         """Assert BenchmarkRunner runs contract_nli dataset correctly."""
+        _skip_if_corpus_absent()
         config = BenchmarkConfig(datasets=["contract_nli"])
         runner = BenchmarkRunner(config=config, cache_dir=tmp_path)
 
