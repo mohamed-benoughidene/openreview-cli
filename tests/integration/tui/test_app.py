@@ -26,17 +26,25 @@ async def test_app_launches() -> None:
         assert status_bar is not None
 
 
-async def test_app_has_six_tabs() -> None:
-    """T007: TabbedContent has exactly 6 TabPanes."""
+async def test_app_has_seven_tabs() -> None:
+    """T007: TabbedContent has exactly 7 TabPanes (Retrieve added by the search workflow)."""
     from openreview_cli.tui.app import OpenReviewApp
 
     app = OpenReviewApp()
     async with app.run_test(size=(120, 40)) as pilot:
         await pilot.pause()
         tab_panes = app.query("TabPane")
-        assert len(tab_panes) == 6
+        assert len(tab_panes) == 7
         tab_ids = [p.id for p in tab_panes if p.id is not None]
-        assert tab_ids == ["home", "review", "clients", "playbooks", "settings", "prompts"]
+        assert tab_ids == [
+            "home",
+            "review",
+            "clients",
+            "playbooks",
+            "settings",
+            "prompts",
+            "retrieve",
+        ]
 
 
 async def test_app_tab_bar_visible() -> None:
