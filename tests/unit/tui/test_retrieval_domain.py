@@ -9,13 +9,14 @@ every test redirects the index directory (``db_dir``) *and* the XDG roots
 from __future__ import annotations
 
 import hashlib
+import sqlite3
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-from openreview_cli.retrieval.errors import IndexNotFoundError
+from openreview_cli.retrieval.errors import IndexCorruptError, IndexNotFoundError
 from openreview_cli.tui.domain.retrieval import (
     chunk_document,
     clear_index,
@@ -44,6 +45,34 @@ _PHRASE = "This Confidentiality Agreement is entered into by"
 
 def _fixture(fixtures_dir: Path) -> Path:
     return fixtures_dir / _FIXTURE_NAME
+
+
+def _sqlite_refuses(db_path: Path) -> bool:
+    """True when SQLite cannot read the image at all."""
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("SELECT * FROM index_meta")
+    except sqlite3.DatabaseError:
+        return True
+    return False
+
+
+def _malformed_index(db_dir: Path, fixtures_dir: Path) -> Path:
+    """A real index truncated to half its length, as the reproducer builds one.
+
+    This is the file an ingest killed mid-write, a second process, or a full
+    disk leaves behind: it exists, it is not a valid SQLite image, and no
+    metadata row can be read out of it. The premise is asserted, so the test
+    cannot silently stop testing damage.
+    """
+    document_id, db_path = resolve_document(_fixture(fixtures_dir), db_dir=db_dir)
+    ingest_chunks(chunk_document(_fixture(fixtures_dir)), db_path, document_id=document_id)
+    raw = db_path.read_bytes()
+    db_path.write_bytes(raw[: len(raw) // 2])
+
+    assert _sqlite_refuses(db_path), "premise: a truncated image must not be readable SQLite"
+    return db_path
 
 
 # --------------------------------------------------------------------------
@@ -189,6 +218,40 @@ def test_search_returns_nothing_for_a_query_with_no_terms_in_the_document(
     ingest_chunks(chunk_document(_fixture(fixtures_dir)), db_path, document_id=document_id)
 
     assert search(db_path, "zzqqxnonexistentterm") == []
+
+
+# --------------------------------------------------------------------------
+# A physically malformed index file
+# --------------------------------------------------------------------------
+#
+# ``RetrievalStorage.get_index_meta`` catches only ``sqlite3.OperationalError``,
+# and a malformed image fails earlier, as a plain ``sqlite3.DatabaseError``
+# raised by ``PRAGMA journal_mode=WAL`` in ``RetrievalStorage.conn`` - so
+# nothing downstream stops it. Uncaught it reaches Textual's
+# ``_handle_exception``, whose documented behaviour is app exit with a
+# traceback; and the file *exists*, so it is not the "not indexed" state either.
+
+
+def test_index_meta_reports_a_malformed_file_as_a_damaged_index(
+    fixtures_dir: Path, tmp_path: Path, isolated_xdg: dict[str, Path]
+) -> None:
+    db_path = _malformed_index(tmp_path / "indexes", fixtures_dir)
+
+    with pytest.raises(IndexCorruptError):
+        index_meta(db_path)
+
+    assert db_path.exists(), "a metadata read must never delete the damaged file"
+
+
+def test_search_reports_a_malformed_file_as_a_damaged_index(
+    fixtures_dir: Path, tmp_path: Path, isolated_xdg: dict[str, Path]
+) -> None:
+    db_path = _malformed_index(tmp_path / "indexes", fixtures_dir)
+
+    with pytest.raises(IndexCorruptError):
+        search(db_path, "confidentiality")
+
+    assert db_path.exists()
 
 
 # --------------------------------------------------------------------------

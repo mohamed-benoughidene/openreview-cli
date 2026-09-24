@@ -12,6 +12,7 @@ Both go through the same code the user's key press does.
 from __future__ import annotations
 
 import asyncio
+import sqlite3
 import threading
 from pathlib import Path
 from typing import Any
@@ -501,6 +502,240 @@ async def test_searching_after_clear_reports_not_indexed_and_keeps_no_stale_rows
         assert await _result_rows(pilot, screen) == [], "stale rows from a deleted index"
         assert isinstance(app.screen, RetrieveScreen)
         assert app._exception is None
+
+
+# --------------------------------------------------------------------------
+# A physically malformed index file (D3: "No traceback, ever")
+# --------------------------------------------------------------------------
+#
+# T5 covers a *stored* ``corrupt`` status marker. This is the different state a
+# verifier measured: the file at the derived path is not a readable SQLite
+# image at all, which is what an ingest killed mid-write, a second process or a
+# full disk leaves behind. ``_refresh_meta`` sat outside every ``try`` while
+# this was true, so chunk, ingest, search and status all died, and Clear - the
+# route the screen's own damaged-index copy advertises - died before its modal
+# could open.
+
+_PAGE_SIZE = 4096
+#: Damage is written as an invalid b-tree page type, so SQLite raises
+#: "database disk image is malformed" the moment it reads that page.
+_INVALID_PAGE_TYPE = 0x00
+
+
+def _sqlite_refuses(db_path: Path) -> bool:
+    """True when SQLite cannot read the image at all."""
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("SELECT * FROM index_meta")
+    except sqlite3.DatabaseError:
+        return True
+    return False
+
+
+def _malformed_index(db_dir: Path, fixture: Path) -> Path:
+    """A real index truncated to half its length, as the reproducer built one."""
+    _, db_path = _seed_index(db_dir, fixture, [_chunk("The confidentiality obligation survives.")])
+    raw = db_path.read_bytes()
+    db_path.write_bytes(raw[: len(raw) // 2])
+
+    assert _sqlite_refuses(db_path), "premise: a truncated image must not be readable SQLite"
+    return db_path
+
+
+def _sqlite_reads_meta_but_not_chunks(db_path: Path) -> bool:
+    """Raw-SQLite premise check, independent of the adapter under test."""
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("SELECT * FROM index_meta").fetchone()
+    except sqlite3.DatabaseError:
+        return False
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute(
+                "SELECT chunk_id FROM chunk_fts WHERE chunk_fts MATCH ? LIMIT 5",
+                ("confidentiality",),
+            ).fetchall()
+    except sqlite3.DatabaseError:
+        return True
+    return False
+
+
+def _torn_page_index(db_dir: Path, fixture: Path) -> Path:
+    """A real index whose damage is below the metadata row.
+
+    SQLite stores no page checksums, so a torn page is only noticed when that
+    page is read. Damage a page the metadata read never touches and the index
+    still reports ``indexed`` right up to the search. Which page that is
+    depends on the index's own layout, so it is found by measurement against
+    raw SQLite rather than by hard-coding a page number.
+    """
+    _, db_path = _seed_index(db_dir, fixture, [_chunk("The confidentiality obligation survives.")])
+    raw = db_path.read_bytes()
+    for page in range(1, len(raw) // _PAGE_SIZE):
+        variant = bytearray(raw)
+        variant[page * _PAGE_SIZE] = _INVALID_PAGE_TYPE
+        db_path.write_bytes(bytes(variant))
+        if _sqlite_reads_meta_but_not_chunks(db_path):
+            return db_path
+
+    raise AssertionError("no page produced a readable metadata row with unreadable chunks")
+
+
+async def test_searching_a_malformed_index_reports_damage_and_stays_up(
+    fixtures_dir: Path, tmp_path: Path, isolated_xdg: dict[str, Path]
+) -> None:
+    db_dir = tmp_path / "indexes"
+    fixture = fixtures_dir / FIXTURE_NAME
+    db_path = _malformed_index(db_dir, fixture)
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _open_screen(pilot, app, db_dir)
+        _set_path(screen, str(fixture))
+
+        await screen.on_input_submitted(_submit(screen, "#retrieve-query", "confidentiality"))
+
+        # D3's damaged-index copy, not the engine's CLI copy and not a traceback.
+        assert _status(screen) == DAMAGED
+        assert "openreview ingest" not in _status(screen)
+        assert isinstance(app.screen, RetrieveScreen)
+        assert app._exception is None
+        assert db_path.exists(), "looking at a damaged index must not delete it"
+
+
+async def test_a_damaged_page_under_a_readable_metadata_row_still_reports_damage(
+    fixtures_dir: Path, tmp_path: Path, isolated_xdg: dict[str, Path]
+) -> None:
+    """The metadata row is intact, so D3 layer 1 says ``indexed`` and the
+    failure happens inside the engine instead. It must arrive as the damaged
+    index too, rather than as ``Unexpected error: database disk image is
+    malformed``: one vocabulary for damage, on both read paths."""
+    db_dir = tmp_path / "indexes"
+    fixture = fixtures_dir / FIXTURE_NAME
+    db_path = _torn_page_index(db_dir, fixture)
+    meta = _retrieval.index_meta(db_path)
+    assert meta is not None and meta["index_status"] == "indexed", "premise: layer 1 passes"
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _open_screen(pilot, app, db_dir)
+        _set_path(screen, str(fixture))
+
+        await screen.on_input_submitted(_submit(screen, "#retrieve-query", "confidentiality"))
+
+        assert _status(screen) == DAMAGED
+        assert "Unexpected error" not in _status(screen)
+        assert isinstance(app.screen, RetrieveScreen)
+        assert app._exception is None
+
+
+async def test_clear_recovers_a_malformed_index_without_reading_its_metadata(
+    fixtures_dir: Path, tmp_path: Path, isolated_xdg: dict[str, Path]
+) -> None:
+    """This is the recovery route the damaged-index copy advertises, and it
+    must not need a metadata row: Clear needs the resolved ``db_path``."""
+    db_dir = tmp_path / "indexes"
+    fixture = fixtures_dir / FIXTURE_NAME
+    db_path = _malformed_index(db_dir, fixture)
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _open_screen(pilot, app, db_dir)
+        _set_path(screen, str(fixture))
+
+        await pilot.click("#btn-clear")
+        await pilot.pause()
+
+        modal = app.screen
+        assert isinstance(modal, ConfirmModal)
+        assert str(modal.query_one("#confirm-title", Label).render()) == "Clear index"
+        message = str(modal.query_one("#confirm-message", Label).render())
+        assert FIXTURE_NAME in message
+        # The count is unreadable, and saying "0" would contradict the damaged
+        # status line the user is looking at.
+        assert "cannot be read" in message
+        assert "0 chunks" not in message
+        assert "The source file is not touched." in message
+        assert "Ingesting it again rebuilds this index." in message
+        assert db_path.exists(), "nothing is deleted while the question is open"
+
+        await pilot.click("#yes")
+        await pilot.pause()
+        await pilot.pause()
+
+        assert isinstance(app.screen, RetrieveScreen)
+        assert not db_path.exists(), "the advertised recovery route must remove the damaged file"
+        assert _status(screen) == NOT_INDEXED
+        assert app._exception is None
+
+
+async def test_ingesting_a_malformed_index_rebuilds_it_and_search_then_works(
+    fixtures_dir: Path, tmp_path: Path, isolated_xdg: dict[str, Path]
+) -> None:
+    """``ingest_document`` deletes the index before rebuilding, so this should
+    already work once the metadata read stops crashing - proven, not assumed."""
+    db_dir = tmp_path / "indexes"
+    fixture = fixtures_dir / FIXTURE_NAME
+    db_path = _malformed_index(db_dir, fixture)
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(140, 40)) as pilot:
+        screen = await _open_screen(pilot, app, db_dir)
+        _set_path(screen, str(fixture))
+
+        await screen.action_ingest_document()
+
+        assert not _sqlite_refuses(db_path), "Ingest must replace the malformed image"
+        meta = _retrieval.index_meta(db_path)
+        assert meta is not None
+        assert meta["index_status"] == "indexed"
+        assert _status(screen).startswith(f"Indexed {FIXTURE_NAME} - ")
+
+        await screen.on_input_submitted(_submit(screen, "#retrieve-query", "confidentiality"))
+
+        rows = await _result_rows(pilot, screen)
+        assert rows, "the rebuilt index must be searchable"
+        assert any("confidentiality" in row.lower() for row in rows), rows
+        assert app._exception is None
+
+
+async def test_the_refresh_routine_and_chunking_survive_a_malformed_index(
+    monkeypatch: pytest.MonkeyPatch,
+    fixtures_dir: Path,
+    tmp_path: Path,
+    isolated_xdg: dict[str, Path],
+) -> None:
+    """``_refresh_meta`` runs in every action, so the crash was not confined to
+    Search. Chunking is given a stub so the test stays on that concern."""
+    db_dir = tmp_path / "indexes"
+    fixture = fixtures_dir / FIXTURE_NAME
+    db_path = _malformed_index(db_dir, fixture)
+    monkeypatch.setattr(
+        _retrieval,
+        "chunk_document",
+        lambda _path: [
+            {**_chunk("The confidentiality obligation survives."), "source_clause_id": "clause-0"}
+        ],
+    )
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _open_screen(pilot, app, db_dir)
+        _set_path(screen, str(fixture))
+
+        await screen.action_chunk_document()
+        assert _status(screen).endswith("Press Ingest to index it.")
+
+        # The refresh routine, which also runs on mount and after every step.
+        await screen.action_index_status()
+        assert _status(screen) == DAMAGED
+
+        assert isinstance(app.screen, RetrieveScreen)
+        assert app._exception is None
+        assert db_path.exists()
 
 
 # --------------------------------------------------------------------------

@@ -54,6 +54,14 @@ _PASSWORD_NOTE = (
 
 _BUTTON_IDS = ("#btn-chunk", "#btn-ingest", "#btn-search", "#btn-clear", "#btn-back")
 
+#: Stand-in for the metadata of a file that exists but cannot be read at all.
+#: Such a file has no ``index_status`` to read, and the adapter reports it as
+#: ``IndexCorruptError``; mapping it onto the stored ``corrupt`` state gives it
+#: D3's damaged-index copy - and the Clear route that copy advertises - instead
+#: of a crash. ``chunk_count`` is ``None`` because the count is not zero, it is
+#: unreadable, and Clear's confirmation must not claim otherwise.
+_DAMAGED_META: dict[str, Any] = {"index_status": "corrupt", "chunk_count": None}
+
 
 def _index_state_message(meta: dict[str, Any] | None) -> str | None:
     """Return the copy for an unusable index, or ``None`` when it is usable.
@@ -305,7 +313,12 @@ class RetrieveScreen(Screen[None]):
             self._set_busy(False)
 
     async def action_index_clear(self) -> None:
-        """Ask for confirmation, then delete the selected document's index."""
+        """Ask for confirmation, then delete the selected document's index.
+
+        The confirmation needs the resolved ``db_path``, not the metadata row:
+        this is the recovery route for an index that cannot be read, so it must
+        work when no metadata can be read.
+        """
         if self._busy:
             return
         self._set_busy(True)
@@ -317,12 +330,12 @@ class RetrieveScreen(Screen[None]):
                 self._set_status(NOT_INDEXED_MESSAGE)
                 return
 
-            count = int(self._meta.get("chunk_count", 0))
+            count_sentence = self._chunk_count_sentence()
             self.app.push_screen(
                 ConfirmModal(
                     "Clear index",
                     f"Clear the index for {self._document_name}?\n\n"
-                    f"{count} chunks are indexed for this document.\n\n"
+                    f"{count_sentence}\n\n"
                     "The source file is not touched. Ingesting it again rebuilds "
                     "this index.",
                     danger=True,
@@ -435,10 +448,29 @@ class RetrieveScreen(Screen[None]):
         return self._db_path
 
     async def _refresh_meta(self) -> None:
+        """Read the index metadata. Damage is a state here, never a crash.
+
+        ``_refresh_meta`` is called by every action, so an error leaving it
+        leaves the whole screen: it would reach Textual's ``_handle_exception``,
+        whose documented behaviour is app exit with a traceback. A physically
+        malformed index raises ``IndexCorruptError`` from the adapter (see
+        ``tui/domain/retrieval.py``), which is rendered here as D3's damaged
+        state - the one state whose copy tells the user how to recover.
+        """
         if self._db_path is None:
             self._meta = None
             return
-        self._meta = await asyncio.to_thread(_retrieval.index_meta, self._db_path)
+        try:
+            self._meta = await asyncio.to_thread(_retrieval.index_meta, self._db_path)
+        except IndexCorruptError:
+            self._meta = dict(_DAMAGED_META)
+
+    def _chunk_count_sentence(self) -> str:
+        """D6's middle line, or the truth when the index cannot be read at all."""
+        count = (self._meta or {}).get("chunk_count")
+        if count is None:
+            return "This index is damaged, so its chunk count cannot be read."
+        return f"{int(count)} chunks are indexed for this document."
 
     async def _refresh_status_line(self) -> None:
         """Restate the persistent truth for the current document."""

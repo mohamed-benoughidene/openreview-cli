@@ -12,12 +12,16 @@ Two deliberate constraints:
 * ``index_meta`` checks that the database file exists *before* touching
   ``RetrievalEngine``. ``sqlite3.connect`` creates the file it is handed, so a
   status read without that guard would fabricate an empty index on disk.
+
+A file that exists but cannot be read is reported as ``IndexCorruptError``,
+never as ``None`` and never as a raw ``sqlite3`` error: see ``_damaged``.
 """
 
 from __future__ import annotations
 
 import dataclasses
 import hashlib
+import sqlite3
 import threading
 from pathlib import Path
 from typing import Any
@@ -28,6 +32,7 @@ from openreview_cli.config.loader import load_config
 from openreview_cli.config.paths import get_config_dir
 from openreview_cli.parsing.stream import parse_document
 from openreview_cli.retrieval.engine import RetrievalEngine
+from openreview_cli.retrieval.errors import IndexCorruptError
 from openreview_cli.retrieval.ingest import _ensure_db_dir, ingest_document
 from openreview_cli.retrieval.ingest import clear_index as _ingest_clear_index
 from openreview_cli.retrieval.models import RetrievalQuery, RetrievalResult
@@ -78,16 +83,43 @@ def chunk_document(path: Path) -> list[dict[str, Any]]:
     ]
 
 
+def _damaged(db_path: Path, error: sqlite3.DatabaseError) -> IndexCorruptError:
+    """The project's damaged-index error for a file SQLite cannot read.
+
+    ``RetrievalStorage.get_index_meta`` catches only ``sqlite3.OperationalError``,
+    while a malformed image fails earlier, with a plain ``sqlite3.DatabaseError``
+    raised by ``PRAGMA journal_mode=WAL`` (``retrieval/storage.py:28``) - which
+    is not a subclass of it. Nothing downstream stops that error either, so
+    uncaught it reaches Textual's ``_handle_exception``, whose documented
+    behaviour is app exit with a traceback. Converting it here gives damage the
+    vocabulary the codebase and the screen already use for it, and keeps
+    ``sqlite3`` out of the UI layer. The SQLite reason is kept in the message so
+    it still reaches the log.
+    """
+    return IndexCorruptError(f"Index database at {db_path} is damaged and cannot be read: {error}")
+
+
 def index_meta(db_path: Path) -> dict[str, Any] | None:
     """Return the index metadata, or ``None`` when no index exists yet.
 
     The existence check comes first and is load-bearing: it is what stops a
     status read from creating a 4096-byte database as a side effect.
+
+    A file that exists and cannot be read is *not* that state, so it raises
+    instead of returning ``None``: answering "not indexed" about a file that is
+    on disk and damaged would hide the damage and point the caller at the wrong
+    fix.
+
+    Raises:
+        IndexCorruptError: The file exists but SQLite cannot read it.
     """
     db_path = Path(db_path)
     if not db_path.exists():
         return None
-    return RetrievalEngine(db_path).get_index_meta()
+    try:
+        return RetrievalEngine(db_path).get_index_meta()
+    except sqlite3.DatabaseError as error:
+        raise _damaged(db_path, error) from error
 
 
 def ingest_chunks(
@@ -126,15 +158,22 @@ def search(
 
     Raises:
         IndexNotFoundError: No index at *db_path* (or a status that is not usable).
-        IndexCorruptError: The stored index status is ``corrupt``.
+        IndexCorruptError: The stored index status is ``corrupt``, or the file
+            cannot be read at all. SQLite keeps no page checksums, so damage
+            below the header is only found when the damaged page is read: an
+            image can read a healthy metadata row here and still fail inside the
+            engine. Both are damage, and both are reported as damage.
     """
-    return RetrievalEngine(db_path).retrieve(
-        RetrievalQuery(
-            query_text=query,
-            method=_METHOD,
-            top_k=top_k or configured_top_k(),
+    try:
+        return RetrievalEngine(db_path).retrieve(
+            RetrievalQuery(
+                query_text=query,
+                method=_METHOD,
+                top_k=top_k or configured_top_k(),
+            )
         )
-    )
+    except sqlite3.DatabaseError as error:
+        raise _damaged(db_path, error) from error
 
 
 def configured_top_k() -> int:
