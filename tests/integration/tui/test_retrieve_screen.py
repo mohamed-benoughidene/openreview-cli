@@ -33,6 +33,12 @@ FIRST_RUN = "No document selected. Enter a path above, then Chunk and Ingest bef
 NOT_INDEXED = "Not indexed yet. Press Ingest to build the index."
 DAMAGED = "This document's index is damaged. Press Clear index, then Ingest to rebuild it."
 INTERRUPTED = "An earlier Ingest was interrupted. Press Ingest to rebuild the index."
+#: The one failure D14 does not name: a ``config.yml`` that cannot be read, so
+#: the search cannot learn its ``top_k``. It must say so and stay mounted.
+CONFIG_UNREADABLE = (
+    "The retrieval settings in config.yml could not be read, so this search cannot run. "
+    "Fix or delete config.yml, then search again."
+)
 CHUNKED_PREFIX = f"Chunked {FIXTURE_NAME} - "
 
 
@@ -1035,4 +1041,56 @@ async def test_a_second_ingest_while_the_first_is_in_flight_is_ignored(
         await in_flight
 
         assert len(calls) == 1
+        assert app._exception is None
+
+
+# --------------------------------------------------------------------------
+# A config.yml that cannot be read (the last unguarded adapter call)
+# --------------------------------------------------------------------------
+#
+# ``action_retrieve`` reads ``retrieval.top_k`` through
+# ``_retrieval.configured_top_k()``, which calls ``load_config`` on the real
+# ``config.yml``. It was the one adapter call in the action with no guard: a
+# malformed file raises ``yaml.parser.ParserError`` and an out-of-range or
+# non-integer ``top_k`` raises a pydantic ``ValidationError``, both of which
+# escaped the action to Textual's ``_handle_exception`` - app exit with a
+# traceback, the same fatal shape this branch fixed for damaged indexes.
+#
+# A broken config is a real condition, so the fix may not fall back to the
+# default ``top_k`` silently: the search must say the settings are unreadable
+# and how to recover, and stay mounted.
+
+
+@pytest.mark.parametrize(
+    "broken_config",
+    [
+        pytest.param("retrieval: [unclosed\n", id="malformed-yaml"),
+        pytest.param("retrieval:\n  top_k: 0\n", id="top_k-out-of-range"),
+        pytest.param("retrieval:\n  top_k: many\n", id="top_k-wrong-type"),
+    ],
+)
+async def test_an_unreadable_config_is_reported_and_the_search_stays_up(
+    broken_config: str,
+    fixtures_dir: Path,
+    tmp_path: Path,
+    isolated_xdg: dict[str, Path],
+) -> None:
+    db_dir = tmp_path / "indexes"
+    fixture = fixtures_dir / FIXTURE_NAME
+    _seed_index(db_dir, fixture, [_chunk("The confidentiality obligation survives.")])
+    isolated_xdg["config_path"].write_text(broken_config, encoding="utf-8")
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _open_screen(pilot, app, db_dir)
+        _set_path(screen, str(fixture))
+        notifications = _capture_notifications(screen)
+
+        await screen.on_input_submitted(_submit(screen, "#retrieve-query", "confidentiality"))
+
+        # The user is told, on both channels, what is wrong and what to do.
+        assert _status(screen) == CONFIG_UNREADABLE
+        assert notifications == [CONFIG_UNREADABLE]
+        # And the screen is still there rather than the app having exited.
+        assert isinstance(app.screen, RetrieveScreen)
         assert app._exception is None

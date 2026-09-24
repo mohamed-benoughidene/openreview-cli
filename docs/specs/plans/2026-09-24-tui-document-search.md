@@ -103,7 +103,7 @@ Because nothing states the result cut otherwise, a successful search reports it:
 
 **D13. Testing split.** Fast unit tests for the domain adapter (no Textual, no `slow` marker, no `run_test` cost). Two TUI test files, one concern each, each run in isolation. One of them is a real end-to-end assertion, not a render check.
 
-**D14. The flow has one persistent voice, and every state's words are pinned here.** The screen does not rely on the user inferring the sequence: `#retrieve-header` states what the screen is for, and `#retrieve-status` always states what is true now and what to press next, rewritten after every step. All seven states, exactly:
+**D14. The flow has one persistent voice, and every state's words are pinned here.** The screen does not rely on the user inferring the sequence: `#retrieve-header` states what the screen is for, and `#retrieve-status` always states what is true now and what to press next, rewritten after every step. All eight states, exactly:
 
 | State | `#retrieve-status` |
 |---|---|
@@ -112,6 +112,7 @@ Because nothing states the result cut otherwise, a successful search reports it:
 | Busy | the `●` lines from D9 |
 | Indexed | `Indexed {filename} - {chunks} chunks. Enter a phrase below to search.` |
 | Not indexed (search attempted) | `Not indexed yet. Press Ingest to build the index.` |
+| Config unreadable (search attempted) | `The retrieval settings in config.yml could not be read, so this search cannot run. Fix or delete config.yml, then search again.` |
 | Search returned nothing | `No matches for "{query}" in {filename}.` |
 | Error | the mapped copy from D3 and T3 Step 3 |
 

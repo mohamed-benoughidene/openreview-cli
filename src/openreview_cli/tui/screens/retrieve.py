@@ -47,6 +47,15 @@ INTERRUPTED_MESSAGE = "An earlier Ingest was interrupted. Press Ingest to rebuil
 #: for the one case D14 does not name - Search pressed with an empty box.
 NO_QUERY_MESSAGE = "Enter a phrase below to search."
 
+#: A ``config.yml`` that ``load_config`` cannot read is a real condition with a
+#: real fix, so the search says so instead of silently applying the default
+#: ``top_k``. It must never fall back: a broken config is the user's problem to
+#: see, not something to paper over.
+CONFIG_UNREADABLE_MESSAGE = (
+    "The retrieval settings in config.yml could not be read, so this search cannot run. "
+    "Fix or delete config.yml, then search again."
+)
+
 _PASSWORD_NOTE = (
     " OPENREVIEW_PDF_PASSWORD is read when the document is parsed, so restart "
     "openreview after setting it."
@@ -276,31 +285,54 @@ class RetrieveScreen(Screen[None]):
                 self._fail(NO_QUERY_MESSAGE, severity="warning")
                 return
 
-            self._set_status("● Searching...")
-            top_k = _retrieval.configured_top_k()
-            try:
-                results = await asyncio.to_thread(_retrieval.search, db_path, query, top_k=top_k)
-            except (IndexNotFoundError, IndexCorruptError) as error:
-                # Layer 2: the state changed underneath us. Speak with one voice,
-                # by exception type and by the metadata - never the engine's text.
-                await self._refresh_meta()
-                fallback = (
-                    DAMAGED_MESSAGE if isinstance(error, IndexCorruptError) else NOT_INDEXED_MESSAGE
-                )
-                self._clear_results()
-                self._set_status(_index_state_message(self._meta) or fallback)
-                return
-            except Exception as error:
-                self._report_step_error(error, str(db_path), step="searching")
-                return
-
-            self._render_results(results, query)
-            if results:
-                self._set_status(f'Showing top {top_k} matches for "{query}".')
-            else:
-                self._set_status(f'No matches for "{query}" in {self._document_name}.')
+            await self._search_and_report(db_path, query)
         finally:
             self._set_busy(False)
+
+    async def _search_and_report(self, db_path: Path, query: str) -> None:
+        """Run the configured search and write its outcome to the status line.
+
+        Split out of ``action_retrieve`` so the action keeps reading as the guard
+        clauses that decide *whether* a search can run, and this part keeps the
+        failures of running it in one place.
+        """
+        self._set_status("● Searching...")
+        try:
+            top_k = _retrieval.configured_top_k()
+        except Exception:
+            # The one config read on this screen, and the one adapter call not
+            # behind ``_run_step``: ``configured_top_k`` reads ``config.yml``
+            # through ``load_config``, which raises plain errors (a YAML syntax
+            # error, or a pydantic ``ValidationError`` for a ``top_k`` out of
+            # range or not an integer) that are neither ``OSError`` nor
+            # ``ParseError``. Uncaught they reach Textual's ``_handle_exception``
+            # - app exit with a traceback. A broken config is a real condition
+            # with a real fix, so it is reported, never hidden by silently using
+            # the default ``top_k``.
+            logger.exception("Could not read retrieval settings from config.yml")
+            self._fail(CONFIG_UNREADABLE_MESSAGE)
+            return
+        try:
+            results = await asyncio.to_thread(_retrieval.search, db_path, query, top_k=top_k)
+        except (IndexNotFoundError, IndexCorruptError) as error:
+            # Layer 2: the state changed underneath us. Speak with one voice,
+            # by exception type and by the metadata - never the engine's text.
+            await self._refresh_meta()
+            fallback = (
+                DAMAGED_MESSAGE if isinstance(error, IndexCorruptError) else NOT_INDEXED_MESSAGE
+            )
+            self._clear_results()
+            self._set_status(_index_state_message(self._meta) or fallback)
+            return
+        except Exception as error:
+            self._report_step_error(error, str(db_path), step="searching")
+            return
+
+        self._render_results(results, query)
+        if results:
+            self._set_status(f'Showing top {top_k} matches for "{query}".')
+        else:
+            self._set_status(f'No matches for "{query}" in {self._document_name}.')
 
     async def action_index_status(self) -> None:
         """Refresh the index status and restate it on the status line."""
