@@ -40,7 +40,7 @@ The following risks are documented, bounded, and constitutionally permissible.
 
 6. PII engine may mislabel address fragments as ORGANIZATION, bare years as DATE_TIME; "Passport ID" suppression is US-centric.
 7. PII engine does not recognize company names (e.g. `Beta LLC` not redacted); documented in skill §7 Common Mistakes table.
-8. R8 PII precision is 0.7633 on the seeded corpus (target 0.95); recall is over target. Reconciled to span-level (precision 1.0, recall 0.964, F1 0.9817).
+8. R8 PII accuracy is below target on the seeded corpus: precision 0.7601 (545/717) and recall 0.9435 (551/584), measured with `PiiEngine(threshold=0.7)` and the committed type-strict evaluator (`benchmark/metrics_pii.py` per FR-006). The 0.95 target stands and is unmet on both. A span-level reconciliation was recorded during R8, but its semantic half was never committed, so span-level figures are not what the shipped code computes.
 
 **CLI / operational edge cases:**
 
@@ -72,7 +72,7 @@ The following items from `specs/DEFERRED.md` are **not promised** in this releas
 
 ### Pre-existing test failure
 
-- `test_pii_recall_above_threshold` — pre-existing, not introduced by this release. The spec was reconciled to span-level during R8 closure; the test measures a quantity the spec no longer requires at the token level.
+- `test_pii_recall_above_threshold`: pre-existing, not introduced by this release. The committed spec still requires recall ≥ 0.95 and precision ≥ 0.95 (FR-008/FR-009); the test asserts exactly that and fails because the engine returns 0.9435 recall and 0.7601 precision.
 
 ## What was fixed in this release
 
