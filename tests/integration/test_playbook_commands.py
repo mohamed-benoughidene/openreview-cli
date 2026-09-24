@@ -8,11 +8,41 @@ IDs or the ``isolated_xdg`` fixture (which redirects the data dir to a tmp_path)
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
+from typer.core import TyperGroup, TyperOption
+from typer.main import get_command
 from typer.testing import CliRunner
 
 from openreview_cli.app import app
+
+# Typer forces terminal mode — and therefore ANSI styling — whenever
+# ``GITHUB_ACTIONS`` (or ``FORCE_COLOR`` / ``PY_COLORS``) is set, and Rich then
+# emits the highlighted option token as several separately-styled spans, e.g.
+# ``\x1b[1;36m-\x1b[0m\x1b[1;36m-playbook\x1b[0m``.  The literal ``--playbook``
+# therefore never appears in the raw captured output even though the user
+# plainly sees it.  Strip styling before matching.
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+
+
+def _visible(output: str) -> str:
+    """Return CLI output with ANSI styling removed — i.e. what the user reads."""
+    return _ANSI_RE.sub("", output)
+
+
+def _registered_options(*command_path: str) -> set[str]:
+    """Option strings registered on a command, read from the Click command tree.
+
+    Independent of how the Rich-rendered ``--help`` is laid out (terminal
+    width, colour depth, terminal detection), unlike scraping the box output.
+    """
+    command = get_command(app)
+    for name in command_path:
+        assert isinstance(command, TyperGroup), f"'{name}' is not a command group"
+        command = command.commands[name]
+    return {opt for param in command.params if isinstance(param, TyperOption) for opt in param.opts}
+
 
 SAMPLE_PLAYBOOK_YAML = """id: test-pb-int
 mode: precheck
@@ -220,9 +250,13 @@ class TestPlaybookFlagOnPrecheck:
     """T038: Integration tests for --playbook flag with precheck command."""
 
     def test_help_shows_playbook_option(self) -> None:
-        result = runner.invoke(app, ["precheck", "review", "--help"])
+        """--playbook is registered on `precheck review` and reaches --help."""
+        assert "--playbook" in _registered_options("precheck", "review")
+
+        # Pin the width so the rendered box cannot wrap the option name.
+        result = runner.invoke(app, ["precheck", "review", "--help"], env={"COLUMNS": "200"})
         assert result.exit_code == 0
-        assert "--playbook" in result.stdout
+        assert "--playbook" in _visible(result.output)
 
 
 # ════════════════════════════════════════════════
