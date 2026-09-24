@@ -13,7 +13,9 @@ filesystem or YAML error can reach a Textual handler.
 ``get_prompt_version_diff`` propagates the store's ``ValueError`` for a
 missing version (its screen handler catches it); and
 ``import_prompts_via_tui`` reports per-item failures in its result rather
-than raising.
+than raising.  ``export_prompts_via_tui`` writes one prompt or the whole
+library (its ``name`` is optional, mirroring the CLI) and returns how many
+prompts were written; ``count_prompts_via_tui`` reports the uncapped total.
 """
 
 from __future__ import annotations
@@ -269,19 +271,53 @@ def validate_prompt_test_via_tui(name: str, versions: list[int]) -> None:
         raise ValueError(f"validate prompt test for '{name}' failed: {exc}") from exc
 
 
-def export_prompt_via_tui(dest: Path, name: str) -> None:
-    """Write ``name``'s export data as YAML to ``dest``.
+def export_prompts_via_tui(dest: Path, name: str | None = None) -> int:
+    """Write prompt export data as YAML to ``dest``; return the prompts written.
 
-    Thin delegate to ``PromptStore.export(name)`` followed by a YAML dump.  The
-    caller owns overwrite confirmation and parent-directory creation.  Any
-    failure (store or filesystem) is translated to ``ValueError`` naming the
-    operation.
+    Mirrors the CLI's ``prompt export``, whose NAME argument is optional: with
+    ``name`` given it writes that one prompt and returns ``1``; with
+    ``name=None`` it writes **every** prompt in the library and returns the
+    number written.  ``PromptStore.export(None)`` walks every distinct prompt
+    name with no cap, so neither the file nor the count is truncated - unlike
+    ``list_prompts_via_tui``, which asks for ``per_page=100``.  The caller owns
+    overwrite confirmation and parent-directory creation.  Any failure (store
+    or filesystem) is translated to ``ValueError`` naming the operation.
     """
+    operation = "export all prompts" if name is None else f"export prompt '{name}'"
     try:
         data = _store().export(name)
         dest.write_text(yaml.dump(data, default_flow_style=False))
     except Exception as exc:
-        raise ValueError(f"export prompt '{name}' failed: {exc}") from exc
+        raise ValueError(f"{operation} failed: {exc}") from exc
+    return len(data) if name is None else 1
+
+
+def count_prompts_via_tui() -> int:
+    """Return the true number of prompts in the library, uncapped.
+
+    ``list_prompts_via_tui`` requests ``per_page=100``, so its length stops at
+    100 once the library is larger.  ``PromptStore.export(None)`` enumerates
+    every distinct prompt name with no cap, so its length is the real total.
+    Any failure is translated to ``ValueError`` naming the operation.
+    """
+    try:
+        data = _store().export(None)
+    except Exception as exc:
+        raise ValueError(f"count prompts failed: {exc}") from exc
+    assert isinstance(data, list)
+    return len(data)
+
+
+def export_prompt_via_tui(dest: Path, name: str) -> None:
+    """Write ``name``'s export data as YAML to ``dest``.
+
+    Kept for the per-prompt call sites: a thin delegate to
+    :func:`export_prompts_via_tui` with a single name, discarding the count.
+    The caller owns overwrite confirmation and parent-directory creation.  Any
+    failure (store or filesystem) is translated to ``ValueError`` naming the
+    operation.
+    """
+    export_prompts_via_tui(dest, name)
 
 
 def import_prompts_via_tui(path: Path) -> dict[str, Any]:

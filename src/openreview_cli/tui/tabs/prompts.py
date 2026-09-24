@@ -1,10 +1,12 @@
 """Prompts tab — list prompts, browse version history, manage the library.
 
 The tab is both the *list* surface and the *action* surface for the prompt
-library (no intermediate detail screen).  The toolbar holds the create and
-import entry points; the selection-gated action row holds the per-prompt
-actions.  Every screen it navigates to is imported lazily inside the handler,
-so this module never depends on a screen at import time.
+library (no intermediate detail screen).  The toolbar holds the create, import
+and export-all entry points; the selection-gated action row holds the
+per-prompt actions.  ``#btn-export-all-prompts`` is a toolbar button, so unlike
+the six ``.prompt-action`` buttons it is reachable with no row selected and
+covers the whole library.  Every screen it navigates to is imported lazily
+inside the handler, so this module never depends on a screen at import time.
 """
 
 from __future__ import annotations
@@ -55,6 +57,7 @@ class PromptsTab(Static):
             Input(placeholder="Type to filter prompts...", id="prompt-filter"),
             Button("+ New prompt", id="btn-new-prompt", variant="primary"),
             Button("+ Import", id="btn-import-prompt", variant="default"),
+            Button("Export all\u2026", id="btn-export-all-prompts", variant="default"),
             id="prompts-toolbar",
         )
         yield ListView(id="prompt-list")
@@ -146,6 +149,8 @@ class PromptsTab(Static):
             self._open_new_form()
         elif btn_id == "btn-import-prompt":
             self._open_import()
+        elif btn_id == "btn-export-all-prompts":
+            self._open_export_all()
         elif btn_id == "btn-edit-prompt":
             self._open_edit_form()
         elif btn_id == "btn-bind-prompt":
@@ -165,7 +170,7 @@ class PromptsTab(Static):
                 return int(prompt["latest_version"])
         return 0
 
-    # ── Toolbar: create / import ──
+    # ── Toolbar: create / import / export-all ──
 
     def _open_new_form(self) -> None:
         from openreview_cli.tui.screens.prompt_form import PromptFormScreen
@@ -198,6 +203,16 @@ class PromptsTab(Static):
         # Import commits per item inside the modal; reload whenever it closes so
         # whatever landed is reflected in the list.
         self._load()
+
+    def _open_export_all(self) -> None:
+        """Open the export modal in library mode.
+
+        Unlike the six selection-gated actions this needs no highlighted row: it
+        exports the whole library, and the modal states the real total.
+        """
+        from openreview_cli.tui.screens.prompt_export import PromptExportModal
+
+        self.app.push_screen(PromptExportModal())
 
     # ── Action row: per-prompt actions ──
 

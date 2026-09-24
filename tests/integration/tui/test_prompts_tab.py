@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from textual.widgets import Input, Label, ListItem, ListView, TabbedContent, TextArea
+from textual.widgets import Button, Input, Label, ListItem, ListView, TabbedContent, TextArea
 
 from openreview_cli.prompts.store import PromptStore
 
@@ -283,6 +283,41 @@ async def test_btn_import_prompt_opens_import_modal(store: PromptStore) -> None:
         from openreview_cli.tui.screens.prompt_import import PromptImportModal
 
         assert isinstance(app.screen, PromptImportModal)
+        assert app.is_running
+
+
+async def test_btn_export_all_prompts_reachable_without_selection(store: PromptStore) -> None:
+    """``#btn-export-all-prompts`` is a toolbar button, not a gated action.
+
+    With nothing highlighted every selection-gated ``.prompt-action`` button is
+    disabled, yet the export-all button is enabled and visible; clicking it opens
+    the export modal in library mode.
+    """
+    store.create("greeting", "hi")
+
+    from openreview_cli.tui.app import OpenReviewApp
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.press("6")
+        await pilot.pause()
+
+        # No row is highlighted: the six selection-gated actions stay disabled.
+        assert all(btn.disabled for btn in _action_buttons(app))
+
+        button = app.query_one("#btn-export-all-prompts", Button)
+        assert not button.disabled
+        assert button.display is True
+        assert button.region.width > 0
+
+        await pilot.click("#btn-export-all-prompts")
+        await pilot.pause()
+
+        from openreview_cli.tui.screens.prompt_export import PromptExportModal
+
+        assert isinstance(app.screen, PromptExportModal)
+        scope = str(app.screen.query_one("#export-scope", Label).render())
+        assert "Export all" in scope
         assert app.is_running
 
 

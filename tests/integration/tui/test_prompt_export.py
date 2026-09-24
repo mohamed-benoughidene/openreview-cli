@@ -72,6 +72,48 @@ async def test_export_modal_states_its_scope(store: PromptStore) -> None:
     assert "notes [clause]" in rendered
 
 
+async def test_library_mode_writes_every_prompt_and_states_the_real_count(
+    store: PromptStore, tmp_path: Path
+) -> None:
+    """Library mode writes the whole library and names its real, uncapped total.
+
+    The library is deliberately larger than the tab's 100-item list cap: a scope
+    count read off the visible list would say 100 instead of the real 105.
+    """
+    for i in range(105):
+        store.create(f"prompt-{i:03d}", f"content {i}")
+    store.update("prompt-000", "content 0 v2")
+    dest = tmp_path / "library.yaml"
+
+    from openreview_cli.tui.app import OpenReviewApp
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        from openreview_cli.tui.screens.prompt_export import PromptExportModal
+
+        # No prompt_name: library mode.
+        app.push_screen(PromptExportModal())
+        await pilot.pause()
+
+        scope = str(app.screen.query_one("#export-scope", Label).render())
+        assert "Export all 105 prompts" in scope
+
+        app.screen.query_one("#export-path", Input).value = str(dest)
+        await pilot.pause()
+
+        await pilot.click("#btn-export-confirm")
+        await pilot.pause()
+
+        assert app.is_running
+
+    # One file holds the entire library, and it parses back whole.
+    parsed = parse_prompts_yaml(dest.read_text())
+    assert len(parsed) == 105
+    assert {item["name"] for item in parsed} == {f"prompt-{i:03d}" for i in range(105)}
+    first = next(item for item in parsed if item["name"] == "prompt-000")
+    assert {int(v["version"]) for v in first["versions"]} == {1, 2}
+
+
 async def test_existing_destination_requires_danger_confirm_and_decline_is_identical(
     store: PromptStore, tmp_path: Path
 ) -> None:

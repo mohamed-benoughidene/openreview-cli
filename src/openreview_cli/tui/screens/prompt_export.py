@@ -1,11 +1,20 @@
-"""PromptExportModal — export one prompt to a YAML file.
+"""PromptExportModal — export one prompt, or the whole library, to a YAML file.
 
 Pushed with **no callback**: the modal performs the export itself and reports
 the outcome through ``self.notify``.  It owns the destination path, the
-``.yaml``/``.yml`` suffix gate, the parent-directory creation, the "one prompt"
-scope statement and the ``ConfirmModal(danger=True)`` overwrite guard; the store
-write itself goes through ``export_prompt_via_tui``, so no store or filesystem
-error reaches a Textual handler.
+``.yaml``/``.yml`` suffix gate, the parent-directory creation, the scope
+statement and the ``ConfirmModal(danger=True)`` overwrite guard; the store
+write itself goes through ``export_prompt_via_tui`` (one prompt) or
+``export_prompts_via_tui`` (the whole library), so no store or filesystem error
+reaches a Textual handler.
+
+Two modes share this one screen:
+
+* per-prompt — ``PromptExportModal(prompt_name="x")`` says
+  "Export one prompt to a YAML file: x";
+* library — ``PromptExportModal()`` says "Export all N prompts to a YAML file",
+  where N is the **real** total from ``count_prompts_via_tui`` (uncapped), not
+  the 100-capped length of the visible list.
 """
 
 from __future__ import annotations
@@ -22,7 +31,7 @@ _VALID_SUFFIXES = (".yaml", ".yml")
 
 
 class PromptExportModal(ModalScreen[None]):
-    """Export a single prompt to a user-chosen YAML file."""
+    """Export one prompt, or the whole library, to a user-chosen YAML file."""
 
     DEFAULT_CSS = """
     PromptExportModal { align: center middle; }
@@ -35,21 +44,32 @@ class PromptExportModal(ModalScreen[None]):
     PromptExportModal Button { margin: 0 1; min-width: 10; }
     """
 
-    def __init__(self, prompt_name: str) -> None:
+    def __init__(self, prompt_name: str | None = None) -> None:
         super().__init__()
         self._prompt_name = prompt_name
         self._writing = False
+        self._total: int | None = None
+        if prompt_name is not None:
+            self._scope = f"Export one prompt to a YAML file: {prompt_name}"
+        else:
+            # Library mode: state the real total, derived from an uncapped
+            # source, rather than the 100-capped visible list.
+            from openreview_cli.tui.domain.prompts import count_prompts_via_tui
+
+            try:
+                self._total = count_prompts_via_tui()
+            except Exception as exc:
+                self._scope = f"Export all prompts to a YAML file (count unavailable: {exc})"
+            else:
+                self._scope = f"Export all {self._total} prompts to a YAML file"
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            yield Label("Export prompt", id="export-title")
-            # markup=False: the prompt name is user-authored and may contain
-            # bracketed expressions Rich would otherwise consume.
-            yield Label(
-                f"Export one prompt to a YAML file: {self._prompt_name}",
-                id="export-scope",
-                markup=False,
-            )
+            title = "Export all prompts" if self._prompt_name is None else "Export prompt"
+            yield Label(title, id="export-title")
+            # markup=False: the scope text carries a user-authored prompt name
+            # that may contain bracketed expressions Rich would otherwise consume.
+            yield Label(self._scope, id="export-scope", markup=False)
             yield Input(placeholder="/path/to/prompt.yaml", id="export-path")
             yield Label("", id="export-error", markup=False)
             with Horizontal():
@@ -107,16 +127,24 @@ class PromptExportModal(ModalScreen[None]):
         """Create the parent directory and write the export, button disabled.
 
         The button is disabled (and the reentrancy flag set) before the write so
-        a double click cannot write the file twice.
+        a double click cannot write the file twice.  In library mode every prompt
+        is written to the one file; in per-prompt mode exactly one is.
         """
-        from openreview_cli.tui.domain.prompts import export_prompt_via_tui
+        from openreview_cli.tui.domain.prompts import (
+            export_prompt_via_tui,
+            export_prompts_via_tui,
+        )
 
         self._writing = True
         button = self.query_one("#btn-export-confirm", Button)
         button.disabled = True
         try:
             dest.parent.mkdir(parents=True, exist_ok=True)
-            export_prompt_via_tui(dest, self._prompt_name)
+            if self._prompt_name is None:
+                written = export_prompts_via_tui(dest)
+            else:
+                export_prompt_via_tui(dest, self._prompt_name)
+                written = 1
         except Exception as exc:
             self._writing = False
             button.disabled = False
@@ -124,5 +152,8 @@ class PromptExportModal(ModalScreen[None]):
             self.notify(f"Export failed: {exc}", severity="error", markup=False)
             return
 
-        self.notify(f"Exported '{self._prompt_name}' to {dest}", markup=False)
+        if self._prompt_name is None:
+            self.notify(f"Exported {written} prompts to {dest}", markup=False)
+        else:
+            self.notify(f"Exported '{self._prompt_name}' to {dest}", markup=False)
         self.dismiss(None)

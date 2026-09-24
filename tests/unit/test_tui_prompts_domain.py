@@ -339,6 +339,86 @@ def test_export_writes_a_file_that_parses_back(store: PromptStore, tmp_path: Pat
     assert data["versions"][1]["content"] == "two"
 
 
+# --- export_prompts_via_tui: the optional-name (export-all) form ------------
+
+
+def test_export_prompts_via_tui_exports_every_prompt_and_returns_count(
+    store: PromptStore, tmp_path: Path
+) -> None:
+    """No name exports the whole library and returns how many were written."""
+    create = _new("create_prompt_via_tui")
+    update = _new("update_prompt_via_tui")
+    export_all = _new("export_prompts_via_tui")
+
+    create("alpha", "a1")
+    update("alpha", "a2")
+    create("beta", "b1")
+    create("gamma", "g1")
+    dest = tmp_path / "library.yaml"
+
+    assert export_all(dest) == 3
+
+    data = yaml.safe_load(dest.read_text())
+    assert [item["name"] for item in data] == ["alpha", "beta", "gamma"]
+    alpha = next(item for item in data if item["name"] == "alpha")
+    assert [v["version"] for v in alpha["versions"]] == [1, 2]
+    assert alpha["versions"][1]["content"] == "a2"
+
+
+def test_export_prompts_via_tui_with_name_exports_exactly_one(
+    store: PromptStore, tmp_path: Path
+) -> None:
+    """A name still exports exactly that one prompt, and returns ``1``."""
+    create = _new("create_prompt_via_tui")
+    export_all = _new("export_prompts_via_tui")
+
+    create("alpha", "a1")
+    create("beta", "b1")
+    dest = tmp_path / "one.yaml"
+
+    assert export_all(dest, "beta") == 1
+
+    data = yaml.safe_load(dest.read_text())
+    assert data["name"] == "beta"
+    assert [v["version"] for v in data["versions"]] == [1]
+    assert data["versions"][0]["content"] == "b1"
+
+
+def test_count_prompts_via_tui_is_uncapped(store: PromptStore) -> None:
+    """The count source does not stop at the 100-item cap the list requests."""
+    create = _new("create_prompt_via_tui")
+    count = _new("count_prompts_via_tui")
+
+    for i in range(105):
+        create(f"prompt-{i:03d}", f"content {i}")
+
+    assert count() == 105
+    # The list wrapper still reports its 100-capped view; the count does not.
+    assert len(list_prompts_via_tui()) == 100
+
+
+def test_export_prompts_via_tui_failure_becomes_value_error(
+    monkeypatch: pytest.MonkeyPatch, isolated_xdg: dict[str, Path], tmp_path: Path
+) -> None:
+    """A store failure on the export-all path is a ``ValueError``."""
+    export_all = _new("export_prompts_via_tui")
+    monkeypatch.setattr(PromptStore, "export", _raiser(sqlite3.IntegrityError("boom")))
+
+    with pytest.raises(ValueError, match="export all prompts"):
+        export_all(tmp_path / "library.yaml")
+
+
+def test_export_prompts_via_tui_with_name_failure_names_the_prompt(
+    monkeypatch: pytest.MonkeyPatch, isolated_xdg: dict[str, Path], tmp_path: Path
+) -> None:
+    """The per-prompt form still names the prompt in its ``ValueError``."""
+    export_all = _new("export_prompts_via_tui")
+    monkeypatch.setattr(PromptStore, "export", _raiser(sqlite3.IntegrityError("boom")))
+
+    with pytest.raises(ValueError, match="export prompt 'alpha'"):
+        export_all(tmp_path / "one.yaml", "alpha")
+
+
 def test_import_reports_imported_and_failed(isolated_xdg: dict[str, Path], tmp_path: Path) -> None:
     importer = _new("import_prompts_via_tui")
     path = tmp_path / "mixed.yaml"
@@ -415,6 +495,9 @@ _BOUNDARY_CASES = [
     ("unbind_prompt_via_tui", "unbind", lambda w: w("reasoning")),
     ("validate_prompt_test_via_tui", "get_latest", lambda w: w("name", [1])),
     ("export_prompt_via_tui", "export", lambda w: w(Path("unused.yaml"), "name")),
+    ("export_prompts_via_tui", "export", lambda w: w(Path("unused.yaml"))),
+    ("export_prompts_via_tui", "export", lambda w: w(Path("unused.yaml"), "name")),
+    ("count_prompts_via_tui", "export", lambda w: w()),
 ]
 
 
@@ -422,7 +505,7 @@ _BOUNDARY_CASES = [
 @pytest.mark.parametrize(
     ("wrapper_name", "store_method", "invoke"),
     _BOUNDARY_CASES,
-    ids=[case[0] for case in _BOUNDARY_CASES],
+    ids=[f"{case[0]}-{index}" for index, case in enumerate(_BOUNDARY_CASES)],
 )
 def test_boundary_is_total(
     monkeypatch: pytest.MonkeyPatch,
