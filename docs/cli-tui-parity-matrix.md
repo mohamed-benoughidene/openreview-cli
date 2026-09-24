@@ -2,8 +2,8 @@
 
 Generated from live source by `scripts/parity/build_parity_matrix.py`. Every row cites a source file and a line number.
 
-- Commit: `1dd7c4a`
-- Generated at: 2026-09-23T21:15:04+00:00
+- Commit: `2b76755`
+- Generated at: 2026-09-24T07:02:54+00:00
 - CLI framework: Typer 0.26.7
 - TUI framework: Textual 8.2.8
 - Python: 3.12.3
@@ -21,11 +21,11 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | Item | Count |
 |---|---|
 | CLI inventory rows | 556 |
-| TUI inventory rows | 107 |
+| TUI inventory rows | 117 |
 | Shared call argument rows | 89 |
 | Compared shared call argument pairs | 44 |
 | Default-value mismatches | 3 |
-| Parity join rows | 141 |
+| Parity join rows | 241 |
 | Needs human confirmation | 32 |
 | Hidden single-key bindings | 139 |
 | Unmatched CLI items | 93 |
@@ -546,52 +546,52 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | --format | option | benchmark baseline | --format | terminal | src/openreview_cli/benchmark/cli.py:371 |
 | --output | option | benchmark baseline | --output | None | src/openreview_cli/benchmark/cli.py:376 |
 | --save-baseline | option | benchmark baseline | --save-baseline | False | src/openreview_cli/benchmark/cli.py:381 |
-| prompt | group |  |  |  | src/openreview_cli/prompts/cli.py:15 |
-| prompt create | command | prompt |  |  | src/openreview_cli/prompts/cli.py:34 |
-| --name | option | prompt create | --name | None | src/openreview_cli/prompts/cli.py:36 |
-| --content | option | prompt create | --content | None | src/openreview_cli/prompts/cli.py:37 |
-| --tags | option | prompt create | --tags | None | src/openreview_cli/prompts/cli.py:38 |
-| --description | option | prompt create | --description | None | src/openreview_cli/prompts/cli.py:40 |
-| prompt update | command | prompt |  |  | src/openreview_cli/prompts/cli.py:56 |
-| name | argument | prompt update | name | REQUIRED | src/openreview_cli/prompts/cli.py:58 |
-| --content | option | prompt update | --content | None | src/openreview_cli/prompts/cli.py:59 |
-| --tags | option | prompt update | --tags | None | src/openreview_cli/prompts/cli.py:60 |
-| --description | option | prompt update | --description | None | src/openreview_cli/prompts/cli.py:61 |
-| prompt list | command | prompt |  |  | src/openreview_cli/prompts/cli.py:72 |
-| --page | option | prompt list | --page | 1 | src/openreview_cli/prompts/cli.py:74 |
-| --per-page | option | prompt list | --per-page | 25 | src/openreview_cli/prompts/cli.py:75 |
-| prompt show | command | prompt |  |  | src/openreview_cli/prompts/cli.py:88 |
-| name | argument | prompt show | name | REQUIRED | src/openreview_cli/prompts/cli.py:90 |
-| --version | option | prompt show | --version | None | src/openreview_cli/prompts/cli.py:92 |
-| prompt delete | command | prompt |  |  | src/openreview_cli/prompts/cli.py:112 |
-| name | argument | prompt delete | name | REQUIRED | src/openreview_cli/prompts/cli.py:114 |
-| --force | option | prompt delete | --force | False | src/openreview_cli/prompts/cli.py:115 |
-| prompt diff | command | prompt |  |  | src/openreview_cli/prompts/cli.py:127 |
-| name | argument | prompt diff | name | REQUIRED | src/openreview_cli/prompts/cli.py:129 |
-| --from | option | prompt diff | --from | None | src/openreview_cli/prompts/cli.py:130 |
-| --to | option | prompt diff | --to | None | src/openreview_cli/prompts/cli.py:131 |
-| prompt bind | command | prompt |  |  | src/openreview_cli/prompts/cli.py:150 |
-| --slot | option | prompt bind | --slot | None | src/openreview_cli/prompts/cli.py:152 |
-| --prompt | option | prompt bind | --prompt | None | src/openreview_cli/prompts/cli.py:153 |
-| --version | option | prompt bind | --version | None | src/openreview_cli/prompts/cli.py:154 |
-| prompt unbind | command | prompt |  |  | src/openreview_cli/prompts/cli.py:164 |
-| --slot | option | prompt unbind | --slot | None | src/openreview_cli/prompts/cli.py:166 |
-| prompt bindings | command | prompt |  |  | src/openreview_cli/prompts/cli.py:176 |
-| prompt history | command | prompt |  |  | src/openreview_cli/prompts/cli.py:189 |
-| name | argument | prompt history | name | REQUIRED | src/openreview_cli/prompts/cli.py:191 |
-| prompt test | command | prompt |  |  | src/openreview_cli/prompts/cli.py:212 |
-| --prompt | option | prompt test | --prompt | None | src/openreview_cli/prompts/cli.py:214 |
-| --versions | option | prompt test | --versions | None | src/openreview_cli/prompts/cli.py:216 |
-| --benchmark | option | prompt test | --benchmark | standard | src/openreview_cli/prompts/cli.py:218 |
-| prompt export | command | prompt |  |  | src/openreview_cli/prompts/cli.py:239 |
-| name | argument | prompt export | name | None | src/openreview_cli/prompts/cli.py:241 |
-| --output | option | prompt export | --output | None | src/openreview_cli/prompts/cli.py:242 |
-| prompt import | command | prompt |  |  | src/openreview_cli/prompts/cli.py:260 |
-| path | argument | prompt import | path | REQUIRED | src/openreview_cli/prompts/cli.py:262 |
-| prompt optimize | command | prompt |  |  | src/openreview_cli/prompts/cli.py:287 |
-| --prompt | option | prompt optimize | --prompt | None | src/openreview_cli/prompts/cli.py:289 |
-| --benchmark | option | prompt optimize | --benchmark | standard | src/openreview_cli/prompts/cli.py:290 |
-| --iterations | option | prompt optimize | --iterations | 5 | src/openreview_cli/prompts/cli.py:291 |
+| prompt | group |  |  |  | src/openreview_cli/prompts/cli.py:16 |
+| prompt create | command | prompt |  |  | src/openreview_cli/prompts/cli.py:35 |
+| --name | option | prompt create | --name | None | src/openreview_cli/prompts/cli.py:37 |
+| --content | option | prompt create | --content | None | src/openreview_cli/prompts/cli.py:38 |
+| --tags | option | prompt create | --tags | None | src/openreview_cli/prompts/cli.py:39 |
+| --description | option | prompt create | --description | None | src/openreview_cli/prompts/cli.py:41 |
+| prompt update | command | prompt |  |  | src/openreview_cli/prompts/cli.py:57 |
+| name | argument | prompt update | name | REQUIRED | src/openreview_cli/prompts/cli.py:59 |
+| --content | option | prompt update | --content | None | src/openreview_cli/prompts/cli.py:60 |
+| --tags | option | prompt update | --tags | None | src/openreview_cli/prompts/cli.py:61 |
+| --description | option | prompt update | --description | None | src/openreview_cli/prompts/cli.py:62 |
+| prompt list | command | prompt |  |  | src/openreview_cli/prompts/cli.py:73 |
+| --page | option | prompt list | --page | 1 | src/openreview_cli/prompts/cli.py:75 |
+| --per-page | option | prompt list | --per-page | 25 | src/openreview_cli/prompts/cli.py:76 |
+| prompt show | command | prompt |  |  | src/openreview_cli/prompts/cli.py:89 |
+| name | argument | prompt show | name | REQUIRED | src/openreview_cli/prompts/cli.py:91 |
+| --version | option | prompt show | --version | None | src/openreview_cli/prompts/cli.py:93 |
+| prompt delete | command | prompt |  |  | src/openreview_cli/prompts/cli.py:113 |
+| name | argument | prompt delete | name | REQUIRED | src/openreview_cli/prompts/cli.py:115 |
+| --force | option | prompt delete | --force | False | src/openreview_cli/prompts/cli.py:116 |
+| prompt diff | command | prompt |  |  | src/openreview_cli/prompts/cli.py:128 |
+| name | argument | prompt diff | name | REQUIRED | src/openreview_cli/prompts/cli.py:130 |
+| --from | option | prompt diff | --from | None | src/openreview_cli/prompts/cli.py:131 |
+| --to | option | prompt diff | --to | None | src/openreview_cli/prompts/cli.py:132 |
+| prompt bind | command | prompt |  |  | src/openreview_cli/prompts/cli.py:151 |
+| --slot | option | prompt bind | --slot | None | src/openreview_cli/prompts/cli.py:153 |
+| --prompt | option | prompt bind | --prompt | None | src/openreview_cli/prompts/cli.py:154 |
+| --version | option | prompt bind | --version | None | src/openreview_cli/prompts/cli.py:155 |
+| prompt unbind | command | prompt |  |  | src/openreview_cli/prompts/cli.py:165 |
+| --slot | option | prompt unbind | --slot | None | src/openreview_cli/prompts/cli.py:167 |
+| prompt bindings | command | prompt |  |  | src/openreview_cli/prompts/cli.py:177 |
+| prompt history | command | prompt |  |  | src/openreview_cli/prompts/cli.py:190 |
+| name | argument | prompt history | name | REQUIRED | src/openreview_cli/prompts/cli.py:192 |
+| prompt test | command | prompt |  |  | src/openreview_cli/prompts/cli.py:213 |
+| --prompt | option | prompt test | --prompt | None | src/openreview_cli/prompts/cli.py:215 |
+| --versions | option | prompt test | --versions | None | src/openreview_cli/prompts/cli.py:217 |
+| --benchmark | option | prompt test | --benchmark | standard | src/openreview_cli/prompts/cli.py:219 |
+| prompt export | command | prompt |  |  | src/openreview_cli/prompts/cli.py:240 |
+| name | argument | prompt export | name | None | src/openreview_cli/prompts/cli.py:242 |
+| --output | option | prompt export | --output | None | src/openreview_cli/prompts/cli.py:243 |
+| prompt import | command | prompt |  |  | src/openreview_cli/prompts/cli.py:261 |
+| path | argument | prompt import | path | REQUIRED | src/openreview_cli/prompts/cli.py:263 |
+| prompt optimize | command | prompt |  |  | src/openreview_cli/prompts/cli.py:289 |
+| --prompt | option | prompt optimize | --prompt | None | src/openreview_cli/prompts/cli.py:291 |
+| --benchmark | option | prompt optimize | --benchmark | standard | src/openreview_cli/prompts/cli.py:292 |
+| --iterations | option | prompt optimize | --iterations | 5 | src/openreview_cli/prompts/cli.py:293 |
 
 ## Table B: TUI inventory
 
@@ -669,8 +669,18 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | VersionHistoryScreen | screen | openreview_cli.tui.screens.playbook_detail |  |  | src/openreview_cli/tui/screens/playbook_detail.py:166 |
 | VersionDiffScreen | screen | openreview_cli.tui.screens.playbook_detail |  |  | src/openreview_cli/tui/screens/playbook_detail.py:250 |
 | ProgressScreen | screen | openreview_cli.tui.screens.progress |  |  | src/openreview_cli/tui/screens/progress.py:46 |
+| PromptBindingsScreen | screen | openreview_cli.tui.screens.prompt_bindings |  |  | src/openreview_cli/tui/screens/prompt_bindings.py:55 |
+| escape | binding | PromptBindingsScreen | escape, close, Back |  | src/openreview_cli/tui/screens/prompt_bindings.py:70 |
+| action_close | action | PromptBindingsScreen | escape |  | src/openreview_cli/tui/screens/prompt_bindings.py:131 |
+| PromptBindModal | screen | openreview_cli.tui.screens.prompt_bindings |  |  | src/openreview_cli/tui/screens/prompt_bindings.py:176 |
 | PromptHistoryScreen | screen | openreview_cli.tui.screens.prompt_detail |  |  | src/openreview_cli/tui/screens/prompt_detail.py:23 |
 | PromptDiffScreen | screen | openreview_cli.tui.screens.prompt_detail |  |  | src/openreview_cli/tui/screens/prompt_detail.py:49 |
+| PromptExportModal | screen | openreview_cli.tui.screens.prompt_export |  |  | src/openreview_cli/tui/screens/prompt_export.py:24 |
+| _writing | default-state | PromptExportModal | _writing | False | src/openreview_cli/tui/screens/prompt_export.py:41 |
+| PromptFormScreen | screen | openreview_cli.tui.screens.prompt_form |  |  | src/openreview_cli/tui/screens/prompt_form.py:21 |
+| PromptImportModal | screen | openreview_cli.tui.screens.prompt_import |  |  | src/openreview_cli/tui/screens/prompt_import.py:26 |
+| _importing | default-state | PromptImportModal | _importing | False | src/openreview_cli/tui/screens/prompt_import.py:43 |
+| PromptTestModal | screen | openreview_cli.tui.screens.prompt_test |  |  | src/openreview_cli/tui/screens/prompt_test.py:33 |
 | ResultScreen | screen | openreview_cli.tui.screens.result |  |  | src/openreview_cli/tui/screens/result.py:35 |
 | l | binding | ResultScreen | l, toggle_layout, Toggle layout |  | src/openreview_cli/tui/screens/result.py:53 |
 | t | binding | ResultScreen | t, open_amber_queue, Triage |  | src/openreview_cli/tui/screens/result.py:54 |
@@ -681,14 +691,14 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | right | binding | ResultScreen | right, next_page, Next page |  | src/openreview_cli/tui/screens/result.py:59 |
 | left | binding | ResultScreen | left, prev_page, Prev page |  | src/openreview_cli/tui/screens/result.py:60 |
 | escape | binding | ResultScreen | escape, close, Close |  | src/openreview_cli/tui/screens/result.py:61 |
-| action_toggle_layout | action | ResultScreen | l |  | src/openreview_cli/tui/screens/result.py:271 |
-| action_close | action | ResultScreen | escape |  | src/openreview_cli/tui/screens/result.py:281 |
-| action_open_clause_graph | action | ResultScreen | g |  | src/openreview_cli/tui/screens/result.py:311 |
-| action_open_amber_queue | action | ResultScreen | t, m |  | src/openreview_cli/tui/screens/result.py:331 |
-| action_next_page | action | ResultScreen | right |  | src/openreview_cli/tui/screens/result.py:358 |
-| action_prev_page | action | ResultScreen | left |  | src/openreview_cli/tui/screens/result.py:366 |
-| action_next_doc | action | ResultScreen | ] |  | src/openreview_cli/tui/screens/result.py:372 |
-| action_prev_doc | action | ResultScreen | [ |  | src/openreview_cli/tui/screens/result.py:379 |
+| action_toggle_layout | action | ResultScreen | l |  | src/openreview_cli/tui/screens/result.py:277 |
+| action_close | action | ResultScreen | escape |  | src/openreview_cli/tui/screens/result.py:287 |
+| action_open_clause_graph | action | ResultScreen | g |  | src/openreview_cli/tui/screens/result.py:317 |
+| action_open_amber_queue | action | ResultScreen | t, m |  | src/openreview_cli/tui/screens/result.py:337 |
+| action_next_page | action | ResultScreen | right |  | src/openreview_cli/tui/screens/result.py:364 |
+| action_prev_page | action | ResultScreen | left |  | src/openreview_cli/tui/screens/result.py:372 |
+| action_next_doc | action | ResultScreen | ] |  | src/openreview_cli/tui/screens/result.py:378 |
+| action_prev_doc | action | ResultScreen | [ |  | src/openreview_cli/tui/screens/result.py:385 |
 | _layout_split | default-state | ResultScreen | _layout_split | True | src/openreview_cli/tui/screens/result.py:79 |
 | ReviewWizard | screen | openreview_cli.tui.screens.review_wizard |  |  | src/openreview_cli/tui/screens/review_wizard.py:67 |
 | escape | binding | ReviewWizard | escape, cancel_wizard, Cancel |  | src/openreview_cli/tui/screens/review_wizard.py:82 |
@@ -754,7 +764,7 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | SHARED-CALL | product modes (session_id) | src/openreview_cli/app.py:3392 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
 | SHARED-CALL | product modes (verbose) | src/openreview_cli/app.py:3398 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:58 | none |
 | CERTAIN | --allow-partial-pii (option) | src/openreview_cli/app.py:3263 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
-| CERTAIN | --cluster-clauses (option) | src/openreview_cli/app.py:2638 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:311 | none |
+| CERTAIN | --cluster-clauses (option) | src/openreview_cli/app.py:2638 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
 | CERTAIN | --no-pii (option) | src/openreview_cli/app.py:3266 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
 | CERTAIN | --no-pii (option) | src/openreview_cli/app.py:1179 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
 | CERTAIN | --no-pii (option) | src/openreview_cli/app.py:1858 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
@@ -763,10 +773,22 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | CERTAIN | --playbook (option) | src/openreview_cli/app.py:1253 | PlaybookDetailScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:40 | none |
 | CERTAIN | --playbook-path (option) | src/openreview_cli/app.py:2970 | PlaybookDetailScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:40 | none |
 | CERTAIN | --playbook-path (option) | src/openreview_cli/app.py:1250 | PlaybookDetailScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:40 | none |
-| CERTAIN | --prompt (option) | src/openreview_cli/prompts/cli.py:153 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
-| CERTAIN | --prompt (option) | src/openreview_cli/prompts/cli.py:153 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | --prompt (option) | src/openreview_cli/prompts/cli.py:154 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
+| CERTAIN | --prompt (option) | src/openreview_cli/prompts/cli.py:154 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
+| CERTAIN | --prompt (option) | src/openreview_cli/prompts/cli.py:154 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | --prompt (option) | src/openreview_cli/prompts/cli.py:154 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
+| CERTAIN | --prompt (option) | src/openreview_cli/prompts/cli.py:154 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
+| CERTAIN | --prompt (option) | src/openreview_cli/prompts/cli.py:154 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | --prompt (option) | src/openreview_cli/prompts/cli.py:154 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
+| CERTAIN | --prompt (option) | src/openreview_cli/prompts/cli.py:154 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
+| CERTAIN | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
+| CERTAIN | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
 | CERTAIN | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
+| CERTAIN | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
 | CERTAIN | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
+| CERTAIN | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
 | CERTAIN | --summary (option) | src/openreview_cli/app.py:1358 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:61 | none |
 | CERTAIN | client add (command) | src/openreview_cli/app.py:390 | ClientDetailScreen (screen) | src/openreview_cli/tui/screens/client_detail.py:13 | none |
 | CERTAIN | client add (command) | src/openreview_cli/app.py:390 | ClientForm (screen) | src/openreview_cli/tui/screens/client_form.py:13 | none |
@@ -774,6 +796,7 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | CERTAIN | client delete (command) | src/openreview_cli/app.py:425 | ClientForm (screen) | src/openreview_cli/tui/screens/client_form.py:13 | none |
 | CERTAIN | client list (command) | src/openreview_cli/app.py:400 | ClientDetailScreen (screen) | src/openreview_cli/tui/screens/client_detail.py:13 | none |
 | CERTAIN | client list (command) | src/openreview_cli/app.py:400 | ClientForm (screen) | src/openreview_cli/tui/screens/client_form.py:13 | none |
+| CERTAIN | export (command) | src/openreview_cli/app.py:3173 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
 | CERTAIN | gateway costs (command) | src/openreview_cli/app.py:1678 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | gateway fallback (command) | src/openreview_cli/app.py:1578 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | gateway models (command) | src/openreview_cli/app.py:1479 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
@@ -784,20 +807,21 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | CERTAIN | gateway setup (command) | src/openreview_cli/app.py:1401 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | gateway status (command) | src/openreview_cli/app.py:1409 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | gateway test (command) | src/openreview_cli/app.py:1643 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
+| CERTAIN | gateway test (command) | src/openreview_cli/app.py:1643 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
 | CERTAIN | graph build (command) | src/openreview_cli/app.py:2615 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:61 | none |
-| CERTAIN | graph build (command) | src/openreview_cli/app.py:2615 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:311 | none |
+| CERTAIN | graph build (command) | src/openreview_cli/app.py:2615 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
 | CERTAIN | graph diff (command) | src/openreview_cli/app.py:2741 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:61 | none |
 | CERTAIN | graph diff (command) | src/openreview_cli/app.py:2741 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
 | CERTAIN | graph diff (command) | src/openreview_cli/app.py:2741 | VersionDiffScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:250 | none |
-| CERTAIN | graph diff (command) | src/openreview_cli/app.py:2741 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:311 | none |
+| CERTAIN | graph diff (command) | src/openreview_cli/app.py:2741 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
 | CERTAIN | graph health (command) | src/openreview_cli/app.py:2824 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:61 | none |
-| CERTAIN | graph health (command) | src/openreview_cli/app.py:2824 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:311 | none |
+| CERTAIN | graph health (command) | src/openreview_cli/app.py:2824 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
 | CERTAIN | graph metrics (command) | src/openreview_cli/app.py:2681 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:61 | none |
-| CERTAIN | graph metrics (command) | src/openreview_cli/app.py:2681 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:311 | none |
+| CERTAIN | graph metrics (command) | src/openreview_cli/app.py:2681 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
 | CERTAIN | graph view (command) | src/openreview_cli/app.py:2908 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:61 | none |
-| CERTAIN | graph view (command) | src/openreview_cli/app.py:2908 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:311 | none |
+| CERTAIN | graph view (command) | src/openreview_cli/app.py:2908 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
 | CERTAIN | graph_path (argument) | src/openreview_cli/app.py:2684 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:61 | none |
-| CERTAIN | graph_path (argument) | src/openreview_cli/app.py:2684 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:311 | none |
+| CERTAIN | graph_path (argument) | src/openreview_cli/app.py:2684 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
 | CERTAIN | pii cleanup (command) | src/openreview_cli/app.py:568 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
 | CERTAIN | pii delete (command) | src/openreview_cli/app.py:548 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
 | CERTAIN | pii list (command) | src/openreview_cli/app.py:507 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
@@ -806,8 +830,10 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | CERTAIN | playbook diff (command) | src/openreview_cli/app.py:912 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
 | CERTAIN | playbook diff (command) | src/openreview_cli/app.py:912 | VersionDiffScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:250 | none |
 | CERTAIN | playbook export (command) | src/openreview_cli/app.py:803 | PlaybookDetailScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:40 | none |
+| CERTAIN | playbook export (command) | src/openreview_cli/app.py:803 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
 | CERTAIN | playbook history (command) | src/openreview_cli/app.py:1114 | PlaybookDetailScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:40 | none |
 | CERTAIN | playbook import (command) | src/openreview_cli/app.py:606 | PlaybookDetailScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:40 | none |
+| CERTAIN | playbook import (command) | src/openreview_cli/app.py:606 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
 | CERTAIN | playbook import (command) | src/openreview_cli/app.py:606 | _ImportModal (screen) | src/openreview_cli/tui/tabs/playbooks.py:141 | none |
 | CERTAIN | playbook list (command) | src/openreview_cli/app.py:647 | PlaybookDetailScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:40 | none |
 | CERTAIN | playbook set-current (command) | src/openreview_cli/app.py:995 | PlaybookDetailScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:40 | none |
@@ -820,36 +846,120 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | CERTAIN | precheck review (command) | src/openreview_cli/app.py:1244 | EgressReviewModal (screen) | src/openreview_cli/tui/screens/egress_review.py:16 | none |
 | CERTAIN | precheck review (command) | src/openreview_cli/app.py:1244 | OpenReviewApp (app) | src/openreview_cli/tui/app.py:18 | none |
 | CERTAIN | precheck review (command) | src/openreview_cli/app.py:1244 | ReviewWizard (screen) | src/openreview_cli/tui/screens/review_wizard.py:67 | none |
-| CERTAIN | prompt bind (command) | src/openreview_cli/prompts/cli.py:150 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
-| CERTAIN | prompt bind (command) | src/openreview_cli/prompts/cli.py:150 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
-| CERTAIN | prompt bindings (command) | src/openreview_cli/prompts/cli.py:176 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
-| CERTAIN | prompt bindings (command) | src/openreview_cli/prompts/cli.py:176 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
-| CERTAIN | prompt create (command) | src/openreview_cli/prompts/cli.py:34 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
-| CERTAIN | prompt create (command) | src/openreview_cli/prompts/cli.py:34 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
-| CERTAIN | prompt delete (command) | src/openreview_cli/prompts/cli.py:112 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
-| CERTAIN | prompt delete (command) | src/openreview_cli/prompts/cli.py:112 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
-| CERTAIN | prompt diff (command) | src/openreview_cli/prompts/cli.py:127 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
-| CERTAIN | prompt diff (command) | src/openreview_cli/prompts/cli.py:127 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
-| CERTAIN | prompt diff (command) | src/openreview_cli/prompts/cli.py:127 | VersionDiffScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:250 | none |
-| CERTAIN | prompt export (command) | src/openreview_cli/prompts/cli.py:239 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
-| CERTAIN | prompt export (command) | src/openreview_cli/prompts/cli.py:239 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
-| CERTAIN | prompt history (command) | src/openreview_cli/prompts/cli.py:189 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
-| CERTAIN | prompt history (command) | src/openreview_cli/prompts/cli.py:189 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
-| CERTAIN | prompt import (command) | src/openreview_cli/prompts/cli.py:260 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
-| CERTAIN | prompt import (command) | src/openreview_cli/prompts/cli.py:260 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
-| CERTAIN | prompt import (command) | src/openreview_cli/prompts/cli.py:260 | _ImportModal (screen) | src/openreview_cli/tui/tabs/playbooks.py:141 | none |
-| CERTAIN | prompt list (command) | src/openreview_cli/prompts/cli.py:72 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
-| CERTAIN | prompt list (command) | src/openreview_cli/prompts/cli.py:72 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
-| CERTAIN | prompt optimize (command) | src/openreview_cli/prompts/cli.py:287 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
-| CERTAIN | prompt optimize (command) | src/openreview_cli/prompts/cli.py:287 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
-| CERTAIN | prompt show (command) | src/openreview_cli/prompts/cli.py:88 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
-| CERTAIN | prompt show (command) | src/openreview_cli/prompts/cli.py:88 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
-| CERTAIN | prompt test (command) | src/openreview_cli/prompts/cli.py:212 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
-| CERTAIN | prompt test (command) | src/openreview_cli/prompts/cli.py:212 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
-| CERTAIN | prompt unbind (command) | src/openreview_cli/prompts/cli.py:164 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
-| CERTAIN | prompt unbind (command) | src/openreview_cli/prompts/cli.py:164 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
-| CERTAIN | prompt update (command) | src/openreview_cli/prompts/cli.py:56 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
-| CERTAIN | prompt update (command) | src/openreview_cli/prompts/cli.py:56 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | prompt bind (command) | src/openreview_cli/prompts/cli.py:151 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
+| CERTAIN | prompt bind (command) | src/openreview_cli/prompts/cli.py:151 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
+| CERTAIN | prompt bind (command) | src/openreview_cli/prompts/cli.py:151 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | prompt bind (command) | src/openreview_cli/prompts/cli.py:151 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
+| CERTAIN | prompt bind (command) | src/openreview_cli/prompts/cli.py:151 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
+| CERTAIN | prompt bind (command) | src/openreview_cli/prompts/cli.py:151 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | prompt bind (command) | src/openreview_cli/prompts/cli.py:151 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
+| CERTAIN | prompt bind (command) | src/openreview_cli/prompts/cli.py:151 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
+| CERTAIN | prompt bindings (command) | src/openreview_cli/prompts/cli.py:177 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
+| CERTAIN | prompt bindings (command) | src/openreview_cli/prompts/cli.py:177 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
+| CERTAIN | prompt bindings (command) | src/openreview_cli/prompts/cli.py:177 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | prompt bindings (command) | src/openreview_cli/prompts/cli.py:177 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
+| CERTAIN | prompt bindings (command) | src/openreview_cli/prompts/cli.py:177 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
+| CERTAIN | prompt bindings (command) | src/openreview_cli/prompts/cli.py:177 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | prompt bindings (command) | src/openreview_cli/prompts/cli.py:177 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
+| CERTAIN | prompt bindings (command) | src/openreview_cli/prompts/cli.py:177 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
+| CERTAIN | prompt create (command) | src/openreview_cli/prompts/cli.py:35 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
+| CERTAIN | prompt create (command) | src/openreview_cli/prompts/cli.py:35 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
+| CERTAIN | prompt create (command) | src/openreview_cli/prompts/cli.py:35 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | prompt create (command) | src/openreview_cli/prompts/cli.py:35 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
+| CERTAIN | prompt create (command) | src/openreview_cli/prompts/cli.py:35 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
+| CERTAIN | prompt create (command) | src/openreview_cli/prompts/cli.py:35 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | prompt create (command) | src/openreview_cli/prompts/cli.py:35 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
+| CERTAIN | prompt create (command) | src/openreview_cli/prompts/cli.py:35 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
+| CERTAIN | prompt delete (command) | src/openreview_cli/prompts/cli.py:113 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
+| CERTAIN | prompt delete (command) | src/openreview_cli/prompts/cli.py:113 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
+| CERTAIN | prompt delete (command) | src/openreview_cli/prompts/cli.py:113 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | prompt delete (command) | src/openreview_cli/prompts/cli.py:113 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
+| CERTAIN | prompt delete (command) | src/openreview_cli/prompts/cli.py:113 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
+| CERTAIN | prompt delete (command) | src/openreview_cli/prompts/cli.py:113 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | prompt delete (command) | src/openreview_cli/prompts/cli.py:113 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
+| CERTAIN | prompt delete (command) | src/openreview_cli/prompts/cli.py:113 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
+| CERTAIN | prompt diff (command) | src/openreview_cli/prompts/cli.py:128 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
+| CERTAIN | prompt diff (command) | src/openreview_cli/prompts/cli.py:128 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
+| CERTAIN | prompt diff (command) | src/openreview_cli/prompts/cli.py:128 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | prompt diff (command) | src/openreview_cli/prompts/cli.py:128 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
+| CERTAIN | prompt diff (command) | src/openreview_cli/prompts/cli.py:128 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
+| CERTAIN | prompt diff (command) | src/openreview_cli/prompts/cli.py:128 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | prompt diff (command) | src/openreview_cli/prompts/cli.py:128 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
+| CERTAIN | prompt diff (command) | src/openreview_cli/prompts/cli.py:128 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
+| CERTAIN | prompt diff (command) | src/openreview_cli/prompts/cli.py:128 | VersionDiffScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:250 | none |
+| CERTAIN | prompt export (command) | src/openreview_cli/prompts/cli.py:240 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
+| CERTAIN | prompt export (command) | src/openreview_cli/prompts/cli.py:240 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
+| CERTAIN | prompt export (command) | src/openreview_cli/prompts/cli.py:240 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | prompt export (command) | src/openreview_cli/prompts/cli.py:240 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
+| CERTAIN | prompt export (command) | src/openreview_cli/prompts/cli.py:240 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
+| CERTAIN | prompt export (command) | src/openreview_cli/prompts/cli.py:240 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | prompt export (command) | src/openreview_cli/prompts/cli.py:240 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
+| CERTAIN | prompt export (command) | src/openreview_cli/prompts/cli.py:240 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
+| CERTAIN | prompt history (command) | src/openreview_cli/prompts/cli.py:190 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
+| CERTAIN | prompt history (command) | src/openreview_cli/prompts/cli.py:190 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
+| CERTAIN | prompt history (command) | src/openreview_cli/prompts/cli.py:190 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | prompt history (command) | src/openreview_cli/prompts/cli.py:190 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
+| CERTAIN | prompt history (command) | src/openreview_cli/prompts/cli.py:190 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
+| CERTAIN | prompt history (command) | src/openreview_cli/prompts/cli.py:190 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | prompt history (command) | src/openreview_cli/prompts/cli.py:190 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
+| CERTAIN | prompt history (command) | src/openreview_cli/prompts/cli.py:190 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
+| CERTAIN | prompt import (command) | src/openreview_cli/prompts/cli.py:261 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
+| CERTAIN | prompt import (command) | src/openreview_cli/prompts/cli.py:261 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
+| CERTAIN | prompt import (command) | src/openreview_cli/prompts/cli.py:261 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | prompt import (command) | src/openreview_cli/prompts/cli.py:261 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
+| CERTAIN | prompt import (command) | src/openreview_cli/prompts/cli.py:261 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
+| CERTAIN | prompt import (command) | src/openreview_cli/prompts/cli.py:261 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | prompt import (command) | src/openreview_cli/prompts/cli.py:261 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
+| CERTAIN | prompt import (command) | src/openreview_cli/prompts/cli.py:261 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
+| CERTAIN | prompt import (command) | src/openreview_cli/prompts/cli.py:261 | _ImportModal (screen) | src/openreview_cli/tui/tabs/playbooks.py:141 | none |
+| CERTAIN | prompt list (command) | src/openreview_cli/prompts/cli.py:73 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
+| CERTAIN | prompt list (command) | src/openreview_cli/prompts/cli.py:73 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
+| CERTAIN | prompt list (command) | src/openreview_cli/prompts/cli.py:73 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | prompt list (command) | src/openreview_cli/prompts/cli.py:73 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
+| CERTAIN | prompt list (command) | src/openreview_cli/prompts/cli.py:73 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
+| CERTAIN | prompt list (command) | src/openreview_cli/prompts/cli.py:73 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | prompt list (command) | src/openreview_cli/prompts/cli.py:73 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
+| CERTAIN | prompt list (command) | src/openreview_cli/prompts/cli.py:73 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
+| CERTAIN | prompt optimize (command) | src/openreview_cli/prompts/cli.py:289 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
+| CERTAIN | prompt optimize (command) | src/openreview_cli/prompts/cli.py:289 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
+| CERTAIN | prompt optimize (command) | src/openreview_cli/prompts/cli.py:289 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | prompt optimize (command) | src/openreview_cli/prompts/cli.py:289 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
+| CERTAIN | prompt optimize (command) | src/openreview_cli/prompts/cli.py:289 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
+| CERTAIN | prompt optimize (command) | src/openreview_cli/prompts/cli.py:289 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | prompt optimize (command) | src/openreview_cli/prompts/cli.py:289 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
+| CERTAIN | prompt optimize (command) | src/openreview_cli/prompts/cli.py:289 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
+| CERTAIN | prompt show (command) | src/openreview_cli/prompts/cli.py:89 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
+| CERTAIN | prompt show (command) | src/openreview_cli/prompts/cli.py:89 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
+| CERTAIN | prompt show (command) | src/openreview_cli/prompts/cli.py:89 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | prompt show (command) | src/openreview_cli/prompts/cli.py:89 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
+| CERTAIN | prompt show (command) | src/openreview_cli/prompts/cli.py:89 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
+| CERTAIN | prompt show (command) | src/openreview_cli/prompts/cli.py:89 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | prompt show (command) | src/openreview_cli/prompts/cli.py:89 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
+| CERTAIN | prompt show (command) | src/openreview_cli/prompts/cli.py:89 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
+| CERTAIN | prompt test (command) | src/openreview_cli/prompts/cli.py:213 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
+| CERTAIN | prompt test (command) | src/openreview_cli/prompts/cli.py:213 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
+| CERTAIN | prompt test (command) | src/openreview_cli/prompts/cli.py:213 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | prompt test (command) | src/openreview_cli/prompts/cli.py:213 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
+| CERTAIN | prompt test (command) | src/openreview_cli/prompts/cli.py:213 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
+| CERTAIN | prompt test (command) | src/openreview_cli/prompts/cli.py:213 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | prompt test (command) | src/openreview_cli/prompts/cli.py:213 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
+| CERTAIN | prompt test (command) | src/openreview_cli/prompts/cli.py:213 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
+| CERTAIN | prompt unbind (command) | src/openreview_cli/prompts/cli.py:165 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
+| CERTAIN | prompt unbind (command) | src/openreview_cli/prompts/cli.py:165 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
+| CERTAIN | prompt unbind (command) | src/openreview_cli/prompts/cli.py:165 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | prompt unbind (command) | src/openreview_cli/prompts/cli.py:165 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
+| CERTAIN | prompt unbind (command) | src/openreview_cli/prompts/cli.py:165 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
+| CERTAIN | prompt unbind (command) | src/openreview_cli/prompts/cli.py:165 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | prompt unbind (command) | src/openreview_cli/prompts/cli.py:165 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
+| CERTAIN | prompt unbind (command) | src/openreview_cli/prompts/cli.py:165 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
+| CERTAIN | prompt update (command) | src/openreview_cli/prompts/cli.py:57 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
+| CERTAIN | prompt update (command) | src/openreview_cli/prompts/cli.py:57 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
+| CERTAIN | prompt update (command) | src/openreview_cli/prompts/cli.py:57 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | prompt update (command) | src/openreview_cli/prompts/cli.py:57 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:24 | none |
+| CERTAIN | prompt update (command) | src/openreview_cli/prompts/cli.py:57 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
+| CERTAIN | prompt update (command) | src/openreview_cli/prompts/cli.py:57 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | prompt update (command) | src/openreview_cli/prompts/cli.py:57 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
+| CERTAIN | prompt update (command) | src/openreview_cli/prompts/cli.py:57 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
 
 ## Default-value mismatches
 
@@ -905,37 +1015,37 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 
 | CLI item | CLI source | TUI item | TUI source | Shared token | Reason |
 |---|---|---|---|---|---|
-| doc_path (argument) | src/openreview_cli/app.py:2968 | action_next_doc (action) | src/openreview_cli/tui/screens/result.py:372 | doc | generic token only: doc |
-| doc_path (argument) | src/openreview_cli/app.py:2968 | action_prev_doc (action) | src/openreview_cli/tui/screens/result.py:379 | doc | generic token only: doc |
-| doc_a (argument) | src/openreview_cli/app.py:1814 | action_next_doc (action) | src/openreview_cli/tui/screens/result.py:372 | doc | generic token only: doc |
-| doc_a (argument) | src/openreview_cli/app.py:1814 | action_prev_doc (action) | src/openreview_cli/tui/screens/result.py:379 | doc | generic token only: doc |
-| doc_b (argument) | src/openreview_cli/app.py:1815 | action_next_doc (action) | src/openreview_cli/tui/screens/result.py:372 | doc | generic token only: doc |
-| doc_b (argument) | src/openreview_cli/app.py:1815 | action_prev_doc (action) | src/openreview_cli/tui/screens/result.py:379 | doc | generic token only: doc |
-| --page (option) | src/openreview_cli/prompts/cli.py:74 | action_next_page (action) | src/openreview_cli/tui/screens/result.py:358 | page | generic token only: page |
-| --page (option) | src/openreview_cli/prompts/cli.py:74 | action_prev_page (action) | src/openreview_cli/tui/screens/result.py:366 | page | generic token only: page |
-| --per-page (option) | src/openreview_cli/prompts/cli.py:75 | action_next_page (action) | src/openreview_cli/tui/screens/result.py:358 | page | generic token only: page |
-| --per-page (option) | src/openreview_cli/prompts/cli.py:75 | action_prev_page (action) | src/openreview_cli/tui/screens/result.py:366 | page | generic token only: page |
+| doc_path (argument) | src/openreview_cli/app.py:2968 | action_next_doc (action) | src/openreview_cli/tui/screens/result.py:378 | doc | generic token only: doc |
+| doc_path (argument) | src/openreview_cli/app.py:2968 | action_prev_doc (action) | src/openreview_cli/tui/screens/result.py:385 | doc | generic token only: doc |
+| doc_a (argument) | src/openreview_cli/app.py:1814 | action_next_doc (action) | src/openreview_cli/tui/screens/result.py:378 | doc | generic token only: doc |
+| doc_a (argument) | src/openreview_cli/app.py:1814 | action_prev_doc (action) | src/openreview_cli/tui/screens/result.py:385 | doc | generic token only: doc |
+| doc_b (argument) | src/openreview_cli/app.py:1815 | action_next_doc (action) | src/openreview_cli/tui/screens/result.py:378 | doc | generic token only: doc |
+| doc_b (argument) | src/openreview_cli/app.py:1815 | action_prev_doc (action) | src/openreview_cli/tui/screens/result.py:385 | doc | generic token only: doc |
+| --page (option) | src/openreview_cli/prompts/cli.py:75 | action_next_page (action) | src/openreview_cli/tui/screens/result.py:364 | page | generic token only: page |
+| --page (option) | src/openreview_cli/prompts/cli.py:75 | action_prev_page (action) | src/openreview_cli/tui/screens/result.py:372 | page | generic token only: page |
+| --per-page (option) | src/openreview_cli/prompts/cli.py:76 | action_next_page (action) | src/openreview_cli/tui/screens/result.py:364 | page | generic token only: page |
+| --per-page (option) | src/openreview_cli/prompts/cli.py:76 | action_prev_page (action) | src/openreview_cli/tui/screens/result.py:372 | page | generic token only: page |
 
 ### VersionDiffScreen
 
 | CLI item | CLI source | TUI item | TUI source | Shared token | Reason |
 |---|---|---|---|---|---|
-| --version (option) | src/openreview_cli/app.py:348; src/openreview_cli/app.py:807; src/openreview_cli/prompts/cli.py:154; src/openreview_cli/prompts/cli.py:92 | VersionDiffScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:250 | version | generic token only: version |
+| --version (option) | src/openreview_cli/app.py:348; src/openreview_cli/app.py:807; src/openreview_cli/prompts/cli.py:155; src/openreview_cli/prompts/cli.py:93 | VersionDiffScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:250 | version | generic token only: version |
 | version (argument) | src/openreview_cli/app.py:720; src/openreview_cli/app.py:998 | VersionDiffScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:250 | version | generic token only: version |
 | --version-label-a (option) | src/openreview_cli/app.py:1840 | VersionDiffScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:250 | version | generic token only: version |
 | --version-label-b (option) | src/openreview_cli/app.py:1843 | VersionDiffScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:250 | version | generic token only: version |
-| --versions (option) | src/openreview_cli/prompts/cli.py:216 | VersionDiffScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:250 | version | generic token only: version |
+| --versions (option) | src/openreview_cli/prompts/cli.py:217 | VersionDiffScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:250 | version | generic token only: version |
 
 ### VersionHistoryScreen
 
 | CLI item | CLI source | TUI item | TUI source | Shared token | Reason |
 |---|---|---|---|---|---|
-| --version (option) | src/openreview_cli/app.py:348; src/openreview_cli/app.py:807; src/openreview_cli/prompts/cli.py:154; src/openreview_cli/prompts/cli.py:92 | VersionHistoryScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:166 | version | generic token only: version |
+| --version (option) | src/openreview_cli/app.py:348; src/openreview_cli/app.py:807; src/openreview_cli/prompts/cli.py:155; src/openreview_cli/prompts/cli.py:93 | VersionHistoryScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:166 | version | generic token only: version |
 | version (argument) | src/openreview_cli/app.py:720; src/openreview_cli/app.py:998 | VersionHistoryScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:166 | version | generic token only: version |
 | --version-label-a (option) | src/openreview_cli/app.py:1840 | VersionHistoryScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:166 | version | generic token only: version |
 | --version-label-b (option) | src/openreview_cli/app.py:1843 | VersionHistoryScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:166 | version | generic token only: version |
 | --history (option) | src/openreview_cli/app.py:1846 | VersionHistoryScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:166 | history | generic token only: history |
-| --versions (option) | src/openreview_cli/prompts/cli.py:216 | VersionHistoryScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:166 | version | generic token only: version |
+| --versions (option) | src/openreview_cli/prompts/cli.py:217 | VersionHistoryScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:166 | version | generic token only: version |
 
 
 ## Unmatched CLI items
@@ -1027,14 +1137,14 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 | --datasets | option | benchmark baseline | src/openreview_cli/benchmark/cli.py:361 |
 | --provider | option | benchmark baseline | src/openreview_cli/benchmark/cli.py:366 |
 | --save-baseline | option | benchmark baseline | src/openreview_cli/benchmark/cli.py:381 |
-| --tags | option | prompt create, prompt update | src/openreview_cli/prompts/cli.py:38 |
-| --description | option | prompt create | src/openreview_cli/prompts/cli.py:40 |
-| --description | option | prompt update | src/openreview_cli/prompts/cli.py:61 |
-| --from | option | prompt diff | src/openreview_cli/prompts/cli.py:130 |
-| --to | option | prompt diff | src/openreview_cli/prompts/cli.py:131 |
-| --slot | option | prompt bind, prompt unbind | src/openreview_cli/prompts/cli.py:152 |
-| --benchmark | option | prompt test, prompt optimize | src/openreview_cli/prompts/cli.py:218 |
-| --iterations | option | prompt optimize | src/openreview_cli/prompts/cli.py:291 |
+| --tags | option | prompt create, prompt update | src/openreview_cli/prompts/cli.py:39 |
+| --description | option | prompt create | src/openreview_cli/prompts/cli.py:41 |
+| --description | option | prompt update | src/openreview_cli/prompts/cli.py:62 |
+| --from | option | prompt diff | src/openreview_cli/prompts/cli.py:131 |
+| --to | option | prompt diff | src/openreview_cli/prompts/cli.py:132 |
+| --slot | option | prompt bind, prompt unbind | src/openreview_cli/prompts/cli.py:153 |
+| --benchmark | option | prompt test, prompt optimize | src/openreview_cli/prompts/cli.py:219 |
+| --iterations | option | prompt optimize | src/openreview_cli/prompts/cli.py:293 |
 
 ## Unmatched TUI items
 
@@ -1066,7 +1176,7 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 | action_toggle_overview | action | AmberQueueScreen | src/openreview_cli/tui/screens/amber_queue.py:240 |
 | action_annotate | action | AmberQueueScreen | src/openreview_cli/tui/screens/amber_queue.py:244 |
 | action_close | action | AmberQueueScreen | src/openreview_cli/tui/screens/amber_queue.py:250 |
-| escape | binding | ClientDetailScreen, GraphSummaryScreen, +1 more | src/openreview_cli/tui/screens/client_detail.py:27 |
+| escape | binding | ClientDetailScreen, GraphSummaryScreen, +2 more | src/openreview_cli/tui/screens/client_detail.py:27 |
 | action_pop_screen | action | ClientDetailScreen, GraphSummaryScreen, +1 more | src/openreview_cli/tui/screens/client_detail.py:98 |
 | ConfirmModal | screen | openreview_cli.tui.screens.confirm | src/openreview_cli/tui/screens/confirm.py:13 |
 | DatabaseErrorScreen | screen | openreview_cli.tui.screens.db_error | src/openreview_cli/tui/screens/db_error.py:15 |
@@ -1074,7 +1184,7 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 | NegotiationProgressScreen | screen | openreview_cli.tui.screens.negotiation_progress | src/openreview_cli/tui/screens/negotiation_progress.py:16 |
 | NegotiationResultScreen | screen | openreview_cli.tui.screens.negotiation_result | src/openreview_cli/tui/screens/negotiation_result.py:19 |
 | escape | binding | NegotiationResultScreen, ResultScreen, +1 more | src/openreview_cli/tui/screens/negotiation_result.py:32 |
-| action_close | action | NegotiationResultScreen, ResultScreen, +1 more | src/openreview_cli/tui/screens/negotiation_result.py:71 |
+| action_close | action | NegotiationResultScreen, PromptBindingsScreen, +2 more | src/openreview_cli/tui/screens/negotiation_result.py:71 |
 | NegotiationWizard | screen | openreview_cli.tui.screens.negotiation_wizard | src/openreview_cli/tui/screens/negotiation_wizard.py:66 |
 | ctrl+h | binding | NegotiationWizard, ReviewWizard | src/openreview_cli/tui/screens/negotiation_wizard.py:82 |
 | action_toggle_hidden | action | NegotiationWizard | src/openreview_cli/tui/screens/negotiation_wizard.py:137 |
@@ -1086,8 +1196,8 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 | t | binding | ResultScreen | src/openreview_cli/tui/screens/result.py:54 |
 | right | binding | ResultScreen | src/openreview_cli/tui/screens/result.py:59 |
 | left | binding | ResultScreen | src/openreview_cli/tui/screens/result.py:60 |
-| action_toggle_layout | action | ResultScreen | src/openreview_cli/tui/screens/result.py:271 |
-| action_open_amber_queue | action | ResultScreen | src/openreview_cli/tui/screens/result.py:331 |
+| action_toggle_layout | action | ResultScreen | src/openreview_cli/tui/screens/result.py:277 |
+| action_open_amber_queue | action | ResultScreen | src/openreview_cli/tui/screens/result.py:337 |
 | action_toggle_hidden | action | ReviewWizard | src/openreview_cli/tui/screens/review_wizard.py:280 |
 | SearchScreen | screen | openreview_cli.tui.screens.search | src/openreview_cli/tui/screens/search.py:31 |
 
@@ -1110,8 +1220,8 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 
 ### `--content`
 
-- New prompt content (owners: prompt update; sources: src/openreview_cli/prompts/cli.py:59).
-- Prompt instruction text (max 16 KB) (owners: prompt create; sources: src/openreview_cli/prompts/cli.py:37).
+- New prompt content (owners: prompt update; sources: src/openreview_cli/prompts/cli.py:60).
+- Prompt instruction text (max 16 KB) (owners: prompt create; sources: src/openreview_cli/prompts/cli.py:38).
 
 ### `--contract-id`
 
@@ -1125,13 +1235,13 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 
 ### `--description`
 
-- Human-readable description (owners: prompt create; sources: src/openreview_cli/prompts/cli.py:40).
-- Updated description (owners: prompt update; sources: src/openreview_cli/prompts/cli.py:61).
+- Human-readable description (owners: prompt create; sources: src/openreview_cli/prompts/cli.py:41).
+- Updated description (owners: prompt update; sources: src/openreview_cli/prompts/cli.py:62).
 
 ### `--force`
 
 - Delete client and all associated reviews. (owners: client delete; sources: src/openreview_cli/app.py:428).
-- Skip confirmation (owners: prompt delete; sources: src/openreview_cli/prompts/cli.py:115).
+- Skip confirmation (owners: prompt delete; sources: src/openreview_cli/prompts/cli.py:116).
 - Skip confirmation prompt (owners: playbook delete; sources: src/openreview_cli/app.py:1025).
 - Suppress overwrite warning (owners: playbook export; sources: src/openreview_cli/app.py:812).
 
@@ -1173,7 +1283,7 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 
 - Destination file path (or directory with --all) (owners: playbook export; sources: src/openreview_cli/app.py:810).
 - Output directory for review results. (owners: precheck; sources: src/openreview_cli/app.py:1188).
-- Output file path (default: stdout) (owners: prompt export; sources: src/openreview_cli/prompts/cli.py:242).
+- Output file path (default: stdout) (owners: prompt export; sources: src/openreview_cli/prompts/cli.py:243).
 - Path for the output graph JSON file (default: {input_stem}.graph.json). (owners: graph build; sources: src/openreview_cli/app.py:2623).
 - Write JSON report to file path (owners: benchmark run; sources: src/openreview_cli/benchmark/cli.py:120).
 - Write output to file instead of stdout. (owners: negotiate, licensecheck, leasecheck, privacycheck, +22 more; sources: src/openreview_cli/app.py:3002, src/openreview_cli/app.py:3272, src/openreview_cli/app.py:1257, src/openreview_cli/app.py:1850).
@@ -1209,9 +1319,9 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 
 ### `--version`
 
-- Prompt version (owners: prompt bind; sources: src/openreview_cli/prompts/cli.py:154).
+- Prompt version (owners: prompt bind; sources: src/openreview_cli/prompts/cli.py:155).
 - Show the openreview version and exit. (owners: openreview; sources: src/openreview_cli/app.py:348).
-- Specific version (default: latest) (owners: prompt show; sources: src/openreview_cli/prompts/cli.py:92).
+- Specific version (default: latest) (owners: prompt show; sources: src/openreview_cli/prompts/cli.py:93).
 - Version to export (default: current/latest) (owners: playbook export; sources: src/openreview_cli/app.py:807).
 
 ### `--weights`
@@ -1223,18 +1333,18 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 
 | Row type | Count |
 |---|---|
-| action | 31 |
+| action | 32 |
 | app | 1 |
 | argument | 73 |
-| binding | 42 |
+| binding | 43 |
 | command | 82 |
-| default-state | 10 |
+| default-state | 12 |
 | group | 11 |
 | mismatch | 3 |
 | option | 390 |
-| screen | 23 |
+| screen | 29 |
 | shared-call-arg | 89 |
-| total | 755 |
+| total | 765 |
 
 Regenerate with:
 
