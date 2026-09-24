@@ -142,11 +142,11 @@ The tab, not just the screen, says what it is for: `RetrieveTab` renders `Search
 **Interfaces:**
 - Produces: `stream_chunks(clauses, config=None, *, show_progress: bool = True) -> Iterator[Chunk]`. Identical yield order and content either way; the default is today's behaviour, so the CLI is unchanged.
 
-- [ ] **Step 1: Write the failing test.** Assert three things: calling it with `show_progress=False` writes **nothing** to stdout or stderr (`capsys`); the chunks it yields are identical to the default path for the same input; and the default path still enters the progress context. For the third, monkeypatch `chunking.stream.Progress` with a recorder and assert it was constructed with `show_progress=True` and never with `False`. Do **not** assert on printed progress text: measured, with stdout not a tty Rich's transient bar emits only `"\n"`, so such an assertion would be environment-dependent and brittle - but without the recorder, a refactor that returns the inner generator from inside the `with` block would pass the silence test while silently killing the CLI's bar.
-- [ ] **Step 2: Run it and confirm it fails** with `TypeError: stream_chunks() got an unexpected keyword argument 'show_progress'`.
-- [ ] **Step 3: Implement** by extracting the existing loop into a private generator and entering `with Progress(transient=True)` around it only when `show_progress` is true.
-- [ ] **Step 4: Run** `uv run pytest tests/unit/test_chunking_stream.py tests/unit/test_chunking_splitter.py -q`, then confirm the CLI is untouched: `uv run openreview chunk tests/fixtures/nda_with_pii.pdf --summary`.
-- [ ] **Step 5: Commit** `refactor(chunking): let callers suppress the progress bar`.
+- [x] **Step 1: Write the failing test.** Assert three things: calling it with `show_progress=False` writes **nothing** to stdout or stderr (`capsys`); the chunks it yields are identical to the default path for the same input; and the default path still enters the progress context. For the third, monkeypatch `chunking.stream.Progress` with a recorder and assert it was constructed with `show_progress=True` and never with `False`. Do **not** assert on printed progress text: measured, with stdout not a tty Rich's transient bar emits only `"\n"`, so such an assertion would be environment-dependent and brittle - but without the recorder, a refactor that returns the inner generator from inside the `with` block would pass the silence test while silently killing the CLI's bar.
+- [x] **Step 2: Run it and confirm it fails** with `TypeError: stream_chunks() got an unexpected keyword argument 'show_progress'`.
+- [x] **Step 3: Implement** by extracting the existing loop into a private generator and entering `with Progress(transient=True)` around it only when `show_progress` is true.
+- [x] **Step 4: Run** `uv run pytest tests/unit/test_chunking_stream.py tests/unit/test_chunking_splitter.py -q`, then confirm the CLI is untouched: `uv run openreview chunk tests/fixtures/nda_with_pii.pdf --summary`.
+- [x] **Step 5: Commit** `refactor(chunking): let callers suppress the progress bar`.
 
 ### Task 2: The retrieval domain adapter
 

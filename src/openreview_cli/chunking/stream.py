@@ -1,5 +1,7 @@
 from collections.abc import Iterator
 
+from rich.progress import Progress
+
 from openreview_cli.chunking.models import Chunk, ChunkConfig
 from openreview_cli.chunking.splitter import (
     build_structural_location,
@@ -10,10 +12,53 @@ from openreview_cli.chunking.splitter import (
 from openreview_cli.parsing.models import Clause
 
 
+def _iter_group_chunks(
+    groups: list[list[Clause]],
+    resolved: ChunkConfig,
+    clauses_by_id: dict[str, Clause],
+    progress: Progress | None,
+) -> Iterator[Chunk]:
+    """Yield the chunks for *groups*, advancing *progress* when it is given."""
+    task = (
+        progress.add_task("Chunking clauses...", total=sum(len(g) for g in groups))
+        if progress is not None
+        else None
+    )
+
+    def _advance() -> None:
+        if progress is not None and task is not None:
+            progress.update(task, advance=1)
+
+    first_chunks: dict[str, str] = {}
+    for group in groups:
+        for clause in group:
+            if not clause.text or not clause.text.strip():
+                _advance()
+                continue
+            for chunk in split_clause(clause, resolved):
+                if chunk.source_clause_id not in first_chunks:
+                    first_chunks[chunk.source_clause_id] = chunk.id
+                if chunk.chunk_index_within_clause > 0:
+                    chunk.parent_chunk_id = first_chunks.get(chunk.source_clause_id)
+                elif clause.parent_id:
+                    chunk.parent_chunk_id = first_chunks.get(clause.parent_id)
+                chunk.structural_location = build_structural_location(chunk, clause, clauses_by_id)
+                yield chunk
+            _advance()
+
+
 def stream_chunks(
     clauses: list[Clause] | Iterator[Clause],
     config: ChunkConfig | None = None,
+    *,
+    show_progress: bool = True,
 ) -> Iterator[Chunk]:
+    """Yield chunks for *clauses*.
+
+    ``show_progress=False`` suppresses the Rich progress bar, so callers that
+    own the terminal (the Textual TUI) are not written over. The yielded
+    chunks are identical either way.
+    """
     resolved = config or ChunkConfig()
     if resolved.chunk_overlap >= resolved.chunk_size:
         raise ValueError(
@@ -27,29 +72,12 @@ def stream_chunks(
 
     groups = group_short_clauses(clause_list, resolved)
 
-    first_chunks: dict[str, str] = {}
-    total_clauses = sum(len(g) for g in groups)
-    from rich.progress import Progress
+    if not show_progress:
+        yield from _iter_group_chunks(groups, resolved, clauses_by_id, None)
+        return
 
     with Progress(transient=True) as progress:
-        task = progress.add_task("Chunking clauses...", total=total_clauses)
-        for group in groups:
-            for clause in group:
-                if not clause.text or not clause.text.strip():
-                    progress.update(task, advance=1)
-                    continue
-                for chunk in split_clause(clause, resolved):
-                    if chunk.source_clause_id not in first_chunks:
-                        first_chunks[chunk.source_clause_id] = chunk.id
-                    if chunk.chunk_index_within_clause > 0:
-                        chunk.parent_chunk_id = first_chunks.get(chunk.source_clause_id)
-                    elif clause.parent_id:
-                        chunk.parent_chunk_id = first_chunks.get(clause.parent_id)
-                    chunk.structural_location = build_structural_location(
-                        chunk, clause, clauses_by_id
-                    )
-                    yield chunk
-                progress.update(task, advance=1)
+        yield from _iter_group_chunks(groups, resolved, clauses_by_id, progress)
 
 
 def format_chunks_text(chunks: list[Chunk]) -> str:
