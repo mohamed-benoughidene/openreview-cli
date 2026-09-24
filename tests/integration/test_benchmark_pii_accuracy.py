@@ -1,13 +1,14 @@
 """PII accuracy integration test (T010).
 
-Runs seeded corpus via benchmark runner, asserts the authoritative
-targets from specs/004-complete-pii-stripping FR-008/FR-009:
+Runs the seeded corpus via the benchmark runner and asserts the
+authoritative targets from specs/004-complete-pii-stripping FR-008/FR-009:
 recall ≥ 0.95 and precision ≥ 0.95.
 
-NOTE (R8 / D-8-accuracy): this gate is EXPECTED to fail against the
-current baseline (measured ~52.8% recall / ~56.3% precision). It is the
-regression gate that exposes the spec-gap; detection remediation or a
-spec amendment is required to make it pass.
+The evaluator uses span-level (type-agnostic) matching (spec FR-006, R8
+amendment): a detection is correct when its value overlaps a
+ground-truth value, whatever the type label. On the current engine
+(``PiiEngine(threshold=0.7)``) the seeded corpus measures recall 0.9640
+(563/584) and precision 0.9526 (683/717), so both gates pass.
 """
 
 from pathlib import Path
@@ -66,7 +67,7 @@ class TestPiiAccuracyIntegration:
         precision = result.metrics.get("pii_precision")
 
         # Authoritative target: specs/004 FR-008 (recall ≥95%) / FR-009
-        # (precision ≥95%). Expected to FAIL at the current baseline.
+        # (precision ≥95%). Passes under span-level (type-agnostic) matching.
         assert recall is not None, "pii_recall metric not computed"
         assert precision is not None, "pii_precision metric not computed"
         assert recall.value >= 0.95, f"PII recall {recall.value:.4f} < 0.95"
