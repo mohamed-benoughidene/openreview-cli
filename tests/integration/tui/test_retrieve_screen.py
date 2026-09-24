@@ -22,6 +22,7 @@ from textual.widgets import Button, Input, Label, ListItem, ListView, Static
 from openreview_cli.retrieval.errors import IndexCorruptError
 from openreview_cli.tui.app import OpenReviewApp
 from openreview_cli.tui.domain import retrieval as _retrieval
+from openreview_cli.tui.screens.confirm import ConfirmModal
 from openreview_cli.tui.screens.retrieve import RetrieveScreen
 
 FIXTURE_NAME = "nda_with_pii.pdf"
@@ -499,6 +500,100 @@ async def test_searching_after_clear_reports_not_indexed_and_keeps_no_stale_rows
         assert _status(screen) == NOT_INDEXED
         assert await _result_rows(pilot, screen) == [], "stale rows from a deleted index"
         assert isinstance(app.screen, RetrieveScreen)
+        assert app._exception is None
+
+
+# --------------------------------------------------------------------------
+# Clear requires confirmation (T6 / D6)
+# --------------------------------------------------------------------------
+
+
+async def test_clear_asks_first_naming_the_document_and_keeps_the_index_open(
+    fixtures_dir: Path, tmp_path: Path, isolated_xdg: dict[str, Path]
+) -> None:
+    db_dir = tmp_path / "indexes"
+    fixture = fixtures_dir / FIXTURE_NAME
+    _seed_index(db_dir, fixture, [_chunk("The confidentiality obligation survives.")])
+    _, db_path = _retrieval.resolve_document(fixture, db_dir=db_dir)
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _open_screen(pilot, app, db_dir)
+        _set_path(screen, str(fixture))
+
+        await pilot.click("#btn-clear")
+        await pilot.pause()
+
+        modal = app.screen
+        assert isinstance(modal, ConfirmModal)
+        assert str(modal.query_one("#confirm-title", Label).render()) == "Clear index"
+        message = str(modal.query_one("#confirm-message", Label).render())
+        assert FIXTURE_NAME in message
+        assert "1 chunks are indexed for this document." in message
+        assert "The source file is not touched." in message
+        assert "Ingesting it again rebuilds this index." in message
+        # Destructive styling, and the safe answer is the focused one.
+        assert modal.query_one("#yes", Button).variant == "error"
+        assert app.focused is modal.query_one("#no", Button)
+        # Nothing is deleted while the question is still open.
+        assert db_path.exists()
+        assert app._exception is None
+
+
+async def test_declining_the_clear_keeps_the_index(
+    fixtures_dir: Path, tmp_path: Path, isolated_xdg: dict[str, Path]
+) -> None:
+    db_dir = tmp_path / "indexes"
+    fixture = fixtures_dir / FIXTURE_NAME
+    _seed_index(db_dir, fixture, [_chunk("The confidentiality obligation survives.")])
+    _, db_path = _retrieval.resolve_document(fixture, db_dir=db_dir)
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _open_screen(pilot, app, db_dir)
+        _set_path(screen, str(fixture))
+
+        await pilot.click("#btn-clear")
+        await pilot.pause()
+        await pilot.click("#no")
+        await pilot.pause()
+
+        assert isinstance(app.screen, RetrieveScreen)
+        assert db_path.exists()
+        assert app._exception is None
+
+        # The index is not just still on disk, it is still usable.
+        await screen.on_input_submitted(_submit(screen, "#retrieve-query", "confidentiality"))
+        assert await _result_rows(pilot, screen)
+
+
+async def test_confirming_the_clear_removes_the_index_and_the_next_search_says_so(
+    fixtures_dir: Path, tmp_path: Path, isolated_xdg: dict[str, Path]
+) -> None:
+    db_dir = tmp_path / "indexes"
+    fixture = fixtures_dir / FIXTURE_NAME
+    _seed_index(db_dir, fixture, [_chunk("The confidentiality obligation survives.")])
+    _, db_path = _retrieval.resolve_document(fixture, db_dir=db_dir)
+
+    app = OpenReviewApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        screen = await _open_screen(pilot, app, db_dir)
+        _set_path(screen, str(fixture))
+
+        await pilot.click("#btn-clear")
+        await pilot.pause()
+        await pilot.click("#yes")
+        await pilot.pause()
+        await pilot.pause()
+
+        assert isinstance(app.screen, RetrieveScreen)
+        assert not db_path.exists(), "the confirmed clear must delete the index"
+        assert _status(screen) == NOT_INDEXED
+
+        await screen.on_input_submitted(_submit(screen, "#retrieve-query", "confidentiality"))
+
+        assert _status(screen) == NOT_INDEXED
+        assert await _result_rows(pilot, screen) == []
         assert app._exception is None
 
 
