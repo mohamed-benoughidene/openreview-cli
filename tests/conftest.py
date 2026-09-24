@@ -265,6 +265,39 @@ def isolated_xdg(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, P
     }
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _tldextract_resolves_suffixes_offline() -> None:
+    """Resolve public suffixes from tldextract's bundled snapshot, never the network.
+
+    Presidio's built-in ``EmailRecognizer.validate_result()`` calls
+    ``tldextract.extract()``, which obtains the public suffix list from (1) its
+    on-disk cache, (2) an HTTPS fetch of ``publicsuffix.org``, or (3) the
+    snapshot bundled inside the tldextract wheel.
+
+    Under this suite's ``--disable-socket`` addopt (2) cannot succeed, and
+    tldextract only tolerates a failed fetch when it raises
+    ``requests.exceptions.RequestException``.  ``pytest_socket`` raises
+    ``SocketBlockedError``, a ``RuntimeError``, which escapes tldextract
+    uncaught — so the designed snapshot fallback in (3) never runs and the
+    PiiEngine reports an engine crash.  Any environment whose tldextract cache
+    is cold therefore fails every PII test whose clause text contains an email
+    address: a fresh CI runner, a fresh checkout, or ``isolated_xdg``
+    redirecting ``XDG_CACHE_HOME`` (tldextract pins its cache directory when the
+    module is first imported).
+
+    Pinning the default extractor to the bundled snapshot removes that
+    environment dependency.  Detection results are unaffected: the bundled
+    snapshot and the downloaded list agree on ``extract(...).fqdn`` — the only
+    value Presidio consults — for every address in the fixtures.
+    """
+    import tldextract
+    import tldextract.tldextract as tldextract_impl
+
+    # ``extract()`` and ``update()`` look TLD_EXTRACTOR up in the implementation
+    # module's globals; the package re-exports those functions, not the instance.
+    tldextract_impl.TLD_EXTRACTOR = tldextract.TLDExtract(suffix_list_urls=())
+
+
 @pytest.fixture(scope="session")
 def pii_engine() -> "PiiEngine":
     """Session-scoped shared PiiEngine for tests that build their own engine."""
