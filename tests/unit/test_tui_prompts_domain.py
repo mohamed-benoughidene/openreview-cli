@@ -8,11 +8,15 @@ so the file the wrapper touches is exactly ``isolated_xdg["db_path"]``.
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
+from typing import Any
 
 import pytest
+import yaml
 
 from openreview_cli.prompts.store import PromptStore
+from openreview_cli.tui.domain import prompts as domain_prompts
 from openreview_cli.tui.domain.prompts import (
     _normalize_created_at,
     get_prompt_history_via_tui,
@@ -124,3 +128,399 @@ def test_diff_missing_version_raises(store: PromptStore) -> None:
     store.create("doc", "alpha\n")
     with pytest.raises(ValueError):
         get_prompt_version_diff("doc", 1, 2)
+
+
+# --- Task 2: the total domain boundary -------------------------------------
+
+
+def _new(name: str) -> Any:
+    """Return a Task 2 wrapper, *failing* (not erroring) when it is missing.
+
+    ``getattr`` keeps this module importable while the wrappers are still
+    unimplemented, so a missing wrapper surfaces as a genuine assertion
+    failure instead of an import-time collection error.
+    """
+    wrapper = getattr(domain_prompts, name, None)
+    if wrapper is None:
+        pytest.fail(f"tui domain wrapper {name!r} is not implemented yet")
+    return wrapper
+
+
+def _raiser(exc: Exception) -> Any:
+    """Build a callable that raises ``exc`` whenever it is invoked."""
+
+    def _raise(*_args: Any, **_kwargs: Any) -> Any:
+        raise exc
+
+    return _raise
+
+
+# --- get_prompt_detail_via_tui ---------------------------------------------
+
+
+def test_create_prompt_then_read_back(store: PromptStore) -> None:
+    version = _new("create_prompt_via_tui")("greeting", "hello", tags=["a"], description="d")
+    assert version == 1
+
+    detail = _new("get_prompt_detail_via_tui")("greeting")
+    assert detail == {
+        "found": True,
+        "name": "greeting",
+        "latest_version": 1,
+        "versions": [1],
+        "content": "hello",
+        "tags": ["a"],
+        "description": "d",
+    }
+
+
+def test_create_duplicate_name_raises(isolated_xdg: dict[str, Path]) -> None:
+    create = _new("create_prompt_via_tui")
+    create("dup", "one")
+    with pytest.raises(ValueError):
+        create("dup", "two")
+
+
+def test_detail_missing_prompt_is_found_false(isolated_xdg: dict[str, Path]) -> None:
+    detail = _new("get_prompt_detail_via_tui")("does-not-exist")
+    assert detail["found"] is False
+    assert detail["versions"] == []
+    assert detail["latest_version"] == 0
+
+
+def test_detail_versions_survive_sparse_import(store: PromptStore) -> None:
+    """An imported prompt numbered 1 and 3 must report ``[1, 3]``, not raise."""
+    store.import_prompt(
+        {
+            "name": "sparse",
+            "versions": [
+                {"version": 1, "content": "one", "created_at": "2026-01-01T00:00:00Z"},
+                {"version": 3, "content": "three", "created_at": "2026-01-03T00:00:00Z"},
+            ],
+        }
+    )
+
+    detail = _new("get_prompt_detail_via_tui")("sparse")
+
+    assert detail["found"] is True
+    assert detail["versions"] == [1, 3]
+    assert detail["latest_version"] == 3
+    assert detail["content"] == "three"
+
+
+# --- create / update / delete ----------------------------------------------
+
+
+def test_update_appends_version_two_and_keeps_version_one(store: PromptStore) -> None:
+    create = _new("create_prompt_via_tui")
+    update = _new("update_prompt_via_tui")
+    detail = _new("get_prompt_detail_via_tui")
+
+    create("doc", "one")
+    assert update("doc", "two") == 2
+
+    d = detail("doc")
+    assert d["versions"] == [1, 2]
+    assert d["latest_version"] == 2
+    assert d["content"] == "two"
+    assert store.get("doc", 1).content == "one"
+
+
+def test_update_with_too_many_characters_raises_value_error(store: PromptStore) -> None:
+    """The store's SQL CHECK rejects 20000 chars; the boundary must raise ValueError."""
+    create = _new("create_prompt_via_tui")
+    update = _new("update_prompt_via_tui")
+
+    create("big", "seed")
+    with pytest.raises(ValueError):
+        update("big", "a" * 20000)
+
+
+def test_update_with_multibyte_content_within_char_limit_succeeds(store: PromptStore) -> None:
+    """12000 ``€`` is 36000 bytes but 12000 characters: the store accepts it."""
+    create = _new("create_prompt_via_tui")
+    update = _new("update_prompt_via_tui")
+
+    create("euro", "seed")
+    assert update("euro", "€" * 12000) == 2
+
+
+def test_delete_removes_every_version(store: PromptStore) -> None:
+    create = _new("create_prompt_via_tui")
+    update = _new("update_prompt_via_tui")
+    delete = _new("delete_prompt_via_tui")
+    detail = _new("get_prompt_detail_via_tui")
+
+    create("gone", "one")
+    update("gone", "two")
+    delete("gone")
+
+    assert detail("gone")["found"] is False
+    assert store.list() == []
+
+
+# --- bindings ---------------------------------------------------------------
+
+
+def test_bind_list_unbind_round_trip(isolated_xdg: dict[str, Path]) -> None:
+    create = _new("create_prompt_via_tui")
+    bind = _new("bind_prompt_via_tui")
+    unbind = _new("unbind_prompt_via_tui")
+    list_bindings = _new("list_bindings_via_tui")
+
+    create("bound", "content")
+    bind("reasoning", "bound", 1)
+
+    bindings = list_bindings()
+    assert len(bindings) == 1
+    row = bindings[0]
+    assert row["slot"] == "reasoning"
+    assert row["prompt_name"] == "bound"
+    assert row["prompt_version"] == 1
+    assert row["created_at"]
+
+    unbind("reasoning")
+    assert list_bindings() == []
+
+
+def test_bind_with_unknown_slot_raises(isolated_xdg: dict[str, Path]) -> None:
+    with pytest.raises(ValueError):
+        _new("bind_prompt_via_tui")("nope", "x", 1)
+
+
+def test_unbind_without_binding_raises(isolated_xdg: dict[str, Path]) -> None:
+    with pytest.raises(ValueError):
+        _new("unbind_prompt_via_tui")("reasoning")
+
+
+# --- validate_prompt_test_via_tui -------------------------------------------
+
+
+def test_validate_prompt_test_unknown_prompt_raises(isolated_xdg: dict[str, Path]) -> None:
+    with pytest.raises(ValueError):
+        _new("validate_prompt_test_via_tui")("ghost", [1])
+
+
+def test_validate_prompt_test_unknown_version_raises(store: PromptStore) -> None:
+    create = _new("create_prompt_via_tui")
+    validate = _new("validate_prompt_test_via_tui")
+
+    create("known", "x")
+    with pytest.raises(ValueError):
+        validate("known", [2])
+
+
+def test_validate_prompt_test_valid_versions_pass(store: PromptStore) -> None:
+    create = _new("create_prompt_via_tui")
+    update = _new("update_prompt_via_tui")
+    validate = _new("validate_prompt_test_via_tui")
+
+    create("known", "x")
+    update("known", "y")
+    assert validate("known", [1, 2]) is None
+
+
+# --- export / import --------------------------------------------------------
+
+
+def test_export_writes_a_file_that_parses_back(store: PromptStore, tmp_path: Path) -> None:
+    create = _new("create_prompt_via_tui")
+    update = _new("update_prompt_via_tui")
+    export = _new("export_prompt_via_tui")
+
+    create("exp", "one")
+    update("exp", "two")
+    dest = tmp_path / "exp.yaml"
+    export(dest, "exp")
+
+    data = yaml.safe_load(dest.read_text())
+    assert data["name"] == "exp"
+    assert [v["version"] for v in data["versions"]] == [1, 2]
+    assert data["versions"][1]["content"] == "two"
+
+
+def test_import_reports_imported_and_failed(isolated_xdg: dict[str, Path], tmp_path: Path) -> None:
+    importer = _new("import_prompts_via_tui")
+    path = tmp_path / "mixed.yaml"
+    path.write_text(
+        yaml.safe_dump(
+            [
+                {
+                    "name": "fresh",
+                    "versions": [
+                        {
+                            "version": 1,
+                            "content": "a",
+                            "created_at": "2026-01-01T00:00:00Z",
+                        }
+                    ],
+                },
+                {
+                    "name": "existing",
+                    "versions": [
+                        {
+                            "version": 1,
+                            "content": "b",
+                            "created_at": "2026-01-01T00:00:00Z",
+                        }
+                    ],
+                },
+            ]
+        )
+    )
+    # Pre-create the second name so its import is refused by the store.
+    PromptStore(isolated_xdg["db_path"]).create("existing", "old")
+
+    result = importer(path)
+
+    assert result["imported"] == ["fresh"]
+    assert set(result["failed"]) == {"existing"}
+    assert "already exists" in result["failed"]["existing"]
+
+
+def test_import_collects_per_item_store_failure(
+    monkeypatch: pytest.MonkeyPatch, isolated_xdg: dict[str, Path], tmp_path: Path
+) -> None:
+    """A store error during import is reported per item, never raised out."""
+    importer = _new("import_prompts_via_tui")
+    monkeypatch.setattr(PromptStore, "import_prompt", _raiser(sqlite3.IntegrityError("boom")))
+    path = tmp_path / "one.yaml"
+    path.write_text(
+        yaml.safe_dump(
+            {
+                "name": "x",
+                "versions": [{"version": 1, "content": "c", "created_at": "2026-01-01T00:00:00Z"}],
+            }
+        )
+    )
+
+    result = importer(path)
+
+    assert result["imported"] == []
+    assert "x" in result["failed"]
+    assert "boom" in result["failed"]["x"]
+
+
+# --- the total boundary: any store exception becomes ValueError -------------
+
+_BOUNDARY_CASES = [
+    ("create_prompt_via_tui", "create", lambda w: w("name", "content")),
+    ("update_prompt_via_tui", "update", lambda w: w("name", "content")),
+    ("delete_prompt_via_tui", "delete", lambda w: w("name")),
+    ("get_prompt_detail_via_tui", "export", lambda w: w("name")),
+    ("list_bindings_via_tui", "bindings", lambda w: w()),
+    ("bind_prompt_via_tui", "bind", lambda w: w("reasoning", "name", 1)),
+    ("unbind_prompt_via_tui", "unbind", lambda w: w("reasoning")),
+    ("validate_prompt_test_via_tui", "get_latest", lambda w: w("name", [1])),
+    ("export_prompt_via_tui", "export", lambda w: w(Path("unused.yaml"), "name")),
+]
+
+
+@pytest.mark.parametrize("exc_type", [sqlite3.IntegrityError, KeyError, TypeError])
+@pytest.mark.parametrize(
+    ("wrapper_name", "store_method", "invoke"),
+    _BOUNDARY_CASES,
+    ids=[case[0] for case in _BOUNDARY_CASES],
+)
+def test_boundary_is_total(
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_xdg: dict[str, Path],
+    exc_type: type[Exception],
+    wrapper_name: str,
+    store_method: str,
+    invoke: Any,
+) -> None:
+    wrapper = _new(wrapper_name)
+    monkeypatch.setattr(PromptStore, store_method, _raiser(exc_type("boom")))
+    with pytest.raises(ValueError):
+        invoke(wrapper)
+
+
+# --- Defect 2: import runs the SAME validator the CLI runs -------------------
+#
+# Regression: ``import_prompts_via_tui`` called ``yaml.safe_load`` itself, so a
+# structurally invalid document reached the store (or was silently swallowed
+# into ``failed``) instead of raising ``ValueError`` before any write.  The fix
+# routes the wrapper through ``openreview_cli.prompts.io.parse_prompts_yaml``,
+# the one structural validator the CLI's ``prompt import`` also uses.
+
+
+def _write_prompts_yaml(path: Path, data: Any) -> None:
+    path.write_text(yaml.safe_dump(data))
+
+
+class TestImportUsesSharedValidator:
+    def test_version_missing_created_at_raises_and_writes_nothing(
+        self, isolated_xdg: dict[str, Path], tmp_path: Path
+    ) -> None:
+        path = tmp_path / "missing-created-at.yaml"
+        _write_prompts_yaml(path, {"name": "alpha", "versions": [{"version": 1, "content": "x"}]})
+
+        with pytest.raises(ValueError, match="created_at"):
+            _new("import_prompts_via_tui")(path)
+
+        assert PromptStore(isolated_xdg["db_path"]).list() == []
+
+    def test_versions_null_raises_and_writes_nothing(
+        self, isolated_xdg: dict[str, Path], tmp_path: Path
+    ) -> None:
+        path = tmp_path / "versions-null.yaml"
+        _write_prompts_yaml(path, {"name": "alpha", "versions": None})
+
+        with pytest.raises(ValueError, match="null 'versions'"):
+            _new("import_prompts_via_tui")(path)
+
+        assert PromptStore(isolated_xdg["db_path"]).list() == []
+
+    def test_mixed_file_imports_first_and_reports_duplicate(
+        self, isolated_xdg: dict[str, Path], tmp_path: Path
+    ) -> None:
+        store = PromptStore(isolated_xdg["db_path"])
+        store.init()
+        store.create("existing", "old")
+        path = tmp_path / "mixed.yaml"
+        _write_prompts_yaml(
+            path,
+            [
+                {
+                    "name": "fresh",
+                    "versions": [
+                        {"version": 1, "content": "a", "created_at": "2026-01-01T00:00:00Z"}
+                    ],
+                },
+                {
+                    "name": "existing",
+                    "versions": [
+                        {"version": 1, "content": "b", "created_at": "2026-01-01T00:00:00Z"}
+                    ],
+                },
+            ],
+        )
+
+        result = _new("import_prompts_via_tui")(path)
+
+        assert result["imported"] == ["fresh"]
+        assert set(result["failed"]) == {"existing"}
+        assert "already exists" in result["failed"]["existing"]
+        # The first prompt really landed, not merely reported.
+        assert store.get("fresh", 1).content == "a"
+
+    def test_unreadable_file_raises_value_error(self, tmp_path: Path) -> None:
+        directory = tmp_path / "a-directory"
+        directory.mkdir()
+
+        with pytest.raises(ValueError, match="import"):
+            _new("import_prompts_via_tui")(directory)
+
+    def test_store_init_failure_raises_value_error(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.setattr(domain_prompts, "_store", _raiser(sqlite3.OperationalError("boom")))
+        path = tmp_path / "ok.yaml"
+        _write_prompts_yaml(
+            path,
+            {"name": "x", "versions": [{"version": 1, "content": "c", "created_at": "z"}]},
+        )
+
+        with pytest.raises(ValueError, match="import"):
+            _new("import_prompts_via_tui")(path)
