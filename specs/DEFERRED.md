@@ -3858,6 +3858,6 @@ The span-level (type-agnostic) predicate adopted for FR-006 counts a detection w
 
 ### Spec references
 
-Spec 004 FR-006 (PII accuracy validation). The type-agnostic predicate adopted for FR-006 is what de-scores this item; this entry is that decision's cross-reference. `benchmark/metrics_pii.py` (`_values_match`, `evaluate_pii_accuracy`); `src/openreview_cli/pii/placeholders.py` (`assign_placeholders`); `src/openreview_cli/pii/engine.py:315-332`. Corpus: `tests/fixtures/pii/seeded_contracts/`.
+Spec 004 FR-006 (PII accuracy validation). The type-agnostic predicate adopted for FR-006 is what de-scores this item; this entry is that decision's cross-reference. `benchmark/metrics_pii.py` (`_values_match`, `evaluate_pii_accuracy`); `src/openreview_cli/pii/placeholders.py` (`assign_placeholders`); `src/openreview_cli/pii/engine.py:315-332`. Corpus: `tests/fixtures/pii/seeded_contracts/`. Issue 115 is the tracking issue for this wrong-type-placeholder defect.
 
 ---

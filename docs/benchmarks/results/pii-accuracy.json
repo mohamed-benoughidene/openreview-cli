@@ -2,7 +2,7 @@
   "benchmark": "pii-accuracy",
   "command": "uv run python - <<'PY' (BenchmarkRunner.run_pii with the real PiiEngine; see AGENTS.md 'PII accuracy (seeded corpus)')",
   "date": "2026-09-24",
-  "git_commit": "657e947",
+  "git_commit": "882568c",
   "provenance": [
     {
       "path": "src/openreview_cli/benchmark/metrics_pii.py",
