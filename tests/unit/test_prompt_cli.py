@@ -131,6 +131,35 @@ class TestPromptTest:
         result = invoke("test", "--prompt", "test", "--versions", "99")
         assert result.exit_code == 2
 
+    @pytest.mark.parametrize("versions", ["1,", "", "abc", "1 2", "1,,2"])
+    def test_test_malformed_versions_exits_cleanly(self, versions: str) -> None:
+        """A malformed --versions value exits 2 with a clear message, never a crash.
+
+        Before the fix, ``int("")`` raised an uncaught ``ValueError`` (a Rich
+        traceback, exit 1) for ``"1,"``, ``""``, ``"1,,2"``, and ``int("abc")``
+        / ``int("1 2")`` did the same for the non-integer tokens.
+        """
+        invoke("create", "--name", "test", "--content", "Hello")
+        result = invoke("test", "--prompt", "test", "--versions", versions)
+
+        assert result.exit_code == 2, result.output
+        # The message names the problem, matching the TUI modal's wording.
+        assert "Versions must be comma-separated version numbers" in result.output
+        assert "Traceback" not in result.output
+        # A clean ``typer.Exit`` surfaces as ``SystemExit``; the pre-fix crash
+        # surfaced as a raw ``ValueError`` from ``int("")``.
+        assert isinstance(result.exception, SystemExit)
+
+    def test_test_valid_versions_exits_three_with_roadmap_notice(self) -> None:
+        """Positive control: a well-formed list still reaches the roadmap stub (exit 3)."""
+        invoke("create", "--name", "test", "--content", "Hello")
+        invoke("update", "test", "--content", "World")
+        result = invoke("test", "--prompt", "test", "--versions", "1,2")
+
+        assert result.exit_code == 3, result.output
+        assert "benchmark harness" in result.output
+        assert "Traceback" not in result.output
+
 
 class TestPromptExport:
     def test_export_single(self) -> None:

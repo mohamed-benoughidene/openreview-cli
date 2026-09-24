@@ -32,6 +32,27 @@ def _exit(code: int, message: str) -> None:
     raise typer.Exit(code=code)
 
 
+# Mirrors the TUI modal's guard (``tui/screens/prompt_test.py:PARSE_ERROR``) so
+# the CLI and the TUI reject a malformed ``--versions`` list with identical wording.
+PARSE_ERROR = "Versions must be comma-separated version numbers"
+
+
+def _parse_versions(raw: str) -> list[int] | None:
+    """Parse ``raw`` into a list of ints, or ``None`` when it is malformed.
+
+    Every empty token (``"1,"``, ``""``, ``"1,,2"``) and every non-integer token
+    (``"abc"``, ``"1 2"``) is rejected, mirroring the TUI modal's guard.  Without
+    this, ``int("")`` raises an uncaught ``ValueError``.
+    """
+    tokens = [token.strip() for token in raw.split(",")]
+    if any(token == "" for token in tokens):
+        return None
+    try:
+        return [int(token) for token in tokens]
+    except ValueError:
+        return None
+
+
 @prompt_app.command("create")
 def prompt_create(
     name: str = typer.Option(..., "--name", help="Unique prompt identifier"),
@@ -218,13 +239,16 @@ def prompt_test(
     ),
     benchmark: str = typer.Option("standard", "--benchmark", help="Benchmark dataset name"),
 ) -> None:
+    version_nums = _parse_versions(versions)
+    if version_nums is None:
+        _exit(2, PARSE_ERROR)
+        return
     store = _get_store()
     try:
         store.get_latest(prompt)
     except ValueError:
         _exit(1, f"Prompt '{prompt}' not found")
         return
-    version_nums = [int(v.strip()) for v in versions.split(",")]
     for v in version_nums:
         try:
             store.get(prompt, v)
