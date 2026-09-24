@@ -132,17 +132,20 @@ def search(
         RetrievalQuery(
             query_text=query,
             method=_METHOD,
-            top_k=top_k or _configured_top_k(),
+            top_k=top_k or configured_top_k(),
         )
     )
 
 
-def _configured_top_k() -> int:
+def configured_top_k() -> int:
     """Read ``retrieval.top_k`` the way the CLI reads it.
 
     Read from ``load_config()`` directly rather than through
     ``openreview_cli.app``: ``tui/`` has never imported the CLI module, and
     doing so would drag the whole CLI into the TUI's import graph.
+
+    Public so the screen can report the cut it actually applied, from the one
+    number it also passes to ``search``.
     """
     section = load_config(get_config_dir() / "config.yml").get("retrieval")
     if not isinstance(section, dict):
