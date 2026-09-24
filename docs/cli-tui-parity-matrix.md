@@ -2,8 +2,8 @@
 
 Generated from live source by `scripts/parity/build_parity_matrix.py`. Every row cites a source file and a line number.
 
-- Commit: `4be40af`
-- Generated at: 2026-09-24T08:22:38+00:00
+- Commit: `ac68a39`
+- Generated at: 2026-09-24T15:03:50+00:00
 - CLI framework: Typer 0.26.7
 - TUI framework: Textual 8.2.8
 - Python: 3.12.3
@@ -21,15 +21,15 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | Item | Count |
 |---|---|
 | CLI inventory rows | 556 |
-| TUI inventory rows | 117 |
+| TUI inventory rows | 127 |
 | Shared call argument rows | 89 |
 | Compared shared call argument pairs | 44 |
 | Default-value mismatches | 3 |
-| Parity join rows | 241 |
+| Parity join rows | 255 |
 | Needs human confirmation | 32 |
-| Hidden single-key bindings | 139 |
-| Unmatched CLI items | 93 |
-| Unmatched TUI items | 50 |
+| Hidden single-key bindings | 140 |
+| Unmatched CLI items | 89 |
+| Unmatched TUI items | 51 |
 | Semantic collisions | 20 |
 
 ## Table A: CLI inventory
@@ -606,10 +606,11 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | 5 | binding | OpenReviewApp | 5, show_tab('settings'), Settings |  | src/openreview_cli/tui/app.py:30 |
 | / | binding | OpenReviewApp | /, open_search, Search |  | src/openreview_cli/tui/app.py:31 |
 | 6 | binding | OpenReviewApp | 6, show_tab('prompts'), Prompts |  | src/openreview_cli/tui/app.py:32 |
-| action_show_tab | action | OpenReviewApp | 1, 2, 3, 4, 5, 6 |  | src/openreview_cli/tui/app.py:72 |
-| action_quit_or_warn | action | OpenReviewApp | ctrl+c |  | src/openreview_cli/tui/app.py:76 |
-| action_open_search | action | OpenReviewApp | / |  | src/openreview_cli/tui/app.py:122 |
-| _ctrl_c_warned | default-state | OpenReviewApp | _ctrl_c_warned | False | src/openreview_cli/tui/app.py:37 |
+| 7 | binding | OpenReviewApp | 7, show_tab('retrieve'), Retrieve |  | src/openreview_cli/tui/app.py:33 |
+| action_show_tab | action | OpenReviewApp | 1, 2, 3, 4, 5, 6, 7 |  | src/openreview_cli/tui/app.py:76 |
+| action_quit_or_warn | action | OpenReviewApp | ctrl+c |  | src/openreview_cli/tui/app.py:80 |
+| action_open_search | action | OpenReviewApp | / |  | src/openreview_cli/tui/app.py:126 |
+| _ctrl_c_warned | default-state | OpenReviewApp | _ctrl_c_warned | False | src/openreview_cli/tui/app.py:38 |
 | AnnotateModal | screen | openreview_cli.tui.screens.amber_queue |  |  | src/openreview_cli/tui/screens/amber_queue.py:54 |
 | escape | binding | AnnotateModal | escape, cancel, Cancel |  | src/openreview_cli/tui/screens/amber_queue.py:68 |
 | action_cancel | action | AnnotateModal | escape |  | src/openreview_cli/tui/screens/amber_queue.py:87 |
@@ -700,6 +701,15 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | action_next_doc | action | ResultScreen | ] |  | src/openreview_cli/tui/screens/result.py:378 |
 | action_prev_doc | action | ResultScreen | [ |  | src/openreview_cli/tui/screens/result.py:385 |
 | _layout_split | default-state | ResultScreen | _layout_split | True | src/openreview_cli/tui/screens/result.py:79 |
+| RetrieveScreen | screen | openreview_cli.tui.screens.retrieve |  |  | src/openreview_cli/tui/screens/retrieve.py:94 |
+| escape | binding | RetrieveScreen | escape, go_back, Back |  | src/openreview_cli/tui/screens/retrieve.py:112 |
+| action_chunk_document | action | RetrieveScreen |  |  | src/openreview_cli/tui/screens/retrieve.py:173 |
+| action_ingest_document | action | RetrieveScreen |  |  | src/openreview_cli/tui/screens/retrieve.py:197 |
+| action_retrieve | action | RetrieveScreen |  |  | src/openreview_cli/tui/screens/retrieve.py:244 |
+| action_index_status | action | RetrieveScreen |  |  | src/openreview_cli/tui/screens/retrieve.py:297 |
+| action_index_clear | action | RetrieveScreen |  |  | src/openreview_cli/tui/screens/retrieve.py:307 |
+| action_go_back | action | RetrieveScreen | escape |  | src/openreview_cli/tui/screens/retrieve.py:335 |
+| _busy | default-state | RetrieveScreen | _busy | False | src/openreview_cli/tui/screens/retrieve.py:118 |
 | ReviewWizard | screen | openreview_cli.tui.screens.review_wizard |  |  | src/openreview_cli/tui/screens/review_wizard.py:67 |
 | escape | binding | ReviewWizard | escape, cancel_wizard, Cancel |  | src/openreview_cli/tui/screens/review_wizard.py:82 |
 | ctrl+h | binding | ReviewWizard | ctrl+h, toggle_hidden, Hidden files |  | src/openreview_cli/tui/screens/review_wizard.py:83 |
@@ -766,7 +776,10 @@ Note: `CERTAIN` in this table means only that the CLI item and the TUI item shar
 | SHARED-CALL | n/a | product modes (session_id) | src/openreview_cli/app.py:3392 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
 | SHARED-CALL | n/a | product modes (verbose) | src/openreview_cli/app.py:3398 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:58 | none |
 | CERTAIN | pii | --allow-partial-pii (option) | src/openreview_cli/app.py:3263 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
+| CERTAIN | clear | --clear (option) | src/openreview_cli/app.py:1584 | action_index_clear (action) | src/openreview_cli/tui/screens/retrieve.py:307 | none |
 | CERTAIN | clause | --cluster-clauses (option) | src/openreview_cli/app.py:2638 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
+| CERTAIN | document | --document (option) | src/openreview_cli/app.py:1176 | action_chunk_document (action) | src/openreview_cli/tui/screens/retrieve.py:173 | none |
+| CERTAIN | document | --document (option) | src/openreview_cli/app.py:1176 | action_ingest_document (action) | src/openreview_cli/tui/screens/retrieve.py:197 | none |
 | CERTAIN | pii | --no-pii (option) | src/openreview_cli/app.py:3266 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
 | CERTAIN | pii | --no-pii (option) | src/openreview_cli/app.py:1179 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
 | CERTAIN | pii | --no-pii (option) | src/openreview_cli/app.py:1858 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
@@ -792,12 +805,15 @@ Note: `CERTAIN` in this table means only that the CLI item and the TUI item shar
 | CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
 | CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
 | CERTAIN | summary | --summary (option) | src/openreview_cli/app.py:1358 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:61 | none |
+| CERTAIN | chunk | chunk (command) | src/openreview_cli/app.py:1772 | action_chunk_document (action) | src/openreview_cli/tui/screens/retrieve.py:173 | none |
 | CERTAIN | client | client add (command) | src/openreview_cli/app.py:390 | ClientDetailScreen (screen) | src/openreview_cli/tui/screens/client_detail.py:13 | none |
 | CERTAIN | client | client add (command) | src/openreview_cli/app.py:390 | ClientForm (screen) | src/openreview_cli/tui/screens/client_form.py:13 | none |
 | CERTAIN | client | client delete (command) | src/openreview_cli/app.py:425 | ClientDetailScreen (screen) | src/openreview_cli/tui/screens/client_detail.py:13 | none |
 | CERTAIN | client | client delete (command) | src/openreview_cli/app.py:425 | ClientForm (screen) | src/openreview_cli/tui/screens/client_form.py:13 | none |
 | CERTAIN | client | client list (command) | src/openreview_cli/app.py:400 | ClientDetailScreen (screen) | src/openreview_cli/tui/screens/client_detail.py:13 | none |
 | CERTAIN | client | client list (command) | src/openreview_cli/app.py:400 | ClientForm (screen) | src/openreview_cli/tui/screens/client_form.py:13 | none |
+| CERTAIN | document | document_hash (argument) | src/openreview_cli/app.py:550 | action_chunk_document (action) | src/openreview_cli/tui/screens/retrieve.py:173 | none |
+| CERTAIN | document | document_hash (argument) | src/openreview_cli/app.py:550 | action_ingest_document (action) | src/openreview_cli/tui/screens/retrieve.py:197 | none |
 | CERTAIN | export | export (command) | src/openreview_cli/app.py:3173 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:33 | none |
 | CERTAIN | gateway | gateway costs (command) | src/openreview_cli/app.py:1678 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | gateway | gateway fallback (command) | src/openreview_cli/app.py:1578 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
@@ -808,6 +824,7 @@ Note: `CERTAIN` in this table means only that the CLI item and the TUI item shar
 | CERTAIN | gateway | gateway set (command) | src/openreview_cli/app.py:1555 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | gateway | gateway setup (command) | src/openreview_cli/app.py:1401 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | gateway | gateway status (command) | src/openreview_cli/app.py:1409 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
+| CERTAIN | statu | gateway status (command) | src/openreview_cli/app.py:1409 | action_index_status (action) | src/openreview_cli/tui/screens/retrieve.py:297 | none |
 | CERTAIN | gateway | gateway test (command) | src/openreview_cli/app.py:1643 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | test | gateway test (command) | src/openreview_cli/app.py:1643 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
 | CERTAIN | graph | graph build (command) | src/openreview_cli/app.py:2615 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:61 | none |
@@ -824,6 +841,11 @@ Note: `CERTAIN` in this table means only that the CLI item and the TUI item shar
 | CERTAIN | graph | graph view (command) | src/openreview_cli/app.py:2908 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
 | CERTAIN | graph | graph_path (argument) | src/openreview_cli/app.py:2684 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:61 | none |
 | CERTAIN | graph | graph_path (argument) | src/openreview_cli/app.py:2684 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
+| CERTAIN | clear, index | index-clear (command) | src/openreview_cli/app.py:2483 | action_index_clear (action) | src/openreview_cli/tui/screens/retrieve.py:307 | none |
+| CERTAIN | index | index-clear (command) | src/openreview_cli/app.py:2483 | action_index_status (action) | src/openreview_cli/tui/screens/retrieve.py:297 | none |
+| CERTAIN | index | index-status (command) | src/openreview_cli/app.py:2426 | action_index_clear (action) | src/openreview_cli/tui/screens/retrieve.py:307 | none |
+| CERTAIN | index, statu | index-status (command) | src/openreview_cli/app.py:2426 | action_index_status (action) | src/openreview_cli/tui/screens/retrieve.py:297 | none |
+| CERTAIN | ingest | ingest (command) | src/openreview_cli/app.py:2075 | action_ingest_document (action) | src/openreview_cli/tui/screens/retrieve.py:197 | none |
 | CERTAIN | pii | pii cleanup (command) | src/openreview_cli/app.py:568 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
 | CERTAIN | pii | pii delete (command) | src/openreview_cli/app.py:548 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
 | CERTAIN | pii | pii list (command) | src/openreview_cli/app.py:507 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
@@ -962,6 +984,8 @@ Note: `CERTAIN` in this table means only that the CLI item and the TUI item shar
 | CERTAIN | prompt | prompt update (command) | src/openreview_cli/prompts/cli.py:78 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
 | CERTAIN | prompt | prompt update (command) | src/openreview_cli/prompts/cli.py:78 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
 | CERTAIN | prompt | prompt update (command) | src/openreview_cli/prompts/cli.py:78 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
+| CERTAIN | retrieve | retrieve (command) | src/openreview_cli/app.py:2209 | RetrieveScreen (screen) | src/openreview_cli/tui/screens/retrieve.py:94 | none |
+| CERTAIN | retrieve | retrieve (command) | src/openreview_cli/app.py:2209 | action_retrieve (action) | src/openreview_cli/tui/screens/retrieve.py:244 | none |
 
 ## Default-value mismatches
 
@@ -998,14 +1022,14 @@ Note: `CERTAIN` in this table means only that the CLI item and the TUI item shar
 
 ## Needs human confirmation
 
-Grouped by the TUI screen each CLI item points at. 139 single and double character keybinding rows are omitted.
+Grouped by the TUI screen each CLI item points at. 140 single and double character keybinding rows are omitted.
 
 ### OpenReviewApp
 
 | CLI item | CLI source | TUI item | TUI source | Shared token | Reason |
 |---|---|---|---|---|---|
-| config show (command) | src/openreview_cli/app.py:447 | action_show_tab (action) | src/openreview_cli/tui/app.py:72 | show | generic token only: show |
-| --show-redlines (option) | src/openreview_cli/app.py:1837 | action_show_tab (action) | src/openreview_cli/tui/app.py:72 | show | generic token only: show |
+| config show (command) | src/openreview_cli/app.py:447 | action_show_tab (action) | src/openreview_cli/tui/app.py:76 | show | generic token only: show |
+| --show-redlines (option) | src/openreview_cli/app.py:1837 | action_show_tab (action) | src/openreview_cli/tui/app.py:76 | show | generic token only: show |
 
 ### PromptHistoryScreen
 
@@ -1057,8 +1081,6 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 | --debug | option | openreview | src/openreview_cli/app.py:355 |
 | parse | command |  | src/openreview_cli/app.py:1354 |
 | --format | option | parse, chunk | src/openreview_cli/app.py:1357 |
-| chunk | command |  | src/openreview_cli/app.py:1772 |
-| ingest | command |  | src/openreview_cli/app.py:2075 |
 | --method | option | ingest | src/openreview_cli/app.py:2078 |
 | --model | option | ingest | src/openreview_cli/app.py:2079 |
 | --db-dir | option | ingest, retrieve, +2 more | src/openreview_cli/app.py:2080 |
@@ -1089,7 +1111,6 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 | v1 | argument | playbook diff | src/openreview_cli/app.py:915 |
 | v2 | argument | playbook diff | src/openreview_cli/app.py:916 |
 | --json | option | playbook diff | src/openreview_cli/app.py:917 |
-| --document | option | precheck | src/openreview_cli/app.py:1176 |
 | --format | option | precheck | src/openreview_cli/app.py:1190 |
 | --force-reprocess | option | precheck | src/openreview_cli/app.py:1192 |
 | --extraction-model | option | precheck review, precheck compare | src/openreview_cli/app.py:1275 |
@@ -1106,7 +1127,6 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 | slot | argument | gateway set, gateway fallback, +1 more | src/openreview_cli/app.py:1556 |
 | model | argument | gateway set | src/openreview_cli/app.py:1556 |
 | model | argument | gateway fallback | src/openreview_cli/app.py:1582 |
-| --clear | option | gateway fallback | src/openreview_cli/app.py:1584 |
 | --today | option | gateway costs | src/openreview_cli/app.py:1680 |
 | --session | option | gateway costs | src/openreview_cli/app.py:1681 |
 | --base-url | option | gateway provider add | src/openreview_cli/app.py:1708 |
@@ -1156,8 +1176,8 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 | 1 | binding | OpenReviewApp | src/openreview_cli/tui/app.py:26 |
 | 5 | binding | OpenReviewApp | src/openreview_cli/tui/app.py:30 |
 | / | binding | OpenReviewApp | src/openreview_cli/tui/app.py:31 |
-| action_quit_or_warn | action | OpenReviewApp | src/openreview_cli/tui/app.py:76 |
-| action_open_search | action | OpenReviewApp | src/openreview_cli/tui/app.py:122 |
+| action_quit_or_warn | action | OpenReviewApp | src/openreview_cli/tui/app.py:80 |
+| action_open_search | action | OpenReviewApp | src/openreview_cli/tui/app.py:126 |
 | AnnotateModal | screen | openreview_cli.tui.screens.amber_queue | src/openreview_cli/tui/screens/amber_queue.py:54 |
 | escape | binding | AnnotateModal, EgressReviewModal, +2 more | src/openreview_cli/tui/screens/amber_queue.py:68 |
 | action_cancel | action | AnnotateModal, EgressReviewModal | src/openreview_cli/tui/screens/amber_queue.py:87 |
@@ -1178,7 +1198,7 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 | action_toggle_overview | action | AmberQueueScreen | src/openreview_cli/tui/screens/amber_queue.py:240 |
 | action_annotate | action | AmberQueueScreen | src/openreview_cli/tui/screens/amber_queue.py:244 |
 | action_close | action | AmberQueueScreen | src/openreview_cli/tui/screens/amber_queue.py:250 |
-| escape | binding | ClientDetailScreen, GraphSummaryScreen, +2 more | src/openreview_cli/tui/screens/client_detail.py:27 |
+| escape | binding | ClientDetailScreen, GraphSummaryScreen, +3 more | src/openreview_cli/tui/screens/client_detail.py:27 |
 | action_pop_screen | action | ClientDetailScreen, GraphSummaryScreen, +1 more | src/openreview_cli/tui/screens/client_detail.py:98 |
 | ConfirmModal | screen | openreview_cli.tui.screens.confirm | src/openreview_cli/tui/screens/confirm.py:13 |
 | DatabaseErrorScreen | screen | openreview_cli.tui.screens.db_error | src/openreview_cli/tui/screens/db_error.py:15 |
@@ -1200,6 +1220,7 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 | left | binding | ResultScreen | src/openreview_cli/tui/screens/result.py:60 |
 | action_toggle_layout | action | ResultScreen | src/openreview_cli/tui/screens/result.py:277 |
 | action_open_amber_queue | action | ResultScreen | src/openreview_cli/tui/screens/result.py:337 |
+| action_go_back | action | RetrieveScreen | src/openreview_cli/tui/screens/retrieve.py:335 |
 | action_toggle_hidden | action | ReviewWizard | src/openreview_cli/tui/screens/review_wizard.py:280 |
 | SearchScreen | screen | openreview_cli.tui.screens.search | src/openreview_cli/tui/screens/search.py:31 |
 
@@ -1335,18 +1356,18 @@ Grouped by the TUI screen each CLI item points at. 139 single and double charact
 
 | Row type | Count |
 |---|---|
-| action | 32 |
+| action | 38 |
 | app | 1 |
 | argument | 73 |
-| binding | 43 |
+| binding | 45 |
 | command | 82 |
-| default-state | 12 |
+| default-state | 13 |
 | group | 11 |
 | mismatch | 3 |
 | option | 390 |
-| screen | 29 |
+| screen | 30 |
 | shared-call-arg | 89 |
-| total | 765 |
+| total | 775 |
 
 Regenerate with:
 
