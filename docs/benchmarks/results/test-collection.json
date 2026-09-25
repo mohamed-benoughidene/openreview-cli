@@ -1,8 +1,8 @@
 {
   "benchmark": "test-collection",
   "command": "uv run pytest --collect-only -q",
-  "date": "2026-09-24",
-  "git_commit": "882568c",
+  "date": "2026-09-25",
+  "git_commit": "fdea262",
   "provenance": [
     {
       "path": "scripts/benchmark_local_metrics.py",
@@ -15,8 +15,8 @@
   },
   "metrics": {
     "exit_code": 0,
-    "total_tests": 3880,
-    "elapsed_seconds": 10.56
+    "total_tests": 3935,
+    "elapsed_seconds": 6.75
   },
   "notes": "The count changes whenever a test is added, so the page cites it under a dated Last verified line instead of asserting equality; regenerate this receipt whenever the page is next edited. git_commit is informational; the top-level provenance pin is the authoritative content pin."
 }

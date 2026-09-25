@@ -2,7 +2,7 @@
   "benchmark": "cuad-segmentation",
   "command": "uv run python scripts/benchmark_cuad_segmentation.py --output .benchmark-reports/cuad-segmentation.json",
   "date": "2026-09-22",
-  "git_commit": "c5a982d",
+  "git_commit": "f7b08ba",
   "provenance": [
     {
       "path": "scripts/benchmark_cuad_segmentation.py",

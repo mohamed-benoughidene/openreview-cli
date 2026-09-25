@@ -12,9 +12,9 @@ openreview-cli runs entirely from the command line. It parses a contract, strips
 
 ## Status: alpha
 
-The core pipeline works and is tested (3,880 tests). Two numbers matter most if you're deciding whether to trust it with real documents right now.
+The core pipeline works and is tested (3,935 tests). Two numbers matter most if you're deciding whether to trust it with real documents right now.
 
-- Review accuracy: 90.9% F1 on 12 labeled NDA clauses (real extraction + QA through OpenRouter; the model was not recorded in the source artifact)
+- Review accuracy: 90.9% F1 on 12 labeled NDA clauses (real extraction + QA; the model and provider were not recorded in the source artifact)
 - PII detection: 96.4% recall on 50 seeded contracts (spaCy `en_core_web_lg`)
 
 That second number is measured on an artificially generated test set, so treat it as a synthetic-data baseline rather than a promise about real contracts. It is measured with span-level (type-agnostic) matching, so a detection that covers the right text with the wrong entity label still counts as correct; that labelling limitation is tracked separately as D-82 in `specs/DEFERRED.md` and issue 115. The pipeline is fail-closed, meaning it halts rather than proceed if page-level detection fails outright, but fail-closed is not the same as perfect recall. Read the full methodology and the honest list of what's not yet measured before using this on anything sensitive: [docs/BENCHMARKS.md](docs/BENCHMARKS.md).

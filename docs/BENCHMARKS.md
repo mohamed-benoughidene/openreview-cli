@@ -44,7 +44,7 @@ Run each benchmark on your own machine to get comparable numbers; the offline no
 | CLI startup (`--help`) | 0.59 / 0.68 / 0.76 s, median 0.68 | 3 runs, peak RSS ~43 MB |
 | Parse 1-page PDF, library level, cold | 3.1–3.2 s | one-time nupunkt model load per process |
 | Parse 1-page PDF, library level, warm | 0.004 s | second parse in same process |
-| Parse 37 KB DOCX, warm process | 0.27 s, 3 clauses | in-process timing |
+| Parse 37 KB DOCX, warm process | 0.016 s, 3 clauses | in-process timing; median of 6 warm runs |
 | PII strip, 50-page synthetic stress | 2.3823 s | 395 entities (see footprint below) |
 
 The cold-PDF number is dominated by a one-time sentence-segmentation model load (~3 s per process), not by PDF parsing itself.
@@ -88,7 +88,7 @@ Not measured: dense-retrieval/embedding throughput (needs a local Ollama server)
 
 Last verified: 2026-09-22 @ 859402f (receipt: docs/benchmarks/results/product-modes.json).
 
-**Label this correctly:** this validates pipeline wiring (mode → playbook → match/extract/QA → flag) with a deterministic mocked gateway. All 23 named modes are covered by this mechanism. Both mock paths — `openreview benchmark baseline --provider mock` and `openreview benchmark run --ci` — are **mode-aware**: a mode's prediction is derived from its own bundled playbook, so a mode only "matches" the categories that playbook declares; only that per-mode `match` signal (surfaced as MAUD `comparison_f1`) diverges across modes, while the label/span metrics stay identical on the ContractNLI/CUAD mock datasets. It is a **wiring** stub: it proves that mode → playbook → category selection is wired end to end, and it proves nothing about model quality. Five modes have a declared baseline (`distrocheck`, `franchisecheck`, `opcheck`, `partnercheck`, `sponsorcheck` in `docs/benchmarks/*.json`) which publishes a fixture, an expected overall assessment and time budgets but **no accuracy number** — no model runs, so nothing is scored. Every other named mode has no declared baseline and is covered only by the mocked wiring run. Real-model accuracy was measured separately through OpenRouter; see [Review accuracy](#review-accuracy-measured-12-labeled-nda-clauses) below. The `scripts/benchmark_review_accuracy.py` script is structural-only (it does not make real LLM calls and reads `predicted_position` from the corpus).
+**Label this correctly:** this validates pipeline wiring (mode → playbook → match/extract/QA → flag) with a deterministic mocked gateway. All 23 named modes are covered by this mechanism. Both mock paths — `openreview benchmark baseline --provider mock` and `openreview benchmark run --ci` — are **mode-aware**: a mode's prediction is derived from its own bundled playbook, so a mode only "matches" the categories that playbook declares; only that per-mode `match` signal (surfaced as MAUD `comparison_f1`) diverges across modes, while the label/span metrics stay identical on the ContractNLI/CUAD mock datasets. It is a **wiring** stub: it proves that mode → playbook → category selection is wired end to end, and it proves nothing about model quality. Five modes have a declared baseline (`distrocheck`, `franchisecheck`, `opcheck`, `partnercheck`, `sponsorcheck` in `docs/benchmarks/*.json`) which publishes a fixture, an expected overall assessment and time budgets but **no accuracy number** — no model runs, so nothing is scored. Every other named mode has no declared baseline and is covered only by the mocked wiring run. Real-model accuracy was measured separately (provider not recorded); see [Review accuracy](#review-accuracy-measured-12-labeled-nda-clauses) below. The `scripts/benchmark_review_accuracy.py` script is structural-only (it does not make real LLM calls and reads `predicted_position` from the corpus).
 
 ## Accuracy signals
 
@@ -105,7 +105,7 @@ Last verified: 2026-09-24 @ 882568c (receipt: docs/benchmarks/results/accuracy-s
 | `tests/integration/test_review_accuracy.py` (7 tests) | F1 / amber-rate / QA-catch formulas correct; benchmark script exists + has required structure | ✓ pass |
 | `tests/integration/test_benchmark_pii_accuracy.py` (3 tests) | Labeled-corpus PII precision/recall (span-level) | ✓ pass: recall 96.4% and precision 95.3%, above the 95% spec target |
 
-**Tier accuracy targets** (design goals, not measured source: `gateway/tier_accuracy.py:42-57`):
+**Tier accuracy targets** (design goals, not measured source: `gateway/tier_accuracy.py:41-60`):
 
 | Tier | F1 | Precision | Recall |
 |---|---|---|---|
@@ -113,7 +113,7 @@ Last verified: 2026-09-24 @ 882568c (receipt: docs/benchmarks/results/accuracy-s
 | Balanced (default) | 0.80 | 0.75 | 0.85 |
 | Performance (cloud-assisted) | 0.90 | 0.85 | 0.95 |
 
-**Honest caveat:** these tier targets are design goals; see [Review accuracy](#review-accuracy-measured-12-labeled-nda-clauses) below for actual measured numbers (90.9% F1, 100% QA error-catch on 12 NDA clauses through OpenRouter).
+**Honest caveat:** these tier targets are design goals; see [Review accuracy](#review-accuracy-measured-12-labeled-nda-clauses) below for actual measured numbers (90.9% F1, 100% QA error-catch on 12 NDA clauses; provider not recorded).
 
 ## PII accuracy (measured 50 seeded contracts)
 
@@ -137,7 +137,7 @@ Last verified: 2026-09-24 @ 882568c (receipt: docs/benchmarks/results/pii-accura
 
 ## Review accuracy (measured 12 labeled NDA clauses)
 
-Real extraction + QA pipeline through OpenRouter (the model was not recorded in the source artifact) against `tests/fixtures/review/nda-corpus-v1/nda-corpus-v1.json` with `precheck-nda-v1` playbook. 24 API calls (per-clause extraction + QA).
+Real extraction + QA pipeline (provider and model were not recorded in the source artifact) against `tests/fixtures/review/nda-corpus-v1/nda-corpus-v1.json` with `precheck-nda-v1` playbook. 24 API calls (per-clause extraction + QA).
 
 | Metric | Value | Target (spec) | Status |
 |---|---|---|---|
@@ -150,7 +150,7 @@ Real extraction + QA pipeline through OpenRouter (the model was not recorded in 
 
 Last verified: 2026-09-21 @ unknown (re-run predates this branch; the source artifact is gitignored) (receipt: docs/benchmarks/results/review-accuracy.json).
 
-**Per-clause:** 10 correct positions, 2 wrong (both predicted `walkaway`/`preferred` when expected was `acceptable`). QA caught both wrong predictions. All 10 correct predictions had QA agree + no amber.
+**Per-clause:** 10 correct positions, 2 wrong (both predicted `walkaway`/`preferred` when expected was `acceptable`). QA caught both wrong predictions. All 10 correct predictions had QA agree + no amber. (Per-clause detail comes from the gitignored source artifact; the committed receipt carries aggregates only.)
 
 **Small-corpus caveat:** 12 clauses is too small for high-confidence F1. These numbers are directionally correct but the true F1 confidence interval is wide. A larger corpus (>100 clauses) would tighten the estimate.
 
@@ -162,10 +162,12 @@ End-to-end `openreview precheck review` on `tests/fixtures/nda_with_pii.pdf` (1 
 |---|---|---|---|
 | Parse | PyMuPDF (local) | | 5 clauses, 1 page |
 | PII strip | Presidio + spaCy (local) | `en_core_web_lg` | PII replaced with `[PAR]`, `[NAME_1]`, `[EMAIL_1]`, `[DATE_2]` |
-| Extraction | OpenRouter (cloud) | `claude-sonnet-4.6` | 5/5 clauses assessed |
-| QA | OpenRouter (cloud) | `claude-sonnet-4.6` | amber flags raised |
+| Extraction | OpenRouter (cloud) | `claude-sonnet-4.6`* | 5/5 clauses assessed |
+| QA | OpenRouter (cloud) | `claude-sonnet-4.6`* | amber flags raised |
 | Embedding | Voyage (cloud) | `voyage-3.5` | 1024-dimensional vectors |
 | Reranking | Voyage (cloud) | `rerank-2.5` | correct clause ranking confirmed |
+
+* `claude-sonnet-4.6` is the OpenRouter model id recorded for the run; it is not an entry in the bundled `gateway/models.json` registry (which offers `claude-sonnet-latest`).
 
 **Result:** 0 matches, 5 differences, avg confidence 0.95, recommendation: revise. Full cost report via `openreview gateway costs --today`. Total wall time ~2.5 min (includes cold API connection overhead).
 
@@ -175,7 +177,7 @@ End-to-end `openreview precheck review` on `tests/fixtures/nda_with_pii.pdf` (1 
 
 Span extraction and category coverage across the [ContractNLI](https://github.com/stanford-crfm/legalbench) dataset (95 real-world Non-Disclosure Agreements, 977 annotated tests / 1,389 ground-truth evidence spans) mapped to standard `precheck` playbook categories.
 
-Evaluated using `scripts/benchmark_contractnli.py` with NUPunkt sentence-boundary and clause segmentation:
+Evaluated using `scripts/benchmark_contractnli.py` with NUPunkt sentence segmentation (no clause detection):
 
 | Metric | Value |
 |---|---|
@@ -226,13 +228,13 @@ Parsing scale against the [CUAD v1](https://www.atticusprojectai.org/cuad) datas
 | Contracts | 462 (4,042 queries / 6,247 spans, all readable) |
 | Time | 85.3 s for the full clause-segmentation pass over 462 documents (~0.18 s/contract) |
 
-Last verified: 2026-09-22 @ c5a982d (receipt: docs/benchmarks/results/cuad-segmentation.json).
+Last verified: 2026-09-22 @ f7b08ba (receipt: docs/benchmarks/results/cuad-segmentation.json).
 
 **Clause segmentation (measured).** A reproducible run (`scripts/benchmark_cuad_segmentation.py`) loaded 462 of 462 documents and measured **90.67% of 6,247 spans** fully contained in a single detected clause, with query coverage of **91.64% of 4,042 queries** (at least one span contained). Enclosure tightness is low: mean **token-F1 0.307**, because the detector groups whole sentences under section headings (7 regex patterns), so one detected clause often swallows several labeled spans. Mean **token-F1** is taken over **every** evaluated span with a non-contained span counted as **0**, so it is a deliberate conservative floor rather than an average over only the spans that were successfully contained. One corpus `file_path` is stored in NFD (decomposed) Unicode form while the file on disk is NFC; the script retries the path under Unicode NFC normalization, so every referenced document loads.
 
 This measures **segmentation** (whether an expert-labeled span lies fully inside one detected clause, and how tightly that clause encloses it), **not query-answering accuracy**. High containment with coarse enclosures is the expected shape for a section-heading segmenter; the low token-F1 is the honest cost of that grouping, not a contradiction of the containment number.
 
-**Reproduction:** run `uv run python scripts/benchmark_cuad_segmentation.py` (writes `.benchmark-reports/cuad-segmentation.json`). To obtain the corpus, download CUAD v1 from [atticusprojectai.org/cuad](https://www.atticusprojectai.org/cuad) (CC BY 4.0), or run `uv run python scripts/benchmark_legalbenchrag.py` to fetch the LegalBench-RAG processed version to `/tmp/opencode/legalbenchrag_data/`. The corpus is gitignored (`data/` in `.gitignore`).
+**Reproduction:** run `uv run python scripts/benchmark_cuad_segmentation.py` (writes `.benchmark-reports/cuad-segmentation.json`). To obtain the corpus, download CUAD v1 from [atticusprojectai.org/cuad](https://www.atticusprojectai.org/cuad) (CC BY 4.0). (Note: `scripts/benchmark_legalbenchrag.py` does not download a corpus — it only reads an already-present one from `/tmp/opencode/legalbenchrag_data/`.) The corpus is gitignored (`data/` in `.gitignore`).
 
 ## MAUD public benchmark (segmentation and timing)
 
@@ -253,9 +255,10 @@ This measures **segmentation**, not query-answering accuracy and not deal-point 
 
 ## Measured vs. not measured
 
-**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (96.4% recall, span-level predicate), review accuracy on 12 NDA clauses through OpenRouter (90.9% F1), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale, timing, and clause segmentation), MAUD public benchmark on 150 M&A documents (scale, timing, and clause segmentation), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,880 tests), accuracy-test suite (21 passed, 0 failed).
+**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (96.4% recall, span-level predicate), review accuracy on 12 NDA clauses (90.9% F1; provider not recorded), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale, timing, and clause segmentation), MAUD public benchmark on 150 M&A documents (scale, timing, and clause segmentation), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,935 tests), accuracy-test suite (21 passed, 0 failed).
 
-Last verified: 2026-09-24 @ 882568c (receipts: docs/benchmarks/results/test-collection.json; docs/benchmarks/results/accuracy-suite.json).
+Last verified: 2026-09-25 @ fdea262 (receipt: docs/benchmarks/results/test-collection.json).
+Last verified: 2026-09-24 @ 882568c (receipt: docs/benchmarks/results/accuracy-suite.json).
 
 **Not measured (methodology documented, no numbers invented):**
 
@@ -269,7 +272,7 @@ Last verified: 2026-09-24 @ 882568c (receipts: docs/benchmarks/results/test-coll
 | CUAD query-answering accuracy | the CUAD section measures clause segmentation (span containment and enclosure tightness), not answering the 4,042 expert queries | score predicted answers against the CUAD query labels, e.g. extend `scripts/benchmark_cuad_segmentation.py` with an answer-scoring pass |
 | ContractNLI query-answering accuracy | the ContractNLI section measures span extraction and playbook-category coverage, not the entailment question itself | score entailment (entailment / contradiction / not-mentioned) against the 977 annotated tests |
 | Hallucination detection accuracy | the shipped detector is a ROUGE-L lexical-overlap placeholder (EXPERIMENTAL); a CG-DPO detector is planned but not shipped | run the detector on a labeled grounded/ungrounded corpus and score precision/recall (`--hallucination-method` selects the detector) |
-| Bilateral comparison accuracy | documented only as a ceiling of 64% F1 (recorded in `PRODUCT.md`), not measured here (`docs/ARCHITECTURE.md:91`) | run `openreview precheck compare` on a labeled divergence corpus and score against the RCBSF taxonomy |
+| Bilateral comparison accuracy | documented only as a ceiling of 64% F1 (recorded in `PRODUCT.md`), not measured here (`docs/ARCHITECTURE.md:120`) | run `openreview precheck compare` on a labeled divergence corpus and score against the RCBSF taxonomy |
 
 Benchmark-harness honesty: the `openreview benchmark run --all --ci` CLI uses a **mock pipeline by default** for CUAD/MAUD/ContractNLI datasets (real LLM integration deferred). The ContractNLI coverage benchmark above was run manually against the real nupunkt parser, not through the mock harness. PII benchmarks use the real `PiiEngine`. Hallucination detection uses a ROUGE-L lexical-overlap placeholder (EXPERIMENTAL default); a CG-DPO detector is planned but not shipped.
 
