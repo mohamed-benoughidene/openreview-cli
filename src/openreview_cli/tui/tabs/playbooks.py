@@ -90,20 +90,40 @@ class PlaybooksTab(Static):
         )
 
     async def _load_async(self) -> None:
-        from openreview_cli.tui.domain.playbooks import list_playbooks_via_tui
+        from openreview_cli.tui.domain.playbooks import (
+            corrupt_playbook_ids_via_tui,
+            list_playbooks_via_tui,
+        )
 
         loading = self.query_one(LoadingState)
         content = self.query_one("#playbook-list", ListView)
         try:
-            # to_thread: the parse-per-playbook corruption scan is ~5s and must not block the loop.
+            # to_thread: the raw list query is a database read, kept off the loop.
             self._all_playbooks = await asyncio.to_thread(list_playbooks_via_tui)
         except Exception as exc:
             self.notify(f"Load failed: {exc}", severity="error", markup=False)
-        else:
-            self._apply_filter()
-        finally:
             # Always drop the spinner and reveal the list, success or failure.
             loading.end(content)
+            return
+
+        # Phase 1: reveal the list immediately.  The defensive corruption scan
+        # below must never delay the first paint.
+        self._apply_filter()
+        loading.end(content)
+
+        # Phase 2: compute the "(corrupt)" badge off the render path.  A failure
+        # here is swallowed — the badge stays optimistic and the tab stays up.
+        try:
+            corrupt = await asyncio.to_thread(
+                corrupt_playbook_ids_via_tui,
+                [p["id"] for p in self._all_playbooks],
+            )
+            if corrupt:
+                for p in self._all_playbooks:
+                    p["corrupt"] = p["id"] in corrupt
+                self._apply_filter()
+        except Exception:
+            pass
 
     def _on_input_changed(self, event: Input.Changed) -> None:
         self._apply_filter()

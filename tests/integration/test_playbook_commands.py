@@ -120,7 +120,7 @@ def _unique_yaml(base_id: str) -> str:
 class TestPlaybookImport:
     """T024: Integration tests for playbook import."""
 
-    def test_import_valid_playbook(self, tmp_path: Path) -> None:
+    def test_import_valid_playbook(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         yaml_content = _unique_yaml("import-valid")
         path = tmp_path / "test.yaml"
         path.write_text(yaml_content)
@@ -129,7 +129,9 @@ class TestPlaybookImport:
         assert result.exit_code == 0, f"stdout: {result.stdout}, stderr: {result.stderr}"
         assert "version" in result.stdout.lower()
 
-    def test_import_same_playbook_twice_increments_version(self, tmp_path: Path) -> None:
+    def test_import_same_playbook_twice_increments_version(
+        self, tmp_path: Path, isolated_xdg: dict[str, Path]
+    ) -> None:
         yaml_content = _unique_yaml("import-twice")
         path = tmp_path / "test.yaml"
         path.write_text(yaml_content)
@@ -143,7 +145,9 @@ class TestPlaybookImport:
         # Should mention version increment
         assert "previous version" in r2.stdout.lower()
 
-    def test_import_malformed_yaml_errors(self, tmp_path: Path) -> None:
+    def test_import_malformed_yaml_errors(
+        self, tmp_path: Path, isolated_xdg: dict[str, Path]
+    ) -> None:
         path = tmp_path / "bad.yaml"
         path.write_text(MALFORMED_YAML)
 
@@ -151,12 +155,14 @@ class TestPlaybookImport:
         assert result.exit_code == 2
         assert "Error" in result.stderr or "Error" in result.stdout
 
-    def test_import_nonexistent_file(self) -> None:
+    def test_import_nonexistent_file(self, isolated_xdg: dict[str, Path]) -> None:
         result = runner.invoke(app, ["playbook", "import", "/nonexistent/file.yaml"])
         assert result.exit_code == 2
         assert "Error" in result.stderr or "Error" in result.stdout
 
-    def test_import_import_then_list_shows_it(self, tmp_path: Path) -> None:
+    def test_import_import_then_list_shows_it(
+        self, tmp_path: Path, isolated_xdg: dict[str, Path]
+    ) -> None:
         yaml_content = _unique_yaml("import-list")
         path = tmp_path / "test.yaml"
         path.write_text(yaml_content)
@@ -174,7 +180,9 @@ class TestPlaybookImport:
 class TestPlaybookList:
     """T030: Integration tests for playbook list."""
 
-    def test_list_shows_imported_playbook(self, tmp_path: Path) -> None:
+    def test_list_shows_imported_playbook(
+        self, tmp_path: Path, isolated_xdg: dict[str, Path]
+    ) -> None:
         yaml_content = _unique_yaml("list-show")
         path = tmp_path / "pb.yaml"
         path.write_text(yaml_content)
@@ -183,7 +191,7 @@ class TestPlaybookList:
         result = runner.invoke(app, ["playbook", "list"])
         assert result.exit_code == 0, f"stdout: {result.stdout}, stderr: {result.stderr}"
 
-    def test_list_does_not_crash(self) -> None:
+    def test_list_does_not_crash(self, isolated_xdg: dict[str, Path]) -> None:
         result = runner.invoke(app, ["playbook", "list"])
         assert result.exit_code == 0, f"stdout: {result.stdout}, stderr: {result.stderr}"
 
@@ -196,7 +204,9 @@ class TestPlaybookList:
 class TestPlaybookShow:
     """T033: Integration tests for playbook show."""
 
-    def test_show_existing_playbook_version(self, tmp_path: Path) -> None:
+    def test_show_existing_playbook_version(
+        self, tmp_path: Path, isolated_xdg: dict[str, Path]
+    ) -> None:
         yaml_content = _unique_yaml("show-valid")
         path = tmp_path / "test.yaml"
         path.write_text(yaml_content)
@@ -210,7 +220,7 @@ class TestPlaybookShow:
         assert result.exit_code == 0, f"stdout: {result.stdout}, stderr: {result.stderr}"
         assert pb_id in result.stdout
 
-    def test_show_nonexistent_id_gives_error(self) -> None:
+    def test_show_nonexistent_id_gives_error(self, isolated_xdg: dict[str, Path]) -> None:
         result = runner.invoke(app, ["playbook", "show", "nonexistent-show-id", "1"])
         assert result.exit_code == 2
         assert "not found" in result.stderr.lower() or "Error" in result.stderr
@@ -229,7 +239,9 @@ class TestPlaybookShow:
         assert result.exit_code == 2
         assert "not found" in result.stderr.lower() or "Error" in result.stderr
 
-    def test_show_negative_version_gives_error(self, tmp_path: Path) -> None:
+    def test_show_negative_version_gives_error(
+        self, tmp_path: Path, isolated_xdg: dict[str, Path]
+    ) -> None:
         yaml_content = _unique_yaml("show-neg")
         path = tmp_path / "test.yaml"
         path.write_text(yaml_content)
@@ -249,7 +261,7 @@ class TestPlaybookShow:
 class TestPlaybookFlagOnPrecheck:
     """T038: Integration tests for --playbook flag with precheck command."""
 
-    def test_help_shows_playbook_option(self) -> None:
+    def test_help_shows_playbook_option(self, isolated_xdg: dict[str, Path]) -> None:
         """--playbook is registered on `precheck review` and reaches --help."""
         assert "--playbook" in _registered_options("precheck", "review")
 
@@ -267,14 +279,14 @@ class TestPlaybookFlagOnPrecheck:
 class TestVersionStampedReview:
     """T043: Integration tests for version-stamped review output."""
 
-    def test_report_model_has_playbook_version_field(self) -> None:
+    def test_report_model_has_playbook_version_field(self, isolated_xdg: dict[str, Path]) -> None:
         """Playbook_version should be in the report model."""
         from openreview_cli.review.models import ReviewReport
 
         field_names = ReviewReport.__dataclass_fields__.keys()
         assert "playbook_version" in field_names
 
-    def test_report_model_has_playbook_id_field(self) -> None:
+    def test_report_model_has_playbook_id_field(self, isolated_xdg: dict[str, Path]) -> None:
         """Playbook_id should be in the report model."""
         from openreview_cli.review.models import ReviewReport
 
@@ -290,7 +302,9 @@ class TestVersionStampedReview:
 class TestPrecedenceWarning:
     """T056: Integration tests for --playbook + --playbook-path precedence warning."""
 
-    def test_precedence_warning_emitted_when_both_flags_given(self) -> None:
+    def test_precedence_warning_emitted_when_both_flags_given(
+        self, isolated_xdg: dict[str, Path]
+    ) -> None:
         """T056: run_review emits UserWarning when both playbook_id and
         playbook_path are provided."""
         import warnings

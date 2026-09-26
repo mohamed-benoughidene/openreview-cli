@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from textual.widgets import Label, ListItem
@@ -35,7 +36,7 @@ def _make_detail_mock(return_value):
 # ── T033: Core tests ──
 
 
-async def test_corrupt_playbook_shows_marker() -> None:
+async def test_corrupt_playbook_shows_marker(isolated_xdg: dict[str, Path]) -> None:
     """Corrupt playbook shows '(corrupt)' marker in list label (T059)."""
     with (
         patch(
@@ -67,7 +68,7 @@ async def test_corrupt_playbook_shows_marker() -> None:
             assert "(corrupt)" not in good_text[0]
 
 
-async def test_playbooks_tab_empty_state() -> None:
+async def test_playbooks_tab_empty_state(isolated_xdg: dict[str, Path]) -> None:
     """Fresh state shows empty-state message (T037)."""
     with patch(
         "openreview_cli.tui.domain.playbooks.list_playbooks_via_tui",
@@ -86,7 +87,7 @@ async def test_playbooks_tab_empty_state() -> None:
             assert "No playbooks yet" in msg
 
 
-async def test_playbooks_tab_shows_playbooks() -> None:
+async def test_playbooks_tab_shows_playbooks(isolated_xdg: dict[str, Path]) -> None:
     """Playbooks visible in list."""
     with patch(
         "openreview_cli.tui.domain.playbooks.list_playbooks_via_tui",
@@ -120,7 +121,7 @@ async def test_playbooks_tab_shows_playbooks() -> None:
             assert "dealcheck" in all_text
 
 
-async def test_playbooks_tab_filter_by_text() -> None:
+async def test_playbooks_tab_filter_by_text(isolated_xdg: dict[str, Path]) -> None:
     """Typing in text filter narrows list (T037)."""
     with patch(
         "openreview_cli.tui.domain.playbooks.list_playbooks_via_tui",
@@ -167,7 +168,7 @@ async def test_playbooks_tab_filter_by_text() -> None:
 # playbooks.py in a previous batch; text filter (#playbook-filter) covers it.
 
 
-async def test_playbooks_tab_import_via_file_picker() -> None:
+async def test_playbooks_tab_import_via_file_picker(isolated_xdg: dict[str, Path]) -> None:
     """'+ Import playbook' flow with mocked file picker (T033)."""
     with (
         patch(
@@ -227,7 +228,7 @@ async def test_playbooks_tab_import_via_file_picker() -> None:
             tmp.unlink()
 
 
-async def test_playbooks_tab_detail_shows_categories() -> None:
+async def test_playbooks_tab_detail_shows_categories(isolated_xdg: dict[str, Path]) -> None:
     """Click on playbook item opens detail view with categories (FR-026)."""
     from openreview_cli.review.models import (
         Category,
@@ -298,7 +299,7 @@ async def test_playbooks_tab_detail_shows_categories() -> None:
             assert isinstance(app.screen, ConfirmModal)
 
 
-async def test_playbooks_tab_version_history() -> None:
+async def test_playbooks_tab_version_history(isolated_xdg: dict[str, Path]) -> None:
     """Click 'View versions' shows version history list (FR-027/028)."""
     from openreview_cli.review.models import (
         Category,
@@ -390,7 +391,7 @@ async def test_playbooks_tab_version_history() -> None:
             assert isinstance(app.screen, VersionHistoryScreen)
 
 
-async def test_playbooks_tab_version_diff() -> None:
+async def test_playbooks_tab_version_diff(isolated_xdg: dict[str, Path]) -> None:
     """'View diff' shows diff view (FR-029)."""
     from openreview_cli.review.models import (
         Category,
@@ -501,7 +502,7 @@ async def test_playbooks_tab_version_diff() -> None:
 # ── T037/T038: Additional tests ──
 
 
-async def test_playbooks_tab_set_as_current_confirm() -> None:
+async def test_playbooks_tab_set_as_current_confirm(isolated_xdg: dict[str, Path]) -> None:
     """Click 'Set as current' opens ConfirmModal (FR-028)."""
     from openreview_cli.review.models import (
         Category,
@@ -589,7 +590,7 @@ async def test_playbooks_tab_set_as_current_confirm() -> None:
             assert isinstance(app.screen, ConfirmModal)
 
 
-async def test_playbooks_tab_import_validation_preview() -> None:
+async def test_playbooks_tab_import_validation_preview(isolated_xdg: dict[str, Path]) -> None:
     """Import YAML shows preview + validation (T037)."""
     import tempfile
     from pathlib import Path

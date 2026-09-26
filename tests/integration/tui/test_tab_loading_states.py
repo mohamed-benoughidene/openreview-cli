@@ -15,6 +15,7 @@ from __future__ import annotations
 import threading
 from collections.abc import Iterator
 from contextlib import ExitStack, contextmanager, suppress
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -169,7 +170,9 @@ _PROMPT_ROWS = [
 # ── Home ──
 
 
-async def test_home_tab_shows_loading_state_until_reviews_arrive() -> None:
+async def test_home_tab_shows_loading_state_until_reviews_arrive(
+    isolated_xdg: dict[str, Path],
+) -> None:
     from openreview_cli.tui.app import OpenReviewApp
 
     gate = threading.Event()
@@ -197,7 +200,9 @@ async def test_home_tab_shows_loading_state_until_reviews_arrive() -> None:
             assert "lease.pdf" in joined
 
 
-async def test_home_load_failure_notifies_and_recovers() -> None:
+async def test_home_load_failure_notifies_and_recovers(
+    isolated_xdg: dict[str, Path],
+) -> None:
     """A failed recent-reviews fetch is reported, never fatal, and unblocks the UI."""
     from openreview_cli.tui.app import OpenReviewApp
 
@@ -225,7 +230,9 @@ async def test_home_load_failure_notifies_and_recovers() -> None:
 # ── Clients ──
 
 
-async def test_clients_tab_shows_loading_state_until_clients_arrive() -> None:
+async def test_clients_tab_shows_loading_state_until_clients_arrive(
+    isolated_xdg: dict[str, Path],
+) -> None:
     from openreview_cli.tui.app import OpenReviewApp
 
     gate = threading.Event()
@@ -254,7 +261,9 @@ async def test_clients_tab_shows_loading_state_until_clients_arrive() -> None:
             assert "beta" in joined
 
 
-async def test_clients_filter_does_not_requery_the_database() -> None:
+async def test_clients_filter_does_not_requery_the_database(
+    isolated_xdg: dict[str, Path],
+) -> None:
     """A filter keystroke re-filters the cache instead of re-querying."""
     from openreview_cli.tui.app import OpenReviewApp
 
@@ -275,7 +284,9 @@ async def test_clients_filter_does_not_requery_the_database() -> None:
             assert "beta" not in joined
 
 
-async def test_clients_load_failure_notifies_and_recovers() -> None:
+async def test_clients_load_failure_notifies_and_recovers(
+    isolated_xdg: dict[str, Path],
+) -> None:
     """A failed clients fetch is reported, never fatal, and reveals the list."""
     from openreview_cli.tui.app import OpenReviewApp
 
@@ -304,7 +315,9 @@ async def test_clients_load_failure_notifies_and_recovers() -> None:
 # ── Playbooks ──
 
 
-async def test_playbooks_tab_shows_loading_state_until_playbooks_arrive() -> None:
+async def test_playbooks_tab_shows_loading_state_until_playbooks_arrive(
+    isolated_xdg: dict[str, Path],
+) -> None:
     from openreview_cli.tui.app import OpenReviewApp
 
     gate = threading.Event()
@@ -333,7 +346,9 @@ async def test_playbooks_tab_shows_loading_state_until_playbooks_arrive() -> Non
             assert "dealcheck" in joined
 
 
-async def test_playbooks_filter_does_not_requery_the_database() -> None:
+async def test_playbooks_filter_does_not_requery_the_database(
+    isolated_xdg: dict[str, Path],
+) -> None:
     """A filter keystroke re-filters the cache instead of re-querying."""
     from openreview_cli.tui.app import OpenReviewApp
 
@@ -354,7 +369,9 @@ async def test_playbooks_filter_does_not_requery_the_database() -> None:
             assert "precheck" not in joined
 
 
-async def test_playbooks_load_failure_notifies_and_recovers() -> None:
+async def test_playbooks_load_failure_notifies_and_recovers(
+    isolated_xdg: dict[str, Path],
+) -> None:
     """A failed playbooks fetch is reported, never fatal, and reveals the list."""
     from openreview_cli.tui.app import OpenReviewApp
 
@@ -383,7 +400,9 @@ async def test_playbooks_load_failure_notifies_and_recovers() -> None:
 # ── Prompts ──
 
 
-async def test_prompts_tab_shows_loading_state_until_prompts_arrive() -> None:
+async def test_prompts_tab_shows_loading_state_until_prompts_arrive(
+    isolated_xdg: dict[str, Path],
+) -> None:
     from openreview_cli.tui.app import OpenReviewApp
 
     gate = threading.Event()
@@ -412,7 +431,9 @@ async def test_prompts_tab_shows_loading_state_until_prompts_arrive() -> None:
             assert "summary" in joined
 
 
-async def test_prompts_filter_does_not_requery_the_database() -> None:
+async def test_prompts_filter_does_not_requery_the_database(
+    isolated_xdg: dict[str, Path],
+) -> None:
     """A filter keystroke re-filters the cache instead of re-querying."""
     from openreview_cli.tui.app import OpenReviewApp
 
@@ -433,7 +454,9 @@ async def test_prompts_filter_does_not_requery_the_database() -> None:
             assert "summary" not in joined
 
 
-async def test_prompts_load_failure_notifies_and_recovers() -> None:
+async def test_prompts_load_failure_notifies_and_recovers(
+    isolated_xdg: dict[str, Path],
+) -> None:
     """A failed prompts fetch is reported, never fatal, and reveals the list."""
     from openreview_cli.tui.app import OpenReviewApp
 
@@ -482,7 +505,9 @@ def _gated_text_for(block_on: str, gate: threading.Event):
     return _fn
 
 
-async def test_settings_tab_shows_loading_state_until_section_renders() -> None:
+async def test_settings_tab_shows_loading_state_until_section_renders(
+    isolated_xdg: dict[str, Path],
+) -> None:
     """The section body stays hidden behind #settings-loading until it renders."""
     from openreview_cli.tui.app import OpenReviewApp
     from openreview_cli.tui.tabs.settings import SettingsTab
@@ -513,7 +538,9 @@ async def test_settings_tab_shows_loading_state_until_section_renders() -> None:
             assert "No providers configured yet" in display.content
 
 
-async def test_settings_second_section_click_wins_over_slow_first_render() -> None:
+async def test_settings_second_section_click_wins_over_slow_first_render(
+    isolated_xdg: dict[str, Path],
+) -> None:
     """A newer section click must win; the stale render must not clobber it."""
     from openreview_cli.tui.app import OpenReviewApp
     from openreview_cli.tui.tabs.settings import SettingsTab
@@ -555,7 +582,9 @@ async def test_settings_second_section_click_wins_over_slow_first_render() -> No
             assert "Configuration" not in display.content
 
 
-async def test_settings_load_failure_notifies_and_recovers() -> None:
+async def test_settings_load_failure_notifies_and_recovers(
+    isolated_xdg: dict[str, Path],
+) -> None:
     """A failed section render is reported, never fatal, and reveals the pane."""
     from openreview_cli.tui.app import OpenReviewApp
     from openreview_cli.tui.tabs.settings import SettingsTab

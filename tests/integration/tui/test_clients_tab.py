@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import patch
 
 from textual.widgets import Label, ListItem, ListView
@@ -21,7 +22,9 @@ def _list_item_text(item: ListItem) -> str:
 
 
 @patch("openreview_cli.tui.domain.clients.list_clients_via_tui")
-async def test_clients_tab_shows_empty_state(mock_list_clients_via_tui) -> None:
+async def test_clients_tab_shows_empty_state(
+    mock_list_clients_via_tui, isolated_xdg: dict[str, Path]
+) -> None:
     """Empty-state message visible when no clients."""
     mock_list_clients_via_tui.return_value = []
     from openreview_cli.tui.app import OpenReviewApp
@@ -38,7 +41,9 @@ async def test_clients_tab_shows_empty_state(mock_list_clients_via_tui) -> None:
 
 
 @patch("openreview_cli.tui.domain.clients.list_clients_via_tui")
-async def test_clients_tab_lists_clients(mock_list_clients_via_tui) -> None:
+async def test_clients_tab_lists_clients(
+    mock_list_clients_via_tui, isolated_xdg: dict[str, Path]
+) -> None:
     """All 3 clients visible in list."""
     mock_list_clients_via_tui.return_value = [
         {"id": "acme", "name": "Acme Corp"},
@@ -60,7 +65,9 @@ async def test_clients_tab_lists_clients(mock_list_clients_via_tui) -> None:
 
 
 @patch("openreview_cli.tui.domain.clients.list_clients_via_tui")
-async def test_clients_tab_type_to_filter(mock_list_clients_via_tui) -> None:
+async def test_clients_tab_type_to_filter(
+    mock_list_clients_via_tui, isolated_xdg: dict[str, Path]
+) -> None:
     """Typing in filter input narrows the displayed list."""
     mock_list_clients_via_tui.return_value = [
         {"id": "acme", "name": "Acme Corp"},
@@ -87,6 +94,7 @@ async def test_clients_tab_type_to_filter(mock_list_clients_via_tui) -> None:
 @patch("openreview_cli.tui.domain.clients.list_clients_via_tui")
 async def test_clients_tab_new_button_opens_form(
     mock_list_clients_via_tui,
+    isolated_xdg: dict[str, Path],
 ) -> None:
     """Clicking 'New client' opens ClientForm modal."""
     mock_list_clients_via_tui.return_value = []
@@ -105,7 +113,10 @@ async def test_clients_tab_new_button_opens_form(
 @patch("openreview_cli.tui.domain.clients.list_clients_via_tui")
 @patch("openreview_cli.tui.domain.clients.delete_client_via_tui")
 async def test_clients_tab_delete_opens_confirm_modal(
-    mock_delete_client_via_tui, mock_list_clients_via_tui, mock_client_has_reviews
+    mock_delete_client_via_tui,
+    mock_list_clients_via_tui,
+    mock_client_has_reviews,
+    isolated_xdg: dict[str, Path],
 ) -> None:
     """Clicking delete on a client opens ConfirmModal."""
     mock_list_clients_via_tui.return_value = [
@@ -133,7 +144,9 @@ async def test_clients_tab_delete_opens_confirm_modal(
 
 
 @patch("openreview_cli.tui.domain.clients.list_clients_via_tui")
-async def test_enter_on_client_opens_detail(mock_list_clients_via_tui) -> None:
+async def test_enter_on_client_opens_detail(
+    mock_list_clients_via_tui, isolated_xdg: dict[str, Path]
+) -> None:
     """Enter/click on a client pushes ClientDetailScreen."""
     mock_list_clients_via_tui.return_value = [
         {"id": "acme", "name": "Acme Corp"},
@@ -157,7 +170,10 @@ async def test_enter_on_client_opens_detail(mock_list_clients_via_tui) -> None:
 @patch("openreview_cli.tui.domain.clients.list_reviews_for_client_via_tui")
 @patch("openreview_cli.tui.domain.clients.list_clients_via_tui")
 async def test_empty_client_detail_shows_no_reviews(
-    mock_list_clients, mock_list_reviews, mock_get_client
+    mock_list_clients,
+    mock_list_reviews,
+    mock_get_client,
+    isolated_xdg: dict[str, Path],
 ) -> None:
     """Client with no reviews shows empty-state button."""
     mock_list_clients.return_value = [{"id": "acme", "name": "Acme Corp"}]
