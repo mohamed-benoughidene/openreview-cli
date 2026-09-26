@@ -6,12 +6,12 @@ Command Code instructions for `openreview`. Read this before touching anything i
 
 Python 3.12 project, pre-alpha but far along: document parsing (PDF/DOCX/clause detection), PII stripping (Presidio, encrypted mapping), AI Gateway (routing, cost tracking, registry, wizard, redaction), review pipeline (extraction → QA → comparison, memo generation, 24 bundled playbooks), chunking/retrieval/grounding/negotiation/bilateral/recovery/graph/benchmark modules, a Textual TUI, and a Typer CLI with 40 top-level subcommands (`parse`, `chunk`, `ingest`, `retrieve`, `index-status`, `index-clear`, `negotiate`, `export`, `precheck`, `gateway`, `playbook`, `pii`, `client`, `config`, `graph`, `benchmark`, `prompt`, plus 23 product-mode review commands such as `licensecheck`, `leasecheck`, `privacycheck`, `dealcheck`, `hirecheck`).
 
-Product design lives in `products/openreview/` (gitignored) and is **preliminary, not final**. Spec-driven development via spec-kit: specs in `specs/` (001–034; 33 specs, `023` unused), deferred work tracked in `specs/DEFERRED.md` — check it before touching a module with open deferrals.
+Product design lives in `products/openreview/` (gitignored) and is **preliminary, not final**. Spec-driven development via spec-kit: the outdated specs 001–034 (33 specs, `023` unused) are archived under `specs/archive/` and are historical, not authoritative, so the code is the source of truth. **New specs go in `specs/` as before, alongside `archive/`.** Deferred work for the archived set is tracked in `specs/archive/DEFERRED.md`.
 
 ## Tracked vs. local
 
 - **Gitignored:** `products/` (product design), `Papers/`, `data/` (benchmark corpora), `draft/`, `review_results/` and `.benchmark-reports/` (run outputs, decision D5), `graphify-out/` + `src/graphify-out/` (regenerable graph), `.venv/`, `.drafts`, and local agent/tooling state `.commandcode/`. (`.opencode/` and `.impeccable/` are gitignore-listed but each retains tracked files; `AGENTS.md` itself is tracked, not gitignored.)
-- **Tracked:** `specs/`, `.specify/` (constitution at `.specify/memory/constitution.md`), the retained `.opencode/commands/*.md` spec-kit files (the `.opencode/` dir itself is gitignore-listed as local tooling state; `.opencode/AGENTS.md` was removed), everything in "Layout" below.
+- **Tracked:** `specs/archive/` (archived specs), `.specify/` (constitution at `.specify/memory/constitution.md`), the retained `.opencode/commands/*.md` spec-kit files (the `.opencode/` dir itself is gitignore-listed as local tooling state; `.opencode/AGENTS.md` was removed), everything in "Layout" below.
 - **Submodule:** `.tools/ponytail` — after clone, `git submodule update --init`, or the OpenCode-only `opencode.json` (harness since superseded by Command Code) points at a missing path and its plugin won't load.
 
 ## Audience
@@ -37,7 +37,8 @@ tests/{unit,integration,fixtures,helpers}   # 207 unit + 149 integration test fi
 tests/exploratory/           # 87 adversarial CLI/TUI probes (feat/design-ux-remediation); in the default -m fast pool
 Makefile                     # make test = test-offline + test-memory; also test-fast / test-slow
 scripts/                     # 9 standalone benchmark scripts (top level); parity/ inventories
-specs/                       # spec-kit specs 001–034 + DEFERRED.md
+specs/                       # new specs land here; the outdated 001–034 are under archive/
+specs/archive/               # archived spec-kit specs 001–034 + DEFERRED.md
 .github/workflows/{ci,release}.yml
 docs/                        # User-facing docs (25 files, all git-tracked): architecture, benchmarks, parity, release, specs/plans
   ├─ ARCHITECTURE.md         # How the CLI/TUI, stage pipeline, AI Gateway, SQLite and retrieval fit together
@@ -243,10 +244,12 @@ Repo `openreview` · PyPI `openreview-cli` · CLI `openreview` · import `openre
 - **SIGTERM test (formerly known-broken, now passing):** `test_sigterm_mid_review_cancels_cleanly` (`tests/integration/tui/test_app.py`) passes — commit `10840a0` (2026-07-27) replaced `sys.exit` with Textual `self.exit()` in `_on_signal` (`tui/app.py:189`), so the handler no longer escapes `run_test`. The stale `xfail` marker was removed.
 - **Sockets disabled in tests by default** (`pytest-socket`, `--disable-socket --allow-unix-socket` in addopts). Internet tests: `@pytest.mark.network` (conftest auto-enables). Local 127.0.0.1 test servers: `@pytest.mark.enable_socket` directly — localhost is AF_INET, still blocked. `--allow-unix-socket` is load-bearing: asyncio needs `socket.socketpair()`.
 - **`tests/integration/test_no_pii_flag.py`, `test_pii_memory.py`, `test_pii_accuracy.py`, `test_config_change.py` are real tests now** — older notes calling them skeletons are stale.
+- **Never ask for a setup step to be redone on the strength of one failed check.** Re-run the check, or verify the underlying state directly, before concluding that a credential, login or install is broken. One failure is a signal to investigate, not a reason to ask.
+- **`gh auth status` can report a false "token is invalid" on the first call of a session.** The token lives in gnome-keyring, and the message blames `~/.config/gh/hosts.yml`, which never held a token. That mismatch is the tell. Prove gh with `gh api user --jq .login` instead, and retry once before concluding anything. Never ask for `gh auth login` on one report. Hit for real on 2026-09-26, and it was a false alarm.
 
 ## Don'ts
 
-- No product logic without an approved spec entry (spec-kit workflow; `specs/`).
+- No product logic without an approved spec entry (spec-kit workflow; specs are archived under `specs/archive/`, and new ones land in `specs/`).
 - No spec deps pre-installed ahead of their feature.
 - Don't treat `products/` specs as final — confirm scope before committing to an interpretation.
 - Don't mention the audience in repo metadata (see above).
@@ -383,5 +386,5 @@ Plain-English phase reports in `.specify/memory/reports/` (date-prefixed, regene
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/034-multifield-provider-auth/plan.md
+at specs/archive/034-multifield-provider-auth/plan.md
 <!-- SPECKIT END -->
