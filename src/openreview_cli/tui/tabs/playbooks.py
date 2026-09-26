@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import Any
 
@@ -9,8 +10,6 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, ListItem, ListView, Static
-
-from openreview_cli.tui.startup import defer_when_splashing
 
 
 class _PlaybookItem(ListItem):
@@ -51,6 +50,7 @@ class PlaybooksTab(Static):
     def __init__(self) -> None:
         super().__init__()
         self._playbooks_data: list[dict[str, Any]] = []
+        self._all_playbooks: list[dict[str, Any]] = []
 
     def compose(self) -> ComposeResult:
         yield Static("Playbooks", id="playbooks-header")
@@ -65,30 +65,52 @@ class PlaybooksTab(Static):
         )
 
     def on_mount(self) -> None:
-        defer_when_splashing(self.app, self._load)
+        if getattr(self.app, "startup_splash", False):
+            self._load_in_background()
+        else:
+            self._load()
+
+    def _load_in_background(self) -> None:
+        """Fetch the playbook list off the event loop so the splash keeps animating."""
+        self.run_worker(
+            self._fetch_playbooks(),
+            name="playbooks-load",
+            group="playbooks-load",
+            exclusive=True,
+        )
+
+    async def _fetch_playbooks(self) -> None:
+        from openreview_cli.tui.domain.playbooks import list_playbooks_via_tui
+
+        # to_thread: the parse-per-playbook corruption scan is ~5s and must not block the loop.
+        self._all_playbooks = await asyncio.to_thread(list_playbooks_via_tui)
+        self._apply_filter()
 
     def _on_input_changed(self, event: Input.Changed) -> None:
-        self._load()
+        self._apply_filter()
 
     def _load(self) -> None:
         from openreview_cli.tui.domain.playbooks import list_playbooks_via_tui
 
-        self._playbooks_data = list_playbooks_via_tui()
-        filter_text = self.query_one("#playbook-filter", Input).value
+        self._all_playbooks = list_playbooks_via_tui()
+        self._apply_filter()
 
+    def _apply_filter(self) -> None:
+        """Re-render the list from the cached playbooks, applying the filter box."""
+        filter_text = self.query_one("#playbook-filter", Input).value
         if filter_text:
             lowered = filter_text.lower()
-            self._playbooks_data = [p for p in self._playbooks_data if lowered in p["id"].lower()]
+            self._playbooks_data = [p for p in self._all_playbooks if lowered in p["id"].lower()]
+        else:
+            self._playbooks_data = list(self._all_playbooks)
 
         list_view = self.query_one("#playbook-list", ListView)
         list_view.clear()
-
         if not self._playbooks_data:
             list_view.append(
                 ListItem(Label("No playbooks yet. Import one with [+ Import playbook]."))
             )
             return
-
         for p in self._playbooks_data:
             list_view.append(
                 _PlaybookItem(
