@@ -11,12 +11,14 @@ inside the handler, so this module never depends on a screen at import time.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Button, Input, Label, ListItem, ListView, Static
 
+from openreview_cli.tui.loading import LoadingState
 from openreview_cli.tui.startup import defer_when_splashing
 
 
@@ -51,7 +53,13 @@ class PromptsTab(Static):
     def __init__(self) -> None:
         super().__init__()
         self._prompts_data: list[dict[str, Any]] = []
+        self._all_prompts: list[dict[str, Any]] | None = None
         self._selected_name: str | None = None
+        # Explicit failure flag: ``_all_prompts is None`` is also true during the
+        # very first fetch, so it cannot distinguish "never loaded" from "failed".
+        # A filter keystroke retries only after a real failure; otherwise it is
+        # pure local filtering (never a DB re-query per keystroke).
+        self._load_failed = False
 
     def compose(self) -> ComposeResult:
         yield Static("Prompts", id="prompts-header")
@@ -62,7 +70,10 @@ class PromptsTab(Static):
             Button("Export all\u2026", id="btn-export-all-prompts", variant="default"),
             id="prompts-toolbar",
         )
-        yield ListView(id="prompt-list")
+        yield LoadingState(id="prompts-loading")
+        prompt_list = ListView(id="prompt-list")
+        prompt_list.display = False
+        yield prompt_list
         yield Horizontal(
             Button("Edit\u2026", id="btn-edit-prompt", classes="prompt-action", disabled=True),
             Button("Bind\u2026", id="btn-bind-prompt", classes="prompt-action", disabled=True),
@@ -85,26 +96,69 @@ class PromptsTab(Static):
         )
 
     def on_mount(self) -> None:
-        defer_when_splashing(self.app, self._load)
+        defer_when_splashing(self.app, self._start_load)
 
     def _on_input_changed(self, event: Input.Changed) -> None:
-        self._load()
+        if self._load_failed:
+            # The last fetch failed: retry it rather than filtering a cache that
+            # was never populated.
+            self._start_load()
+            return
+        # Filtering is local: the cache is re-filtered, never re-queried.
+        self._apply_filter()
 
-    def _load(self) -> None:
+    def _start_load(self) -> None:
+        """Show the loading state and fetch the prompt list off the event loop.
+
+        Also the reload entry point for post-write refreshes.
+        """
+        self._load_failed = False
+        loading = self.query_one(LoadingState)
+        content = self.query_one("#prompt-list", ListView)
+        loading.begin(content)
+        self.run_worker(
+            self._load_async(),
+            name="prompts-load",
+            group="prompts-load",
+            exclusive=True,
+            exit_on_error=False,  # never take the app down for a tab fetch
+        )
+
+    async def _load_async(self) -> None:
         from openreview_cli.tui.domain.prompts import list_prompts_via_tui
 
+        loading = self.query_one(LoadingState)
+        content = self.query_one("#prompt-list", ListView)
         try:
-            self._prompts_data = list_prompts_via_tui()
+            # to_thread: the SQLite read must not block the event loop.
+            self._all_prompts = await asyncio.to_thread(list_prompts_via_tui)
         except Exception as exc:
             # A store failure on the list path must never reach a Textual
-            # handler; report it and leave the current list untouched.
+            # handler; report it and keep the last good cache so previously
+            # fetched rows stay visible instead of blanking the tab.
+            self._load_failed = True
+            if self._all_prompts is None:
+                # Nothing was ever fetched: fall back to an empty cache so the
+                # empty-state row renders rather than a blank area.
+                self._all_prompts = []
+            self._apply_filter()
             self.notify(f"Load failed: {exc}", severity="error", markup=False)
-            return
+        else:
+            self._apply_filter()
+        finally:
+            # Always reveal the list and drop the spinner, success or failure.
+            loading.end(content)
+
+    def _apply_filter(self) -> None:
+        """Re-render the list from the cached prompts, applying the filter box."""
         filter_text = self.query_one("#prompt-filter", Input).value
+        cached = self._all_prompts or []
 
         if filter_text:
             lowered = filter_text.lower()
-            self._prompts_data = [p for p in self._prompts_data if lowered in p["name"].lower()]
+            self._prompts_data = [p for p in cached if lowered in p["name"].lower()]
+        else:
+            self._prompts_data = list(cached)
 
         list_view = self.query_one("#prompt-list", ListView)
         list_view.clear()
@@ -192,7 +246,7 @@ class PromptsTab(Static):
             except Exception as exc:
                 self.notify(f"Create failed: {exc}", severity="error", markup=False)
                 return
-            self._load()
+            self._start_load()
 
         self.app.push_screen(PromptFormScreen(), on_result)
 
@@ -204,7 +258,7 @@ class PromptsTab(Static):
     def _on_import_result(self, _result: Any) -> None:
         # Import commits per item inside the modal; reload whenever it closes so
         # whatever landed is reflected in the list.
-        self._load()
+        self._start_load()
 
     def _open_export_all(self) -> None:
         """Open the export modal in library mode.
@@ -250,7 +304,7 @@ class PromptsTab(Static):
             except Exception as exc:
                 self.notify(f"Update failed: {exc}", severity="error", markup=False)
                 return
-            self._load()
+            self._start_load()
 
         self.app.push_screen(
             PromptFormScreen(
@@ -278,7 +332,7 @@ class PromptsTab(Static):
             except Exception as exc:
                 self.notify(f"Bind failed: {exc}", severity="error", markup=False)
                 return
-            self._load()
+            self._start_load()
 
         self.app.push_screen(PromptBindModal(prompt_name=name), on_result)
 
@@ -293,7 +347,7 @@ class PromptsTab(Static):
     def _on_bindings_result(self, _result: Any) -> None:
         # Unbind happens inside the bindings screen; reload on close so the
         # prompt list is fresh and the action row is re-gated.
-        self._load()
+        self._start_load()
 
     def _open_test(self) -> None:
         name = self._selected_name
@@ -349,7 +403,7 @@ class PromptsTab(Static):
             except Exception as exc:
                 self.notify(f"Delete failed: {exc}", severity="error", markup=False)
                 return
-            self._load()
+            self._start_load()
 
         from openreview_cli.tui.screens.confirm import ConfirmModal
 

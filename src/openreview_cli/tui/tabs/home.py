@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal
 from textual.widgets import Button, Label, ListItem, ListView, Static
 
+from openreview_cli.tui.loading import LoadingState
 from openreview_cli.tui.screens.review_wizard import ReviewWizard
 from openreview_cli.tui.startup import defer_when_splashing
 
@@ -41,22 +43,54 @@ class HomeTab(Container):
             id="empty-state",
             variant="primary",
         )
-        yield ListView(id="recent-list")
+        yield LoadingState(id="home-loading")
+        recent_list = ListView(id="recent-list")
+        recent_list.display = False
+        yield recent_list
         yield Static("", id="desc-bar")
 
     def on_mount(self) -> None:
-        defer_when_splashing(self.app, self._refresh_reviews)
+        defer_when_splashing(self.app, self._start_load)
 
-    def _refresh_reviews(self) -> None:
+    def _start_load(self) -> None:
+        """Show the spinner and fetch recent reviews off the event loop.
+
+        The single load entry point: invoked once on mount (deferred behind the
+        splash when enabled). There is no post-write caller.
+        """
+        loading = self.query_one(LoadingState)
+        content = self.query_one("#recent-list", ListView)
+        loading.begin(content)
+        self.run_worker(
+            self._load_async(),
+            name="home-load",
+            group="home-load",
+            exclusive=True,
+            exit_on_error=False,  # never take the app down for a tab fetch
+        )
+
+    async def _load_async(self) -> None:
         """Refresh the recent-reviews list from the database."""
         from openreview_cli.tui.domain.review import list_recent_reviews_via_tui
 
-        self._reviews = list_recent_reviews_via_tui(limit=5)
+        loading = self.query_one(LoadingState)
+        content = self.query_one("#recent-list", ListView)
+        try:
+            # to_thread: the SQLite read must not block the event loop.
+            self._reviews = await asyncio.to_thread(list_recent_reviews_via_tui, limit=5)
+        except Exception as exc:
+            self.notify(f"Load failed: {exc}", severity="error", markup=False)
+            # Always drop the spinner and reveal the list region. #empty-state is
+            # left visible (M5): it must be actionable from the very first frame.
+            loading.end(content)
+            return
 
         empty = self.query_one("#empty-state", Button)
         lst = self.query_one("#recent-list", ListView)
 
         if not self._reviews:
+            # Home has two mutually-exclusive content regions; the empty-state
+            # button stays visible and the list stays hidden.
             empty.display = True
             lst.display = False
             lst.clear()
@@ -68,6 +102,8 @@ class HomeTab(Container):
                 lst.append(ListItem(Label(text)))
             lst.display = True
             lst.index = 0
+
+        loading.display = False
 
     @staticmethod
     def _format_review_item(r: dict[str, Any]) -> str:

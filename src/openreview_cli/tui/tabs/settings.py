@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import sys
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -10,6 +11,7 @@ from textual.widgets import Button, Static
 
 from openreview_cli import __version__
 from openreview_cli.tui.domain.gateway import gateway_health_check, get_slot_configs
+from openreview_cli.tui.loading import LoadingState
 from openreview_cli.tui.screens.gateway_wizard import GatewayWizard
 from openreview_cli.tui.startup import defer_when_splashing
 
@@ -47,7 +49,10 @@ class SettingsTab(Vertical):
                 yield Button("PII data", id="section-pii-data")
                 yield Button("About", id="section-about")
             with Vertical(id="section-content"):
-                yield Static(id="section-content-display")
+                content = Static(id="section-content-display")
+                content.display = False
+                yield content
+                yield LoadingState(id="settings-loading")
                 with Horizontal(id="copy-buttons-row"):
                     yield Button("Copy DB path", id="copy-db-path", classes="copy-btn")
                     yield Button("Copy config path", id="copy-config-path", classes="copy-btn")
@@ -113,11 +118,44 @@ class SettingsTab(Vertical):
 
     def _show_section(self, section: str) -> None:
         self._current_section = section
-        display = self.query_one("#section-content-display", Static)
-        display.update(self._text_for(section))
         self.query_one("#copy-buttons-row").display = section == "about"
         self.query_one("#run-wizard", Button).display = section == "gateway"
         self.query_one("#manage-pii", Button).display = section == "pii-data"
+        loading = self.query_one(LoadingState)
+        content = self.query_one("#section-content-display", Static)
+        loading.begin(content)
+        self.run_worker(
+            self._render_section(section),
+            name="settings-load",
+            group="settings-load",
+            exclusive=True,
+            exit_on_error=False,  # never take the app down for a tab fetch
+        )
+
+    async def _render_section(self, section: str) -> None:
+        """Render *section* off the event loop, then reveal the content pane.
+
+        ``exclusive=True`` cancels an in-flight render when a newer section is
+        requested; the guard below is the explicit belt-and-braces for the
+        window before cancellation lands.
+        """
+        loading = self.query_one(LoadingState)
+        content = self.query_one("#section-content-display", Static)
+        try:
+            # to_thread: file I/O and the SQLite cost aggregation must not block the loop.
+            text = await asyncio.to_thread(self._text_for, section)
+        except Exception as exc:
+            # A render failure must never reach a Textual handler. A stale
+            # render that already lost the race must stay silent.
+            if self._current_section != section:
+                return
+            self.notify(f"Load failed: {exc}", severity="error", markup=False)
+            loading.end(content)
+            return
+        if self._current_section != section:
+            return
+        content.update(text)
+        loading.end(content)
 
     def _text_for(self, section: str) -> str:
         renderer = _SECTION_RENDERERS.get(section)

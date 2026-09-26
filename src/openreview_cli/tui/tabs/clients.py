@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Button, Input, Label, ListItem, ListView, Static
 
 from openreview_cli.tui.domain import clients as _dc
+from openreview_cli.tui.loading import LoadingState
 from openreview_cli.tui.screens.client_detail import ClientDetailScreen
 from openreview_cli.tui.screens.client_form import ClientForm
 from openreview_cli.tui.screens.confirm import ConfirmModal
@@ -26,6 +29,8 @@ class ClientsTab(Static):
         super().__init__()
         self._selected_client_id: str | None = None
         self._clients: list[dict[str, str]] = []
+        self._all_clients: list[dict[str, str]] = []
+        self._pending_highlight_id: str | None = None
 
     def compose(self) -> ComposeResult:
         yield Static("Clients", id="clients-header")
@@ -34,7 +39,10 @@ class ClientsTab(Static):
             Button("+ New client", id="btn-new-client", variant="primary"),
             id="clients-toolbar",
         )
-        yield ListView(id="client-list")
+        yield LoadingState(id="clients-loading")
+        client_list = ListView(id="client-list")
+        client_list.display = False
+        yield client_list
         yield Horizontal(
             Button("View", id="btn-view", variant="default", disabled=True),
             Button("Delete selected", id="btn-delete", variant="error", disabled=True),
@@ -42,39 +50,82 @@ class ClientsTab(Static):
         )
 
     def on_mount(self) -> None:
-        defer_when_splashing(self.app, self._load)
+        defer_when_splashing(self.app, self._start_load)
+
+    def _start_load(self) -> None:
+        """Show the loading state and fetch clients off the event loop.
+
+        Also the reload entry point for post-write refreshes (add/delete).
+        """
+        loading = self.query_one(LoadingState)
+        content = self.query_one("#client-list", ListView)
+        loading.begin(content)
+        self.run_worker(
+            self._load_async(),
+            name="clients-load",
+            group="clients-load",
+            exclusive=True,
+            exit_on_error=False,  # never take the app down for a tab fetch
+        )
+
+    async def _load_async(self) -> None:
+        loading = self.query_one(LoadingState)
+        content = self.query_one("#client-list", ListView)
+        try:
+            # to_thread: the SQLite read must not block the event loop.
+            self._all_clients = await asyncio.to_thread(_dc.list_clients_via_tui)
+            self._apply_filter()
+
+            pending = self._pending_highlight_id
+            self._pending_highlight_id = None
+            if pending is not None:
+                self._highlight_client(pending)
+        except Exception as exc:
+            self.notify(f"Load failed: {exc}", severity="error", markup=False)
+        finally:
+            # Always drop the spinner and reveal the list, success or failure.
+            loading.end(content)
 
     def _on_input_changed(self, event: Input.Changed) -> None:
-        self._load(event.value)
+        # Filtering is local: the cache is re-filtered, never re-queried.
+        self._apply_filter()
 
-    def _load(self, filter_text: str = "") -> None:
-        """Fetch and display clients, optionally filtered."""
-        self._clients = _dc.list_clients_via_tui()
+    def _apply_filter(self) -> None:
+        """Re-render the list from the cached clients, applying the filter box."""
+        filter_text = self.query_one("#client-filter", Input).value
 
         if filter_text:
             lowered = filter_text.lower()
             self._clients = [
                 c
-                for c in self._clients
+                for c in self._all_clients
                 if lowered in c["id"].lower() or lowered in c["name"].lower()
             ]
+        else:
+            self._clients = list(self._all_clients)
 
         list_view = self.query_one("#client-list", ListView)
         list_view.clear()
+
+        self._selected_client_id = None
+        self.query_one("#btn-delete", Button).disabled = True
 
         if not self._clients:
             list_view.append(
                 ListItem(Label("No clients yet. Add one with + New client.", markup=False))
             )
-            self._selected_client_id = None
-            self.query_one("#btn-delete", Button).disabled = True
             return
 
         for c in self._clients:
             list_view.append(ListItem(Label(f"{c['id']} \u2014 {c['name']}", markup=False)))
 
-        self._selected_client_id = None
-        self.query_one("#btn-delete", Button).disabled = True
+    def _highlight_client(self, client_id: str) -> None:
+        """Move the list cursor onto *client_id* if it is in the filtered view."""
+        lv = self.query_one("#client-list", ListView)
+        for i, c in enumerate(self._clients):
+            if c["id"] == client_id:
+                lv.index = i
+                return
 
     def _on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         """Track highlighted client for delete button."""
@@ -108,13 +159,9 @@ class ClientsTab(Static):
         def on_result(result: dict[str, str] | None) -> None:
             if result:
                 _dc.add_client_via_tui(result["client_id"], result["name"], result.get("notes"))
-                self._load()
-                lv = self.query_one("#client-list", ListView)
-                new_id = result["client_id"]
-                for i, c in enumerate(self._clients):
-                    if c["id"] == new_id:
-                        lv.index = i
-                        break
+                # Highlight the new row once the async reload lands.
+                self._pending_highlight_id = result["client_id"]
+                self._start_load()
 
         self.app.push_screen(ClientForm(), on_result)
 
@@ -132,7 +179,7 @@ class ClientsTab(Static):
             def on_confirm(result: bool | None) -> None:
                 if result:
                     _dc.delete_client_via_tui(client_id, cascade=True)
-                    self._load()
+                    self._start_load()
 
             self.app.push_screen(
                 ConfirmModal(
@@ -144,4 +191,4 @@ class ClientsTab(Static):
             )
         else:
             _dc.delete_client_via_tui(client_id)
-            self._load()
+            self._start_load()

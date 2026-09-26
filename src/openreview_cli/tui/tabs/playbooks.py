@@ -11,6 +11,9 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, ListItem, ListView, Static
 
+from openreview_cli.tui.loading import LoadingState
+from openreview_cli.tui.startup import defer_when_splashing
+
 
 class _PlaybookItem(ListItem):
     """ListItem carrying playbook_id for detail view lookup."""
@@ -58,41 +61,51 @@ class PlaybooksTab(Static):
             Input(placeholder="Type to filter playbooks...", id="playbook-filter"),
             id="playbooks-toolbar",
         )
-        yield ListView(id="playbook-list")
+        yield LoadingState(id="playbooks-loading")
+        playbook_list = ListView(id="playbook-list")
+        playbook_list.display = False
+        yield playbook_list
         yield Horizontal(
             Button("+ Import playbook", id="btn-import", variant="primary"),
             id="playbooks-actions",
         )
 
     def on_mount(self) -> None:
-        if getattr(self.app, "startup_splash", False):
-            self._load_in_background()
-        else:
-            self._load()
+        defer_when_splashing(self.app, self._start_load)
 
-    def _load_in_background(self) -> None:
-        """Fetch the playbook list off the event loop so the splash keeps animating."""
+    def _start_load(self) -> None:
+        """Show the loading state and fetch the playbook list off the event loop.
+
+        Also the reload entry point for post-import refreshes.
+        """
+        loading = self.query_one(LoadingState)
+        content = self.query_one("#playbook-list", ListView)
+        loading.begin(content)
         self.run_worker(
-            self._fetch_playbooks(),
+            self._load_async(),
             name="playbooks-load",
             group="playbooks-load",
             exclusive=True,
+            exit_on_error=False,  # never take the app down for a tab fetch
         )
 
-    async def _fetch_playbooks(self) -> None:
+    async def _load_async(self) -> None:
         from openreview_cli.tui.domain.playbooks import list_playbooks_via_tui
 
-        # to_thread: the parse-per-playbook corruption scan is ~5s and must not block the loop.
-        self._all_playbooks = await asyncio.to_thread(list_playbooks_via_tui)
-        self._apply_filter()
+        loading = self.query_one(LoadingState)
+        content = self.query_one("#playbook-list", ListView)
+        try:
+            # to_thread: the parse-per-playbook corruption scan is ~5s and must not block the loop.
+            self._all_playbooks = await asyncio.to_thread(list_playbooks_via_tui)
+        except Exception as exc:
+            self.notify(f"Load failed: {exc}", severity="error", markup=False)
+        else:
+            self._apply_filter()
+        finally:
+            # Always drop the spinner and reveal the list, success or failure.
+            loading.end(content)
 
     def _on_input_changed(self, event: Input.Changed) -> None:
-        self._apply_filter()
-
-    def _load(self) -> None:
-        from openreview_cli.tui.domain.playbooks import list_playbooks_via_tui
-
-        self._all_playbooks = list_playbooks_via_tui()
         self._apply_filter()
 
     def _apply_filter(self) -> None:
@@ -157,7 +170,7 @@ class PlaybooksTab(Static):
                 f"with {info['category_count']} categories.",
                 timeout=3,
             )
-            self._load()
+            self._start_load()
         except Exception as exc:
             self.notify(f"Import failed: {exc}", timeout=5, severity="error")
 

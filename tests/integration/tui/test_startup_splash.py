@@ -96,9 +96,8 @@ async def test_all_tab_loads_run_behind_the_splash() -> None:
         app = OpenReviewApp(show_splash=True)
         async with app.run_test(size=(120, 40)) as pilot:
             # At the run_test yield the splash is up and none of the deferred
-            # tab loads (nor the settings gateway render) has run yet. The
-            # playbooks fetch is a background worker started in on_mount, so it
-            # is deliberately not asserted here (it could already be running).
+            # tab loads (nor the settings gateway render) has run yet — every
+            # tab, playbooks included, defers its fetch behind the splash.
             assert app.query(StartupSplash)
             assert not m_reviews.called
             assert not m_clients.called
