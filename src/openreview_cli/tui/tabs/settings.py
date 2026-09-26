@@ -11,6 +11,7 @@ from textual.widgets import Button, Static
 from openreview_cli import __version__
 from openreview_cli.tui.domain.gateway import gateway_health_check, get_slot_configs
 from openreview_cli.tui.screens.gateway_wizard import GatewayWizard
+from openreview_cli.tui.startup import defer_when_splashing
 
 # Constructed to avoid CodeQL URL substring sanitization false positive
 _DOCS_URL: str = "https://" + "github.com/mohamed-benoughidene/openreview"
@@ -55,7 +56,11 @@ class SettingsTab(Vertical):
                 yield Button("View stored PII data", id="manage-pii")
 
     def on_mount(self) -> None:
-        self._show_section("gateway")
+        defer_when_splashing(self.app, self._initial_section)
+
+    def _initial_section(self) -> None:
+        """Render the initially-selected section once the first frame has painted."""
+        self._show_section(self._current_section)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         btn_id = event.button.id or ""
