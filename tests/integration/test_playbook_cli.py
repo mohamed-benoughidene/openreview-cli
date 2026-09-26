@@ -115,7 +115,7 @@ def _import_yaml(tmp_path: Path, yaml_str: str) -> str:
 class TestUndeleteCLI:
     """D-46: End-to-end undelete via CLI."""
 
-    def test_undelete_restores_listing(self, tmp_path: Path) -> None:
+    def test_undelete_restores_listing(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("undelete-test")
         yaml_content = _make_yaml_v1(pb_id)
         imported_id = _import_yaml(tmp_path, yaml_content)
@@ -138,12 +138,12 @@ class TestUndeleteCLI:
         result = runner.invoke(app, ["playbook", "list"])
         assert pb_id in result.output
 
-    def test_undelete_nonexistent(self) -> None:
+    def test_undelete_nonexistent(self, isolated_xdg: dict[str, Path]) -> None:
         result = runner.invoke(app, ["playbook", "undelete", "no-such-pb"])
         assert result.exit_code != 0
         assert "not found" in result.output.lower()
 
-    def test_undelete_requires_id(self) -> None:
+    def test_undelete_requires_id(self, isolated_xdg: dict[str, Path]) -> None:
         result = runner.invoke(app, ["playbook", "undelete"])
         assert result.exit_code != 0
 
@@ -151,7 +151,7 @@ class TestUndeleteCLI:
 class TestDiffJsonCLI:
     """D-47: --json flag for playbook diff."""
 
-    def test_diff_json_flag(self, tmp_path: Path) -> None:
+    def test_diff_json_flag(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("diff-json")
         _import_yaml(tmp_path, _make_yaml_v1(pb_id))
         _import_yaml(tmp_path, _make_yaml_v2(pb_id))
@@ -167,7 +167,7 @@ class TestDiffJsonCLI:
         assert "changed_categories" in data
         assert "indemnification" in data["added_categories"]
 
-    def test_diff_default_text_output(self, tmp_path: Path) -> None:
+    def test_diff_default_text_output(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("diff-text")
         _import_yaml(tmp_path, _make_yaml_v1(pb_id))
         _import_yaml(tmp_path, _make_yaml_v2(pb_id))
@@ -181,7 +181,7 @@ class TestDiffJsonCLI:
 class TestBulkExportCLI:
     """D-48: --all flag for playbook export."""
 
-    def test_bulk_export_all(self, tmp_path: Path) -> None:
+    def test_bulk_export_all(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb1 = _unique_id("bulk-export-1")
         pb2 = _unique_id("bulk-export-2")
         _import_yaml(tmp_path, _make_yaml_v1(pb1))
@@ -194,7 +194,7 @@ class TestBulkExportCLI:
         assert result.exit_code == 0, f"Bulk export failed: {result.output}"
         assert "Exported" in result.output
 
-    def test_bulk_export_no_output(self, tmp_path: Path) -> None:
+    def test_bulk_export_no_output(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb1 = _unique_id("bulk-export-no-out")
         _import_yaml(tmp_path, _make_yaml_v1(pb1))
 
@@ -208,7 +208,7 @@ class TestBulkExportCLI:
 class TestBulkDeleteCLI:
     """D-48: --all flag for playbook delete."""
 
-    def test_bulk_delete_with_force(self, tmp_path: Path) -> None:
+    def test_bulk_delete_with_force(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb1 = _unique_id("bulk-del-1")
         pb2 = _unique_id("bulk-del-2")
         _import_yaml(tmp_path, _make_yaml_v1(pb1))

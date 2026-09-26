@@ -100,7 +100,7 @@ class TestDiff:
         r = runner.invoke(app, ["playbook", "import", str(path)])
         assert r.exit_code == 0, f"import failed: {r.stderr}"
 
-    def test_diff_different_versions(self, tmp_path: Path) -> None:
+    def test_diff_different_versions(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("diff-valid")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
         self._import_yaml(tmp_path, SAMPLE_YAML_V2, pb_id)
@@ -120,7 +120,7 @@ class TestDiff:
         assert "confidentiality" in result.stdout
         assert "indemnification" in result.stdout or "New categories" in result.stdout
 
-    def test_diff_equal_versions(self, tmp_path: Path) -> None:
+    def test_diff_equal_versions(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("diff-equal")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
@@ -138,7 +138,7 @@ class TestDiff:
         assert result.exit_code == 0
         assert "No changes" in result.stdout
 
-    def test_diff_nonexistent_playbook(self) -> None:
+    def test_diff_nonexistent_playbook(self, isolated_xdg: dict[str, Path]) -> None:
         result = runner.invoke(
             app,
             [
@@ -152,7 +152,7 @@ class TestDiff:
         assert result.exit_code == 1
         assert "not found" in result.stderr.lower()
 
-    def test_diff_bad_version(self, tmp_path: Path) -> None:
+    def test_diff_bad_version(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("diff-bad-ver")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
 
@@ -169,7 +169,9 @@ class TestDiff:
         assert result.exit_code == 1
         assert "not found" in result.stderr.lower()
 
-    def test_diff_auto_normalizes_v1_greater_than_v2(self, tmp_path: Path) -> None:
+    def test_diff_auto_normalizes_v1_greater_than_v2(
+        self, tmp_path: Path, isolated_xdg: dict[str, Path]
+    ) -> None:
         pb_id = _unique_id("diff-swap")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
         self._import_yaml(tmp_path, SAMPLE_YAML_V2, pb_id)
@@ -190,7 +192,7 @@ class TestDiff:
         assert "1" in result.stdout
         assert "2" in result.stdout
 
-    def test_diff_exemplar_changes(self, tmp_path: Path) -> None:
+    def test_diff_exemplar_changes(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("diff-exemplar")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
         self._import_yaml(tmp_path, SAMPLE_YAML_V2, pb_id)

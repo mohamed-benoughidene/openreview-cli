@@ -28,7 +28,13 @@ _db_path = get_data_dir() / "openreview.db"
 
 
 def list_playbooks_via_tui() -> list[dict[str, Any]]:
-    """List all playbooks with latest version info and corruption status."""
+    """List all playbooks with latest version info.
+
+    Every row is reported optimistically non-corrupt (``"corrupt": False``).  The
+    defensive parse-per-playbook scan is :func:`corrupt_playbook_ids_via_tui`,
+    kept off this render path because a full YAML/pydantic load per row costs
+    ~4.5ms each (seconds-to-minutes on a large database).
+    """
 
     def _cur(pid: str, ver: int) -> int:
         try:
@@ -39,21 +45,31 @@ def list_playbooks_via_tui() -> list[dict[str, Any]]:
     raw = list_playbooks(_db_path)
     result: list[dict[str, Any]] = []
     for pid, ver, created in raw:
-        corrupt = False
-        try:
-            load_playbook_from_db(pid)
-        except (PlaybookLoadError, ValueError):
-            corrupt = True
         result.append(
             {
                 "id": pid,
                 "latest_version": ver,
                 "current_version": _cur(pid, ver),
                 "created_at": created,
-                "corrupt": corrupt,
+                "corrupt": False,
             }
         )
     return result
+
+
+def corrupt_playbook_ids_via_tui(playbook_ids: list[str]) -> set[str]:
+    """Return the subset of *playbook_ids* whose stored payload fails to parse.
+
+    Kept out of ``list_playbooks_via_tui``: this parses every playbook to power
+    the defensive "(corrupt)" badge, so it must not sit on the render path.
+    """
+    corrupt: set[str] = set()
+    for pid in playbook_ids:
+        try:
+            load_playbook_from_db(pid)
+        except (PlaybookLoadError, ValueError):
+            corrupt.add(pid)
+    return corrupt
 
 
 def import_playbook_via_tui(yaml_path: Path) -> dict[str, Any]:

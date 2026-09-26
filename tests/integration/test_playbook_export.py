@@ -102,7 +102,7 @@ class TestExport:
         assert r.exit_code == 0, f"import failed: {r.stderr}"
         return path
 
-    def test_export_valid_playbook(self, tmp_path: Path) -> None:
+    def test_export_valid_playbook(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("export-valid")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
         out_path = tmp_path / "exported.yaml"
@@ -124,7 +124,7 @@ class TestExport:
         assert loaded["id"] == pb_id
         assert len(loaded["categories"]) == 1
 
-    def test_export_with_version(self, tmp_path: Path) -> None:
+    def test_export_with_version(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("export-ver")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
         self._import_yaml(tmp_path, SAMPLE_YAML_V2, pb_id)
@@ -167,7 +167,7 @@ class TestExport:
         assert loaded2["id"] == pb_id
         assert len(loaded2["categories"]) == 2
 
-    def test_export_default_version(self, tmp_path: Path) -> None:
+    def test_export_default_version(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         """Without --version, exports the current/latest version."""
         pb_id = _unique_id("export-default")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
@@ -188,7 +188,9 @@ class TestExport:
         loaded = yaml.safe_load(out.read_text())
         assert len(loaded["categories"]) == 2  # latest (v2)
 
-    def test_export_nonexistent_playbook(self, tmp_path: Path) -> None:
+    def test_export_nonexistent_playbook(
+        self, tmp_path: Path, isolated_xdg: dict[str, Path]
+    ) -> None:
         out = tmp_path / "out.yaml"
         result = runner.invoke(
             app,
@@ -203,7 +205,7 @@ class TestExport:
         assert result.exit_code == 1
         assert "not found" in result.stderr.lower()
 
-    def test_export_bad_version(self, tmp_path: Path) -> None:
+    def test_export_bad_version(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("export-bad-ver")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
         out = tmp_path / "out.yaml"
@@ -223,7 +225,7 @@ class TestExport:
         assert result.exit_code == 1
         assert "not found" in result.stderr.lower()
 
-    def test_export_missing_parent_dir(self, tmp_path: Path) -> None:
+    def test_export_missing_parent_dir(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("export-missing-dir")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
         bad_path = tmp_path / "does_not_exist" / "out.yaml"
@@ -241,7 +243,7 @@ class TestExport:
         assert result.exit_code == 1
         assert "parent directory" in result.stderr.lower()
 
-    def test_export_overwrite_warning(self, tmp_path: Path) -> None:
+    def test_export_overwrite_warning(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("export-overwrite")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
         out = tmp_path / "out.yaml"
@@ -263,7 +265,9 @@ class TestExport:
         loaded = yaml.safe_load(out.read_text())
         assert loaded["id"] == pb_id
 
-    def test_export_with_force_suppresses_warning(self, tmp_path: Path) -> None:
+    def test_export_with_force_suppresses_warning(
+        self, tmp_path: Path, isolated_xdg: dict[str, Path]
+    ) -> None:
         pb_id = _unique_id("export-force")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
         out = tmp_path / "out.yaml"

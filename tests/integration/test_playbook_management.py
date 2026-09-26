@@ -102,7 +102,7 @@ class TestSetCurrent:
         r = runner.invoke(app, ["playbook", "import", str(path)])
         assert r.exit_code == 0, f"import failed: {r.stderr}"
 
-    def test_set_current_version(self, tmp_path: Path) -> None:
+    def test_set_current_version(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("set-cur")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
         self._import_yaml(tmp_path, SAMPLE_YAML_V2, pb_id)
@@ -114,7 +114,7 @@ class TestSetCurrent:
         assert result.exit_code == 0
         assert "Set current version" in result.stdout
 
-    def test_set_current_idempotent(self, tmp_path: Path) -> None:
+    def test_set_current_idempotent(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("set-cur-idem")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
 
@@ -123,7 +123,7 @@ class TestSetCurrent:
         assert result.exit_code == 0
         assert "already current" in result.stdout
 
-    def test_set_current_nonexistent_playbook(self) -> None:
+    def test_set_current_nonexistent_playbook(self, isolated_xdg: dict[str, Path]) -> None:
         result = runner.invoke(
             app,
             ["playbook", "set-current", "no-such-pb", "1"],
@@ -131,7 +131,7 @@ class TestSetCurrent:
         assert result.exit_code == 1
         assert "not found" in result.stderr.lower()
 
-    def test_set_current_bad_version(self, tmp_path: Path) -> None:
+    def test_set_current_bad_version(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("set-cur-bad")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
 
@@ -152,7 +152,7 @@ class TestDelete:
         r = runner.invoke(app, ["playbook", "import", str(path)])
         assert r.exit_code == 0, f"import failed: {r.stderr}"
 
-    def test_delete_playbook(self, tmp_path: Path) -> None:
+    def test_delete_playbook(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("del")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
 
@@ -160,7 +160,7 @@ class TestDelete:
         assert result.exit_code == 0
         assert "Deleted playbook" in result.stdout
 
-    def test_delete_already_deleted(self, tmp_path: Path) -> None:
+    def test_delete_already_deleted(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("del-already")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
 
@@ -169,12 +169,12 @@ class TestDelete:
         assert result.exit_code == 0
         assert "already deleted" in result.stdout
 
-    def test_delete_nonexistent(self) -> None:
+    def test_delete_nonexistent(self, isolated_xdg: dict[str, Path]) -> None:
         result = runner.invoke(app, ["playbook", "delete", "no-such-pb"])
         assert result.exit_code == 1
         assert "not found" in result.stderr.lower()
 
-    def test_delete_hides_from_list(self, tmp_path: Path) -> None:
+    def test_delete_hides_from_list(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("del-list")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
 
@@ -189,7 +189,9 @@ class TestDelete:
         after = runner.invoke(app, ["playbook", "list"])
         assert pb_id not in after.stdout
 
-    def test_delete_appears_in_list_with_include_deleted(self, tmp_path: Path) -> None:
+    def test_delete_appears_in_list_with_include_deleted(
+        self, tmp_path: Path, isolated_xdg: dict[str, Path]
+    ) -> None:
         pb_id = _unique_id("del-include")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
 
@@ -199,7 +201,9 @@ class TestDelete:
         assert pb_id in result.stdout
         assert "deleted" in result.stdout.lower()
 
-    def test_delete_restore_via_set_current(self, tmp_path: Path) -> None:
+    def test_delete_restore_via_set_current(
+        self, tmp_path: Path, isolated_xdg: dict[str, Path]
+    ) -> None:
         pb_id = _unique_id("del-restore")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
 
@@ -224,7 +228,7 @@ class TestHistory:
         r = runner.invoke(app, ["playbook", "import", str(path)])
         assert r.exit_code == 0, f"import failed: {r.stderr}"
 
-    def test_history_multi_version(self, tmp_path: Path) -> None:
+    def test_history_multi_version(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("hist-multi")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
         self._import_yaml(tmp_path, SAMPLE_YAML_V2, pb_id)
@@ -234,7 +238,7 @@ class TestHistory:
         assert "1" in result.stdout
         assert "2" in result.stdout
 
-    def test_history_current_marker(self, tmp_path: Path) -> None:
+    def test_history_current_marker(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("hist-cur")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
         self._import_yaml(tmp_path, SAMPLE_YAML_V2, pb_id)
@@ -244,7 +248,7 @@ class TestHistory:
         assert result.exit_code == 0
         assert "Current" in result.stdout
 
-    def test_history_deleted_marker(self, tmp_path: Path) -> None:
+    def test_history_deleted_marker(self, tmp_path: Path, isolated_xdg: dict[str, Path]) -> None:
         pb_id = _unique_id("hist-del")
         self._import_yaml(tmp_path, SAMPLE_YAML, pb_id)
 
@@ -253,7 +257,7 @@ class TestHistory:
         assert result.exit_code == 0
         assert "deleted" in result.stdout.lower()
 
-    def test_history_nonexistent_playbook(self) -> None:
+    def test_history_nonexistent_playbook(self, isolated_xdg: dict[str, Path]) -> None:
         result = runner.invoke(app, ["playbook", "history", "no-such-pb"])
         assert result.exit_code == 1
         assert "not found" in result.stderr.lower()
