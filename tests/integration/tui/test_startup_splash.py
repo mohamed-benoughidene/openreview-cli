@@ -9,12 +9,22 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+from textual.pilot import Pilot
 from textual.widgets import Footer, Static, TabbedContent, TabPane
 
 from openreview_cli import __version__
 from openreview_cli.tui.app import OpenReviewApp
 from openreview_cli.tui.screens.splash import StartupSplash
 from openreview_cli.tui.tabs.settings import SettingsTab
+
+
+async def _wait_for_splash_lift(app: OpenReviewApp, pilot: Pilot) -> None:
+    """Wait wall-clock for the splash's minimum-on-screen timer to fire."""
+    for _ in range(40):
+        if not app.query(StartupSplash):
+            return
+        await pilot.pause(0.05)
+    raise AssertionError("startup splash did not lift")
 
 
 async def test_splash_paints_first_then_lifts() -> None:
@@ -32,10 +42,7 @@ async def test_splash_paints_first_then_lifts() -> None:
         assert "Privacy: —" in str(app.query_one("#status-privacy", Static).render())
 
         # Startup completes and the splash lifts.
-        for _ in range(6):
-            if not app.query(StartupSplash):
-                break
-            await pilot.pause()
+        await _wait_for_splash_lift(app, pilot)
 
         assert not app.query(StartupSplash)
         assert app.query_one("#tabs", TabbedContent) is not None
@@ -89,18 +96,17 @@ async def test_all_tab_loads_run_behind_the_splash() -> None:
         app = OpenReviewApp(show_splash=True)
         async with app.run_test(size=(120, 40)) as pilot:
             # At the run_test yield the splash is up and none of the deferred
-            # tab loads (nor the settings gateway render) has run yet.
+            # tab loads (nor the settings gateway render) has run yet. The
+            # playbooks fetch is a background worker started in on_mount, so it
+            # is deliberately not asserted here (it could already be running).
             assert app.query(StartupSplash)
             assert not m_reviews.called
             assert not m_clients.called
-            assert not m_playbooks.called
             assert not m_prompts.called
             assert not m_slots.called
 
-            for _ in range(6):
-                if not app.query(StartupSplash):
-                    break
-                await pilot.pause()
+            await _wait_for_splash_lift(app, pilot)
+            await app.workers.wait_for_complete()
 
             assert not app.query(StartupSplash)
             assert m_reviews.called
@@ -120,9 +126,6 @@ async def test_splash_settings_section_not_clobbered() -> None:
         assert tab._current_section == "gateway"
         tab.select_section("about")
 
-        for _ in range(6):
-            if not app.query(StartupSplash):
-                break
-            await pilot.pause()
+        await _wait_for_splash_lift(app, pilot)
 
         assert "Accessibility" in str(tab.query_one("#section-content-display", Static).render())

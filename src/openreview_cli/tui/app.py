@@ -14,6 +14,8 @@ from textual.widgets import Button, Footer, Header, Static, TabbedContent, TabPa
 from openreview_cli.slots import VALID_SLOTS
 from openreview_cli.tui.domain.gateway import gateway_health_check, get_slot_configs
 
+_MIN_SPLASH_SECONDS: float = 0.6
+
 
 class OpenReviewApp(App[None]):
     """Root TUI app for openreview."""
@@ -167,12 +169,22 @@ class OpenReviewApp(App[None]):
         self._register_signal_handlers()
 
         if self._show_splash:
-            self.call_after_refresh(self._finish_startup)
+            self.call_after_refresh(self._start_startup_behind_splash)
         else:
             self._finish_startup()
 
     def _finish_startup(self) -> None:
-        """Run blocking startup I/O behind the splash, then lift it."""
+        """Run startup I/O and lift the splash (lift is a no-op without the splash)."""
+        self._startup_work()
+        self._lift_splash()
+
+    def _start_startup_behind_splash(self) -> None:
+        """Run startup I/O, then keep the splash up long enough to be seen animating."""
+        self._startup_work()
+        self.set_timer(_MIN_SPLASH_SECONDS, self._lift_splash)
+
+    def _startup_work(self) -> None:
+        """Refresh the status bar from the blocking startup sources."""
         try:
             from openreview_cli.tui.domain.privacy import read_privacy_tier
 
@@ -183,6 +195,8 @@ class OpenReviewApp(App[None]):
         self._refresh_gateway_status()
         self._refresh_egress_status()
 
+    def _lift_splash(self) -> None:
+        """Remove the startup splash, if it is present."""
         from openreview_cli.tui.screens.splash import StartupSplash
 
         with contextlib.suppress(NoMatches):
