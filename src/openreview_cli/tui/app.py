@@ -33,11 +33,17 @@ class OpenReviewApp(App[None]):
         ("7", "show_tab('retrieve')", "Retrieve"),
     ]
 
-    def __init__(self) -> None:
+    def __init__(self, *, show_splash: bool = False) -> None:
         super().__init__()
+        self._show_splash = show_splash
         self._ctrl_c_warned = False
         self._orig_sigterm: Any = signal.SIG_DFL
         self._orig_sigint: Any = signal.SIG_DFL
+
+    @property
+    def startup_splash(self) -> bool:
+        """True when the startup splash (and deferred startup I/O) is enabled."""
+        return self._show_splash
 
     def compose(self) -> ComposeResult:
         from openreview_cli.tui.tabs.clients import ClientsTab
@@ -72,6 +78,10 @@ class OpenReviewApp(App[None]):
             yield Static("Cloud calls: 0", id="status-egress")
             yield Button("Quit", id="btn-quit", variant="error")
         yield Footer()
+        if self._show_splash:
+            from openreview_cli.tui.screens.splash import StartupSplash
+
+            yield StartupSplash()
 
     def action_show_tab(self, tab_id: str) -> None:
         tabs = self.query_one("#tabs", TabbedContent)
@@ -151,6 +161,18 @@ class OpenReviewApp(App[None]):
             self.exit()
 
     def on_mount(self) -> None:
+        self._gateway_timer = self.set_interval(5.0, self._refresh_gateway_status)
+        self._egress_timer = self.set_interval(2.0, self._refresh_egress_status)
+
+        self._register_signal_handlers()
+
+        if self._show_splash:
+            self.call_after_refresh(self._finish_startup)
+        else:
+            self._finish_startup()
+
+    def _finish_startup(self) -> None:
+        """Run blocking startup I/O behind the splash, then lift it."""
         try:
             from openreview_cli.tui.domain.privacy import read_privacy_tier
 
@@ -160,10 +182,11 @@ class OpenReviewApp(App[None]):
 
         self._refresh_gateway_status()
         self._refresh_egress_status()
-        self._gateway_timer = self.set_interval(5.0, self._refresh_gateway_status)
-        self._egress_timer = self.set_interval(2.0, self._refresh_egress_status)
 
-        self._register_signal_handlers()
+        from openreview_cli.tui.screens.splash import StartupSplash
+
+        with contextlib.suppress(NoMatches):
+            self.query_one(StartupSplash).remove()
 
     def on_unmount(self) -> None:
         """Clean up process-global resources installed by on_mount."""

@@ -1,4 +1,5 @@
 /* Base TUI styles */
 Screen {
     background: $surface;
+    layers: main splash;
 }

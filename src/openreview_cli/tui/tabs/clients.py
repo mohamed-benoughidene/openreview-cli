@@ -10,6 +10,7 @@ from openreview_cli.tui.domain import clients as _dc
 from openreview_cli.tui.screens.client_detail import ClientDetailScreen
 from openreview_cli.tui.screens.client_form import ClientForm
 from openreview_cli.tui.screens.confirm import ConfirmModal
+from openreview_cli.tui.startup import defer_when_splashing
 
 
 class ClientsTab(Static):
@@ -41,7 +42,7 @@ class ClientsTab(Static):
         )
 
     def on_mount(self) -> None:
-        self._load()
+        defer_when_splashing(self.app, self._load)
 
     def _on_input_changed(self, event: Input.Changed) -> None:
         self._load(event.value)

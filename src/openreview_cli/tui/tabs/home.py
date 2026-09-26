@@ -9,6 +9,7 @@ from textual.containers import Container, Horizontal
 from textual.widgets import Button, Label, ListItem, ListView, Static
 
 from openreview_cli.tui.screens.review_wizard import ReviewWizard
+from openreview_cli.tui.startup import defer_when_splashing
 
 
 def fmt_counts(green: int, amber: int, red: int) -> str:
@@ -44,7 +45,7 @@ class HomeTab(Container):
         yield Static("", id="desc-bar")
 
     def on_mount(self) -> None:
-        self._refresh_reviews()
+        defer_when_splashing(self.app, self._refresh_reviews)
 
     def _refresh_reviews(self) -> None:
         """Refresh the recent-reviews list from the database."""

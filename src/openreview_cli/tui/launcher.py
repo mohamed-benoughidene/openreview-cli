@@ -25,8 +25,10 @@ def launch_tui() -> int:
         from openreview_cli.tui.screens.db_error import DatabaseErrorScreen
 
         # ponytail: stub wiring — push error screen on init failure
+        # The error modal is pushed immediately, so the startup splash would
+        # never be visible here: construct the baseline app (no flag).
         app = OpenReviewApp()
         app.push_screen(DatabaseErrorScreen(str(exc)))
         return app.run() or 0
 
-    return OpenReviewApp().run() or 0
+    return OpenReviewApp(show_splash=True).run() or 0

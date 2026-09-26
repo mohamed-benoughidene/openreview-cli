@@ -10,6 +10,8 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, ListItem, ListView, Static
 
+from openreview_cli.tui.startup import defer_when_splashing
+
 
 class _PlaybookItem(ListItem):
     """ListItem carrying playbook_id for detail view lookup."""
@@ -63,7 +65,7 @@ class PlaybooksTab(Static):
         )
 
     def on_mount(self) -> None:
-        self._load()
+        defer_when_splashing(self.app, self._load)
 
     def _on_input_changed(self, event: Input.Changed) -> None:
         self._load()

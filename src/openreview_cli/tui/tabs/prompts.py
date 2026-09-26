@@ -17,6 +17,8 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Button, Input, Label, ListItem, ListView, Static
 
+from openreview_cli.tui.startup import defer_when_splashing
+
 
 class _PromptItem(ListItem):
     """ListItem carrying the prompt name and rendering name + latest version."""
@@ -83,7 +85,7 @@ class PromptsTab(Static):
         )
 
     def on_mount(self) -> None:
-        self._load()
+        defer_when_splashing(self.app, self._load)
 
     def _on_input_changed(self, event: Input.Changed) -> None:
         self._load()
