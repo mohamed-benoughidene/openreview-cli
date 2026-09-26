@@ -28,7 +28,7 @@
 - No VERSION DRIFT, no NOT INSTALLED entries.
 
 ## Filesystem Delta
-- NEW SINCE TASKS: specs/033-ai-gateway-v2/ (feature dir, untracked — expected, this is the active feature)
+- NEW SINCE TASKS: specs/archive/033-ai-gateway-v2/ (feature dir, untracked — expected, this is the active feature)
 - REMOVED SINCE TASKS: none
 
 ## Tasks Baseline
@@ -40,4 +40,4 @@
 ## Implementation Clearance
 - STATUS: CLEAR — grounding chain intact, no version drift, all dependencies installed.
 - Note: before_implement hook `speckit.impl-grounding` is a spec-kit slash command with no bash binary; executed manually per its 6-step prompt (read-only verification + this file write). No source files modified.
-- Pending external gate: specs/033-ai-gateway-v2/checklists/requirements.md has 2 deliberately-unchecked items (implementation-detail leak, accepted per checklist Notes) — requires user confirmation to proceed past spec-kit outline's hard stop.
+- Pending external gate: specs/archive/033-ai-gateway-v2/checklists/requirements.md has 2 deliberately-unchecked items (implementation-detail leak, accepted per checklist Notes) — requires user confirmation to proceed past spec-kit outline's hard stop.

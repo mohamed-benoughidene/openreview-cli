@@ -1,7 +1,7 @@
 """PII accuracy integration test (T010).
 
 Runs the seeded corpus via the benchmark runner and asserts the
-authoritative targets from specs/004-complete-pii-stripping FR-008/FR-009:
+authoritative targets from specs/archive/004-complete-pii-stripping FR-008/FR-009:
 recall ≥ 0.95 and precision ≥ 0.95.
 
 The evaluator uses span-level (type-agnostic) matching (spec FR-006, R8
@@ -66,7 +66,7 @@ class TestPiiAccuracyIntegration:
         recall = result.metrics.get("pii_recall")
         precision = result.metrics.get("pii_precision")
 
-        # Authoritative target: specs/004 FR-008 (recall ≥95%) / FR-009
+        # Authoritative target: specs/archive/004 FR-008 (recall ≥95%) / FR-009
         # (precision ≥95%). Passes under span-level (type-agnostic) matching.
         assert recall is not None, "pii_recall metric not computed"
         assert precision is not None, "pii_precision metric not computed"

@@ -40,7 +40,7 @@ The following risks are documented, bounded, and constitutionally permissible.
 
 6. PII engine may mislabel address fragments as ORGANIZATION, bare years as DATE_TIME; "Passport ID" suppression is US-centric.
 7. PII engine does not recognize company names (e.g. `Beta LLC` not redacted); documented in skill §7 Common Mistakes table.
-8. R8 PII accuracy now meets target on the seeded corpus under the span-level (type-agnostic) evaluator (`benchmark/metrics_pii.py` per FR-006): recall 0.9640 (563/584) and precision 0.9526 (683/717), both above the 0.95 targets (FR-008/FR-009), measured with `PiiEngine(threshold=0.7)`. Matching ignores the entity type label, so a detection that covers the right span with the wrong label still counts as correct; that labelling limitation is tracked separately as D-82 in `specs/DEFERRED.md` and issue 115.
+8. R8 PII accuracy now meets target on the seeded corpus under the span-level (type-agnostic) evaluator (`benchmark/metrics_pii.py` per FR-006): recall 0.9640 (563/584) and precision 0.9526 (683/717), both above the 0.95 targets (FR-008/FR-009), measured with `PiiEngine(threshold=0.7)`. Matching ignores the entity type label, so a detection that covers the right span with the wrong label still counts as correct; that labelling limitation is tracked separately as D-82 in `specs/archive/DEFERRED.md` and issue 115.
 
 **CLI / operational edge cases:**
 
@@ -58,7 +58,7 @@ The following risks are documented, bounded, and constitutionally permissible.
 
 ### Deferred functionality
 
-The following items from `specs/DEFERRED.md` are **not promised** in this release:
+The following items from `specs/archive/DEFERRED.md` are **not promised** in this release:
 
 - `--share-data` opt-in anonymized data collection (D-1)
 - Multi-party bilateral comparison (beyond two-party)
@@ -72,7 +72,7 @@ The following items from `specs/DEFERRED.md` are **not promised** in this releas
 
 ### PII accuracy gate
 
-- `test_pii_recall_above_threshold` now passes. The committed spec requires recall ≥ 0.95 and precision ≥ 0.95 (FR-008/FR-009); under the span-level (type-agnostic) predicate the engine measures recall 0.9640 (563/584) and precision 0.9526 (683/717), so both gates pass. Matching is span-level, so a detection that covers the right span with the wrong label still counts as correct; that labelling limitation is tracked separately as D-82 in `specs/DEFERRED.md` and issue 115.
+- `test_pii_recall_above_threshold` now passes. The committed spec requires recall ≥ 0.95 and precision ≥ 0.95 (FR-008/FR-009); under the span-level (type-agnostic) predicate the engine measures recall 0.9640 (563/584) and precision 0.9526 (683/717), so both gates pass. Matching is span-level, so a detection that covers the right span with the wrong label still counts as correct; that labelling limitation is tracked separately as D-82 in `specs/archive/DEFERRED.md` and issue 115.
 
 ## What was fixed in this release
 

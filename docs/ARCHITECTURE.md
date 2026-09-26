@@ -129,7 +129,7 @@ The TUI adds a Prompts tab (`tui/tabs/prompts.py`, registered in `tui/app.py`): 
 
 ## Spec-driven development
 
-Development is driven by spec-kit: requirements land as specs in `specs/`, get plans, then implementation. 33 spec directories (001–034; 023 absent), including:
+Development was driven by spec-kit: requirements landed as specs, each got a plan, then implementation. The 33 spec directories (001–034; 023 absent) are now archived under `specs/archive/` and are historical, not authoritative, so the code is the source of truth. What they covered:
 
 | Spec | Area |
 |---|---|
@@ -150,7 +150,7 @@ Development is driven by spec-kit: requirements land as specs in `specs/`, get p
 | 033 | AI Gateway v2 (fail-safe privacy routing, full provider registry, capability validation, streaming) |
 | 034 | Multi-field provider credentials |
 
-Deferred work is tracked in `specs/DEFERRED.md` — check it before touching any module with open deferrals.
+Deferred work is tracked in `specs/archive/DEFERRED.md` — check it before touching any module with open deferrals.
 
 ## Honest limitations
 

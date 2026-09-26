@@ -5,8 +5,6 @@ markdown code fences (```json ... ```). ``json.loads`` fails on the leading
 backticks, and parsers that swallow ``JSONDecodeError`` then return silent
 fallback values. Every gateway-response parser must strip fences via
 ``strip_fences`` before calling ``json.loads``.
-
-See specs/retro-markdown-fence-bug.md.
 """
 
 from __future__ import annotations

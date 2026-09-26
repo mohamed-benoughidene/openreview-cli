@@ -119,7 +119,7 @@ Last verified: 2026-09-24 @ 882568c (receipt: docs/benchmarks/results/accuracy-s
 
 Real `PiiEngine` (Presidio + spaCy `en_core_web_lg`) evaluated against `tests/fixtures/pii/seeded_contracts/` with `BenchmarkRunner.run_pii()`.
 
-Matching is span-level (type-agnostic): a detection counts as correct when its value overlaps a ground-truth value, whatever entity type label it carries, so a right span with a wrong label still counts as correct. That labelling limitation is tracked separately as D-82 in `specs/DEFERRED.md` and issue 115.
+Matching is span-level (type-agnostic): a detection counts as correct when its value overlaps a ground-truth value, whatever entity type label it carries, so a right span with a wrong label still counts as correct. That labelling limitation is tracked separately as D-82 in `specs/archive/DEFERRED.md` and issue 115.
 
 **Overall:** 717 detections across 50 contracts, 584 ground-truth entities.
 
