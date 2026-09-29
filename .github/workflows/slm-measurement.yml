@@ -72,6 +72,7 @@ jobs:
         run: |
           uv run python scripts/measure_slm_slots.py \
             --model "${{ matrix.model }}" \
+            --no-pii \
             --mode indemnitycheck \
             --out "results/${{ matrix.slug }}.json"
 

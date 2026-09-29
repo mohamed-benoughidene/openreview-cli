@@ -1,16 +1,23 @@
-"""Measure clause-detection quality of local (Ollama) models on the bundled fixtures.
+"""Measure clause-detection quality of gateway models on the bundled fixtures.
 
 This is a measurement, not a test. It runs the product review pipeline for one
-mode's documents with one model on the text slots, then scores the result against
-that mode's ``ground_truth.json`` (expected category + expected position per
-document). It writes a JSON result and prints a markdown summary.
+mode's documents with a given model (local Ollama or a cloud provider), then scores
+the result against that mode's ``ground_truth.json``. It writes a JSON result and
+prints a markdown summary.
 
-Intended to run against a local Ollama server (see
-``.github/workflows/slm-measurement.yml``). Reranking is not measured: no local
-Ollama rerank is supported.
+Two ways to choose the model:
+- ``--model ollama/qwen3:4b`` routes every text slot to that model (used by the
+  CI matrix; add ``--no-pii`` there, since Ollama is local and CI has no spaCy).
+- ``--configured`` uses the slots already configured in config.yml (the real
+  product setup); PII stripping then runs, as the balanced/performance privacy
+  tiers require before cloud egress.
+
+Reranking is never measured: no local Ollama rerank support, and the rerank slot
+is out of scope here.
 
 Usage:
-    uv run python scripts/measure_slm_slots.py --model ollama/qwen3:4b --out results/qwen3-4b.json
+    uv run python scripts/measure_slm_slots.py --model ollama/qwen3:4b --no-pii --out results/qwen3-4b.json
+    uv run python scripts/measure_slm_slots.py --configured --out results/cloud.json
 """
 
 from __future__ import annotations
@@ -39,6 +46,16 @@ def _configure_slots(model: str) -> None:
     """Point every text slot at ``model`` via the documented env override."""
     for env_key in _SLOT_ENV_KEYS.values():
         os.environ[env_key] = model
+
+
+def _configured_slots() -> dict[str, str]:
+    """Return the text-slot primaries already configured in config.yml."""
+    from openreview_cli.config.loader import load_config
+    from openreview_cli.config.paths import get_config_dir
+
+    config = load_config(get_config_dir() / "config.yml")
+    models = config.get("gateway", {}).get("models", {})
+    return {slot: (models.get(slot) or {}).get("primary", "") for slot in _SLOT_ENV_KEYS}
 
 
 def _score(assessments: list[Any], expected: list[dict[str, str]]) -> dict[str, int]:
@@ -90,13 +107,35 @@ def _markdown(result: dict[str, Any]) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", required=True, help="Model under test, e.g. ollama/qwen3:4b.")
+    parser.add_argument(
+        "--model",
+        help="Model under test, e.g. ollama/qwen3:4b. Omit with --configured.",
+    )
+    parser.add_argument(
+        "--configured",
+        action="store_true",
+        help="Use the slots configured in config.yml instead of overriding them.",
+    )
+    parser.add_argument(
+        "--no-pii",
+        action="store_true",
+        help="Skip PII stripping (local models only; the cloud tiers require it).",
+    )
     parser.add_argument("--mode", default="indemnitycheck", help="Mode whose fixtures to use.")
     parser.add_argument("--fixtures-dir", type=Path, default=FIXTURES)
     parser.add_argument("--out", type=Path, required=True, help="Where to write the JSON result.")
     args = parser.parse_args()
 
-    _configure_slots(args.model)
+    if not args.configured and not args.model:
+        parser.error("pass --model <id> or --configured")
+
+    if args.configured:
+        slots = _configured_slots()  # read config as-is; do not override any slot
+        label = slots.get("extraction", "") or "configured slots"
+    else:
+        _configure_slots(args.model)
+        slots = dict.fromkeys(_SLOT_ENV_KEYS, args.model)
+        label = args.model
 
     # The gateway's cost-limit check reads the app database, so create it (with
     # migrations) first. Without this every model call fails with
@@ -127,7 +166,7 @@ def main() -> None:
                 playbook_path=playbook_path,
                 extraction_model="extraction",
                 qa_model=None,
-                no_pii=True,  # synthetic fixtures; skips the spaCy/PII dependency
+                no_pii=args.no_pii,
                 mode=args.mode,
             )
             assessments = [a for r in reports for a in r.assessments]
@@ -150,14 +189,16 @@ def main() -> None:
             }
         )
         print(
-            f"[{args.model}] {doc_path.name}: {score['matched']}/{len(expected)} matched, "
+            f"[{label}] {doc_path.name}: {score['matched']}/{len(expected)} matched, "
             f"{score['extraction_errors']} extraction failures",
             flush=True,
         )
 
     expected_total = totals["expected"]
     result: dict[str, Any] = {
-        "model": args.model,
+        "model": label,
+        "slots": slots,
+        "pii_stripped": not args.no_pii,
         "mode": args.mode,
         "git_sha": _git_sha(),
         "measured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
