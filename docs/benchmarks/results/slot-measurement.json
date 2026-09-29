@@ -596,5 +596,6 @@
       "path": "tests/fixtures/benchmark/indemnitycheck/ground_truth.json",
       "sha256": "2987f2ff49a5b53570a6c6b435870ae7d3bfe14b206a33b6f0c90a389c097818"
     }
-  ]
+  ],
+  "scope": "extraction slot only (QA shares it); the review path calls no other slot. reasoning/graph/grounding/embedding/reranking are not called and not measured."
 }

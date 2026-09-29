@@ -6,12 +6,18 @@ name: SLM slot measurement
 
 on:
   workflow_dispatch:
+    inputs:
+      only:
+        description: "Run only the embedding job (skips the 4-model extraction matrix)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 jobs:
   measure:
+    if: ${{ !inputs.only }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
@@ -84,8 +90,62 @@ jobs:
           path: results/${{ matrix.slug }}.json
           if-no-files-found: warn
 
+  embedding:
+    # Measures the `embedding` slot on the retrieval fixture with a LOCAL embedding
+    # provider (Ollama). Cloud embeddings are unreachable in the retrieval path:
+    # `balanced` requires a local provider, `performance` requires a PII strip the
+    # retrieval path never performs.
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - run: uv sync --frozen
+
+      - name: Install Ollama
+        run: curl -fsSL https://ollama.com/install.sh | sh
+
+      - name: Start Ollama and wait until it answers
+        run: |
+          nohup ollama serve > /tmp/ollama-serve.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:11434/api/tags >/dev/null 2>&1; then
+              echo "Ollama is up after ${i} attempt(s)"
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/ollama-serve.log
+          exit 1
+
+      - name: Cache Ollama models
+        uses: actions/cache@v4
+        with:
+          path: ~/.ollama/models
+          key: ollama-measure-embedding-nomic-embed-text
+
+      - name: Pull embedding model
+        run: ollama pull nomic-embed-text
+
+      - name: Measure embedding slot
+        run: |
+          uv run python scripts/measure_retrieval_slots.py \
+            --embedding-model "ollama/nomic-embed-text" \
+            --out "results/embedding.json"
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slm-result-embedding
+          path: results/embedding.json
+          if-no-files-found: warn
+
   report:
-    needs: measure
+    needs: [measure, embedding]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -101,7 +161,9 @@ jobs:
           python3 - <<'PY'
           import glob, json, pathlib
 
-          rows = [json.loads(pathlib.Path(p).read_text()) for p in sorted(glob.glob("results/*.json"))]
+          loaded = [json.loads(pathlib.Path(p).read_text()) for p in sorted(glob.glob("results/*.json"))]
+          rows = [r for r in loaded if "totals" in r]
+          embedding = [r for r in loaded if "mean_precision_at_k" in r]
           rows.sort(key=lambda r: r["recall"], reverse=True)
           sha = rows[0]["git_sha"] if rows else "unknown"
           lines = [
@@ -122,6 +184,17 @@ jobs:
               lines.append(
                   f"| `{r['model']}` | {t['matched']} | {t['expected']} | {r['recall']} | "
                   f"{r['position_accuracy']} | {errs} | {secs} |"
+              )
+          lines += [
+              "",
+              "## Embedding slot (retrieval fixture)",
+              "",
+          ]
+          for r in embedding:
+              lines.append(
+                  f"- `{r['embedding_slot']}`: mean P@k = {r['mean_precision_at_k']} over "
+                  f"{r['queries']} queries · dense used: {r['dense_used']} · "
+                  f"notices: {r['notices_seen']}"
               )
           lines += [
               "",

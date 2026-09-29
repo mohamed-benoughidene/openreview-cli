@@ -1,8 +1,10 @@
 # Slot measurement — clause-position accuracy
 
-One measurement of the `reranking`-free review path on the bundled `indemnitycheck` fixtures: 5 synthetic contracts with known risky clauses and their expected positions. Two runs, same fixtures and same scoring.
+One measurement of the bundled `indemnitycheck` fixtures: 5 synthetic contracts with known risky clauses and their expected positions. Two runs, same fixtures and same scoring.
 
-- **Run A — local models** (`ollama/*`): GitHub-hosted `ubuntu-latest`, CPU-only, local Ollama; PII stripping skipped; run commit `9e7f9b201485`.
+**Scope: this measures the `extraction` slot only** (the QA call shares that slot, `runner.py:59-62`). The review path is Parse → (Strip) → Review (`runner.py:317-320`), so `reasoning`, `graph`, `grounding`, `embedding` and `reranking` are never called and are **not** measured here.
+
+- **Run A — local models** (`ollama/*`): GitHub-hosted `ubuntu-latest`, CPU-only, local Ollama; PII stripping skipped; run commit `9e7f9b201485`. The model is set on every text slot, but only the `extraction` slot is called.
 - **Run B — cloud slots** (`openrouter/anthropic/claude-sonnet-4.6`): developer machine, privacy tier `balanced`, PII stripping ON (required before cloud egress); `embedding` = `voyage/voyage-3.5`, `reranking` = `voyage/rerank-2.5` (neither is used by the review pipeline).
 
 ## Results
@@ -42,5 +44,6 @@ Category recall is 1.0 for every model that produced usable extractions and 0.0 
 - n = 5 documents × 2 expected categories = 10 scored items per model. Treat as a **smoke measurement, not a benchmark**.
 - The fixtures embed the category name, so this measures *position choice given the category*, not clause discovery.
 - Reranking is excluded: no local Ollama rerank support, and the review pipeline does not call the rerank slot.
+- **Not measured:** `embedding` (retrieval path only), `grounding` (needs `grounding_mode`), `reasoning` and `graph` (no caller in `src/`). This is an `extraction`-slot measurement.
 - Harness bugs found and fixed before these numbers were valid: the missing app DB (`no such table: cost_logs`) and the failure fallback faking category matches (commit `9e7f9b2`).
 - Raw data: `docs/benchmarks/results/slot-measurement.json`.
