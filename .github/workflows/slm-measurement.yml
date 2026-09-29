@@ -1,0 +1,148 @@
+name: SLM slot measurement
+
+# Measures clause-detection quality of local (Ollama) models on the bundled
+# fixtures. This is a measurement, not a test: it reports numbers, it does not
+# gate anything. Reranking is not measured (no local Ollama rerank support).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/slm-measurement]
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - model: ollama/qwen3:4b
+            pull: qwen3:4b
+            slug: qwen3-4b
+          - model: ollama/granite4:3b
+            pull: granite4:3b
+            slug: granite4-3b
+          - model: ollama/phi4-mini:3.8b
+            pull: phi4-mini:3.8b
+            slug: phi4-mini-3.8b
+          - model: ollama/gemma3:4b
+            pull: gemma3:4b
+            slug: gemma3-4b
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - run: uv sync --frozen
+
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL
+
+      - name: Install Ollama
+        run: curl -fsSL https://ollama.com/install.sh | sh
+
+      - name: Start Ollama and wait until it answers
+        run: |
+          nohup ollama serve > /tmp/ollama-serve.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:11434/api/tags >/dev/null 2>&1; then
+              echo "Ollama is up after ${i} attempt(s)"
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/ollama-serve.log
+          exit 1
+
+      - name: Cache Ollama models
+        uses: actions/cache@v4
+        with:
+          path: ~/.ollama/models
+          key: ollama-measure-${{ matrix.slug }}
+
+      - name: Pull model
+        run: |
+          ollama pull "${{ matrix.pull }}"
+          ollama list
+
+      - name: Measure
+        run: |
+          uv run python scripts/measure_slm_slots.py \
+            --model "${{ matrix.model }}" \
+            --mode indemnitycheck \
+            --out "results/${{ matrix.slug }}.json"
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slm-result-${{ matrix.slug }}
+          path: results/${{ matrix.slug }}.json
+          if-no-files-found: warn
+
+  report:
+    needs: measure
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: results
+          pattern: slm-result-*
+          merge-multiple: true
+
+      - name: Build report
+        run: |
+          python3 - <<'PY'
+          import glob, json, pathlib
+
+          rows = [json.loads(pathlib.Path(p).read_text()) for p in sorted(glob.glob("results/*.json"))]
+          rows.sort(key=lambda r: r["recall"], reverse=True)
+          sha = rows[0]["git_sha"] if rows else "unknown"
+          lines = [
+              "# SLM slot measurement — indemnitycheck fixtures",
+              "",
+              f"- commit: `{sha}` · models: {len(rows)} · documents per model: "
+              f"{rows[0]['documents'] if rows else 0}",
+              "- metric: category recall (expected category detected) and position accuracy "
+              "(detected position equals the expected playbook position).",
+              "",
+              "| model | matched | expected | recall | position acc | docs with errors | seconds |",
+              "|---|---|---|---|---|---|---|",
+          ]
+          for r in rows:
+              t = r["totals"]
+              secs = round(sum(d["seconds"] for d in r["per_document"]), 1)
+              errs = sum(1 for d in r["per_document"] if d["error"])
+              lines.append(
+                  f"| `{r['model']}` | {t['matched']} | {t['expected']} | {r['recall']} | "
+                  f"{r['position_accuracy']} | {errs} | {secs} |"
+              )
+          lines += [
+              "",
+              "## Method and limits",
+              "- Pipeline: product review (parse → review) with PII stripping skipped (`--no-pii`), "
+              "synthetic fixtures only.",
+              "- One run per document; local models are not deterministic, so numbers are a single sample.",
+              "- n = 5 documents per model; each document labels 2–4 categories. Treat this as a smoke "
+              "measurement, not a benchmark.",
+              "- Reranking is excluded: no local Ollama rerank support.",
+          ]
+          md = "\n".join(lines)
+          pathlib.Path("slm-measurement-report.md").write_text(md)
+          print(md)
+          PY
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slm-measurement-report
+          path: slm-measurement-report.md
+          if-no-files-found: warn
