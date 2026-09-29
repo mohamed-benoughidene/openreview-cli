@@ -6,8 +6,6 @@ name: SLM slot measurement
 
 on:
   workflow_dispatch:
-  push:
-    branches: [feat/slm-measurement]
 
 permissions:
   contents: read
@@ -131,6 +129,9 @@ jobs:
               "synthetic fixtures only.",
               "- A category counts as detected only when the extraction did not fail; the pipeline's "
               "failure fallback stamps the category id and would otherwise fake a match.",
+              "- Category matching is lexical (`match_category` runs before the model and the fixtures "
+              "embed the category name), so *category recall is not a model metric*: the model only "
+              "chooses the position. Read **position accuracy** as the model signal.",
               "- One run per document; local models are not deterministic, so numbers are a single sample.",
               "- n = 5 documents per model; each document labels 2–4 categories. Treat this as a smoke "
               "measurement, not a benchmark.",
