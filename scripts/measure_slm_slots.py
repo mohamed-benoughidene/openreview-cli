@@ -122,6 +122,12 @@ def main() -> None:
         help="Skip PII stripping (local models only; the cloud tiers require it).",
     )
     parser.add_argument("--mode", default="indemnitycheck", help="Mode whose fixtures to use.")
+    parser.add_argument(
+        "--grounding-mode",
+        choices=["strict", "lenient"],
+        default=None,
+        help="Run the grounding slot too (the `precheck review` CLI default is 'strict').",
+    )
     parser.add_argument("--fixtures-dir", type=Path, default=FIXTURES)
     parser.add_argument("--out", type=Path, required=True, help="Where to write the JSON result.")
     args = parser.parse_args()
@@ -152,7 +158,16 @@ def main() -> None:
     ground_truth: list[dict[str, Any]] = json.loads((mode_dir / "ground_truth.json").read_text())
     playbook_path = str(BUNDLED_PLAYBOOKS[args.mode])
 
-    totals = {"matched": 0, "position_ok": 0, "expected": 0, "extraction_errors": 0}
+    totals = {
+        "matched": 0,
+        "position_ok": 0,
+        "expected": 0,
+        "extraction_errors": 0,
+        "grounding_grounded": 0,
+        "grounding_ungrounded": 0,
+        "grounding_uncertain": 0,
+        "grounding_assessed": 0,
+    }
     per_document: list[dict[str, Any]] = []
     for entry in ground_truth:
         doc_path = Path(entry["path"])
@@ -160,6 +175,7 @@ def main() -> None:
         started = time.perf_counter()
         error: str | None = None
         score = {"matched": 0, "position_ok": 0, "extraction_errors": 0}
+        grounding = {"grounded": 0, "ungrounded": 0, "uncertain": 0, "assessed": 0}
         try:
             reports = run_review(
                 paths=[str(doc_path)],
@@ -167,6 +183,7 @@ def main() -> None:
                 extraction_model="extraction",
                 qa_model=None,
                 no_pii=args.no_pii,
+                grounding_mode=args.grounding_mode,
                 mode=args.mode,
             )
             assessments = [a for r in reports for a in r.assessments]
@@ -174,6 +191,14 @@ def main() -> None:
             totals["matched"] += score["matched"]
             totals["position_ok"] += score["position_ok"]
             totals["extraction_errors"] += score["extraction_errors"]
+            verdicts = [
+                a.grounding_verdict.value if a.grounding_verdict is not None else None
+                for a in assessments
+            ]
+            grounding = {v: verdicts.count(v) for v in ("grounded", "ungrounded", "uncertain")}
+            grounding["assessed"] = sum(1 for v in verdicts if v is not None)
+            for key in ("grounded", "ungrounded", "uncertain", "assessed"):
+                totals[f"grounding_{key}"] += grounding[key]
         except Exception as exc:  # a failing document is recorded, not fatal
             error = f"{type(exc).__name__}: {exc}"
         totals["expected"] += len(expected)
@@ -184,6 +209,7 @@ def main() -> None:
                 "matched": score["matched"],
                 "position_ok": score["position_ok"],
                 "extraction_errors": score["extraction_errors"],
+                "grounding": grounding,
                 "seconds": round(time.perf_counter() - started, 2),
                 "error": error,
             }
@@ -199,6 +225,7 @@ def main() -> None:
         "model": label,
         "slots": slots,
         "pii_stripped": not args.no_pii,
+        "grounding_mode": args.grounding_mode,
         "mode": args.mode,
         "git_sha": _git_sha(),
         "measured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
