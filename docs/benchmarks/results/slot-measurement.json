@@ -1,0 +1,600 @@
+{
+  "benchmark": "slot-measurement",
+  "command": "scripts/measure_slm_slots.py --mode indemnitycheck (--model <id> --no-pii in CI; --configured locally)",
+  "date": "2026-09-29",
+  "mode": "indemnitycheck",
+  "documents_per_model": 5,
+  "metrics": {
+    "category_recall": "fraction of expected categories present in the report \u2014 LEXICAL, not a model metric: match_category() runs before the model and the fixtures embed the category name",
+    "position_accuracy": "fraction of expected categories whose detected position equals the expected playbook position \u2014 the model signal",
+    "extraction_failures": "assessments carrying an error (excluded from both counts)"
+  },
+  "runs": [
+    {
+      "run": "local-models (CI matrix)",
+      "where": "GitHub-hosted ubuntu-latest, CPU-only, local Ollama",
+      "privacy": "PII stripping skipped (--no-pii); local models, no egress",
+      "run_commit": "9e7f9b201485",
+      "cost": "free (local compute)",
+      "models": [
+        {
+          "model": "ollama/gemma3:4b",
+          "mode": "indemnitycheck",
+          "git_sha": "9e7f9b201485",
+          "measured_at_utc": "2026-09-29T12:45:56Z",
+          "documents": 5,
+          "totals": {
+            "matched": 10,
+            "position_ok": 7,
+            "expected": 10,
+            "extraction_errors": 0
+          },
+          "recall": 1.0,
+          "position_accuracy": 0.7,
+          "per_document": [
+            {
+              "doc": "doc_1.pdf",
+              "expected": [
+                {
+                  "category_id": "indemnity-scope",
+                  "expected_position": "preferred"
+                },
+                {
+                  "category_id": "liability-cap",
+                  "expected_position": "preferred"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 2,
+              "extraction_errors": 0,
+              "seconds": 113.16,
+              "error": null
+            },
+            {
+              "doc": "doc_2.pdf",
+              "expected": [
+                {
+                  "category_id": "survival-period",
+                  "expected_position": "acceptable"
+                },
+                {
+                  "category_id": "defense-obligations",
+                  "expected_position": "preferred"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 2,
+              "extraction_errors": 0,
+              "seconds": 105.05,
+              "error": null
+            },
+            {
+              "doc": "doc_3.pdf",
+              "expected": [
+                {
+                  "category_id": "indemnity-scope",
+                  "expected_position": "acceptable"
+                },
+                {
+                  "category_id": "liability-cap",
+                  "expected_position": "acceptable"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 1,
+              "extraction_errors": 0,
+              "seconds": 94.23,
+              "error": null
+            },
+            {
+              "doc": "doc_4.pdf",
+              "expected": [
+                {
+                  "category_id": "survival-period",
+                  "expected_position": "preferred"
+                },
+                {
+                  "category_id": "defense-obligations",
+                  "expected_position": "walkaway"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 1,
+              "extraction_errors": 0,
+              "seconds": 145.14,
+              "error": null
+            },
+            {
+              "doc": "doc_5.pdf",
+              "expected": [
+                {
+                  "category_id": "indemnity-scope",
+                  "expected_position": "acceptable"
+                },
+                {
+                  "category_id": "liability-cap",
+                  "expected_position": "acceptable"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 1,
+              "extraction_errors": 0,
+              "seconds": 96.51,
+              "error": null
+            }
+          ]
+        },
+        {
+          "model": "ollama/granite4:3b",
+          "mode": "indemnitycheck",
+          "git_sha": "9e7f9b201485",
+          "measured_at_utc": "2026-09-29T12:42:23Z",
+          "documents": 5,
+          "totals": {
+            "matched": 10,
+            "position_ok": 9,
+            "expected": 10,
+            "extraction_errors": 0
+          },
+          "recall": 1.0,
+          "position_accuracy": 0.9,
+          "per_document": [
+            {
+              "doc": "doc_1.pdf",
+              "expected": [
+                {
+                  "category_id": "indemnity-scope",
+                  "expected_position": "preferred"
+                },
+                {
+                  "category_id": "liability-cap",
+                  "expected_position": "preferred"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 2,
+              "extraction_errors": 0,
+              "seconds": 66.8,
+              "error": null
+            },
+            {
+              "doc": "doc_2.pdf",
+              "expected": [
+                {
+                  "category_id": "survival-period",
+                  "expected_position": "acceptable"
+                },
+                {
+                  "category_id": "defense-obligations",
+                  "expected_position": "preferred"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 2,
+              "extraction_errors": 0,
+              "seconds": 62.02,
+              "error": null
+            },
+            {
+              "doc": "doc_3.pdf",
+              "expected": [
+                {
+                  "category_id": "indemnity-scope",
+                  "expected_position": "acceptable"
+                },
+                {
+                  "category_id": "liability-cap",
+                  "expected_position": "acceptable"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 2,
+              "extraction_errors": 0,
+              "seconds": 38.66,
+              "error": null
+            },
+            {
+              "doc": "doc_4.pdf",
+              "expected": [
+                {
+                  "category_id": "survival-period",
+                  "expected_position": "preferred"
+                },
+                {
+                  "category_id": "defense-obligations",
+                  "expected_position": "walkaway"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 1,
+              "extraction_errors": 0,
+              "seconds": 71.16,
+              "error": null
+            },
+            {
+              "doc": "doc_5.pdf",
+              "expected": [
+                {
+                  "category_id": "indemnity-scope",
+                  "expected_position": "acceptable"
+                },
+                {
+                  "category_id": "liability-cap",
+                  "expected_position": "acceptable"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 2,
+              "extraction_errors": 0,
+              "seconds": 40.93,
+              "error": null
+            }
+          ]
+        },
+        {
+          "model": "ollama/phi4-mini:3.8b",
+          "mode": "indemnitycheck",
+          "git_sha": "9e7f9b201485",
+          "measured_at_utc": "2026-09-29T12:44:04Z",
+          "documents": 5,
+          "totals": {
+            "matched": 10,
+            "position_ok": 7,
+            "expected": 10,
+            "extraction_errors": 0
+          },
+          "recall": 1.0,
+          "position_accuracy": 0.7,
+          "per_document": [
+            {
+              "doc": "doc_1.pdf",
+              "expected": [
+                {
+                  "category_id": "indemnity-scope",
+                  "expected_position": "preferred"
+                },
+                {
+                  "category_id": "liability-cap",
+                  "expected_position": "preferred"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 1,
+              "extraction_errors": 0,
+              "seconds": 142.38,
+              "error": null
+            },
+            {
+              "doc": "doc_2.pdf",
+              "expected": [
+                {
+                  "category_id": "survival-period",
+                  "expected_position": "acceptable"
+                },
+                {
+                  "category_id": "defense-obligations",
+                  "expected_position": "preferred"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 2,
+              "extraction_errors": 0,
+              "seconds": 134.81,
+              "error": null
+            },
+            {
+              "doc": "doc_3.pdf",
+              "expected": [
+                {
+                  "category_id": "indemnity-scope",
+                  "expected_position": "acceptable"
+                },
+                {
+                  "category_id": "liability-cap",
+                  "expected_position": "acceptable"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 2,
+              "extraction_errors": 0,
+              "seconds": 59.98,
+              "error": null
+            },
+            {
+              "doc": "doc_4.pdf",
+              "expected": [
+                {
+                  "category_id": "survival-period",
+                  "expected_position": "preferred"
+                },
+                {
+                  "category_id": "defense-obligations",
+                  "expected_position": "walkaway"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 0,
+              "extraction_errors": 0,
+              "seconds": 88.08,
+              "error": null
+            },
+            {
+              "doc": "doc_5.pdf",
+              "expected": [
+                {
+                  "category_id": "indemnity-scope",
+                  "expected_position": "acceptable"
+                },
+                {
+                  "category_id": "liability-cap",
+                  "expected_position": "acceptable"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 2,
+              "extraction_errors": 0,
+              "seconds": 61.45,
+              "error": null
+            }
+          ]
+        },
+        {
+          "model": "ollama/qwen3:4b",
+          "mode": "indemnitycheck",
+          "git_sha": "9e7f9b201485",
+          "measured_at_utc": "2026-09-29T13:43:47Z",
+          "documents": 5,
+          "totals": {
+            "matched": 0,
+            "position_ok": 0,
+            "expected": 10,
+            "extraction_errors": 11
+          },
+          "recall": 0.0,
+          "position_accuracy": 0.0,
+          "per_document": [
+            {
+              "doc": "doc_1.pdf",
+              "expected": [
+                {
+                  "category_id": "indemnity-scope",
+                  "expected_position": "preferred"
+                },
+                {
+                  "category_id": "liability-cap",
+                  "expected_position": "preferred"
+                }
+              ],
+              "matched": 0,
+              "position_ok": 0,
+              "extraction_errors": 2,
+              "seconds": 734.01,
+              "error": null
+            },
+            {
+              "doc": "doc_2.pdf",
+              "expected": [
+                {
+                  "category_id": "survival-period",
+                  "expected_position": "acceptable"
+                },
+                {
+                  "category_id": "defense-obligations",
+                  "expected_position": "preferred"
+                }
+              ],
+              "matched": 0,
+              "position_ok": 0,
+              "extraction_errors": 2,
+              "seconds": 729.38,
+              "error": null
+            },
+            {
+              "doc": "doc_3.pdf",
+              "expected": [
+                {
+                  "category_id": "indemnity-scope",
+                  "expected_position": "acceptable"
+                },
+                {
+                  "category_id": "liability-cap",
+                  "expected_position": "acceptable"
+                }
+              ],
+              "matched": 0,
+              "position_ok": 0,
+              "extraction_errors": 2,
+              "seconds": 729.31,
+              "error": null
+            },
+            {
+              "doc": "doc_4.pdf",
+              "expected": [
+                {
+                  "category_id": "survival-period",
+                  "expected_position": "preferred"
+                },
+                {
+                  "category_id": "defense-obligations",
+                  "expected_position": "walkaway"
+                }
+              ],
+              "matched": 0,
+              "position_ok": 0,
+              "extraction_errors": 3,
+              "seconds": 1093.98,
+              "error": null
+            },
+            {
+              "doc": "doc_5.pdf",
+              "expected": [
+                {
+                  "category_id": "indemnity-scope",
+                  "expected_position": "acceptable"
+                },
+                {
+                  "category_id": "liability-cap",
+                  "expected_position": "acceptable"
+                }
+              ],
+              "matched": 0,
+              "position_ok": 0,
+              "extraction_errors": 2,
+              "seconds": 729.25,
+              "error": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "run": "cloud slots (configured)",
+      "where": "developer machine, OpenRouter + Voyage",
+      "privacy": "tier balanced, PII stripping ON (required before cloud egress)",
+      "run_commit": "80b2431",
+      "cost": {
+        "calls": 22,
+        "prompt_tokens": 14039,
+        "completion_tokens": 3319,
+        "cost_cents": 22,
+        "source": "local cost_logs for the run date (extraction slot; QA shares that slot)"
+      },
+      "slots": {
+        "extraction": "openrouter/anthropic/claude-sonnet-4.6",
+        "reasoning": "openrouter/anthropic/claude-sonnet-4.6",
+        "grounding": "openrouter/anthropic/claude-sonnet-4.6",
+        "graph": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "models": [
+        {
+          "model": "openrouter/anthropic/claude-sonnet-4.6",
+          "slots": {
+            "extraction": "openrouter/anthropic/claude-sonnet-4.6",
+            "reasoning": "openrouter/anthropic/claude-sonnet-4.6",
+            "grounding": "openrouter/anthropic/claude-sonnet-4.6",
+            "graph": "openrouter/anthropic/claude-sonnet-4.6"
+          },
+          "pii_stripped": true,
+          "mode": "indemnitycheck",
+          "git_sha": "unknown",
+          "measured_at_utc": "2026-09-29T14:01:26Z",
+          "documents": 5,
+          "totals": {
+            "matched": 10,
+            "position_ok": 7,
+            "expected": 10,
+            "extraction_errors": 0
+          },
+          "recall": 1.0,
+          "position_accuracy": 0.7,
+          "per_document": [
+            {
+              "doc": "doc_1.pdf",
+              "expected": [
+                {
+                  "category_id": "indemnity-scope",
+                  "expected_position": "preferred"
+                },
+                {
+                  "category_id": "liability-cap",
+                  "expected_position": "preferred"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 1,
+              "extraction_errors": 0,
+              "seconds": 30.3,
+              "error": null
+            },
+            {
+              "doc": "doc_2.pdf",
+              "expected": [
+                {
+                  "category_id": "survival-period",
+                  "expected_position": "acceptable"
+                },
+                {
+                  "category_id": "defense-obligations",
+                  "expected_position": "preferred"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 2,
+              "extraction_errors": 0,
+              "seconds": 19.91,
+              "error": null
+            },
+            {
+              "doc": "doc_3.pdf",
+              "expected": [
+                {
+                  "category_id": "indemnity-scope",
+                  "expected_position": "acceptable"
+                },
+                {
+                  "category_id": "liability-cap",
+                  "expected_position": "acceptable"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 2,
+              "extraction_errors": 0,
+              "seconds": 20.04,
+              "error": null
+            },
+            {
+              "doc": "doc_4.pdf",
+              "expected": [
+                {
+                  "category_id": "survival-period",
+                  "expected_position": "preferred"
+                },
+                {
+                  "category_id": "defense-obligations",
+                  "expected_position": "walkaway"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 0,
+              "extraction_errors": 0,
+              "seconds": 25.53,
+              "error": null
+            },
+            {
+              "doc": "doc_5.pdf",
+              "expected": [
+                {
+                  "category_id": "indemnity-scope",
+                  "expected_position": "acceptable"
+                },
+                {
+                  "category_id": "liability-cap",
+                  "expected_position": "acceptable"
+                }
+              ],
+              "matched": 2,
+              "position_ok": 2,
+              "extraction_errors": 0,
+              "seconds": 20.25,
+              "error": null
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "provenance": [
+    {
+      "path": "scripts/measure_slm_slots.py",
+      "sha256": "e9a7404f01d1f21ce167ba4e2205e77ed330cf19ce1695b1dde960d495be433c"
+    },
+    {
+      "path": ".github/workflows/slm-measurement.yml",
+      "sha256": "6a6f052d160dd1bcbc601afa31e940c1a69587b6c02a0802c86628a182111bc3"
+    },
+    {
+      "path": "tests/fixtures/benchmark/indemnitycheck/ground_truth.json",
+      "sha256": "2987f2ff49a5b53570a6c6b435870ae7d3bfe14b206a33b6f0c90a389c097818"
+    }
+  ]
+}
