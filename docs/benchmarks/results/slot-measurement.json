@@ -1,15 +1,45 @@
 {
   "benchmark": "slot-measurement",
-  "command": "scripts/measure_slm_slots.py --mode indemnitycheck (--model <id> --no-pii in CI; --configured locally)",
   "date": "2026-09-29",
-  "mode": "indemnitycheck",
-  "documents_per_model": 5,
-  "metrics": {
-    "category_recall": "fraction of expected categories present in the report \u2014 LEXICAL, not a model metric: match_category() runs before the model and the fixtures embed the category name",
-    "position_accuracy": "fraction of expected categories whose detected position equals the expected playbook position \u2014 the model signal",
-    "extraction_failures": "assessments carrying an error (excluded from both counts)"
-  },
-  "runs": [
+  "coverage": [
+    {
+      "slot": "extraction",
+      "status": "measured",
+      "how": "run_review (extract + QA share this slot)",
+      "result": "position accuracy 0.9/0.7/0.7/0.7 (local\u00d74, cloud\u00d71)"
+    },
+    {
+      "slot": "grounding",
+      "status": "measured (no ground truth)",
+      "how": "run_review(grounding_mode='strict')",
+      "result": "7 claims assessed, all grounded after strict filtering"
+    },
+    {
+      "slot": "embedding",
+      "status": "measured",
+      "how": "ingest + retrieve on tests/fixtures/retrieval (local Ollama)",
+      "result": "mean P@k 0.32, dense used"
+    },
+    {
+      "slot": "reranking",
+      "status": "NOT MEASURABLE",
+      "how": "cloud blocked by both tiers in the retrieval path; no local Ollama rerank",
+      "result": "balanced: 'requires a local provider for reranking'; performance: 'requires PII stripping before cloud calls'"
+    },
+    {
+      "slot": "reasoning",
+      "status": "NOT MEASURABLE",
+      "how": "no caller in src/ (only `openreview gateway test reasoning`)",
+      "result": "no code path to score"
+    },
+    {
+      "slot": "graph",
+      "status": "NOT MEASURABLE",
+      "how": "src/openreview_cli/graph/ makes no model calls (pure regex)",
+      "result": "no gateway call exists"
+    }
+  ],
+  "extraction_runs": [
     {
       "run": "local-models (CI matrix)",
       "where": "GitHub-hosted ubuntu-latest, CPU-only, local Ollama",
@@ -583,19 +613,143 @@
       ]
     }
   ],
+  "embedding": {
+    "embedding_slot": "ollama/nomic-embed-text",
+    "method_override": null,
+    "rerank_requested": false,
+    "pii_stripped": null,
+    "ingest_seconds": 1.43,
+    "queries": 5,
+    "mean_precision_at_k": 0.32,
+    "dense_used": true,
+    "notices_seen": [],
+    "measured_at_utc": "2026-09-29T14:39:14Z",
+    "git_sha": "2fe54687ebe2",
+    "per_query": [
+      {
+        "query": "confidentiality obligations",
+        "method": "hybrid",
+        "top_k": 5,
+        "expected": [
+          "chunk-004",
+          "chunk-003",
+          "chunk-005"
+        ],
+        "returned": [
+          "chunk-004",
+          "chunk-007",
+          "chunk-005",
+          "chunk-003",
+          "chunk-006"
+        ],
+        "precision_at_k": 0.6,
+        "notices": [],
+        "seconds": 0.04,
+        "error": null
+      },
+      {
+        "query": "return or destroy confidential information",
+        "method": "hybrid",
+        "top_k": 5,
+        "expected": [
+          "chunk-008",
+          "chunk-004"
+        ],
+        "returned": [
+          "chunk-008",
+          "chunk-004",
+          "chunk-003",
+          "chunk-009",
+          "chunk-006"
+        ],
+        "precision_at_k": 0.4,
+        "notices": [],
+        "seconds": 0.04,
+        "error": null
+      },
+      {
+        "query": "governing law",
+        "method": "sparse",
+        "top_k": 5,
+        "expected": [
+          "chunk-012"
+        ],
+        "returned": [
+          "chunk-012",
+          "chunk-005"
+        ],
+        "precision_at_k": 0.2,
+        "notices": [],
+        "seconds": 0.0,
+        "error": null
+      },
+      {
+        "query": "entire agreement",
+        "method": "sparse",
+        "top_k": 5,
+        "expected": [
+          "chunk-010",
+          "chunk-011"
+        ],
+        "returned": [
+          "chunk-010",
+          "chunk-001",
+          "chunk-002",
+          "chunk-012",
+          "chunk-008"
+        ],
+        "precision_at_k": 0.2,
+        "notices": [],
+        "seconds": 0.0,
+        "error": null
+      },
+      {
+        "query": "warranty disclaimer limitation liability",
+        "method": "hybrid",
+        "top_k": 5,
+        "expected": [
+          "chunk-009"
+        ],
+        "returned": [
+          "chunk-009",
+          "chunk-007",
+          "chunk-005",
+          "chunk-011",
+          "chunk-008"
+        ],
+        "precision_at_k": 0.2,
+        "notices": [],
+        "seconds": 0.05,
+        "error": null
+      }
+    ]
+  },
+  "grounding": {
+    "mode": "strict",
+    "totals": {
+      "grounding_grounded": 7,
+      "grounding_ungrounded": 0,
+      "grounding_uncertain": 0,
+      "grounding_assessed": 7
+    },
+    "note": "strict mode removes ungrounded/uncertain claims before the report, so the post-merge counts cannot show them; a lenient re-run was blocked by the OpenRouter key reaching its spend limit."
+  },
+  "blocked": {
+    "cloud_reruns": "OpenRouter key hit its total limit (403 'Key limit exceeded')",
+    "cloud_embedding": "blocked in the retrieval path: balanced needs a local provider, performance needs a PII strip the path does not perform (local attempt: dense_used=False, mean P@k=0.24)"
+  },
   "provenance": [
     {
       "path": "scripts/measure_slm_slots.py",
-      "sha256": "e9a7404f01d1f21ce167ba4e2205e77ed330cf19ce1695b1dde960d495be433c"
+      "sha256": "49007e2c2612e8fbb63c8d2d77f46ddf4929ec1b2660fcc145b3887b042058f7"
+    },
+    {
+      "path": "scripts/measure_retrieval_slots.py",
+      "sha256": "65d5ca1100c942563eba5e5f95f045128cd0dd2fa0742e8f91a30fb003f7ca53"
     },
     {
       "path": ".github/workflows/slm-measurement.yml",
-      "sha256": "6a6f052d160dd1bcbc601afa31e940c1a69587b6c02a0802c86628a182111bc3"
-    },
-    {
-      "path": "tests/fixtures/benchmark/indemnitycheck/ground_truth.json",
-      "sha256": "2987f2ff49a5b53570a6c6b435870ae7d3bfe14b206a33b6f0c90a389c097818"
+      "sha256": "1d7021bec7542f8cc8fea9b27fb37b133997a2361505793839e58922df93d77c"
     }
-  ],
-  "scope": "extraction slot only (QA shares it); the review path calls no other slot. reasoning/graph/grounding/embedding/reranking are not called and not measured."
+  ]
 }
