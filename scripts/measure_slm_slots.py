@@ -42,8 +42,14 @@ def _configure_slots(model: str) -> None:
 
 
 def _score(assessments: list[Any], expected: list[dict[str, str]]) -> dict[str, int]:
-    """Return category-match and position-match counts for one document."""
-    detected = {a.playbook_category: a.position.value for a in assessments}
+    """Return category-match / position-match / failure counts for one document.
+
+    Assessments carrying an ``error`` are the pipeline's failure fallback: it
+    stamps ``playbook_category`` with the category id, so counting them would
+    report every category as "detected" even when the model never answered.
+    """
+    ok = [a for a in assessments if getattr(a, "error", None) is None]
+    detected = {a.playbook_category: a.position.value for a in ok}
     matched = 0
     position_ok = 0
     for exp in expected:
@@ -52,7 +58,11 @@ def _score(assessments: list[Any], expected: list[dict[str, str]]) -> dict[str, 
             matched += 1
             if detected[category] == exp["expected_position"]:
                 position_ok += 1
-    return {"matched": matched, "position_ok": position_ok}
+    return {
+        "matched": matched,
+        "position_ok": position_ok,
+        "extraction_errors": len(assessments) - len(ok),
+    }
 
 
 def _markdown(result: dict[str, Any]) -> str:
@@ -65,13 +75,14 @@ def _markdown(result: dict[str, Any]) -> str:
         f"(recall {result['recall']})",
         f"- position correct: {totals['position_ok']}/{totals['expected']} "
         f"(accuracy {result['position_accuracy']})",
+        f"- extraction failures, excluded from the counts: {totals['extraction_errors']}",
         "",
-        "| doc | matched | position ok | seconds | error |",
-        "|---|---|---|---|---|",
+        "| doc | matched | position ok | extraction errors | seconds | error |",
+        "|---|---|---|---|---|---|",
     ]
     lines += [
         f"| {d['doc']} | {d['matched']}/{len(d['expected'])} | {d['position_ok']} | "
-        f"{d['seconds']} | {d['error'] or ''} |"
+        f"{d['extraction_errors']} | {d['seconds']} | {d['error'] or ''} |"
         for d in result["per_document"]
     ]
     return "\n".join(lines)
@@ -87,6 +98,14 @@ def main() -> None:
 
     _configure_slots(args.model)
 
+    # The gateway's cost-limit check reads the app database, so create it (with
+    # migrations) first. Without this every model call fails with
+    # "no such table: cost_logs" and the pipeline silently returns fallbacks.
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.storage.database import init_database
+
+    init_database(get_data_dir() / "openreview.db")
+
     from openreview_cli.review import run_review
     from openreview_cli.review.playbook import BUNDLED_PLAYBOOKS
 
@@ -94,14 +113,14 @@ def main() -> None:
     ground_truth: list[dict[str, Any]] = json.loads((mode_dir / "ground_truth.json").read_text())
     playbook_path = str(BUNDLED_PLAYBOOKS[args.mode])
 
-    totals = {"matched": 0, "position_ok": 0, "expected": 0}
+    totals = {"matched": 0, "position_ok": 0, "expected": 0, "extraction_errors": 0}
     per_document: list[dict[str, Any]] = []
     for entry in ground_truth:
         doc_path = Path(entry["path"])
         expected = entry["expected_categories"]
         started = time.perf_counter()
         error: str | None = None
-        score = {"matched": 0, "position_ok": 0}
+        score = {"matched": 0, "position_ok": 0, "extraction_errors": 0}
         try:
             reports = run_review(
                 paths=[str(doc_path)],
@@ -115,6 +134,7 @@ def main() -> None:
             score = _score(assessments, expected)
             totals["matched"] += score["matched"]
             totals["position_ok"] += score["position_ok"]
+            totals["extraction_errors"] += score["extraction_errors"]
         except Exception as exc:  # a failing document is recorded, not fatal
             error = f"{type(exc).__name__}: {exc}"
         totals["expected"] += len(expected)
@@ -124,12 +144,14 @@ def main() -> None:
                 "expected": expected,
                 "matched": score["matched"],
                 "position_ok": score["position_ok"],
+                "extraction_errors": score["extraction_errors"],
                 "seconds": round(time.perf_counter() - started, 2),
                 "error": error,
             }
         )
         print(
-            f"[{args.model}] {doc_path.name}: {score['matched']}/{len(expected)} matched",
+            f"[{args.model}] {doc_path.name}: {score['matched']}/{len(expected)} matched, "
+            f"{score['extraction_errors']} extraction failures",
             flush=True,
         )
 
