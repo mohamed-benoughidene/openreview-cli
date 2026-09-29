@@ -1,0 +1,151 @@
+{
+  "benchmark": "cloud-slot-measurement",
+  "command": "uv run python scripts/measure_slm_slots.py --configured --mode indemnitycheck",
+  "date": "2026-09-29",
+  "git_commit": "80b2431 (report committed at this base commit)",
+  "environment": "local machine; privacy tier balanced; PII stripping ON (required before cloud egress)",
+  "slots": {
+    "extraction": "openrouter/anthropic/claude-sonnet-4.6",
+    "reasoning": "openrouter/anthropic/claude-sonnet-4.6",
+    "grounding": "openrouter/anthropic/claude-sonnet-4.6",
+    "graph": "openrouter/anthropic/claude-sonnet-4.6"
+  },
+  "mode": "indemnitycheck",
+  "documents": 5,
+  "cost": {
+    "calls": 22,
+    "prompt_tokens": 14039,
+    "completion_tokens": 3319,
+    "cost_cents": 22,
+    "source": "local cost_logs for the run date (extraction slot; QA shares that slot)"
+  },
+  "metrics": {
+    "category_recall": "lexical, not a model metric (match_category runs before the model)",
+    "position_accuracy": "model signal: detected position equals the expected playbook position",
+    "extraction_failures": "assessments carrying an error (excluded from both counts)"
+  },
+  "provenance": [
+    {
+      "path": "scripts/measure_slm_slots.py",
+      "sha256": "e9a7404f01d1f21ce167ba4e2205e77ed330cf19ce1695b1dde960d495be433c"
+    },
+    {
+      "path": "tests/fixtures/benchmark/indemnitycheck/ground_truth.json",
+      "sha256": "2987f2ff49a5b53570a6c6b435870ae7d3bfe14b206a33b6f0c90a389c097818"
+    }
+  ],
+  "result": {
+    "model": "openrouter/anthropic/claude-sonnet-4.6",
+    "slots": {
+      "extraction": "openrouter/anthropic/claude-sonnet-4.6",
+      "reasoning": "openrouter/anthropic/claude-sonnet-4.6",
+      "grounding": "openrouter/anthropic/claude-sonnet-4.6",
+      "graph": "openrouter/anthropic/claude-sonnet-4.6"
+    },
+    "pii_stripped": true,
+    "mode": "indemnitycheck",
+    "git_sha": "unknown",
+    "measured_at_utc": "2026-09-29T14:01:26Z",
+    "documents": 5,
+    "totals": {
+      "matched": 10,
+      "position_ok": 7,
+      "expected": 10,
+      "extraction_errors": 0
+    },
+    "recall": 1.0,
+    "position_accuracy": 0.7,
+    "per_document": [
+      {
+        "doc": "doc_1.pdf",
+        "expected": [
+          {
+            "category_id": "indemnity-scope",
+            "expected_position": "preferred"
+          },
+          {
+            "category_id": "liability-cap",
+            "expected_position": "preferred"
+          }
+        ],
+        "matched": 2,
+        "position_ok": 1,
+        "extraction_errors": 0,
+        "seconds": 30.3,
+        "error": null
+      },
+      {
+        "doc": "doc_2.pdf",
+        "expected": [
+          {
+            "category_id": "survival-period",
+            "expected_position": "acceptable"
+          },
+          {
+            "category_id": "defense-obligations",
+            "expected_position": "preferred"
+          }
+        ],
+        "matched": 2,
+        "position_ok": 2,
+        "extraction_errors": 0,
+        "seconds": 19.91,
+        "error": null
+      },
+      {
+        "doc": "doc_3.pdf",
+        "expected": [
+          {
+            "category_id": "indemnity-scope",
+            "expected_position": "acceptable"
+          },
+          {
+            "category_id": "liability-cap",
+            "expected_position": "acceptable"
+          }
+        ],
+        "matched": 2,
+        "position_ok": 2,
+        "extraction_errors": 0,
+        "seconds": 20.04,
+        "error": null
+      },
+      {
+        "doc": "doc_4.pdf",
+        "expected": [
+          {
+            "category_id": "survival-period",
+            "expected_position": "preferred"
+          },
+          {
+            "category_id": "defense-obligations",
+            "expected_position": "walkaway"
+          }
+        ],
+        "matched": 2,
+        "position_ok": 0,
+        "extraction_errors": 0,
+        "seconds": 25.53,
+        "error": null
+      },
+      {
+        "doc": "doc_5.pdf",
+        "expected": [
+          {
+            "category_id": "indemnity-scope",
+            "expected_position": "acceptable"
+          },
+          {
+            "category_id": "liability-cap",
+            "expected_position": "acceptable"
+          }
+        ],
+        "matched": 2,
+        "position_ok": 2,
+        "extraction_errors": 0,
+        "seconds": 20.25,
+        "error": null
+      }
+    ]
+  }
+}
