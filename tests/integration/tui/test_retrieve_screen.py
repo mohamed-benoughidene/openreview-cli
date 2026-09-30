@@ -943,7 +943,7 @@ async def test_an_unexpected_failure_is_reported_by_message_not_by_class_name(
 # --------------------------------------------------------------------------
 
 
-async def test_the_busy_flag_gates_all_five_actions_and_the_inputs(
+async def test_the_busy_flag_gates_every_action_and_the_inputs(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, isolated_xdg: dict[str, Path]
 ) -> None:
     calls: list[str] = []
@@ -975,6 +975,7 @@ async def test_the_busy_flag_gates_all_five_actions_and_the_inputs(
                 "#btn-ingest",
                 "#btn-search",
                 "#btn-clear",
+                "#btn-graph",
                 "#btn-back",
             ):
                 assert screen.query_one(button_id, Button).disabled is True
@@ -985,6 +986,7 @@ async def test_the_busy_flag_gates_all_five_actions_and_the_inputs(
             await screen.action_retrieve()
             await screen.action_index_status()
             await screen.action_index_clear()
+            await screen.action_build_clause_graph()
             await screen.on_input_submitted(
                 _submit(screen, "#retrieve-path", str(tmp_path / "x.pdf"))
             )
