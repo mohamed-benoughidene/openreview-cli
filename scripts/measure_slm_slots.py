@@ -408,6 +408,48 @@ def _is_cloud_model(model: str) -> bool:
     return bool(model) and model.split("/", 1)[0] != "ollama"
 
 
+# The CLI's per-socket smoke test is a real grounding call (app.py: ``gateway test``); this
+# is the same prompt shape, so the pre-flight exercises the path a measurement call takes.
+_PREFLIGHT_PROMPT = "Reachability check: does clause 1 require confidentiality? Answer OK."
+
+
+def _preflight_arm_reachability() -> tuple[bool, str | None]:
+    """One cheap call to the arm's grounding model, through the real gateway.
+
+    This is the guard for the measurement-integrity bug where a failed gateway call is
+    swallowed by ``CitationGroundingDiscriminator.ground_claim`` and returned as
+    ``uncertain`` (``grounding/discriminator.py``): an unreachable arm — no local server, or
+    a cloud key at its spend limit — then reads as model uncertainty.
+
+    The call shape is the CLI's own smoke test (``app.py`` ``gateway test``)::
+
+        Gateway().chat("grounding", [{"role": "user", "content": ...}],
+                       requirement=CapabilityRequirement(capability="reasoning"))
+
+    The balanced tier's PII gate must already be satisfied (the caller strips and marks it,
+    exactly as the review path does) or a cloud arm self-refuses before the network — which
+    is itself a reason to abort, not to proceed.
+
+    Returns ``(ok, error)``: ``error`` is the underlying ``Type: message`` (redacted) when
+    the call fails, else ``None``.
+    """
+    from openreview_cli.gateway.models import CapabilityRequirement
+    from openreview_cli.gateway.router import Gateway
+
+    try:
+        gateway = Gateway()
+        gateway.chat(
+            "grounding",
+            [{"role": "user", "content": _PREFLIGHT_PROMPT}],
+            requirement=CapabilityRequirement(capability="reasoning"),
+        )
+    except Exception as exc:  # an unreachable arm must abort, never become a matrix
+        from openreview_cli.gateway.redaction import redact_text
+
+        return False, redact_text(f"{type(exc).__name__}: {exc}")
+    return True, None
+
+
 def _make_discriminator() -> Any:
     """Build the discriminator under test: real Gateway, throwaway audit dir."""
     import tempfile
@@ -424,7 +466,12 @@ def _make_discriminator() -> Any:
 
 
 def _grounding_skip_receipt(
-    corpus_dir: Path, limit: int, arm: str, reason: str, slots: dict[str, str] | None = None
+    corpus_dir: Path,
+    limit: int,
+    arm: str,
+    reason: str,
+    slots: dict[str, str] | None = None,
+    skip_kind: str | None = None,
 ) -> dict[str, Any]:
     models = dict(slots or {})
     return {
@@ -436,6 +483,9 @@ def _grounding_skip_receipt(
         "corpus_files_scanned": 0,
         "limit": limit,
         "skipped": True,
+        # Distinguishes an absent corpus (a documented CI skip) from an unreachable arm
+        # (a measurement that could not run). ``None`` only for a run that never got here.
+        "skip_kind": skip_kind,
         "skip_reason": reason,
         "git_sha": _git_sha(),
         "measured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -454,6 +504,9 @@ def _grounding_skip_receipt(
         "negatives_dropped_guard_by_generator": dict.fromkeys(GROUNDING_VALID_NEGATIVES, 0),
         "caught_rate": None,
         "false_reject_rate": None,
+        # No matrix ran, so nothing can be all-uncertain.
+        "all_uncertain": False,
+        "all_uncertain_note": None,
         "latency": {"calls": 0, "mean": None, "median": None, "p95": None, "max": None},
         "caveats": list(GROUNDING_ACCURACY_CAVEATS),
         "per_label": [],
@@ -476,6 +529,15 @@ def _print_grounding_summary(receipt: dict[str, Any], out: Path) -> None:
         f"(false_reject_rate={receipt['false_reject_rate']}) "
         f"uncertain good/bad={receipt['good_uncertain']}/{receipt['bad_uncertain']}"
     )
+    if receipt.get("all_uncertain"):
+        print(
+            "[grounding-accuracy] *** WARNING: EVERY verdict is 'uncertain' — this is not a "
+            "result. A failed gateway call is swallowed and returned as 'uncertain' "
+            "(grounding/discriminator.py), so an all-uncertain matrix almost always means the "
+            f"arm '{receipt['arm']}' was unreachable, not that the model was cautious. Check "
+            "the arm (local server down? cloud key at its spend limit?) before quoting any of "
+            "these numbers. ***"
+        )
     print(
         "[grounding-accuracy] guard drops by generator: "
         + ", ".join(f"{name}={count}" for name, count in drops.items())
@@ -521,7 +583,7 @@ def run_grounding_accuracy(
 
     if not corpus_dir.is_dir() or not any(corpus_dir.glob("*.txt")):
         reason = f"corpus absent at {corpus_dir}"
-        receipt = _grounding_skip_receipt(corpus_dir, limit, arm, reason)
+        receipt = _grounding_skip_receipt(corpus_dir, limit, arm, reason, skip_kind="corpus_absent")
         _write_receipt(out, receipt)
         print(f"[grounding-accuracy] {reason} — skipping. Receipt: {out}")
         return receipt
@@ -533,7 +595,9 @@ def run_grounding_accuracy(
             "cloud arm needs a cloud grounding model; configured grounding primary is "
             f"'{grounding_model or '(unset)'}'"
         )
-        receipt = _grounding_skip_receipt(corpus_dir, limit, arm, reason, slots=slots)
+        receipt = _grounding_skip_receipt(
+            corpus_dir, limit, arm, reason, slots=slots, skip_kind="arm_misconfigured"
+        )
         _write_receipt(out, receipt)
         print(f"[grounding-accuracy] {reason} — skipping. Receipt: {out}")
         return receipt
@@ -546,9 +610,41 @@ def run_grounding_accuracy(
         units, pii_info = _strip_grounding_units(units, no_pii=no_pii)
     except Exception as exc:  # a failed strip must abort, never send raw text to a cloud tier
         reason = f"PII stripping failed: {type(exc).__name__}: {exc}"
-        _write_receipt(out, _grounding_skip_receipt(corpus_dir, limit, arm, reason, slots=slots))
+        _write_receipt(
+            out,
+            _grounding_skip_receipt(
+                corpus_dir, limit, arm, reason, slots=slots, skip_kind="pii_unavailable"
+            ),
+        )
         print(f"[grounding-accuracy] {reason}")
         raise SystemExit(1) from exc
+
+    # Guard 1: the arm must be reachable BEFORE any label is built or scored. Otherwise a
+    # broken gateway call becomes a matrix full of ``uncertain`` — a measurement that looks
+    # like model uncertainty but is really "the call never happened" (no local server, or a
+    # cloud key at its spend limit). The PII gate is already satisfied by the strip above.
+    reachable, preflight_error = _preflight_arm_reachability()
+    if not reachable:
+        reason = (
+            f"arm '{arm}' unreachable: the grounding model refused the pre-flight call "
+            f"({preflight_error}); no measurement was run"
+        )
+        receipt = _grounding_skip_receipt(
+            corpus_dir, limit, arm, reason, slots=slots, skip_kind="arm_unreachable"
+        )
+        receipt["preflight"] = {
+            "ok": False,
+            "arm": arm,
+            "grounding_model": grounding_model,
+            "error": preflight_error,
+        }
+        _write_receipt(out, receipt)
+        print(f"[grounding-accuracy] {reason}")
+        raise SystemExit(1)
+    print(
+        f"[grounding-accuracy] pre-flight OK: arm '{arm}' grounding model "
+        f"'{grounding_model}' answered the reachability check."
+    )
 
     labels, drops, generated = _build_grounding_labels(units)
 
@@ -556,7 +652,12 @@ def run_grounding_accuracy(
         discriminator = _make_discriminator()
     except Exception as exc:  # an unbuildable gateway is an environment error, not a number
         reason = f"cannot start the grounding run: {type(exc).__name__}: {exc}"
-        _write_receipt(out, _grounding_skip_receipt(corpus_dir, limit, arm, reason, slots=slots))
+        _write_receipt(
+            out,
+            _grounding_skip_receipt(
+                corpus_dir, limit, arm, reason, slots=slots, skip_kind="gateway_unavailable"
+            ),
+        )
         print(f"[grounding-accuracy] {reason}")
         raise SystemExit(1) from exc
 
@@ -587,6 +688,22 @@ def run_grounding_accuracy(
             }
         )
 
+    matrix = compute_grounding_matrix(per_label)
+
+    # Guard 2: every-uncertain is almost always a broken arm, not a cautious model. Flag it
+    # so it cannot pass as a normal measurement. (The discriminator swallows a failed gateway
+    # call and returns ``uncertain``; see grounding/discriminator.py.)
+    all_uncertain = bool(per_label) and all(row["verdict"] == "uncertain" for row in per_label)
+    all_uncertain_note = None
+    if all_uncertain:
+        all_uncertain_note = (
+            f"ALL {len(per_label)} verdicts are 'uncertain'. A failed gateway call is swallowed "
+            "by the discriminator and returned as 'uncertain' (grounding/discriminator.py), so "
+            "an all-uncertain matrix almost always means the arm was unreachable (no local "
+            "server, or a cloud key at its spend limit) rather than a cautious model. Check the "
+            "arm before trusting this run; do not quote these numbers."
+        )
+
     receipt: dict[str, Any] = {
         "mode": "grounding-accuracy",
         "arm": arm,
@@ -602,7 +719,9 @@ def run_grounding_accuracy(
         "units": len(units),
         "pii_stripped": bool(pii_info["stripped"]),
         "pii": pii_info,
-        **compute_grounding_matrix(per_label),
+        **matrix,
+        "all_uncertain": all_uncertain,
+        "all_uncertain_note": all_uncertain_note,
         "negatives_generated": generated,
         "negatives_dropped_guard": sum(drops.values()),
         "negatives_dropped_guard_by_generator": drops,
