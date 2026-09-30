@@ -148,3 +148,15 @@ class TestCostRecord:
             created_at="2026-01-01T00:00:00",
         )
         assert r.slot is None
+
+
+def test_the_shipped_default_asks_the_local_grounding_slot_for_json() -> None:
+    from typing import Any, cast
+
+    from openreview_cli.config.loader import DEFAULT_CONFIG
+
+    # `DEFAULT_CONFIG` is declared as `dict[str, object]`, so the nested lookups
+    # need the cast to reach the slot mapping under strict mypy.
+    gateway = cast("dict[str, Any]", DEFAULT_CONFIG["gateway"])
+    grounding = gateway["models"]["grounding"]
+    assert grounding["extra_params"] == {"response_format": {"type": "json_object"}}

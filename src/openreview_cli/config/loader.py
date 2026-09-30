@@ -32,6 +32,7 @@ DEFAULT_CONFIG: dict[str, object] = {
                 "primary": "ollama/granite4:3b",
                 "fallback": None,
                 "params": {"temperature": 0.0, "max_tokens": 4000},
+                "extra_params": {"response_format": {"type": "json_object"}},
             },
         },
         "fallback": {
