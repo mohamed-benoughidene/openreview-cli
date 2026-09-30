@@ -1169,16 +1169,14 @@ def test_an_unreadable_batch_counts_every_claim_in_it(
 ) -> None:
     """The batch path has no early return: it maps missing indices to UNCERTAIN.
 
-    Copy the `ground_report(...)` call shape from an existing test in this file
-    (see `test_ground_report_with_clause_text`) so the fixtures are wired the
-    same way.
+    The `sample_report` fixture's 10 assessments all cite `4.3` with a QA verdict
+    of agree, so none is filtered out and they form exactly one batch of 10 under
+    `_BATCH_SIZE` — the whole batch is unreadable here.
     """
     mock_gateway.chat.return_value = "I cannot help with that."
     d = CitationGroundingDiscriminator(mode="strict", gateway=mock_gateway)
 
     d.ground_report(sample_report, sample_document)
 
-    # One unreadable answer per claim in the batch the reader could not parse.
-    # For this fixture that is every assessment; if the pipeline filters any, use
-    # the count the ground_report test you copied already asserts on.
+    # Nothing in the batch parsed, so every claim in it counts as unreadable.
     assert d.unreadable_answers == len(sample_report.assessments)

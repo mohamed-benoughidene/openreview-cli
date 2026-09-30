@@ -1273,38 +1273,39 @@ class TestCustomProviderRouting:
         assert result["extraction"]["status"] == "missing_api_key"
 
 
-def _config_with(primary: str, *, fallback: str = "anthropic/claude-3") -> str:
-    """COMMON_CONFIG with a chosen reasoning primary and fallback plus a local-only param."""
-    cfg = COMMON_CONFIG.replace("      primary: openai/gpt-4\n", f"      primary: {primary}\n")
-    cfg = cfg.replace("      fallback: anthropic/claude-3\n", f"      fallback: {fallback}\n")
-    return cfg.replace(
-        "      extra_params:\n        top_p: 0.9\n",
-        "      extra_params:\n        response_format:\n          type: json_object\n",
+def _config_with(
+    primary: str,
+    *,
+    slot: str = "reasoning",
+    fallback: str = "anthropic/claude-3",
+    extra_params: dict[str, Any] | None = None,
+) -> str:
+    """A one-slot config: `slot` declares `primary`, `fallback` and `extra_params`.
+
+    ``extra_params`` defaults to what the shipped config declares for the grounding
+    slot (``config/loader.py``) — a JSON ``response_format``, the local-only key the
+    gate tests observe at the dispatch seam — so ``slot="grounding"`` reproduces
+    that shipped slot. Every other slot and key comes from the config defaults.
+    """
+    if extra_params is None:
+        extra_params = {"response_format": {"type": "json_object"}}
+    return (
+        "privacy:\n"
+        "  tier: performance\n"
+        "gateway:\n"
+        "  models:\n"
+        f"    {slot}:\n"
+        f"      primary: {primary}\n"
+        f"      fallback: {fallback}\n"
+        "      params:\n"
+        "        temperature: 0.0\n"
+        "        max_tokens: 1024\n"
+        f"      extra_params: {json.dumps(extra_params)}\n"
+        "  fallback:\n"
+        "    retries: 2\n"
+        "    retry_delay: 0.01\n"
+        "    timeout: 5\n"
     )
-
-
-def _grounding_config(primary: str, *, fallback: str = "anthropic/claude-3") -> str:
-    """A config whose `grounding` slot declares `response_format`, mirroring the
-    shipped default in ``config/loader.py`` (ollama primary, JSON extra_param)."""
-    return f"""\
-privacy:
-  tier: performance
-gateway:
-  models:
-    grounding:
-      primary: {primary}
-      fallback: {fallback}
-      params:
-        temperature: 0.0
-        max_tokens: 1024
-      extra_params:
-        response_format:
-          type: json_object
-  fallback:
-    retries: 2
-    retry_delay: 0.01
-    timeout: 5
-"""
 
 
 def _capture_dispatches(
@@ -1396,7 +1397,7 @@ class TestLocalOnlyExtraParams:
         provider that actually receives the call.
         """
         seen = _capture_dispatches(monkeypatch)
-        gw = _gateway(tmp_path, monkeypatch, _grounding_config("ollama/granite4:3b"))
+        gw = _gateway(tmp_path, monkeypatch, _config_with("ollama/granite4:3b", slot="grounding"))
         gw.chat("grounding", [{"role": "user", "content": "Hi"}], model="openai/gpt-4")
         assert seen[0]["model"] == "openai/gpt-4"
         assert "response_format" not in seen[0]
@@ -1421,7 +1422,7 @@ class TestLocalOnlyExtraParams:
     ) -> None:
         """The starvation: the build-time strip never restores the local value."""
         seen = _capture_dispatches(monkeypatch, failures_before_success=3)
-        cfg = _grounding_config("openai/gpt-4", fallback="ollama/granite4:3b")
+        cfg = _config_with("openai/gpt-4", slot="grounding", fallback="ollama/granite4:3b")
         gw = _gateway(tmp_path, monkeypatch, cfg)
         assert gw.chat("grounding", [{"role": "user", "content": "Hi"}]) == "from fallback"
         assert all("response_format" not in k for k in seen[:3])
@@ -1440,7 +1441,7 @@ class TestLocalOnlyExtraParams:
             return TerminatedStream([StreamChunk("hi")])
 
         monkeypatch.setattr("openreview_cli.gateway.router.completion", stub)
-        gw = _gateway(tmp_path, monkeypatch, _grounding_config("ollama/granite4:3b"))
+        gw = _gateway(tmp_path, monkeypatch, _config_with("ollama/granite4:3b", slot="grounding"))
         events = list(
             gw.chat_stream("grounding", [{"role": "user", "content": "Hi"}], model="openai/gpt-4")
         )
