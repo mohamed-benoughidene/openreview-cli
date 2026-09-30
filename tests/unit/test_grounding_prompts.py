@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 from openreview_cli.grounding.models import GroundingVerdict
-from openreview_cli.grounding.prompts import parse_grounding_response
+from openreview_cli.grounding.prompts import GROUNDING_PROMPT_TEMPLATE, parse_grounding_response
 
 GROUNDED = {
     "claim_index": 0,
@@ -122,3 +122,19 @@ def test_trailing_prose_containing_brackets_still_parses() -> None:
     response = f"{json.dumps([GROUNDED])}\nNote: [see the clause above]"
 
     assert [row[1] for row in parse_grounding_response(response)] == [GroundingVerdict.GROUNDED]
+
+
+NEW_TAIL = (
+    "For each claim, respond with one JSON object. If there is a single claim, you may return that "
+    "object on its own; if there are several, return a JSON array of the objects, one per claim, in the "
+    "same order as the input claims. Return the JSON only"
+)
+
+
+def test_prompt_permits_a_single_object_and_keeps_the_array_for_batches() -> None:
+    normalised = " ".join(GROUNDING_PROMPT_TEMPLATE.split())
+    assert NEW_TAIL in normalised
+
+
+def test_prompt_no_longer_demands_an_array_unconditionally() -> None:
+    assert "Respond with a JSON array of these objects" not in GROUNDING_PROMPT_TEMPLATE
