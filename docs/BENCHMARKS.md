@@ -243,7 +243,7 @@ The shipped index is SQLite FTS5 with `tokenize='porter unicode61'` and `prefix=
 
 | Metric | shipped `porter unicode61` | `unicode61` (no stemming) | Delta (porter − unicode61) |
 |---|---|---|---|
-| hit@1 | 0.0435 | 0.0312 | +0.0123 |
+| hit@1 | 0.0435 | 0.0312 | +0.0124 |
 | hit@5 | 0.3206 | 0.2548 | +0.0658 |
 | MRR@5 | 0.1274 | 0.1001 | +0.0273 |
 
@@ -251,7 +251,7 @@ Sample: 4,042 queries over 462 contracts — every query in the committed benchm
 
 Last verified: 2026-09-30 @ 8bd72a3 (receipts: docs/benchmarks/results/cuad-retrieval-porter.json, docs/benchmarks/results/cuad-retrieval-unicode61.json).
 
-**`porter` still wins, and now on reproducible evidence.** The shipped choice was originally made on a comparison over 1,536 queries whose harness was never committed and whose query count matches no benchmark in the tree, so that evidence could not be re-run. The two receipts above are the re-derivation on the committed set: they reproduce the direction (porter ahead on all three metrics) but not the magnitudes — the remembered claim of **+1.7 hit@1 / +2.1 hit@5 / +1.9 MRR** percentage points becomes **+1.23 / +6.58 / +2.73** here, with the hit@5 gap more than three times larger than claimed. Absolute accuracy is low: keyword search returns the answer span at rank 1 for 4.4% of queries. The honest reading is that `porter unicode61` is the better of two weak configurations, not that retrieval is good on this corpus.
+**`porter` still wins, and now on reproducible evidence.** The shipped choice was originally made on a comparison over 1,536 queries whose harness was never committed and whose query count matches no benchmark in the tree, so that evidence could not be re-run. The two receipts above are the re-derivation on the committed set: they reproduce the direction (porter ahead on all three metrics) but not the magnitudes — the remembered claim of **+1.7 hit@1 / +2.1 hit@5 / +1.9 MRR** percentage points becomes **+1.24 / +6.58 / +2.73** here, with the hit@5 gap more than three times larger than claimed. Absolute accuracy is low: keyword search returns the answer span at rank 1 for 4.4% of queries. The honest reading is that `porter unicode61` is the better of two weak configurations, not that retrieval is good on this corpus.
 
 **Reproduction:** `uv run python scripts/measure_retrieval_accuracy.py --tokenizer porter --out .benchmark-reports/retrieval-porter.json`, and the same with `--tokenizer unicode61`. Both arms are offline (SQLite FTS5, no model calls). Two caveats are recorded in the receipts and bound the claim: ground truth is character-span overlap rather than answer correctness (a retrieved chunk that merely touches a labeled span counts as relevant), and the CUAD `.txt` corpus cannot go through the product parser (PDF/DOCX only), so the harness drives the product chunker directly and chunk boundaries approximate a real parse. This measures retrieval, not answering: nothing here checks whether an extracted answer is correct.
 

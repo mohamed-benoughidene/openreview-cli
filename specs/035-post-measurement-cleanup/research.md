@@ -42,10 +42,16 @@ so any source of real clause text works (*VS: Grounding ground_claim signature*)
 
 **Decision:** `porter unicode61`.
 
-**Rationale:** Measured over 1,536 labelled CUAD queries, `porter` stemming beat the
-shipped `unicode61` by +1.7 hit@1, +2.1 hit@5 and +1.9 MRR (see Measurement evidence).
-Both tokenizers are built into the shipped SQLite, so this is a one-line change with **no
-new dependency** (*VS: SQLite FTS5 tokenizers*; *VS: Retrieval FTS tokenizer site*).
+**Rationale:** Re-measured with the committed harness `scripts/measure_retrieval_accuracy.py`
+over the committed CUAD benchmark (4,042 labelled queries, 462 contracts), `porter` stemming beat
+plain `unicode61` by +1.24 hit@1, +6.58 hit@5 and +2.73 MRR@5 (receipts
+`docs/benchmarks/results/cuad-retrieval-porter.json` and `cuad-retrieval-unicode61.json`; see
+Measurement evidence and *VS: CUAD keyword retrieval receipts*). The figures this decision was
+originally recorded with (+1.7 hit@1 / +2.1 hit@5 / +1.9 MRR over 1,536 queries) came from a
+harness that was never committed and are **not citable**; the committed pair reproduces the
+*direction* (porter ahead on all three metrics) but not the old *magnitudes*. Both tokenizers
+are built into the shipped SQLite, so this is a one-line change with **no new dependency**
+(*VS: SQLite FTS5 tokenizers*; *VS: Retrieval FTS tokenizer site*).
 
 **Alternatives:** keep `unicode61` (measurably weaker); `trigram` (supported, but no
 measured gain and a larger index).
@@ -55,10 +61,13 @@ measured gain and a larger index).
 **Decision:** Drop it.
 
 **Rationale:** A local dense model scored 0.104 / 0.505 / 0.238 (hit@1 / hit@5 / MRR)
-against keyword search at 0.126 / 0.519 / 0.258 over 1,536 queries — worse on every metric
-— for about 20 minutes of CPU and a model held in memory. Cloud embeddings are ruled out by
-the privacy claim. The embedding store (table, columns, insert path) is project code with a
-known schema (*VS: Embedding store schema*).
+against keyword search at 0.126 / 0.519 / 0.258 — worse on every metric — for about 20 minutes
+of CPU and a model held in memory. That comparison came from the same harness that was never
+committed and is **not citable**; the reproducible re-run on the committed benchmark covers only
+the two tokenizer arms (*VS: CUAD keyword retrieval receipts*), and with the `embedding` slot
+gone the dense path cannot run at all (Q13). Cloud embeddings are ruled out by the privacy
+claim. The embedding store (table, columns, insert path) is project code with a known schema
+(*VS: Embedding store schema*).
 
 **Alternatives:** keep local dense (needs a bundled model or a local server); keep cloud
 dense (privacy); keep hybrid (needs dense, and was not better — Q13).
@@ -245,24 +254,37 @@ and `.json`. Category recall is not a model metric: the category is resolved by 
 matching before any model call, and the fixtures embed the category name; only the position
 is the model's work. n = 5 documents → single samples (**Inference**; record R1).
 
-### Retrieval — 1,536 labelled CUAD queries
+### Retrieval — 4,042 labelled CUAD queries (committed benchmark)
 
-150 of the 462 CUAD contracts; retrieval scoped to each query's own contract; ground truth =
-the chunk overlapping the CUAD answer span; product chunk size; app-style query building.
+Every query in the committed CUAD benchmark; each of the 462 contracts is indexed alone with the
+shipped FTS5 configuration and searched with the product chunker and ingest path; retrieval is
+scoped to each query's own contract; ground truth = character-span overlap between the retrieved
+chunk and the query's CUAD answer span. Measured by `scripts/measure_retrieval_accuracy.py`
+(~48 s per arm).
 
 | arm | hit@1 | hit@5 | MRR@5 |
 |---|---|---|---|
-| BM25 (`unicode61`, shipped) | 0.126 | 0.519 | 0.258 |
-| **BM25 + `porter` stemming** | **0.143** | **0.540** | **0.277** |
-| local dense (`BAAI/bge-small-en-v1.5`) | 0.104 | 0.505 | 0.238 |
-| hybrid (porter BM25 + dense, RRF k=60) | 0.117 | 0.544 | 0.262 |
+| plain `unicode61` (no stemming) | 0.0312 | 0.2548 | 0.1001 |
+| **`porter unicode61` (shipped)** | **0.0435** | **0.3206** | **0.1274** |
 
-`porter` − `unicode61` = **+1.7 hit@1 / +2.1 hit@5 / +1.9 MRR**. Source: *VS: Measurement
-decision record (gitignored companion)*, §1.3 (raw harness lived in session scratch and is
-gone). **Provenance caveat:** the primary artifact is the gitignored record; the tracked
-tokenizer/engine facts it relies on are separately anchored (*VS: Retrieval FTS tokenizer
-site*, *VS: Retrieval engine dispatch*). A larger or different dense model might change the
-dense row, but the conclusion holds for any small locally bundled model (**Inference**).
+`porter` − `unicode61` = **+1.24 hit@1 / +6.58 hit@5 / +2.73 MRR@5**. Source: *VS: CUAD keyword
+retrieval receipts* — `docs/benchmarks/results/cuad-retrieval-porter.json` and
+`cuad-retrieval-unicode61.json`; the same comparison is summarised in the "CUAD keyword
+retrieval" section of `docs/BENCHMARKS.md`. **Provenance:** the decision was originally recorded
+against a **1,536-query** comparison whose harness was never committed (the raw run lived in
+session scratch and is gone), so the previous figures — **+1.7 hit@1 / +2.1 hit@5 / +1.9 MRR**
+and the dense/hybrid rows of the old table — are **not reproducible and not citable**. This pair
+is the re-derivation on the committed set: it confirms the *direction* of the shipped choice
+(porter ahead on all three metrics) but not the old *magnitudes*. Both arms are weak in absolute
+terms — keyword search returns the gold span first for only ~4% of queries, largely because the
+benchmark queries carry a long contract-identifying preamble that BM25 matches against
+title/signature blocks — so the defensible claim is that `porter unicode61` is **the better of
+two weak configurations**, not that retrieval works. The dense and hybrid arms were never
+re-measured (the `embedding` slot is gone and the path is deleted — Q13); the tracked
+tokenizer/engine facts the decision relies on are separately anchored (*VS: Retrieval FTS
+tokenizer site*, *VS: Retrieval engine dispatch*). The harness reuses the product chunker and
+ingest path but not the product parser (PDF/DOCX only), so chunk boundaries approximate a real
+parse (**stated in the receipts**).
 
 ### Reranking — 424 labelled CUAD queries at candidate depth 20
 
@@ -360,10 +382,13 @@ size split. The size question remains a **measurement** question for our own har
 
 ## Claims not fully verifiable in the repo (labelled, not hidden)
 
-- The **CUAD retrieval** and **reranker** numbers (Q2, Q3, Q7, Q13) come from the gitignored
-  decision record and a session-scratch harness that no longer exists; the tracked code facts
-  they depend on are anchored, but the raw artifacts are not in the repo (**UNVERIFIED in
-  repo**; provenance above).
+- The **CUAD tokenizer** numbers (Q2) are now **reproducible**: the committed harness
+  `scripts/measure_retrieval_accuracy.py` and its two receipts
+  (`docs/benchmarks/results/cuad-retrieval-{porter,unicode61}.json`) are the anchors, and the
+  same comparison is summarised in `docs/BENCHMARKS.md`. The **dense/hybrid** rows (Q3, Q13) and
+  the **reranker** numbers (Q7) still come only from the gitignored decision record and a
+  session-scratch harness that no longer exists, so they remain **UNVERIFIED in repo / not
+  citable**; the tracked code facts they depend on are anchored (provenance above).
 - **Why** the local rerankers lose is **Inference** (small model / truncation / the task).
 - The **reader ranking** (granite 0.9 vs others 0.7) is **Inference** at n = 5 documents.
 - The claim that the TUI retrieve screen needs no edit is **UNVERIFIED until checked** at

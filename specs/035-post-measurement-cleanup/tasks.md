@@ -338,12 +338,15 @@ uv run python scripts/measure_slm_slots.py --grounding-accuracy --limit 20 --arm
 
 - [ ] T037 Dispatch the manual CI slot matrix, now three slots:
   `gh workflow run ci-ollama-smoke.yml`.
-- [ ] T038 Build the CUAD retrieval harness (new work with a stated shape — the committed
-  `scripts/measure_retrieval_slots.py` has no CUAD loader): extend it to load
-  `data/legalbenchrag/corpus/cuad/*.txt`, take the CUAD queries and answer spans, build the FTS
-  index with `porter unicode61`, and score hit@1 / hit@5 / MRR with ground truth "the chunk
-  overlapping the CUAD answer span is relevant"; confirm `porter` on the full set and that no
-  dense path remains.
+- [ ] T038 Re-run the CUAD retrieval harness — **already committed** as
+  `scripts/measure_retrieval_accuracy.py` (it loads `data/legalbenchrag/corpus/cuad/*.txt`,
+  takes the committed 4,042 CUAD queries and answer spans, builds the FTS index with
+  `porter unicode61` — and, via `--tokenizer`, the `unicode61` arm — and scores hit@1 / hit@5 /
+  MRR with ground truth "the chunk overlapping the CUAD answer span is relevant"). Its receipts
+  are `docs/benchmarks/results/cuad-retrieval-{porter,unicode61}.json` and the summary is the
+  "CUAD keyword retrieval" section of `docs/BENCHMARKS.md`. Re-run it after the change lands to
+  confirm `porter` on the full set and that no dense path remains. (The **1,536**-query CUAD run
+  this replaces lived in session scratch space only and is not citable.)
 - [ ] T039 Run the grounding harness on both arms:
   `uv run python scripts/measure_slm_slots.py --grounding-accuracy --arm local` and
   `--arm cloud` (skip the cloud arm cleanly if the key/limit is unavailable, and say so in the

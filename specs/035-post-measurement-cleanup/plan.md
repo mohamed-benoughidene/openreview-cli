@@ -35,7 +35,7 @@ Everything else is mechanical with a known file list and lives as checklist item
 From one measurement run; numbers and file:line proofs are in the companion record. In short:
 
 - The shipped reader measured **0/10 with 11 timeouts** (4,016 s) versus `granite4:3b` at **9/10, 0 failures** (280 s).
-- Keyword search beat meaning-based search on the decisive corpus (1,536 CUAD queries); `porter unicode61` beat plain `unicode61` by **+1.7 hit@1 / +2.1 hit@5 / +1.9 MRR**.
+- Keyword search beat meaning-based search on the decisive corpus (the committed CUAD benchmark, 4,042 queries); `porter unicode61` beat plain `unicode61` by **+1.24 hit@1 / +6.58 hit@5 / +2.73 MRR@5** on the committed harness `scripts/measure_retrieval_accuracy.py` (receipts under `docs/benchmarks/results/`). The earlier **+1.7 / +2.1 / +1.9** over **1,536** queries came from a harness that was never committed and is not citable; the committed pair confirms the direction of the choice, not the old magnitudes.
 - No local reranker works: a cheap lexical rerank and a local cross-encoder both made ordering **worse** than BM25's order.
 - The `reasoning` slot has **no caller**; the `graph` feature is rule-based and calls no model; `balanced` and `performance` differ only by the embedding rule (which dies).
 - Grounding **removed nothing** in the measured run (7 in, 7 out) and cannot be scored by the existing metrics function.
@@ -189,7 +189,7 @@ uv run python scripts/measure_slm_slots.py --grounding-accuracy --limit 20 --arm
 ## 7. Phase 4 — re-measure and regenerate
 
 1. **CI slot matrix** — dispatch the manual workflow (`gh workflow run ci-ollama-smoke.yml`), now three slots.
-2. **CUAD retrieval measurement** — **this harness does not exist yet.** The committed `scripts/measure_retrieval_slots.py` scores the 5-query `tests/fixtures/retrieval/sample_contract.ndax` (P@5) and has no CUAD loader; the 1,536-query CUAD run lived in session scratch space only. So this phase item is **new work with a stated shape**: load `data/legalbenchrag/corpus/cuad/*.txt`, take the CUAD queries and answer spans, build the FTS index with `porter unicode61`, and score hit@1 / hit@5 / MRR with the ground-truth rule "the chunk overlapping the CUAD answer span is relevant". Confirm `porter` on the full set and that no dense path remains.
+2. **CUAD retrieval measurement** — **now a committed harness.** `scripts/measure_retrieval_accuracy.py` loads `data/legalbenchrag/corpus/cuad/*.txt`, takes the committed 4,042 CUAD queries and answer spans, builds the FTS index with `porter unicode61` (and, via `--tokenizer`, the `unicode61` comparison arm), and scores hit@1 / hit@5 / MRR with the ground-truth rule "the chunk overlapping the CUAD answer span is relevant"; its two receipts are `docs/benchmarks/results/cuad-retrieval-{porter,unicode61}.json` and the summary is the new "CUAD keyword retrieval" section of `docs/BENCHMARKS.md`. (The **1,536**-query CUAD run it replaces lived in session scratch space only and is not citable.) Re-run it after the change lands to confirm `porter` on the full set and that no dense path remains.
 3. **The grounding harness**, both arms.
 4. **Regenerate the parity matrix**: `scripts/parity/inventory_cli.py`, `inventory_tui.py`, then `build_parity_matrix.py` (exact commands in `docs/cli-tui-parity-matrix.md:13-17`), and commit the regenerated `docs/cli-tui-parity-matrix.md`. Remember "CERTAIN" rows are name-token joins, not proof of coverage (W11).
 5. Roll the results into `docs/benchmarks/results/` beside the existing per-slot measurement.

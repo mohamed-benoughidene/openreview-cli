@@ -322,14 +322,40 @@ mean P@k 0.32. Category recall is not a model metric (category resolved lexicall
 model call). Single-sample smoke measurement; n = 5 documents.
 STATUS: CONFIRMED
 
+## ITEM: CUAD keyword retrieval receipts (committed)
+SOURCE: `docs/benchmarks/results/cuad-retrieval-porter.json` and
+`docs/benchmarks/results/cuad-retrieval-unicode61.json`, produced by
+`scripts/measure_retrieval_accuracy.py` (branch `feat/035-post-measurement-cleanup`, commit
+`bdfd8e1`; the receipts record git_commit `8bd72a3`); summarised in `docs/BENCHMARKS.md`
+("CUAD keyword retrieval" section).
+KEY FACTS — CUAD keyword retrieval over the committed benchmark (4,042 labelled queries, 462
+contracts, 73,222 chunks; ~48 s per arm), scoped to each query's own contract, ground truth =
+character-span overlap between the retrieved chunk and the query's CUAD answer span: plain
+`unicode61` hit@1 0.0312 / hit@5 0.2548 / MRR@5 0.1001; `porter unicode61` (shipped)
+hit@1 0.0435 / hit@5 0.3206 / MRR@5 0.1274. `porter` − `unicode61` =
+**+1.24 hit@1 / +6.58 hit@5 / +2.73 MRR@5**.
+PROVENANCE: both receipts are raw script output plus a metadata block
+(command/date/git_commit/provenance). Absolute accuracy is low — keyword search returns the gold
+span first for only ~4% of queries, largely because the benchmark queries carry a long
+contract-identifying preamble that BM25 matches against title/signature blocks — so this
+confirms only that `porter unicode61` is the better of two weak configurations, not that
+retrieval works. The previous **1,536**-query figures (+1.7 / +2.1 / +1.9) came from a harness
+that was never committed and are not citable. Caveats stated in the receipts: ground truth is
+span overlap, not answer correctness, and the product parser (PDF/DOCX only) cannot read the
+CUAD `.txt` corpus, so the harness drives the product chunker directly and chunk boundaries
+approximate a real parse.
+STATUS: CONFIRMED
+
 ## ITEM: Measurement decision record (gitignored companion)
 SOURCE: `draft/measurement-decisions-2026-09-29.md` §1.3, §1.5, §1.1 — gitignored; the raw
 measurement harness lived in session scratch and no longer exists.
-KEY FACTS — CUAD retrieval, 1,536 labelled queries (150 contracts), scoped to each query's own
-contract, ground truth = chunk overlapping the CUAD answer span: BM25 `unicode61`
+KEY FACTS — the CUAD retrieval numbers this record carries (BM25 `unicode61`
 0.126 / 0.519 / 0.258; BM25 + `porter` 0.143 / 0.540 / 0.277; local dense
-(`BAAI/bge-small-en-v1.5`) 0.104 / 0.505 / 0.238; hybrid (RRF k=60) 0.117 / 0.544 / 0.262.
-`porter` − `unicode61` = +1.7 hit@1 / +2.1 hit@5 / +1.9 MRR.
+`BAAI/bge-small-en-v1.5` 0.104 / 0.505 / 0.238; hybrid RRF k=60 0.117 / 0.544 / 0.262;
+`porter` − `unicode61` = +1.7 hit@1 / +2.1 hit@5 / +1.9 MRR, over 1,536 labelled queries, 150
+contracts) are **superseded by the committed receipts** (*CUAD keyword retrieval receipts*) and
+are **not citable** — that harness was never committed; the dense/hybrid rows were never
+re-measured.
 Reranking, 424 labelled queries, candidate depth 20: BM25+porter 0.108 / 0.535 / 0.252;
 cheap lexical rerank 0.092 / 0.448 / 0.207; local cross-encoder (`ms-marco-MiniLM-L-6-v2`)
 0.085 / 0.427 / 0.199.
