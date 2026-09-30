@@ -39,7 +39,7 @@ For each claim, respond with a JSON object containing:
 - confidence: float (0.0-1.0) — overall confidence in this verdict
 - reason: str | None — explanation if ungrounded or uncertain
 
-Respond with a JSON array of these objects, one per claim, in the same order as the input claims."""
+For each claim, respond with one JSON object. If there is a single claim, you may return that object on its own; if there are several, return a JSON array of the objects, one per claim, in the same order as the input claims. Return the JSON only — no text before or after it."""
 
 
 def build_grounding_messages(
