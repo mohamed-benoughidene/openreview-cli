@@ -121,7 +121,11 @@ STATUS: CONFIRMED
 SOURCE: `src/openreview_cli/retrieval/storage.py:73-81`
 KEY FACTS: the `chunk_fts` virtual table is created with `tokenize='unicode61'` at `:79`
 (target: `porter unicode61`). The tokenizer is baked in at table-creation time.
-STATUS: CONFIRMED
+RESOLVED: T1.1 changed `:79` to `tokenize='porter unicode61'` on this branch
+(`feat/035-post-measurement-cleanup`). The `unicode61` observation above is the pre-T1.1 read
+state (head `c49ee21`). The tokenizer is baked in at table-creation time, so any index created
+before T1.1 was tokenized with `unicode61` and must be re-created with `openreview ingest`.
+STATUS: SUPERSEDED BY T1.1 (tokenizer changed to `porter unicode61`; see RESOLVED above).
 
 ## ITEM: Embedding store schema
 SOURCE: `src/openreview_cli/retrieval/storage.py:51-52,100-108,163-175`

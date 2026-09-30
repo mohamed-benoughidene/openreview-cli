@@ -76,7 +76,7 @@ class RetrievalStorage:
                 clause_heading,
                 content='chunks',
                 content_rowid='rowid',
-                tokenize='unicode61',
+                tokenize='porter unicode61',
                 prefix='2 3'
             );
 

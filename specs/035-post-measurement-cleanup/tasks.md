@@ -136,9 +136,15 @@ and a `porter unicode61` index; run the retrieval, config and tier suites; run t
   `tokenize='porter unicode61'` in `src/openreview_cli/retrieval/storage.py:79`, and update
   every inline DDL that hardcodes `unicode61` in tests (e.g.
   `tests/unit/test_retrieval_offline.py:59`, `tests/unit/test_retrieval_engine.py`).
-- [ ] T013 [US1] (plan T1.1/T1.2, decisions 2, 13) Rewrite the retrieval section of
-  `docs/ARCHITECTURE.md:88` wholesale — it currently documents "hybrid BM25 + dense + RRF"
-  *and* `unicode61`; both die.
+- [X] T013 [US1] (plan T1.1, decision 2) Rewrite the tokenizer fragment of the retrieval
+  section in `docs/ARCHITECTURE.md:88`: `unicode61` → `porter unicode61`. Done on
+  `feat/035-post-measurement-cleanup` (the "hybrid BM25 + dense + RRF" wording is split out to
+  T043 and lands with plan T1.2).
+- [ ] T043 [US1] (plan T1.2, decision 13) Rewrite the retrieval section of
+  `docs/ARCHITECTURE.md:88` wholesale — it currently documents "hybrid BM25 + dense + RRF";
+  that wording dies with the dense path (T1.2, dense still exists today) — and add the
+  re-index sentence there: indexes built before this release must be re-created with
+  `openreview ingest` (no detection, no migration).
 - [ ] T014 [US1] (plan T1.2, decision 13) Delete the meaning-based search path: remove
   `src/openreview_cli/retrieval/dense.py` and `src/openreview_cli/retrieval/rrf.py`; make
   `src/openreview_cli/retrieval/engine.py:129-138` dispatch `sparse` only (delete
@@ -356,6 +362,12 @@ uv run python scripts/measure_slm_slots.py --grounding-accuracy --limit 20 --arm
 - [ ] T042 [P] Final validation: `uv run pre-commit run --all-files`,
   `uv run pytest -m "fast or slow" -q`, `uv run pytest -m memory -q` (solo), and
   `uv run openreview --help`.
+- [ ] T044 Deduplicate the `chunk_fts` DDL: the product copy in
+  `src/openreview_cli/retrieval/storage.py:73-81` is duplicated in four test fixtures
+  (`tests/unit/test_retrieval_offline.py:56`, `tests/unit/test_retrieval_engine.py:64,126,192`),
+  so every schema change must be made five times. Export the FTS DDL fragment from the product
+  module (or add a shared test helper that builds the table from the product's own DDL) and
+  convert the four fixtures to use it, so future schema changes land in one place.
 
 **Verification** (master plan Phase 4 block):
 ```bash
@@ -460,7 +472,7 @@ Every master-plan task maps here:
 | Plan task | tasks.md | Plan task | tasks.md |
 |---|---|---|---|
 | T1.1 | T009, T012, T013 | T2.3 | T029 |
-| T1.2 | T014, T015, T016, T017, T018 | T2.4 | T030, T031 |
+| T1.2 | T014, T015, T016, T017, T018, T043 | T2.4 | T030, T031 |
 | T1.3 | T003, T004, T005, T006, T007, T008 | T2.5 | T027 |
 | T1.4 | T010, T019 | T3.1 | T034 |
 | T1.5 | T010, T020 | T3.2 | T035, T036 |
@@ -469,4 +481,4 @@ Every master-plan task maps here:
 | T1.8 | T023 | Phase 4.2 | T038 |
 | T2.1 | T025 | Phase 4.3 | T039 |
 | T2.2 | T026, T028 | Phase 4.4 | T040 |
-| — | T001, T002, T024, T042 | Phase 4.5 | T041 |
+| — | T001, T002, T024, T042, T044 | Phase 4.5 | T041 |
