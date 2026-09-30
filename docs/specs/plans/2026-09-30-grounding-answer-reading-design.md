@@ -121,6 +121,13 @@ truncated JSON still fails — but visibly, per 4.4.
 - When merging `extra_params`, drop any key in `_LOCAL_ONLY_PARAMS` if the provider is not local — that is,
   when `info is None` (unknown provider: fail safe) or `info.is_local` is false (`gateway/models.py:38`).
   Log at debug level, not warning: the drop is expected, not an error.
+- **The fallback path needs the same rule at a second site — confirmed by reading the code, not assumed.**
+  `_call_with_fallback` (`router.py:497`) reuses the kwargs dict built for the primary and re-dispatches it
+  with only the model string swapped (`:540`, `:565`, `:568`): it pops the primary's credentials (`:556-557`)
+  and sets the fallback's `api_base` (`:562`), but it never re-runs the merge, so `extra_params` merged for the
+  primary's provider survive untouched. With a local primary and a cloud fallback, the cloud model would
+  therefore receive `response_format`. The fallback's own provider info is already resolved at `:560`, so the
+  same strip applies there. One rule, two call sites, held in a small shared helper.
 - Config default: the `grounding` slot gains
   `extra_params={"response_format": {"type": "json_object"}}` in `config/loader.py:104-106`.
 - The installed litellm honours this for Ollama: `response_format={"type":"json_object"}` becomes
@@ -192,7 +199,7 @@ Request side: grounding slot config → `extra_params` → router merges, droppi
 | `tests/unit/test_grounding_discriminator.py` | Existing tests unaffected (the suite's only parse input is a bare array at `:22`); batched shape links `claim_index` correctly; the counter increments on an unreadable answer and stays put on a readable one; the gateway-failure path does not touch the counter |
 | `tests/unit/test_gateway_router.py` | `response_format` is forwarded when the provider is local; dropped when it is not; dropped when the provider is unknown; other `extra_params` still forwarded (no regression to existing `extra_params` tests) |
 | `tests/unit/test_grounding_harness.py` | The receipt carries `unreadable_answers`, and it is zero when every answer parses |
-| fallback path | A fallback to a cloud model must not inherit `response_format` — *to confirm during the plan stage how the fallback path builds its kwargs; if it does not route through the same gate, the fix there is part of this task* |
+| fallback path | A cloud fallback must not inherit `response_format`. Confirmed unprotected by a primary-only rule, so this pins a second strip inside `_call_with_fallback` (`router.py:497`, provider info at `:560`): a local primary with a cloud fallback sends no `response_format`, while a local fallback still receives it |
 
 Commands:
 
@@ -245,7 +252,7 @@ key that can spend, so it is not part of CI.
 |---|---|
 | A cloud grounding user is affected by the new request | Local-only gate; `response_format` never reaches a non-local provider; tested for the local, cloud and unknown-provider cases |
 | The batched caller breaks | Prompt keeps the array contract for several claims; a three-object batch test; `_BATCH_SIZE` and both flush sites unchanged |
-| The fallback model inherits the flag | Explicit test; the fallback path is inspected during planning and fixed here if it does not route through the gate |
+| The fallback model inherits the flag | **Confirmed real**: a rule placed only in `_get_litellm_kwargs` does not protect a cloud fallback, because `_call_with_fallback` re-dispatches the primary's kwargs (`:540-568`) and that builder resolves only the primary's provider (`:373`). The strip is applied at the fallback site too, keyed to the fallback's provider info, tested for local→cloud and local→local |
 | A parameter drop is mistaken for a bug | Debug-level log explains it; the existing protected-key warning is untouched |
 | Truncated answers remain unreadable | Not solved by this change, but now counted and visible; the local JSON request reduces the chance |
 | The receipt guard or the CI gate erodes | Neither is edited; the existing known failure (`tests/unit/test_benchmark_receipts.py`, issue #180) is left alone |
@@ -273,8 +280,8 @@ key that can spend, so it is not part of CI.
 - The reader unwraps through the shared helper, takes the first value `raw_decode` accepts, accepts a single
   object as a one-element list, and still parses the batched shape — each covered by a test that fails before
   the change.
-- The local grounding request asks for JSON only, with tests proving the cloud and unknown-provider paths are
-  unchanged, and the fallback path verified.
+- The local grounding request asks for JSON only, with tests proving the cloud, unknown-provider and
+  cloud-fallback paths are unchanged.
 - The prompt matches what both callers send.
 - The receipt shows unreadable answers separately from uncertain ones.
 - The local grounding job has been re-run in CI, its numbers recorded against the baseline, and the wrong
@@ -289,8 +296,9 @@ key that can spend, so it is not part of CI.
   (privacy forbids logging it), so the fixes target the four known failure modes plus the JSON request. The
   new counter is what will tell us whether they were the right four. If unreadable answers persist after this
   change, the next lever is the local model and its parameters, not the reader.
-- **Whether the fallback path routes through the same kwargs builder** is unverified; the plan stage must check
-  it, and section 7 makes it a required test.
+- **The fallback path does not route through the same merge** — verified on 2026-09-30 (see 4.2 and 9). What
+  remains unverified is only whether any bundled configuration ships a non-`None` fallback; none was found
+  under `src/`, so the exposure is latent for users who configure one.
 - **Whether two back-to-back arrays ever occur in practice** is unverified; the chosen behaviour (first value
   wins) is safe either way.
 - **Correction carried from the diagnosis:** the handoff wrote bare `config/loader.py` for a path that is
