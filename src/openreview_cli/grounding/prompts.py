@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 from typing import TYPE_CHECKING, Any
+
+from openreview_cli.llm_json import strip_fences
 
 if TYPE_CHECKING:
     from openreview_cli.grounding.models import CitationProvenance, GroundingVerdict
@@ -96,19 +97,12 @@ def parse_grounding_response(
 
     results: list[tuple[int, GroundingVerdict, list[CitationProvenance], float]] = []
 
-    # Try to extract JSON array from response
-    json_str = _extract_json_array(response)
-    if json_str is None:
-        logger.warning("No JSON array found in grounding response")
+    data = _first_json_value(response)
+    if data is None:
         return results
+    items: list[Any] = data if isinstance(data, list) else [data]
 
-    try:
-        data: list[dict[str, Any]] = json.loads(json_str)
-    except json.JSONDecodeError as e:
-        logger.warning("Failed to parse grounding JSON: %s", e)
-        return results
-
-    for item in data:
+    for item in items:
         if not isinstance(item, dict):
             continue
         claim_index = item.get("claim_index")
@@ -147,20 +141,23 @@ def parse_grounding_response(
     return results
 
 
-def _extract_json_array(text: str) -> str | None:
-    """Extract the first JSON array from a text response.
+def _first_json_value(text: str) -> Any | None:
+    """Return the first JSON value in ``text``, or None when there is none.
 
-    Handles cases where the LLM wraps JSON in markdown code blocks
-    or includes explanatory text before/after the JSON.
+    The payload is unwrapped through the project-wide fence helper first, then
+    candidate start positions are offered to the standard library decoder. That
+    decoder understands quoted strings and escapes, so a bracket or brace inside
+    a reason string cannot unbalance the scan, and it stops at the end of the
+    first valid value, so trailing prose is ignored.
     """
-    # First try to find a JSON array in a code block
-    code_block_match = re.search(r"```(?:json)?\s*(\[[\s\S]*?\])\s*```", text, re.IGNORECASE)
-    if code_block_match:
-        return code_block_match.group(1)
-
-    # Next try to find a bare JSON array
-    array_match = re.search(r"(\[[\s\S]*\])", text, re.DOTALL)
-    if array_match:
-        return array_match.group(1)
-
+    candidate_text = strip_fences(text)
+    decoder = json.JSONDecoder()
+    for index, char in enumerate(candidate_text):
+        if char not in "[{":
+            continue
+        try:
+            value, _ = decoder.raw_decode(candidate_text, index)
+        except json.JSONDecodeError:
+            continue
+        return value
     return None
