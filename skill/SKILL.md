@@ -172,14 +172,13 @@ CLI: `openreview ingest <file.ndax>` → `openreview retrieve "<query>" [file]`;
 
 Required: for `ingest`, a JSON file containing a list of chunk dicts (`.ndax` is a user-applied extension; any JSON list works). For `retrieve`, a query string; `file` falls back to last indexed document.
 
-Key constraint: no CLI command produces `.ndax`. To build one: `openreview chunk <doc> --format json` (stdout) → save to file → `ingest` (`chunk` is OPTIONAL — see Optional Capabilities). `precheck review` does NOT require chunking or indexing. **Retrieval is keyword-only (BM25) — there is no retrieval-method choice. `--rerank` is opt-in but inert: the `reranking` slot was removed and no local reranker works on legal text (see `docs/ARCHITECTURE.md` "Honest limitations"), so it returns the original keyword order.**
+Key constraint: no CLI command produces `.ndax`. To build one: `openreview chunk <doc> --format json` (stdout) → save to file → `ingest` (`chunk` is OPTIONAL — see Optional Capabilities). `precheck review` does NOT require chunking or indexing. **Retrieval is keyword-only (BM25) — there is no retrieval-method choice and no reranker. The reranker flags were removed along with the `reranking` socket: no local reranker works on legal text (see `docs/ARCHITECTURE.md` "Honest limitations").**
 
 #### `retrieve` and `ingest` flags
 
 These flags are part of the index-and-retrieve surface and are commonly needed but were not formally documented:
 
 - `retrieve --top-k <int>`: number of top chunks to return (1–50). The default is implementation-defined; raise it for broader context, lower it for tight scoping. Source: `app.py:2295`.
-- `retrieve --rerank` / `--rerank-depth <int>`: enable the opt-in cross-encoder reranker and choose how many chunks to re-rank before truncating to `--top-k`. With the `reranking` slot removed, it is inert and returns the original keyword order; `--force-rerank` overrides the validation warning. Source: `app.py:2296-2304`.
 - `retrieve --format <terminal|json>`: output format; `terminal` is the default. Source: `app.py:2305`.
 - `retrieve --no-header`: suppress the column header in text-format output (useful when piping into other tools). Source: `app.py:2307`.
 - `retrieve --db-dir <path>`: override the default DB directory. By default, the CLI uses `platformdirs.user_data_dir("openreview") / "openreview.db"` (Linux/macOS: `~/.local/share/openreview/openreview.db`); `--db-dir` lets the user point at a different index for isolation, testing, or multi-tenant setups. Source: `app.py:2306` (declaration; same parameter name used for `ingest`, `retrieve`, and other index commands).
@@ -512,7 +511,6 @@ Each example: **intent → workflow selection → commands → prerequisites →
 - **Intent:** "What does the confidentiality section say?" — user confirms this document was indexed before.
 - **Workflow:** Retrieve (narrow factual question over an existing index).
 - **Command:** `openreview retrieve "confidentiality obligations" --top-k 3 --format json`
-- **Reranker note:** if a reranker validation warning appears and the user still wants it, re-run with `--force-rerank`.
 - **Prerequisites:** An index exists for the document (`ingest` was run previously; confirm with `index-status <file.ndax>`). If no index exists, do **not** run `retrieve` — fall back to `precheck review` (Rule 5) or build the index (E-5).
 - **Result meaning:** Ranked chunks with `chunk_id`, `text`, and `score`; higher score = better match. Chunk text is the retrieval evidence.
 - **Next action:** Quote the matched chunk(s) as the answer, with the clause heading if present. If the user wants a deeper per-clause analysis, offer `precheck review`.

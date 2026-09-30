@@ -18,8 +18,8 @@ if TYPE_CHECKING:
 
 
 def _result_limit(query: RetrievalQuery) -> int:
-    """Number of candidates to materialize (the rerank pool when reranking)."""
-    return query.rerank_depth if query.rerank else query.top_k
+    """Number of candidates to materialize for a query."""
+    return query.top_k
 
 
 class RetrievalEngine:
@@ -58,8 +58,7 @@ class RetrievalEngine:
             query: The retrieval query parameters.
 
         Returns:
-            Ranked list of RetrievalResult (length = top_k, or rerank_depth when the
-            query reranks).
+            Ranked list of RetrievalResult (length = top_k).
 
         Raises:
             IndexNotFoundError: If the index database doesn't exist or status is wrong.
@@ -122,7 +121,6 @@ class RetrievalEngine:
                     score=1.0 / rank if rank > 0 else 0.0,  # Simple score: inverse rank
                     method="sparse",
                     rank_sparse=rank,
-                    rerank_score=None,
                     char_start=chunk.get("char_start", 0),
                     char_end=chunk.get("char_end", 0),
                 )

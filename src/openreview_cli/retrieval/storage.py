@@ -91,30 +91,6 @@ class RetrievalStorage:
                 INSERT INTO chunk_fts(rowid, chunk_id, text, clause_heading)
                 VALUES (new.rowid, new.chunk_id, new.text, new.clause_heading);
             END;
-
-            CREATE TABLE IF NOT EXISTS rerank_validation (
-                model_id              TEXT NOT NULL,
-                document_type         TEXT NOT NULL,
-                precision_with        REAL CHECK(precision_with BETWEEN 0.0 AND 1.0),
-                precision_without     REAL CHECK(precision_without BETWEEN 0.0 AND 1.0),
-                degradation_pp        REAL,
-                benchmark_timestamp   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-                PRIMARY KEY (model_id, document_type)
-            );
-
-            CREATE TABLE IF NOT EXISTS rerank_validation_log (
-                id                    INTEGER PRIMARY KEY AUTOINCREMENT,
-                model_id              TEXT NOT NULL,
-                document_type         TEXT NOT NULL,
-                precision_with        REAL CHECK(precision_with BETWEEN 0.0 AND 1.0),
-                precision_without     REAL CHECK(precision_without BETWEEN 0.0 AND 1.0),
-                degradation_pp        REAL,
-                consecutive           INTEGER NOT NULL DEFAULT 0,
-                run_timestamp         TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_val_log_lookup
-                ON rerank_validation_log(model_id, document_type, run_timestamp DESC);
         """)
 
     def insert_chunk(self, chunk: dict[str, Any]) -> None:
@@ -190,96 +166,6 @@ class RetrievalStorage:
                 f"Index database at {self.db_path} is damaged and cannot be read: {exc}. "
                 "Re-run `openreview ingest <file>` to rebuild."
             ) from exc
-
-    def insert_rerank_validation(
-        self,
-        model_id: str,
-        document_type: str,
-        precision_with: float,
-        precision_without: float,
-        degradation_pp: float,
-    ) -> int:
-        """Insert or update a reranker validation record.
-
-        Returns the consecutive degradation count (how many recent runs all
-        showed degradation_pp > 0). Uses the validation log to track history.
-
-        Uses INSERT OR REPLACE to handle the PRIMARY KEY (model_id, document_type).
-        """
-        # Write consolidated record
-        self.conn.execute(
-            """INSERT OR REPLACE INTO rerank_validation
-               (model_id, document_type, precision_with, precision_without, degradation_pp)
-               VALUES (?, ?, ?, ?, ?)""",
-            (model_id, document_type, precision_with, precision_without, degradation_pp),
-        )
-
-        # Compute consecutive degradation count from previous log entries.
-        # FR-5: degradation = Precision@5 with reranker <= without reranker,
-        # i.e. degradation_pp <= 0 (where degradation_pp = (with - without) * 100).
-        is_degraded = degradation_pp <= 0
-        prev = self.get_rerank_validation_log(model_id, document_type, limit=3)
-        consecutive = 0
-        if is_degraded:
-            # Count how many consecutive recent entries also showed degradation
-            for entry in prev:
-                prev_pp = entry.get("degradation_pp", 0)
-                if prev_pp is not None and float(prev_pp) <= 0:  # type: ignore[arg-type]
-                    consecutive += 1
-                else:
-                    break
-            consecutive += 1  # count the current run
-
-        # Write log entry
-        self.conn.execute(
-            """INSERT INTO rerank_validation_log
-               (model_id, document_type, precision_with, precision_without, degradation_pp, consecutive)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (
-                model_id,
-                document_type,
-                precision_with,
-                precision_without,
-                degradation_pp,
-                consecutive,
-            ),
-        )
-
-        self.conn.commit()
-        return consecutive
-
-    def get_rerank_validation(
-        self,
-        model_id: str,
-        document_type: str,
-    ) -> dict[str, object] | None:
-        """Read a reranker validation record, or None if not found."""
-        cursor = self.conn.execute(
-            "SELECT * FROM rerank_validation WHERE model_id = ? AND document_type = ?",
-            (model_id, document_type),
-        )
-        row = cursor.fetchone()
-        if row is None:
-            return None
-        return dict(row)
-
-    def get_rerank_validation_log(
-        self,
-        model_id: str,
-        document_type: str,
-        limit: int = 3,
-    ) -> list[dict[str, object]]:
-        """Read the last N reranker validation log entries for a (model, doc_type).
-
-        Returns entries ordered by run_timestamp DESC (newest first).
-        """
-        cursor = self.conn.execute(
-            "SELECT * FROM rerank_validation_log "
-            "WHERE model_id = ? AND document_type = ? "
-            "ORDER BY run_timestamp DESC LIMIT ?",
-            (model_id, document_type, limit),
-        )
-        return [dict(row) for row in cursor.fetchall()]
 
     def close(self) -> None:
         """Close the database connection."""
