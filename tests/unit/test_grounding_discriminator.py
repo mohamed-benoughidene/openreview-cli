@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -1105,11 +1106,19 @@ def test_an_unreadable_answer_increments_the_counter(mock_gateway: MagicMock) ->
 
 
 def test_a_readable_answer_leaves_the_counter_at_zero(mock_gateway: MagicMock) -> None:
+    """A counter that never increments also "leaves" the count at zero, so make
+    the SAME discriminator spend its next call on an unreadable answer: only a
+    zero that then moves proves the zero came from a readable reply."""
     d = CitationGroundingDiscriminator(mode="strict", gateway=mock_gateway)
 
     d.ground_claim("claim text", "4.3", "clause text")
 
     assert d.unreadable_answers == 0
+
+    mock_gateway.chat.return_value = "I cannot help with that."
+    d.ground_claim("claim text", "4.3", "clause text")
+
+    assert d.unreadable_answers == 1
 
 
 def test_a_gateway_failure_is_not_counted_as_unreadable(mock_gateway: MagicMock) -> None:
@@ -1121,6 +1130,38 @@ def test_a_gateway_failure_is_not_counted_as_unreadable(mock_gateway: MagicMock)
     assert verdict is GroundingVerdict.UNCERTAIN
     assert confidence == 0.0
     assert d.unreadable_answers == 0
+
+
+def test_only_the_claims_missing_from_a_partial_batch_are_counted(
+    mock_gateway: MagicMock, sample_report: MagicMock, sample_document: MagicMock
+) -> None:
+    """The reader answered 1 of 3 claims; the other 2 are still unreadable.
+
+    A partially parsable answer used to count zero, so a model that dropped most
+    of its verdicts looked like a fully readable run.
+    """
+    sample_report.assessments = sample_report.assessments[:3]
+    mock_gateway.chat.return_value = json.dumps(
+        [
+            {
+                "claim_index": 1,
+                "verdict": "grounded",
+                "provenances": [],
+                "confidence": 0.9,
+                "reason": None,
+            }
+        ]
+    )
+    d = CitationGroundingDiscriminator(mode="strict", gateway=mock_gateway)
+
+    cg_report = d.ground_report(sample_report, sample_document)
+
+    assert d.unreadable_answers == 2
+    assert {v.claim_index: v.verdict for v in cg_report.verdicts} == {
+        0: GroundingVerdict.UNCERTAIN,
+        1: GroundingVerdict.GROUNDED,
+        2: GroundingVerdict.UNCERTAIN,
+    }
 
 
 def test_an_unreadable_batch_counts_every_claim_in_it(
