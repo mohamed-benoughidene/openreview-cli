@@ -452,17 +452,32 @@ def _preflight_arm_reachability() -> tuple[bool, str | None]:
     return True, None
 
 
+def _ensure_cost_ledger_database() -> None:
+    """Create the app database (with migrations) before the first gateway call.
+
+    The gateway checks its cost limits by reading ``cost_logs`` *before* it dispatches a
+    call, and resolves that database in ``Gateway.__init__`` (``gateway/router.py``) as
+    ``get_data_dir() / "openreview.db"`` by default. A fresh CI checkout has no such file,
+    so the very first gateway call — including the grounding arm's pre-flight reachability
+    check — dies with ``sqlite3.OperationalError: no such table: cost_logs`` before any
+    model is reached. Initialising that same path here is the guard: the review mode and
+    the discriminator build already did this, but the grounding pre-flight ran before both.
+    """
+    from openreview_cli.config.paths import get_data_dir
+    from openreview_cli.storage.database import init_database
+
+    init_database(get_data_dir() / "openreview.db")
+
+
 def _make_discriminator() -> Any:
     """Build the discriminator under test: real Gateway, throwaway audit dir."""
     import tempfile
 
-    from openreview_cli.config.paths import get_data_dir
     from openreview_cli.grounding.discriminator import CitationGroundingDiscriminator
-    from openreview_cli.storage.database import init_database
 
-    # The gateway's cost-limit check reads the app database, so create it (with
+    # The gateway's cost-limit check reads the app database, so it must exist (with
     # migrations) first (the `no such table: cost_logs` bug).
-    init_database(get_data_dir() / "openreview.db")
+    _ensure_cost_ledger_database()
     audit_dir = tempfile.mkdtemp(prefix="grounding_accuracy_audit_")
     return CitationGroundingDiscriminator(mode="strict", output_dir=audit_dir)
 
@@ -625,6 +640,12 @@ def run_grounding_accuracy(
     # broken gateway call becomes a matrix full of ``uncertain`` — a measurement that looks
     # like model uncertainty but is really "the call never happened" (no local server, or a
     # cloud key at its spend limit). The PII gate is already satisfied by the strip above.
+    #
+    # The pre-flight is itself a gateway call, and the gateway reads its cost ledger
+    # (``cost_logs``) *before* it dispatches, so the app database must exist by now — a fresh
+    # CI checkout has no such file (the `no such table: cost_logs` failure). Initialise the
+    # same path the gateway resolves by default, before any gateway call of any kind.
+    _ensure_cost_ledger_database()
     reachable, preflight_error = _preflight_arm_reachability()
     if not reachable:
         reason = (
@@ -820,10 +841,7 @@ def main(argv: list[str] | None = None) -> None:
     # The gateway's cost-limit check reads the app database, so create it (with
     # migrations) first. Without this every model call fails with
     # "no such table: cost_logs" and the pipeline silently returns fallbacks.
-    from openreview_cli.config.paths import get_data_dir
-    from openreview_cli.storage.database import init_database
-
-    init_database(get_data_dir() / "openreview.db")
+    _ensure_cost_ledger_database()
 
     from openreview_cli.review import run_review
     from openreview_cli.review.playbook import BUNDLED_PLAYBOOKS

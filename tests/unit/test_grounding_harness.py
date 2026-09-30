@@ -28,6 +28,20 @@ from tests.helpers.benchmark_scripts import load_benchmark_script
 
 SCRIPT = load_benchmark_script("measure_slm_slots")
 
+
+@pytest.fixture(autouse=True)
+def _isolate_default_data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep the gateway's default database out of the developer's real data tree.
+
+    ``run_grounding_accuracy`` creates the app database (``get_data_dir()/openreview.db``)
+    before the pre-flight gateway call, so every test here must redirect platformdirs at a
+    throwaway tree rather than writing into ``~/.local/share/openreview``.
+    """
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-config"))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "xdg-cache"))
+
+
 # A qualifying paragraph: >= 200 chars, >= 2 sentences, and a first *qualifying* sentence
 # (the first sentence is a short heading, below the word/char bar).
 PARA_A = (
@@ -511,3 +525,58 @@ class TestGroundingArmPreflight:
         captured = capsys.readouterr().out
         assert "WARNING" in captured
         assert "uncertain" in captured.lower()
+
+
+class TestGroundingInitialisesCostLedgerBeforePreflight:
+    """The gateway reads its cost ledger (``cost_logs``) *before* it dispatches a call, so
+    the grounding path must have created the app database before the pre-flight gateway
+    call. A fresh CI checkout has no database file, and the pre-flight used to die with
+    ``sqlite3.OperationalError: no such table: cost_logs`` before any model was reached
+    (the ``grounding-accuracy`` CI job failure). All offline: no model, no network.
+    """
+
+    def test_database_is_initialised_before_the_preflight_call(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        corpus = _tiny_corpus(tmp_path)
+        out = tmp_path / "ga.json"
+        order: list[str] = []
+        _stub_reachable_slots(monkeypatch)
+
+        monkeypatch.setattr(SCRIPT, "_ensure_cost_ledger_database", lambda: order.append("ledger"))
+
+        def _preflight() -> tuple[bool, str | None]:
+            order.append("preflight")
+            return False, "ConnectionError: Connection refused"
+
+        monkeypatch.setattr(SCRIPT, "_preflight_arm_reachability", _preflight)
+
+        with pytest.raises(SystemExit):
+            SCRIPT.run_grounding_accuracy(
+                corpus_dir=corpus, limit=2, arm="configured", out=out, no_pii=True
+            )
+
+        # The ledger is created before the pre-flight gateway call — not after it (which was
+        # the bug: the only init happened inside the discriminator build, past the pre-flight).
+        assert order[:2] == ["ledger", "preflight"]
+
+    def test_initialiser_creates_the_cost_ledger_table_at_the_gateway_default_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # A fresh checkout: the default data dir holds no database at all.
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "fresh-data"))
+
+        from openreview_cli.config.paths import get_data_dir
+        from openreview_cli.storage.costs import check_daily_limit
+
+        # This is the path the Gateway resolves for its cost ledger by default
+        # (``gateway/router.py``: ``get_data_dir() / "openreview.db"``).
+        db_path = get_data_dir() / "openreview.db"
+        assert not db_path.exists()
+
+        SCRIPT._ensure_cost_ledger_database()
+
+        assert db_path.exists()
+        # The gateway's own pre-dispatch check now succeeds instead of raising
+        # ``no such table: cost_logs`` (empty ledger is within every limit).
+        assert check_daily_limit(db_path, max_cents=10_000) is True
