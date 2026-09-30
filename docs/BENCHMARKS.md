@@ -237,6 +237,24 @@ This measures **segmentation** (whether an expert-labeled span lies fully inside
 
 **Reproduction:** run `uv run python scripts/benchmark_cuad_segmentation.py` (writes `.benchmark-reports/cuad-segmentation.json`). To obtain the corpus, download CUAD v1 from [atticusprojectai.org/cuad](https://www.atticusprojectai.org/cuad) (CC BY 4.0). (Note: `scripts/benchmark_legalbenchrag.py` does not download a corpus — it only reads an already-present one from `/tmp/opencode/legalbenchrag_data/`.) The corpus is gitignored (`data/` in `.gitignore`).
 
+## CUAD keyword retrieval (tokenizer comparison)
+
+The shipped index is SQLite FTS5 with `tokenize='porter unicode61'` and `prefix='2 3'` (`src/openreview_cli/retrieval/storage.py`). This measures what that configuration retrieves, reusing the shipped ingest path and chunker (no dense/rerank path exists): each of the 4,042 CUAD queries is searched against its own contract's index and scored by whether a retrieved chunk's document span overlaps the query's expert-labeled answer span.
+
+| Metric | shipped `porter unicode61` | `unicode61` (no stemming) | Delta (porter − unicode61) |
+|---|---|---|---|
+| hit@1 | 0.0435 | 0.0312 | +0.0123 |
+| hit@5 | 0.3206 | 0.2548 | +0.0658 |
+| MRR@5 | 0.1274 | 0.1001 | +0.0273 |
+
+Sample: 4,042 queries over 462 contracts — every query in the committed benchmark — with 73,222 chunks indexed and ~48 s per arm.
+
+Last verified: 2026-09-30 @ 8bd72a3 (receipts: docs/benchmarks/results/cuad-retrieval-porter.json, docs/benchmarks/results/cuad-retrieval-unicode61.json).
+
+**`porter` still wins, and now on reproducible evidence.** The shipped choice was originally made on a comparison over 1,536 queries whose harness was never committed and whose query count matches no benchmark in the tree, so that evidence could not be re-run. The two receipts above are the re-derivation on the committed set: they reproduce the direction (porter ahead on all three metrics) but not the magnitudes — the remembered claim of **+1.7 hit@1 / +2.1 hit@5 / +1.9 MRR** percentage points becomes **+1.23 / +6.58 / +2.73** here, with the hit@5 gap more than three times larger than claimed. Absolute accuracy is low: keyword search returns the answer span at rank 1 for 4.4% of queries. The honest reading is that `porter unicode61` is the better of two weak configurations, not that retrieval is good on this corpus.
+
+**Reproduction:** `uv run python scripts/measure_retrieval_accuracy.py --tokenizer porter --out .benchmark-reports/retrieval-porter.json`, and the same with `--tokenizer unicode61`. Both arms are offline (SQLite FTS5, no model calls). Two caveats are recorded in the receipts and bound the claim: ground truth is character-span overlap rather than answer correctness (a retrieved chunk that merely touches a labeled span counts as relevant), and the CUAD `.txt` corpus cannot go through the product parser (PDF/DOCX only), so the harness drives the product chunker directly and chunk boundaries approximate a real parse. This measures retrieval, not answering: nothing here checks whether an extracted answer is correct.
+
 ## MAUD public benchmark (segmentation and timing)
 
 Parsing scale against the [MAUD](https://www.atticusprojectai.org/maud) dataset (CC BY 4.0): 150
@@ -256,7 +274,7 @@ This measures **segmentation**, not query-answering accuracy and not deal-point 
 
 ## Measured vs. not measured
 
-**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (96.4% recall, span-level predicate), review accuracy on 12 NDA clauses (90.9% F1; provider not recorded), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale, timing, and clause segmentation), MAUD public benchmark on 150 M&A documents (scale, timing, and clause segmentation), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,935 tests), accuracy-test suite (21 passed, 0 failed).
+**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (96.4% recall, span-level predicate), review accuracy on 12 NDA clauses (90.9% F1; provider not recorded), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale, timing, and clause segmentation), CUAD keyword retrieval over 462 contracts on the full 4,042-query set (both tokenizer arms), MAUD public benchmark on 150 M&A documents (scale, timing, and clause segmentation), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,935 tests), accuracy-test suite (21 passed, 0 failed).
 
 Last verified: 2026-09-25 @ fdea262 (receipt: docs/benchmarks/results/test-collection.json).
 Last verified: 2026-09-24 @ 882568c (receipt: docs/benchmarks/results/accuracy-suite.json).
