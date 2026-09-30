@@ -267,7 +267,7 @@ Last verified: 2026-09-24 @ 882568c (receipt: docs/benchmarks/results/accuracy-s
 |---|---|---|
 | Full LLM review latency + cost per review | needs API keys | `openreview gateway costs` (SQLite `cost_logs`) + `scripts/benchmark_review_accuracy.py` |
 | Graph clustering | needs legal-bert download | `openreview graph` with `--cluster-clauses` |
-| Reranker effect | unmeasured — disabled by default | opt-in `--rerank` on a labeled retrieval corpus (a 26-query pilot was inconclusive) |
+| Reranker effect | not applicable — the reranker feature was removed with the `reranking` socket (see `docs/ARCHITECTURE.md`); a 26-query pilot had been inconclusive | — |
 | MAUD deal-point accuracy | no bundled playbook's category taxonomy matches MAUD's deal-point labels: the nearest mode, `buycheck`, scores against the `asset-purchase-v1` playbook (purchase price, included/excluded assets, liabilities, reps and warranties, closing conditions), not MAUD's merger-agreement deal points | map the deal points onto a playbook whose categories match, then run `openreview benchmark baseline --modes=buycheck` (or a new M&A mode) |
 | CUAD query-answering accuracy | the CUAD section measures clause segmentation (span containment and enclosure tightness), not answering the 4,042 expert queries | score predicted answers against the CUAD query labels, e.g. extend `scripts/benchmark_cuad_segmentation.py` with an answer-scoring pass |
 | ContractNLI query-answering accuracy | the ContractNLI section measures span extraction and playbook-category coverage, not the entailment question itself | score entailment (entailment / contradiction / not-mentioned) against the 977 annotated tests |

@@ -17,17 +17,11 @@ class RetrievalQuery:
         method: Retrieval method. Keyword search ("sparse") is the only method;
             anything else is rejected.
         top_k: Number of results (1-50).
-        rerank: Enable cross-encoder reranker.
-        rerank_depth: Number of candidates to rerank (raised to top_k when smaller).
-        force_rerank: Override reranker validation warning.
     """
 
     query_text: str
     method: str = "sparse"
     top_k: int = 5
-    rerank: bool = False
-    rerank_depth: int = 20
-    force_rerank: bool = False
 
     def __post_init__(self) -> None:
         if not self.query_text or not self.query_text.strip():
@@ -38,7 +32,6 @@ class RetrievalQuery:
             )
         if not 1 <= self.top_k <= 50:
             raise ValueError(f"top_k must be between 1 and 50, got {self.top_k}")
-        self.rerank_depth = max(self.rerank_depth, self.top_k)
 
 
 @dataclass
@@ -55,7 +48,6 @@ class RetrievalResult:
         score: Final relevance score (0.0-1.0).
         method: Retrieval method used.
         rank_sparse: Rank in BM25 results (None if not in top-K).
-        rerank_score: Cross-encoder score (None if reranker not used).
         char_start: Character offset (start) in the original document.
         char_end: Character offset (end) in the original document.
     """
@@ -69,7 +61,6 @@ class RetrievalResult:
     score: float
     method: str
     rank_sparse: int | None = None
-    rerank_score: float | None = None
     char_start: int = 0
     char_end: int = 0
 

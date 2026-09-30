@@ -5,7 +5,6 @@ from __future__ import annotations
 import json as json_lib
 from pathlib import Path
 from typing import Any, cast
-from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
@@ -378,10 +377,10 @@ class TestRetrieveCommand:
             assert "Section 3.1" in sec1["hierarchy_chain"][1]
 
 
-class TestRetrieveTopKAboveDefaultRerankDepth:
-    """`--top-k` above the default `--rerank-depth` (20) must work without touching `--rerank`."""
+class TestRetrieveTopKAboveDefault:
+    """`--top-k` above the built-in default (5) must widen the candidate set."""
 
-    def test_retrieve_top_k_above_default_rerank_depth(
+    def test_retrieve_top_k_above_default(
         self,
         runner: CliRunner,
         indexed_db: Path,
@@ -416,42 +415,6 @@ class TestRetrieveTopKAboveDefaultRerankDepth:
             "chunk-005",
         ]
 
-    @patch("openreview_cli.gateway.router.Gateway")
-    def test_retrieve_top_k_30_with_rerank_applies_scores_without_raising(
-        self,
-        mock_cls: MagicMock,
-        runner: CliRunner,
-        indexed_db: Path,
-    ) -> None:
-        """`--top-k 30 --rerank` must not raise on the rerank path and must apply scores.
-
-        The fixture yields only 7 candidates, so this does not prove the
-        candidate pool widened to 30 — it guards that the rerank path accepts a
-        `--top-k` above the default rerank depth and that the reranked scores
-        are written onto the results.
-        """
-        mock_cls.return_value.rerank.return_value = [{"index": 0, "relevance_score": 0.9}]
-        result = runner.invoke(
-            app,
-            [
-                "retrieve",
-                "confidentiality",
-                str(FIXTURE_PATH),
-                "--top-k",
-                "30",
-                "--rerank",
-                "--format",
-                "json",
-                "--db-dir",
-                str(indexed_db.parent),
-            ],
-        )
-        assert result.exit_code == 0, f"exit {result.exit_code}: {result.output}"
-        data = _extract_json_from_output(result.output)
-        assert len(data["results"]) == 7
-        assert data["results"][0]["rerank_score"] == 0.9
-        assert data["results"][1]["rerank_score"] == 0.0
-
     def test_retrieve_rejects_top_k_above_50(self, runner: CliRunner, indexed_db: Path) -> None:
         result = runner.invoke(
             app,
@@ -467,49 +430,6 @@ class TestRetrieveTopKAboveDefaultRerankDepth:
         )
         assert result.exit_code == 1
         assert "top_k" in result.output
-
-
-class TestRetrieveRerankDepthFromConfig:
-    """`retrieval.rerank_depth` must drive the rerank candidate pool, like the flag."""
-
-    @patch("openreview_cli.gateway.router.Gateway")
-    def test_retrieve_rerank_depth_from_config_limits_the_candidate_pool(
-        self,
-        mock_cls: MagicMock,
-        runner: CliRunner,
-        indexed_db: Path,
-    ) -> None:
-        config_path = get_config_dir() / "config.yml"
-        load_config(config_path)
-        set_config_value(config_path, "retrieval.rerank_depth", "3")
-
-        mock_cls.return_value.rerank.return_value = [
-            {"index": 2, "relevance_score": 0.99},
-            {"index": 0, "relevance_score": 0.50},
-            {"index": 5, "relevance_score": 0.98},
-        ]
-
-        result = runner.invoke(
-            app,
-            [
-                "retrieve",
-                "confidential information",
-                str(FIXTURE_PATH),
-                "--top-k",
-                "2",
-                "--rerank",
-                "--format",
-                "json",
-                "--db-dir",
-                str(indexed_db.parent),
-            ],
-        )
-        assert result.exit_code == 0, f"exit {result.exit_code}: {result.output}"
-        data = _extract_json_from_output(result.output)
-        # A pool of rerank_depth=3 stops before plain-rank-6 chunk-008 (index 5);
-        # only indices 0..2 are candidates, so chunk-008 can never be promoted.
-        assert len(mock_cls.return_value.rerank.call_args.args[2]) == 3
-        assert [r["chunk_id"] for r in data["results"]] == ["chunk-006", "chunk-003"]
 
 
 class TestNoMethodOption:

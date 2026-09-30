@@ -9,25 +9,16 @@ class TestRetrievalQuery:
         assert q.query_text == "confidentiality clause"
         assert q.method == "sparse"
         assert q.top_k == 5
-        assert q.rerank is False
-        assert q.rerank_depth == 20
-        assert q.force_rerank is False
 
     def test_creates_with_all_fields(self) -> None:
         q = RetrievalQuery(
             query_text="limitation of liability",
             method="sparse",
             top_k=10,
-            rerank=True,
-            rerank_depth=15,
-            force_rerank=True,
         )
         assert q.query_text == "limitation of liability"
         assert q.method == "sparse"
         assert q.top_k == 10
-        assert q.rerank is True
-        assert q.rerank_depth == 15
-        assert q.force_rerank is True
 
     def test_accepts_sparse_method(self) -> None:
         q = RetrievalQuery(query_text="test", method="sparse")
@@ -58,26 +49,10 @@ class TestRetrievalQuery:
             RetrievalQuery(query_text="test", top_k=51)
         assert "top_k" in str(exc.value).lower()
 
-    def test_rerank_depth_is_raised_to_top_k(self) -> None:
-        q = RetrievalQuery(query_text="test", top_k=30)
-        assert q.rerank_depth == 30
-
-    def test_explicit_rerank_depth_above_top_k_is_kept(self) -> None:
-        q = RetrievalQuery(query_text="test", top_k=5, rerank_depth=25)
-        assert q.rerank_depth == 25
-
-    def test_top_k_50_with_default_rerank_depth_is_accepted(self) -> None:
-        q = RetrievalQuery(query_text="test", top_k=50)
-        assert q.rerank_depth == 50
-
-    def test_accepts_rerank_depth_equal_to_top_k(self) -> None:
-        q = RetrievalQuery(query_text="test", top_k=10, rerank_depth=10)
-        assert q.rerank_depth == 10
-
     def test_accepts_boundary_top_k_values(self) -> None:
         q1 = RetrievalQuery(query_text="test", top_k=1)
         assert q1.top_k == 1
-        q2 = RetrievalQuery(query_text="test", top_k=50, rerank_depth=50)
+        q2 = RetrievalQuery(query_text="test", top_k=50)
         assert q2.top_k == 50
 
 
@@ -96,7 +71,6 @@ class TestRetrievalResult:
         assert r.chunk_id == "chunk-001"
         assert r.score == 0.95
         assert r.rank_sparse is None
-        assert r.rerank_score is None
         assert r.char_start == 0
         assert r.char_end == 0
 
@@ -109,18 +83,16 @@ class TestRetrievalResult:
             hierarchy_chain=["Article 3 — Obligations", "Section 3.1"],
             parent_chunk_id=None,
             score=0.89,
-            method="sparse+rerank",
+            method="sparse",
             rank_sparse=2,
-            rerank_score=0.92,
             char_start=100,
             char_end=400,
         )
         assert r.chunk_id == "chunk-001"
         assert r.clause_heading == "Article 3 — Obligations"
         assert r.score == 0.89
-        assert r.method == "sparse+rerank"
+        assert r.method == "sparse"
         assert r.rank_sparse == 2
-        assert r.rerank_score == 0.92
         assert r.char_start == 100
         assert r.char_end == 400
 

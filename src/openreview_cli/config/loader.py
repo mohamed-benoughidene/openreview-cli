@@ -52,9 +52,6 @@ DEFAULT_CONFIG: dict[str, object] = {
     },
     "retrieval": {
         "top_k": 5,
-        "reranker_model": None,
-        "rerank_enabled": False,
-        "rerank_depth": 20,
         "db_dir": None,
     },
 }
@@ -199,9 +196,6 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
 
     class RetrievalConfig(BaseModel):
         top_k: int = Field(default=5, ge=1, le=50)
-        reranker_model: str | None = None
-        rerank_enabled: bool = False
-        rerank_depth: int = Field(default=20, ge=1)
         db_dir: str | None = None
 
     class OpenReviewConfig(BaseModel):

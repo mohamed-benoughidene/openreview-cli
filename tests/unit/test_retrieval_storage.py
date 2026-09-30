@@ -49,8 +49,10 @@ class TestSchemaCreation:
         tables = {row["name"] for row in cursor.fetchall()}
         assert "index_meta" in tables
         assert "chunks" in tables
-        assert "rerank_validation" in tables
         assert "chunk_embeddings" not in tables
+        # The reranker was removed, so its validation tables are never created.
+        assert "rerank_validation" not in tables
+        assert "rerank_validation_log" not in tables
 
     def test_creates_fts_virtual_table(self, storage: RetrievalStorage) -> None:
         cursor = storage.conn.execute(

@@ -73,52 +73,6 @@ def populated_db(db_path: str) -> str:
 
 
 @pytest.fixture
-def pooled_db(tmp_path: Path) -> str:
-    """Index with four chunks matching one term plus one chunk that does not."""
-    db_path = str(tmp_path / "pool.db")
-    conn = sqlite3.connect(db_path)
-    conn.executescript("""
-        CREATE TABLE index_meta (
-            document_id TEXT PRIMARY KEY, document_path TEXT NOT NULL DEFAULT '',
-            index_version INTEGER NOT NULL DEFAULT 1, index_status TEXT NOT NULL DEFAULT 'indexed',
-            index_timestamp TEXT, chunk_count INTEGER NOT NULL DEFAULT 0,
-            method TEXT NOT NULL DEFAULT 'sparse', db_size_bytes INTEGER DEFAULT 0
-        );
-        INSERT INTO index_meta (document_id, index_status, chunk_count, method)
-        VALUES ('test-doc', 'indexed', 5, 'sparse');
-        CREATE TABLE chunks (
-            chunk_id TEXT PRIMARY KEY, document_id TEXT NOT NULL DEFAULT 'test-doc',
-            text TEXT NOT NULL, clause_heading TEXT NOT NULL, clause_level INTEGER NOT NULL DEFAULT 0,
-            parent_chunk_id TEXT, heading_chain TEXT NOT NULL DEFAULT '[]',
-            char_start INTEGER NOT NULL DEFAULT 0, char_end INTEGER NOT NULL DEFAULT 0
-        );
-        INSERT INTO chunks VALUES
-            ('c1','test-doc','confidential information shall be protected','Article 3',0,NULL,'["Article 3"]',0,100),
-            ('c2','test-doc','governing law is delaware','Section 7.2',1,'c1','["Article 7","Section 7.2"]',200,300);
-        CREATE VIRTUAL TABLE chunk_fts USING fts5(
-            chunk_id UNINDEXED, text, clause_heading, content='chunks', content_rowid='rowid',
-            tokenize='porter unicode61', prefix='2 3'
-        );
-        INSERT INTO chunk_fts (rowid, chunk_id, text, clause_heading)
-        SELECT rowid, chunk_id, text, clause_heading FROM chunks;
-    """)
-    for chunk_id in ("c3", "c4", "c5"):
-        heading = f"Article {chunk_id}"
-        conn.execute(
-            "INSERT INTO chunks VALUES (?, 'test-doc', ?, ?, 0, NULL, ?, 1000, 1100)",
-            (chunk_id, f"confidential obligation {chunk_id}", heading, f'["{heading}"]'),
-        )
-        conn.execute(
-            "INSERT INTO chunk_fts (rowid, chunk_id, text, clause_heading) "
-            "SELECT rowid, chunk_id, text, clause_heading FROM chunks WHERE chunk_id = ?",
-            (chunk_id,),
-        )
-    conn.commit()
-    conn.close()
-    return db_path
-
-
-@pytest.fixture
 def nl_query_db(tmp_path: Path) -> str:
     """Sparse-only index of natural-language contract clauses (no embeddings)."""
     db_path = str(tmp_path / "nl_query.db")
@@ -252,7 +206,6 @@ class TestRetrievalEngine:
         assert len(results) <= 3
         assert all(r.method == "sparse" for r in results)
         assert all(r.rank_sparse is not None for r in results)
-        assert all(r.rerank_score is None for r in results)
 
     # ── T035: Hierarchy preservation ──
 
@@ -288,39 +241,6 @@ class TestRetrievalEngine:
             assert len(c2.hierarchy_chain) == 2
             assert c2.hierarchy_chain[0] == "Article 7"
             assert c2.hierarchy_chain[1] == "Section 7.2"
-
-
-class TestRerankCandidatePool:
-    """B2: a rerank query must materialize rerank_depth candidates, a plain one must not."""
-
-    def test_sparse_pool_reaches_rerank_depth(self, pooled_db: str) -> None:
-        engine = RetrievalEngine(pooled_db)
-        query = RetrievalQuery(
-            query_text="confidential", method="sparse", top_k=1, rerank=True, rerank_depth=4
-        )
-
-        results = engine.retrieve(query)
-
-        assert {r.chunk_id for r in results} == {"c1", "c3", "c4", "c5"}
-
-    def test_rerank_off_ignores_rerank_depth(self, pooled_db: str) -> None:
-        engine = RetrievalEngine(pooled_db)
-        query = RetrievalQuery(query_text="confidential", method="sparse", top_k=2, rerank_depth=4)
-
-        results = engine.retrieve(query)
-
-        assert len(results) == 2
-
-    def test_pool_keeps_the_plain_result_order(self, pooled_db: str) -> None:
-        engine = RetrievalEngine(pooled_db)
-        plain = engine.retrieve(RetrievalQuery(query_text="confidential", method="sparse", top_k=2))
-        pooled = engine.retrieve(
-            RetrievalQuery(
-                query_text="confidential", method="sparse", top_k=2, rerank=True, rerank_depth=4
-            )
-        )
-
-        assert [r.chunk_id for r in pooled[:2]] == [r.chunk_id for r in plain]
 
 
 class TestSparseNaturalLanguageQueries:

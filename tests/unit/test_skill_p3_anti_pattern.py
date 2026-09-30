@@ -12,7 +12,7 @@ The 16 candidates are:
   P3-A10  ``playbook diff --json`` flag
   P3-A12  ``--mode-threshold MODE=VALUE`` (repeatable) for product modes
   P3-A14  retrieval is keyword-only; removed ``--method`` choice not advertised
-  P3-A15  ``retrieve --top-k``, ``--rerank-depth``, ``--no-header``, ``--db-dir``
+  P3-A15  ``retrieve --top-k``, ``--no-header``, ``--db-dir``
   P3-A16  ``ingest --db-dir`` documented; removed ``--model`` not advertised
   P3-A18  Global ``--no-tui``, ``--debug`` flags
   P3-A19  ``chunk --summary`` flag
@@ -123,12 +123,12 @@ def test_p3_a14_no_retrieval_method_choice(skill_text: str) -> None:
 
 
 def test_p3_a15_retrieve_flags_documented(skill_text: str) -> None:
-    """P3-A15: ``retrieve --top-k``, ``--rerank-depth``, ``--no-header``, ``--db-dir`` documented."""
+    """P3-A15: ``retrieve --top-k``, ``--no-header``, ``--db-dir`` documented."""
     body = _section_after_heading(skill_text, r"^#{3,4}\s+[^#\n]*Retrieval[^#\n]*$")
     assert "--top-k" in body, "P3-A15: --top-k flag not mentioned"
-    assert "--rerank-depth" in body, "P3-A15: --rerank-depth flag not mentioned"
     assert "--no-header" in body, "P3-A15: --no-header flag not mentioned"
     assert "--db-dir" in body, "P3-A15: --db-dir flag not mentioned"
+    assert "--rerank" not in body, "P3-A15: removed --rerank flag still advertised"
 
 
 def test_p3_a16_ingest_flags_documented(skill_text: str) -> None:

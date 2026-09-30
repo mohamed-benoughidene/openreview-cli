@@ -2233,47 +2233,6 @@ def _retrieval_config() -> dict[str, Any]:
     return {}
 
 
-def _rerank_enabled_from_config() -> bool:
-    """Return `retrieval.rerank_enabled` from config.yml (OPENREVIEW_* overrides included)."""
-    return bool(_retrieval_config().get("rerank_enabled", False))
-
-
-def _reranker_model_id(gateway: Any) -> str:
-    """Resolve the model id used for reranker validation bookkeeping.
-
-    Prefers the configured `reranking` gateway slot (the model that actually
-    scores), then `retrieval.reranker_model`, then the bundled default.
-    """
-    from openreview_cli.retrieval.rerank import DEFAULT_RERANK_MODEL, RERANK_SLOT
-
-    if gateway is not None:
-        primary = gateway.slot_primary_model(RERANK_SLOT)
-        if isinstance(primary, str) and primary:
-            return primary
-    config = load_config(get_config_dir() / "config.yml")
-    fallback: object = config.get("retrieval", {}).get("reranker_model")
-    if isinstance(fallback, str) and fallback:
-        return fallback
-    return DEFAULT_RERANK_MODEL
-
-
-def _should_warn_reranker_degradation(val: dict[str, object] | None, force_rerank: bool) -> bool:
-    """Return True when a stored validation shows reranker degradation and the
-    user has not suppressed the warning with --force-rerank.
-
-    degradation_pp = (precision_with_reranker - precision_without) * 100,
-    so degradation is degradation_pp <= 0 (reranker does not improve or hurts).
-    """
-    if force_rerank:
-        return False
-    if not val:
-        return False
-    deg = val.get("degradation_pp")
-    if not isinstance(deg, (int, float)):
-        return False
-    return deg <= 0
-
-
 @app.command()
 def retrieve(
     query: str = typer.Argument(..., help="Natural-language query (wrap in quotes)."),
@@ -2281,15 +2240,6 @@ def retrieve(
         None, help="Document file (.ndax). Omit to use most recently indexed document."
     ),
     top_k: int | None = typer.Option(None, "--top-k", help="Number of results (1-50)"),
-    rerank: bool = typer.Option(
-        False, "--rerank", help="Enable cross-encoder reranker (experimental, opt-in)."
-    ),
-    rerank_depth: int | None = typer.Option(
-        None, "--rerank-depth", help="Number of results to rerank."
-    ),
-    force_rerank: bool = typer.Option(
-        False, "--force-rerank", help="Override reranker validation warning."
-    ),
     format: str = typer.Option("terminal", "--format", help="Output format: terminal, json"),
     db_dir: str | None = typer.Option(None, "--db-dir", help="Index database directory"),
     no_header: bool = typer.Option(
@@ -2299,7 +2249,6 @@ def retrieve(
     """Retrieve relevant clause chunks from an indexed document."""
     import json as json_lib
 
-    from openreview_cli.gateway.router import Gateway
     from openreview_cli.retrieval.engine import RetrievalEngine
     from openreview_cli.retrieval.errors import IndexCorruptError, IndexNotFoundError
     from openreview_cli.retrieval.ingest import (
@@ -2351,33 +2300,18 @@ def retrieve(
 
     if top_k is None:
         top_k = retrieval_cfg.get("top_k", 5)
-    if rerank_depth is None:
-        rerank_depth = retrieval_cfg.get("rerank_depth", 20)
-
-    rerank_enabled = rerank or _rerank_enabled_from_config()
 
     # Build query
     try:
         rq = RetrievalQuery(
             query_text=query,
             top_k=top_k,
-            rerank=rerank_enabled,
-            rerank_depth=rerank_depth,
-            force_rerank=force_rerank,
         )
     except ValueError as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1) from None
 
-    # Get gateway when the reranker is enabled
-    gateway: Gateway | None = None
-    if rerank_enabled:
-        try:
-            gateway = Gateway()
-        except Exception:
-            gateway = None
-
-    engine = RetrievalEngine(db_path, gateway=gateway)
+    engine = RetrievalEngine(db_path)
 
     try:
         results = engine.retrieve(rq)
@@ -2391,37 +2325,6 @@ def retrieve(
     # ── Retrieval notices (T047) ──
     for notice in engine.notices:
         typer.echo(f"⚠  {notice}", err=True)
-
-    # ── Reranker integration (T031) ──
-    if rerank_enabled and results:
-        from openreview_cli.retrieval.rerank import Reranker
-        from openreview_cli.retrieval.storage import RetrievalStorage
-
-        try:
-            reranker = Reranker(gateway, model_id=_reranker_model_id(gateway))
-            results = reranker.rerank(query, results, top_k)
-
-            # Check reranker validation warning
-            with RetrievalStorage(db_path) as store:
-                val = store.get_rerank_validation(
-                    model_id=reranker.model_id,
-                    document_type="legal-nda",
-                )
-            if _should_warn_reranker_degradation(val, force_rerank):
-                # mypy can't narrow `val` through the helper; cast is safe here
-                # because the helper only returns True for a non-None dict with
-                # a numeric degradation_pp.
-                deg = float(val["degradation_pp"])  # type: ignore[index, arg-type]
-                warning = (
-                    "⚠ Reranker validation shows reranker does not improve "
-                    f"retrieval quality (degradation: {deg:.1f}pp). "
-                    "Use --force-rerank to override."
-                )
-                typer.echo(warning, err=True)
-
-        except Exception as exc:
-            logger.warning("Reranker integration failed (%s); returning raw results.", exc)
-            results = results[:top_k]
 
     if not results:
         typer.echo("No relevant clauses found for this query. Try a different query.")
@@ -2440,9 +2343,6 @@ def retrieve(
                     "score": round(r.score, 4),
                     "method": r.method,
                     "rank_sparse": r.rank_sparse,
-                    "rerank_score": round(r.rerank_score, 6)
-                    if r.rerank_score is not None
-                    else None,
                 }
             )
         typer.echo(

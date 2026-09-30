@@ -16,14 +16,12 @@ from openreview_cli.retrieval.ingest import (
     ingest_from_file,
 )
 from openreview_cli.retrieval.models import IndexMeta, RetrievalQuery, RetrievalResult
-from openreview_cli.retrieval.rerank import Reranker
 from openreview_cli.retrieval.storage import RetrievalStorage
 
 __all__ = [
     "IndexCorruptError",
     "IndexMeta",
     "IndexNotFoundError",
-    "Reranker",
     "RetrievalEngine",
     "RetrievalError",
     "RetrievalQuery",
