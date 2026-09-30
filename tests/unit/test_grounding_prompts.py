@@ -108,8 +108,9 @@ def test_two_arrays_back_to_back_take_the_first() -> None:
 def test_a_pathological_answer_is_treated_as_unreadable_not_as_a_crash() -> None:
     """Deeply nested brackets must not abort the run that is measuring a model.
 
-    `raw_decode` raises `RecursionError` on such input, and that error would
-    escape the discriminator's try block in the real pipeline.
+    `raw_decode` raises `RecursionError` on such input and the scan stops there,
+    so the payload is treated as unreadable — no verdicts — rather than raising
+    out of the parser in the real pipeline.
     """
     response = ("[" * 30_000) + json.dumps([GROUNDED])
 

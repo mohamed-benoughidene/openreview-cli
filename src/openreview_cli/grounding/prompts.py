@@ -161,9 +161,9 @@ def _first_json_value(text: str) -> Any | None:
         except json.JSONDecodeError:
             continue
         except RecursionError:
-            # A pathological payload. Every later candidate would raise the same
-            # way, so stop rather than walk the rest; an unreadable answer is
-            # counted by the discriminator, a crash is not.
+            # A payload this deep is treated as unreadable rather than decoded:
+            # stop here instead of walking the remaining offsets, which would
+            # spend unbounded time on an answer already this malformed.
             break
         return value
     return None

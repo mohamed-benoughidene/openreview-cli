@@ -135,9 +135,9 @@ def _enforce_local_only_params(
     target, since an earlier non-local dispatch may have stripped it: the gate
     is per-dispatch, not a permanent mutation.
 
-    Locality reuses ``classify_provider`` (models.py:46-64), the codebase's one
-    notion of local, so a localhost custom provider counts as local exactly as
-    it does for tier enforcement. An unknown or unclassifiable prefix is remote.
+    Locality reuses ``classify_provider``, the codebase's one notion of local, so
+    a localhost custom provider counts as local exactly as it does for tier
+    enforcement. An unknown or unclassifiable prefix is remote.
     """
     info = load_registry().get(provider_prefix)
     is_local = False
@@ -411,10 +411,7 @@ class Gateway:
             kwargs.update(stripped)
         # T008: populate api_base from real provider config for reachability
         info = self._resolve_provider_info(slot)
-        # The local-only gate is NOT applied here: this dict is built for the
-        # slot's configured primary, but a dispatch-time `model=` override or a
-        # caller kwarg can retarget the call. ``_call_with_fallback`` enforces
-        # the gate against the provider actually dispatched (both legs).
+        # The local-only gate runs at dispatch, not here: see _enforce_local_only_params.
         if info is not None and info.base_url:
             kwargs["api_base"] = info.base_url
         # spec 034: map each declared credential field to its litellm kwarg.
@@ -549,11 +546,7 @@ class Gateway:
     ) -> Any:
         cfg = self._get_slot_config(slot)
         provider = provider_prefix or cfg["primary"].split("/", 1)[0]
-        # The one authoritative local-only gate: enforce it for the provider
-        # ACTUALLY dispatched, before the first attempt. A dispatch-time
-        # `model=` override (or a caller-supplied kwarg) can point the primary
-        # at a provider the built kwargs never saw, and a local provider must
-        # get the key RESTORED rather than inherit a build-time strip.
+        # Local-only gate for the provider actually dispatched: see _enforce_local_only_params.
         extra_params = cfg.get("extra_params")
         _enforce_local_only_params(call_kwargs, extra_params, provider)
         fallback_cfg = self._config.get("gateway", {}).get("fallback", {})
@@ -613,9 +606,7 @@ class Gateway:
             call_kwargs["api_base"] = info.base_url
         if info is not None and info.credentials:
             self._apply_provider_credentials(info, call_kwargs)
-        # The reused kwargs were merged for the primary's provider, so a parameter
-        # that is local-only must be re-gated against the fallback's own locality:
-        # the primary's dispatch may have removed it (remote) or left it (local).
+        # Re-gated for the fallback's own locality: see _enforce_local_only_params.
         _enforce_local_only_params(call_kwargs, extra_params, fallback_prefix)
         call_kwargs["model"] = fallback
         self._record_cloud_call(slot, provider_prefix=fallback_prefix)
