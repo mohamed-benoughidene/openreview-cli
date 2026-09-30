@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from openreview_cli.gateway.tier_config import PrivacyTier, TierConfig
 
 
@@ -11,7 +13,8 @@ class TestPrivacyTier:
     def test_valid_tiers(self) -> None:
         assert PrivacyTier.MAXIMUM.value == "maximum"
         assert PrivacyTier.BALANCED.value == "balanced"
-        assert PrivacyTier.PERFORMANCE.value == "performance"
+        # Spec 035 T1.4: only two modes ship.
+        assert not hasattr(PrivacyTier, "PERFORMANCE")
 
     def test_parse_valid_lowercase(self) -> None:
         tier, warning = PrivacyTier.parse("maximum")
@@ -22,8 +25,10 @@ class TestPrivacyTier:
         assert tier == "balanced"
         assert warning is None
 
+    def test_parse_legacy_performance_is_balanced(self) -> None:
+        """Spec 035 T1.4: an old ``performance`` value keeps working as balanced."""
         tier, warning = PrivacyTier.parse("performance")
-        assert tier == "performance"
+        assert tier == "balanced"
         assert warning is None
 
     def test_parse_case_insensitive(self) -> None:
@@ -47,7 +52,7 @@ class TestPrivacyTier:
         assert warning is not None
         assert "Invalid" in warning
         assert "balanced" in warning
-        assert "performance" in warning
+        assert "performance" not in warning
 
     def test_parse_none_defaults_to_maximum(self) -> None:
         tier, warning = PrivacyTier.parse("")
@@ -85,21 +90,51 @@ class TestTierConfig:
 
     def test_tier_accessors_for_maximum(self) -> None:
         cfg = TierConfig(tier="maximum")
-        assert cfg.embeddings_local_only is True
         assert cfg.llm_local_only is True
         assert cfg.pii_required_before_cloud is False
 
     def test_tier_accessors_for_balanced(self) -> None:
         cfg = TierConfig(tier="balanced")
-        assert cfg.embeddings_local_only is True
         assert cfg.llm_local_only is False
         assert cfg.pii_required_before_cloud is True
 
-    def test_tier_accessors_for_performance(self) -> None:
-        cfg = TierConfig(tier="performance")
-        assert cfg.embeddings_local_only is False
-        assert cfg.llm_local_only is False
+    def test_legacy_performance_tier_behaves_like_balanced(self) -> None:
+        """Spec 035 T1.4: ``performance`` is accepted and behaves as ``balanced``."""
+        legacy = TierConfig.from_config({"privacy": {"tier": "performance"}})
+        balanced = TierConfig.from_config({"privacy": {"tier": "balanced"}})
+        assert legacy.tier == "balanced"
+        assert legacy.llm_local_only == balanced.llm_local_only
+        assert legacy.pii_required_before_cloud == balanced.pii_required_before_cloud
+        assert legacy.pii_required_before_cloud is True
+
+    def test_legacy_performance_in_real_config_file_yields_balanced_rules(
+        self, tmp_path: Path
+    ) -> None:
+        """Spec 035 T1.4 — the backward-compat mapping must hold end to end.
+
+        ``config.loader``'s pydantic ``Literal`` is validated *before*
+        ``PrivacyTier.parse`` can run, so a config written before the change has
+        to keep loading (no ``ConfigLoadError`` traceback out of the CLI) and then
+        yield ``balanced``'s rules — never ``maximum``'s.
+        """
+        from openreview_cli.config.loader import load_config
+
+        config_path = tmp_path / "config.yml"
+        config_path.write_text("privacy:\n  tier: performance\n")
+
+        loaded = load_config(config_path)
+        # The schema normalizes it before anything downstream sees the value.
+        assert loaded["privacy"]["tier"] == "balanced"
+
+        cfg = TierConfig.from_config(loaded)
+        maximum = TierConfig.from_config({"privacy": {"tier": "maximum"}})
+        assert cfg.tier == "balanced"
+        assert cfg.tier_source == "config"
+        assert cfg.warning is None
+        assert cfg.llm_local_only is False  # maximum says True
         assert cfg.pii_required_before_cloud is True
+        assert cfg.llm_local_only != maximum.llm_local_only
+        assert cfg.pii_required_before_cloud != maximum.pii_required_before_cloud
 
     def test_tier_captured_once_at_construction(self) -> None:
         """T034: TierConfig captured once, does not re-read config."""
@@ -138,12 +173,15 @@ class TestPrivacyTierReport:
         assert "BALANCED" in banner
         assert "PII" in banner
 
-    def test_progress_banner_performance(self) -> None:
+    def test_progress_banner_for_legacy_performance_config(self) -> None:
+        """Spec 035 T1.4: a legacy ``performance`` config renders as balanced."""
         from openreview_cli.gateway.models import PrivacyTierReport
 
-        report = PrivacyTierReport(tier="performance")
+        tier = TierConfig.from_config({"privacy": {"tier": "performance"}}).tier
+        report = PrivacyTierReport(tier=tier)
         banner = report.progress_banner()
-        assert "PERFORMANCE" in banner
+        assert "BALANCED" in banner
+        assert "PERFORMANCE" not in banner
         assert "PII" in banner
 
     def test_report_footer_maximum(self) -> None:
@@ -162,12 +200,15 @@ class TestPrivacyTierReport:
         assert "Balanced" in footer
         assert "24" in footer
 
-    def test_report_footer_performance(self) -> None:
+    def test_report_footer_for_legacy_performance_config(self) -> None:
+        """Spec 035 T1.4: a legacy ``performance`` config foots as balanced."""
         from openreview_cli.gateway.models import PrivacyTierReport
 
-        report = PrivacyTierReport(tier="performance", cloud_calls_made=3, pii_entities_stripped=10)
+        tier = TierConfig.from_config({"privacy": {"tier": "performance"}}).tier
+        report = PrivacyTierReport(tier=tier, cloud_calls_made=3, pii_entities_stripped=10)
         footer = report.report_footer()
-        assert "Performance" in footer
+        assert "Balanced" in footer
+        assert "Performance" not in footer
         assert "10" in footer
 
     def test_exported_from_gateway(self) -> None:
@@ -176,7 +217,6 @@ class TestPrivacyTierReport:
 
         assert PrivacyTier.MAXIMUM.value == "maximum"
         assert PrivacyTier.BALANCED.value == "balanced"
-        assert PrivacyTier.PERFORMANCE.value == "performance"
 
     def test_privacy_tier_report_exported_from_gateway(self) -> None:
         from openreview_cli.gateway import PrivacyTierReport

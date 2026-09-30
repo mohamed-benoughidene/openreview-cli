@@ -156,7 +156,7 @@ def discover_ollama(base_url: str | None = None) -> list[dict[str, Any]]:
             models.append(
                 {
                     "model_id": name,
-                    "slots": ["reasoning", "extraction", "graph"],
+                    "slots": ["extraction", "reasoning", "grounding"],
                     "ram": None,
                     "recommended": False,
                     "status": "available",

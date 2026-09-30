@@ -35,6 +35,10 @@ VALID_DATASETS = frozenset({"cuad", "maud", "contract_nli", "pii"})
 VALID_FORMATS = frozenset({"terminal", "json"})
 VALID_HALLUCINATION_METHODS = frozenset({"lexical", "cg-dpo"})
 VALID_BENCHMARK_TIERS = frozenset({"maximum", "balanced", "performance", "all"})
+# Spec 035 T1.4: `performance` was identical to `balanced` and no longer ships as
+# a mode. It stays accepted so an existing script does not break, and runs the
+# `balanced` evaluation (the same alias the config loader applies to privacy.tier).
+_LEGACY_BENCHMARK_TIER_ALIASES: dict[str, str] = {"performance": "balanced"}
 # D7/R9: derived from the single source of truth, 24 = 23 named modes + precheck.
 VALID_MODES: frozenset[str] = frozenset(
     {GENERIC_MODE, *(mode.name for mode in PRODUCT_MODES if not mode.generic)}
@@ -243,9 +247,9 @@ def benchmark_run(
     # If PII is in the dataset list, run PII evaluation (per-tier or all)
     if "pii" in dataset_list:
         if benchmark_tier == "all":
-            tiers_to_run = ["maximum", "balanced", "performance"]
+            tiers_to_run = ["maximum", "balanced"]
         else:
-            tiers_to_run = [benchmark_tier]
+            tiers_to_run = [_LEGACY_BENCHMARK_TIER_ALIASES.get(benchmark_tier, benchmark_tier)]
         for t in tiers_to_run:
             pii_result = _run_pii_evaluation(runner, verbose, tier=t)
             pii_result.dataset_name = f"pii::tier={t}"

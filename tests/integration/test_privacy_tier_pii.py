@@ -37,15 +37,10 @@ class _MockGateway:
         self._cost_tracker = _MockCostTracker()
         self._data_path = Path("/tmp/test.db")  # ponytail: path never touched on disk
         self.chat_calls: list[Any] = []
-        self.embed_calls: list[Any] = []
 
     def chat(self, *args: Any, **kwargs: Any) -> str:
         self.chat_calls.append((args, kwargs))
         return "response"
-
-    def embed(self, *args: Any, **kwargs: Any) -> list[list[float]]:
-        self.embed_calls.append((args, kwargs))
-        return [[0.1, 0.2, 0.3]]
 
     def _get_litellm_kwargs(self, slot: str) -> dict[str, Any]:
         model = ""
@@ -80,28 +75,6 @@ class TestPIIFailureIntegration:
         assert "PII" in msg
         assert len(gw.chat_calls) == 0  # fail-closed
 
-    def test_performance_blocked_when_pii_fails(self) -> None:
-        """Performance tier blocks all cloud calls when PII unavailable."""
-        gw = _MockGateway(
-            {
-                "gateway": {
-                    "models": {
-                        "reasoning": {"primary": "openai/gpt-4o"},
-                        "embedding": {"primary": "openai/text-embedding-3-small"},
-                    }
-                }
-            }
-        )
-        config = TierConfig(tier="performance", tier_source="config")
-        router = TierRouter(gw, config, pii_engine=_MockPiiEngineUnavailable())  # type: ignore[arg-type]
-
-        with pytest.raises(PIIUnavailableError):
-            router.chat("reasoning", [{"role": "user", "content": "secret"}])
-        with pytest.raises(PIIUnavailableError):
-            router.embed("embedding", ["secret"])
-        assert len(gw.chat_calls) == 0
-        assert len(gw.embed_calls) == 0
-
     def test_maximum_unaffected_when_pii_fails(self) -> None:
         """Maximum tier works without PII engine."""
         gw = _MockGateway(
@@ -109,7 +82,6 @@ class TestPIIFailureIntegration:
                 "gateway": {
                     "models": {
                         "reasoning": {"primary": "ollama/qwen3:8b"},
-                        "embedding": {"primary": "ollama/nomic-embed-text"},
                     }
                 }
             }
@@ -118,9 +90,7 @@ class TestPIIFailureIntegration:
         router = TierRouter(gw, config, pii_engine=_MockPiiEngineUnavailable())  # type: ignore[arg-type]
 
         router.chat("reasoning", [{"role": "user", "content": "data"}])
-        router.embed("embedding", ["data"])
         assert len(gw.chat_calls) == 1
-        assert len(gw.embed_calls) == 1
 
     def test_error_contains_actionable_suggestions(self) -> None:
         """Error includes ≥2 actionable suggestions and no document text."""

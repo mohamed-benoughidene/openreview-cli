@@ -33,11 +33,11 @@ Unlike cloud-hosted SaaS legal tech platforms that require uploading raw agreeme
 ### Capabilities
 - **5-Stage Pipeline**: Parse → Strip PII → Chunk → Multi-Agent Extract/QA → Structured Memo.
 - **24 Bundled Playbooks**: Pre-configured domain playbooks covering 23 contract modes (NDAs, Leases, DPAs, SaaS licenses, Employment, etc.).
-- **Privacy Tiers**: Configurable routing modes (Maximum: all-local; Balanced: local embeddings + cloud reasoning with stripped PII; Performance: cloud reasoning with stripped PII).
+- **Privacy Tiers**: Configurable routing modes (Maximum: all-local; Balanced: cloud reasoning with locally stripped PII; a legacy `performance` value is accepted and treated as `balanced`).
 - **Bilateral Comparison (Experimental)**: RCBSF divergence detection across counterparty drafts with heading alignment (experimental; documented accuracy ceiling $\le$64% F1).
 - **Negotiation Modeling (Experimental)**: Local game-theoretic equilibrium solver (Nash, QRE, Level-k) with payoff matrices from playbook positions.
 - **Contract Graph**: Clause dependency, cross-reference mapping, and structural health scoring.
-- **AI Gateway**: Unified multi-provider abstraction supporting 17+ backends and local Ollama SLMs across 6 task-specific model slots.
+- **AI Gateway**: Unified multi-provider abstraction supporting 17+ backends and local Ollama SLMs across 3 task-specific model slots.
 
 ### Constraints
 - **Privacy Guarantee**: Fail-closed PII redaction before any external API dispatch; no raw contract text in logs.

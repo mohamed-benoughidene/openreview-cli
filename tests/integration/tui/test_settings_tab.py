@@ -18,18 +18,12 @@ from openreview_cli.tui.screens.pii_data import PiiDataScreen
 MOCK_SLOTS: dict[str, dict[str, Any]] = {
     "reasoning": {"provider": "openai", "model": "gpt-4o", "configured": True},
     "extraction": {"provider": "anthropic", "model": "claude-3-haiku-20240307", "configured": True},
-    "embedding": {"provider": "openai", "model": "text-embedding-3-small", "configured": True},
-    "reranking": {"provider": "", "model": "", "configured": False},
-    "graph": {"provider": "openai", "model": "gpt-4o", "configured": True},
     "grounding": {"provider": "", "model": "", "configured": False},
 }
 
 MOCK_HEALTH: dict[str, dict[str, Any]] = {
     "reasoning": {"status": "configured", "provider": "openai"},
     "extraction": {"status": "configured", "provider": "anthropic"},
-    "embedding": {"status": "configured", "provider": "openai"},
-    "reranking": {"status": "not_configured"},
-    "graph": {"status": "configured", "provider": "openai"},
     "grounding": {"status": "not_configured"},
 }
 
@@ -143,7 +137,7 @@ class TestSettingsTab:
             assert "Keyboard navigation" in text
 
     async def test_settings_gateway_section_shows_slots(self) -> None:
-        """Select Gateway section, assert 6 slot rows visible."""
+        """Select Gateway section, assert the three slot rows visible."""
         app = OpenReviewApp()
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.press("5")
@@ -154,9 +148,6 @@ class TestSettingsTab:
             assert "Reasoning" in text
             assert "gpt-4o" in text
             assert "Extraction" in text
-            assert "Embedding" in text
-            assert "Reranking" in text
-            assert "Graph" in text
             assert "Grounding" in text
 
             btn = app.query_one("#run-wizard", Button)

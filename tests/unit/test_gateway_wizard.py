@@ -91,10 +91,12 @@ class TestGatewayWizard:
 
         gateway_setup()
 
-        assert len(calls) == 6
+        assert len(calls) == 3  # one provider prompt per remaining slot
         assert any("reasoning" in c for c in calls)
-        assert any("graph" in c for c in calls)
+        assert any("extraction" in c for c in calls)
         assert any("grounding" in c for c in calls)
+        for removed in ("embedding", "reranking", "graph"):
+            assert not any(removed in c for c in calls)
 
     def test_wizard_prompts_for_optional_fallback(
         self,
@@ -115,10 +117,8 @@ class TestGatewayWizard:
         gateway_setup()
 
         models = load_config(config_path)["gateway"]["models"]
-        for slot in ("reasoning", "extraction", "graph", "grounding"):
+        for slot in ("reasoning", "extraction", "grounding"):
             assert models[slot]["fallback"] == backup
-        for slot in ("embedding", "reranking"):
-            assert models[slot].get("fallback") is None
 
     def test_wizard_skips_blank_fallback(
         self,
@@ -138,7 +138,7 @@ class TestGatewayWizard:
         gateway_setup()
 
         models = load_config(config_path)["gateway"]["models"]
-        for slot in ("reasoning", "extraction", "graph", "grounding"):
+        for slot in ("reasoning", "extraction", "grounding"):
             assert models[slot]["fallback"] is None
 
     def test_wizard_aborts_on_none(

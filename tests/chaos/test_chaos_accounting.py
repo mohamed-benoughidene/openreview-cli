@@ -391,34 +391,6 @@ def test_chat_stream_retries_then_tries_the_fallback(
     assert flaky.gw._cloud_calls_made == 4
 
 
-def test_rerank_uses_the_configured_retry_loop(
-    flaky_gateway: FlakyGatewayFactory, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Sharp edge 11 is fixed: ``rerank`` runs the configured retry loop.
-
-    ``reranking`` is in ``PRIMARY_ONLY_SLOTS``, so the fallback branch stays
-    unreachable (the slot has no fallback and is primary-only either way), while
-    ``gateway.fallback.retries`` now applies to the dispatch exactly as it does
-    to ``chat``/``embed``.
-    """
-    calls: list[dict[str, Any]] = []
-
-    def _boom(**kwargs: Any) -> Any:
-        calls.append(kwargs)
-        raise RuntimeError("rerank provider down")
-
-    monkeypatch.setattr("litellm.rerank", _boom)
-    flaky = flaky_gateway("timeout")
-
-    with pytest.raises(UnclassifiedProviderError) as exc_info:
-        flaky.gw.rerank("reranking", "query", ["a", "b"])
-
-    assert len(calls) == 3, f"rerank was dispatched {len(calls)} times"
-    assert "openai" in str(exc_info.value), "the error must name the provider"
-    assert _w7.cost_rows(flaky.state.db_path) == [], "a failed rerank logged a cost"
-    assert flaky.gw._cloud_calls_made == 3
-
-
 # ── Negative control (anti-vacuity, plan section 9.3) ───────────────────────
 
 

@@ -99,21 +99,21 @@ class TestGatewayWizard:
             await pilot.pause()
 
     async def test_wizard_step1_slot_picker(self) -> None:
-        """Open wizard, assert 6 slot options visible."""
+        """Open wizard, assert the 3 slot options visible."""
         app = OpenReviewApp()
         async with app.run_test(size=(80, 24)) as pilot:
             await app.push_screen(gw_mod.GatewayWizard())
             await pilot.pause()
 
             slot_list = app.screen.query_one("#slot-list")
-            assert len(slot_list.children) == 6
+            assert len(slot_list.children) == 3
 
             slot_names = set()
             for child in slot_list.children:
                 c = child.children[0] if child.children else None
                 name = str(c.content) if hasattr(c, "content") else ""
                 slot_names.add(name)
-            for name in ("Reasoning", "Extraction", "Embedding", "Reranking", "Graph", "Grounding"):
+            for name in ("Reasoning", "Extraction", "Grounding"):
                 assert name in slot_names, f"Missing slot: {name}"
 
     async def test_wizard_step2_provider_filter(self) -> None:
@@ -316,8 +316,8 @@ class TestGatewayWizardFallback:
     async def _select_reasoning_and_reach_step3(self, pilot, wizard) -> None:
         """Select the ``reasoning`` chat slot by index, then reach step 3.
 
-        The slot list is ``sorted(VALID_SLOTS)`` so ``embedding`` is item 0; the
-        index is set explicitly and ``focus()`` is called before Enter because
+        The slot list is ``sorted(VALID_SLOTS)``; the index is set explicitly
+        and ``focus()`` is called before Enter because
         the nav (#wizard-cancel) is composed first and would otherwise receive
         the keypress and dismiss the screen.
         """
@@ -345,30 +345,6 @@ class TestGatewayWizardFallback:
 
             assert wizard._slot == "reasoning"
             assert wizard.query("#fallback-input")
-
-    async def test_wizard_hides_fallback_for_primary_only_slots(self) -> None:
-        """The default path clicks the first slot item, i.e. ``embedding``.
-
-        ``_render_slot_step`` mounts ``sorted(VALID_SLOTS)`` so the first
-        ``#slot-list`` item is ``embedding``, a primary-only slot with no
-        backup model.
-        """
-        app = OpenReviewApp()
-        async with app.run_test(size=(80, 24)) as pilot:
-            wizard = gw_mod.GatewayWizard()
-            await app.push_screen(wizard)
-            await pilot.pause()
-            await pilot.click("#slot-list ListItem")
-            await pilot.pause()
-            await pilot.click("#wizard-next")
-            await pilot.pause()
-            await pilot.click("#provider-list ListItem")
-            await pilot.pause()
-            await pilot.click("#wizard-next")
-            await pilot.pause()
-
-            assert wizard._slot == "embedding"
-            assert list(wizard.query("#fallback-input")) == []
 
     async def test_wizard_prefills_existing_fallback(self) -> None:
         gw_mod.get_slot_configs = lambda: {  # type: ignore[method-assign]

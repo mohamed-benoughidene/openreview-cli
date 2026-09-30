@@ -53,16 +53,15 @@ Memo written to `review_results/` as Markdown, JSON, or DOCX.
 ## Why local-first
 
 - **Fail-closed by design.** If page-level PII detection fails, the review halts instead of proceeding partially stripped.
-- **Local by default.** Every model slot defaults to Ollama (`qwen3` reasoning, `nomic-embed-text` embeddings). Swap any slot to a different local or cloud model.
-- **Three privacy tiers** control exactly what, if anything, leaves the machine.
+- **Local by default.** Every model slot defaults to local Ollama (`granite4:3b`). Swap any slot to a different local or cloud model.
+- **Two privacy tiers** control exactly what, if anything, leaves the machine.
 
-| Tier | PII | Reasoning | Embedding |
-|---|---|---|---|
-| Maximum | Local | Local | Local |
-| Balanced (default) | Local | Cloud | Local |
-| Performance | Local | Cloud | Cloud |
+| Tier | PII | Reasoning |
+|---|---|---|
+| Maximum | Local | Local |
+| Balanced (default) | Local | Cloud |
 
-Set with `openreview config set privacy.tier maximum|balanced|performance`.
+Set with `openreview config set privacy.tier maximum|balanced` (a legacy `performance` value is accepted and treated as `balanced`).
 
 ## What it does
 

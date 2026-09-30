@@ -38,6 +38,8 @@ class TierAccuracyTarget:
 #   Courts accept 80% F1 for TAR; human first-pass review ~85%.
 #   PII false negatives are worse than false positives,
 #   so Maximum tier uses the lowest PII threshold (broadest capture).
+# Spec 035 T1.4 removed the `performance` mode (it was identical to `balanced`),
+# so only the two remaining tiers carry targets.
 TIER_ACCURACY_TARGETS: dict[str, TierAccuracyTarget] = {
     PrivacyTier.MAXIMUM: TierAccuracyTarget(
         min_f1=0.70,
@@ -51,12 +53,6 @@ TIER_ACCURACY_TARGETS: dict[str, TierAccuracyTarget] = {
         min_recall=0.85,
         pii_score_threshold=0.6,
     ),
-    PrivacyTier.PERFORMANCE: TierAccuracyTarget(
-        min_f1=0.90,
-        min_precision=0.85,
-        min_recall=0.95,
-        pii_score_threshold=0.8,
-    ),
 }
 
 
@@ -66,7 +62,7 @@ def get_target(tier: str) -> TierAccuracyTarget:
     Parameters
     ----------
     tier : str
-        One of ``"maximum"``, ``"balanced"``, ``"performance"``.
+        One of ``"maximum"``, ``"balanced"``.
 
     Returns
     -------

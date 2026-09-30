@@ -69,8 +69,9 @@ class ReviewStage(Stage):
         extraction_model:
             Model slot name for the extraction agent.
         qa_model:
-            Model slot name for QA verification.  Falls back to
-            *extraction_model* when ``None``.
+            Model slot name for QA verification.  Falls back to the
+            ``reasoning`` slot when ``None``, so the checker can be pointed at
+            a different model than the reader without touching it.
         confidence_threshold:
             Threshold for Green/Amber/Red colour assignment.
         mode_threshold_overrides:
@@ -94,7 +95,7 @@ class ReviewStage(Stage):
         """
         self._playbook = playbook
         self._extraction_model = extraction_model
-        self._qa_model = qa_model or extraction_model
+        self._qa_model = qa_model or "reasoning"
         self._confidence_threshold = confidence_threshold
         self._mode_threshold_overrides = mode_threshold_overrides or {}
         self._playbook_version = playbook_version

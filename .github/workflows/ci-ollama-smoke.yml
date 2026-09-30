@@ -81,10 +81,7 @@ jobs:
           set -e
           uv run openreview gateway set reasoning  ollama/qwen3:4b
           uv run openreview gateway set extraction ollama/qwen3:4b
-          uv run openreview gateway set graph      ollama/qwen3:4b
           uv run openreview gateway set grounding  ollama/qwen3:4b
-          uv run openreview gateway set embedding  ollama/nomic-embed-text
-          uv run openreview gateway set reranking  ollama/qwen3-reranker-0.6b
 
       - name: Model string and api_base passed to litellm, per slot
         run: |
@@ -95,7 +92,7 @@ jobs:
 
           cfg = load_config(get_config_dir() / "config.yml")
           registry = load_registry()
-          for slot in ("reasoning", "extraction", "graph", "grounding", "embedding", "reranking"):
+          for slot in ("reasoning", "extraction", "grounding"):
               model = cfg["gateway"]["models"][slot]["primary"]
               provider = model.split("/", 1)[0]
               base = registry[provider].base_url if provider in registry else "UNKNOWN"
@@ -106,7 +103,7 @@ jobs:
         run: |
           set +e
           failed=""
-          for slot in reasoning extraction graph grounding embedding reranking; do
+          for slot in reasoning extraction grounding; do
             echo "::group::gateway test ${slot}"
             uv run openreview gateway test "${slot}" > "/tmp/slot-${slot}.log" 2>&1
             code=$?
@@ -114,17 +111,7 @@ jobs:
             cat "/tmp/slot-${slot}.log"
             echo "::endgroup::"
             if [ "${code}" -ne 0 ]; then
-              # Reranking is not supported on Ollama. This is a documented limitation,
-              # not an open bug: litellm has no rerank provider branch for 'ollama' and
-              # Ollama exposes no rerank endpoint, so no Ollama model can serve the
-              # reranking slot. See docs/ARCHITECTURE.md "Honest limitations".
-              # Keep this exclusion for an Ollama reranking slot; it applies whenever
-              # the reranking model is absent from the local Ollama library.
-              if [ "${slot}" = "reranking" ] && ! ollama list | grep -q "qwen3-reranker-0.6b"; then
-                echo "slot=reranking status=NOT_TESTABLE (reranking is unsupported on Ollama; see docs/ARCHITECTURE.md)"
-              else
-                failed="${failed} ${slot}"
-              fi
+              failed="${failed} ${slot}"
             fi
           done
           if [ -n "${failed}" ]; then

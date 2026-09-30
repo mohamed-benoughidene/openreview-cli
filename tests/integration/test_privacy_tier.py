@@ -24,7 +24,6 @@ def maximum_config() -> dict[str, Any]:
         "gateway": {
             "models": {
                 "reasoning": {"primary": "ollama/qwen3:8b"},
-                "embedding": {"primary": "ollama/nomic-embed-text"},
             }
         }
     }
@@ -36,19 +35,6 @@ def balanced_config() -> dict[str, Any]:
         "gateway": {
             "models": {
                 "reasoning": {"primary": "openai/gpt-4o"},
-                "embedding": {"primary": "ollama/nomic-embed-text"},
-            }
-        }
-    }
-
-
-@pytest.fixture
-def performance_config() -> dict[str, Any]:
-    return {
-        "gateway": {
-            "models": {
-                "reasoning": {"primary": "openai/gpt-4o"},
-                "embedding": {"primary": "openai/text-embedding-3-small"},
             }
         }
     }
@@ -68,28 +54,12 @@ class TestMaximumTierIntegration:
         assert result == "mock response"
         assert len(gw.chat_calls) == 1
 
-    def test_local_embed_succeeds(self, maximum_config: dict[str, Any]) -> None:
-        gw = _MockGateway(maximum_config)
-        config = TierConfig(tier="maximum", tier_source="config")
-        router = TierRouter(gw, config, pii_engine=_MockPiiEngineAvailable())  # type: ignore[arg-type]
-        result = router.embed("embedding", ["test"])
-        assert result == [[0.1, 0.2, 0.3]]
-        assert len(gw.embed_calls) == 1
-
 
 # ── US2: Balanced Tier Integration (T022) ────────────────────────────────────
 
 
 class TestBalancedTierIntegration:
     """US2 integration: Balanced routes by call type."""
-
-    def test_embedding_local(self, balanced_config: dict[str, Any]) -> None:
-        gw = _MockGateway(balanced_config)
-        config = TierConfig(tier="balanced", tier_source="config")
-        router = TierRouter(gw, config, pii_engine=_MockPiiEngineAvailable())  # type: ignore[arg-type]
-        result = router.embed("embedding", ["test"])
-        assert result == [[0.1, 0.2, 0.3]]
-        assert len(gw.embed_calls) == 1
 
     def test_llm_cloud_with_pii(self, balanced_config: dict[str, Any]) -> None:
         gw = _MockGateway(balanced_config)
@@ -109,30 +79,6 @@ class TestBalancedTierIntegration:
         assert len(gw.chat_calls) == 0  # no cloud call
 
 
-# ── US3: Performance Tier Integration (T026) ────────────────────────────────
-
-
-class TestPerformanceTierIntegration:
-    """US3 integration: all calls cloud, PII stripped."""
-
-    def test_all_calls_cloud(self, performance_config: dict[str, Any]) -> None:
-        gw = _MockGateway(performance_config)
-        config = TierConfig(tier="performance", tier_source="config")
-        router = TierRouter(gw, config, pii_engine=_MockPiiEngineAvailable())  # type: ignore[arg-type]
-        router.chat("reasoning", [{"role": "user", "content": "Hi"}])
-        router.embed("embedding", ["test"])
-        assert len(gw.chat_calls) == 1
-        assert len(gw.embed_calls) == 1
-
-    def test_pii_stripped_before_calls(self, performance_config: dict[str, Any]) -> None:
-        gw = _MockGateway(performance_config)
-        config = TierConfig(tier="performance", tier_source="config")
-        router = TierRouter(gw, config, pii_engine=_MockPiiEngineUnavailable())  # type: ignore[arg-type]
-        with pytest.raises(PIIUnavailableError):
-            router.chat("reasoning", [{"role": "user", "content": "secret"}])
-        assert len(gw.chat_calls) == 0
-
-
 # ── US5: Tier Stability (T035) ──────────────────────────────────────────────
 
 
@@ -147,7 +93,6 @@ class TestTierStability:
             "gateway": {
                 "models": {
                     "reasoning": {"primary": "ollama/llama3.1"},
-                    "embedding": {"primary": "ollama/nomic-embed-text"},
                 }
             }
         }
@@ -263,7 +208,6 @@ class TestTierVisibility:
                 "gateway": {
                     "models": {
                         "reasoning": {"primary": "ollama/qwen3:8b"},
-                        "embedding": {"primary": "ollama/nomic-embed-text"},
                     }
                 }
             },

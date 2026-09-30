@@ -9,11 +9,11 @@ Two ways to choose the model:
 - ``--model ollama/qwen3:4b`` routes every text slot to that model (used by the
   CI matrix; add ``--no-pii`` there, since Ollama is local and CI has no spaCy).
 - ``--configured`` uses the slots already configured in config.yml (the real
-  product setup); PII stripping then runs, as the balanced/performance privacy
-  tiers require before cloud egress.
+  product setup); PII stripping then runs, as the balanced privacy tier requires
+  before cloud egress.
 
-Reranking is never measured: no local Ollama rerank support, and the rerank slot
-is out of scope here.
+Reranking is not measured: the `reranking` slot was removed (no local reranker
+works on legal text).
 
 Usage:
     uv run python scripts/measure_slm_slots.py --model ollama/qwen3:4b --no-pii --out results/qwen3-4b.json
@@ -34,7 +34,7 @@ FIXTURES = Path("tests/fixtures/benchmark")
 # Route every text slot to the model under test, so the run is internally consistent.
 _SLOT_ENV_KEYS = {
     slot: f"OPENREVIEW_GATEWAY__MODELS__{slot.upper()}__PRIMARY"
-    for slot in ("extraction", "reasoning", "grounding", "graph")
+    for slot in ("extraction", "reasoning", "grounding")
 }
 
 

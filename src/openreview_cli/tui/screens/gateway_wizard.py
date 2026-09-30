@@ -9,7 +9,7 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Button, Input, Label, ListItem, ListView, Static
 
-from openreview_cli.slots import PRIMARY_ONLY_SLOTS, VALID_SLOTS
+from openreview_cli.slots import VALID_SLOTS
 from openreview_cli.tui.domain.gateway import (
     gateway_health_check,
     get_slot_configs,
@@ -111,22 +111,19 @@ class GatewayWizard(Screen[bool]):
             ctx = m.get("context", "")
             items.append(ListItem(Label(f"{mid}  ({ctx:,} ctx)" if ctx else mid), name=mid))
         _mount_list(body, f"Select a model for [bold]{provider}[/bold]:", items, "model-list")
-        if self._slot not in PRIMARY_ONLY_SLOTS:
-            # Pre-fill from the stored config only on the first render of this
-            # step. On a back/forward re-render keep whatever the user already
-            # typed, or their backup model would be silently discarded.
-            if self._fallback is None:
-                self._fallback = str(
-                    get_slot_configs().get(self._slot or "", {}).get("fallback") or ""
-                )
-            body.mount(Static("Backup model (optional — leave blank to clear):"))
-            body.mount(
-                Input(
-                    value=self._fallback or "",
-                    placeholder="e.g. anthropic/claude-3-5-haiku",
-                    id="fallback-input",
-                )
+        # Pre-fill from the stored config only on the first render of this
+        # step. On a back/forward re-render keep whatever the user already
+        # typed, or their backup model would be silently discarded.
+        if self._fallback is None:
+            self._fallback = str(get_slot_configs().get(self._slot or "", {}).get("fallback") or "")
+        body.mount(Static("Backup model (optional — leave blank to clear):"))
+        body.mount(
+            Input(
+                value=self._fallback or "",
+                placeholder="e.g. anthropic/claude-3-5-haiku",
+                id="fallback-input",
             )
+        )
 
     def _render_key_step(self, body: Vertical) -> None:
         provider = self._provider or ""
@@ -215,8 +212,7 @@ class GatewayWizard(Screen[bool]):
         if self._key and self._key != "<saved>":
             save_api_key(self._provider, self._key)
         save_slot_config(self._slot, self._provider, self._model)
-        if self._slot not in PRIMARY_ONLY_SLOTS:
-            save_slot_fallback(self._slot, self._fallback or None)
+        save_slot_fallback(self._slot, self._fallback or None)
         health = gateway_health_check()
         slot_status = health.get(self._slot, {}).get("status", "")
         if slot_status in ("configured", "missing_api_key"):
