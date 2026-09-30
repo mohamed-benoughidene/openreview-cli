@@ -62,6 +62,226 @@ class TestDetectClauseStarts:
     def test_empty_text_returns_empty(self) -> None:
         assert detect_clause_starts("") == []
 
+    def test_bare_dotted_number_is_a_clause_start_with_a_child_item(self) -> None:
+        """Real contracts number clauses ``1.1 Title`` (no trailing dot).
+
+        Regression: the dot-alternative used to require a trailing dot
+        (``1.1.``), so ``1.1 Confidentiality`` was never a start and got folded
+        into the preceding clause -- the clause hierarchy, and therefore the
+        graph's ``parent_child`` edges, came out thinner than reality.
+        """
+        text = (
+            "1.1 Confidentiality\n"
+            "The Receiving Party shall keep the information secret.\n"
+            "1.2 Term\n"
+            "(a) This Agreement begins on the Effective Date.\n"
+        )
+        starts = detect_clause_starts(text)
+        start_lines = [text[offset:].splitlines()[0] for offset, _ in starts]
+        assert start_lines == [
+            "1.1 Confidentiality",
+            "1.2 Term",
+            "(a) This Agreement begins on the Effective Date.",
+        ]
+
+        # The start regex and the level rules must agree: ``1.1`` is level 1,
+        # its nested ``(a)`` item is level 2, exactly as the parser links them.
+        clauses = build_hierarchy([], starts, [], 1, 0, text)
+        matches = [detect_numbering_pattern(c.text.splitlines()[0]) for c in clauses]
+        levels = [m["level"] if m else None for m in matches]
+        assert levels == [1, 1, 2]
+        link_parent_ids(clauses, [], levels=levels)
+        assert clauses[0].parent_id is None
+        assert clauses[1].parent_id is None
+        assert clauses[2].parent_id == clauses[1].id
+
+    def test_existing_numbering_forms_still_start_clauses(self) -> None:
+        text = (
+            "ARTICLE I: Definitions\n"
+            "Section 1.1 Confidentiality obligations apply.\n"
+            "Clause 4 Payment\n"
+            "1. Payment\n"
+            "2. Payment\n"
+            "1.1 Late payment\n"
+            "1.1.1. Trailing dot sub-clause\n"
+            "2.3.4 Sub-sub-clause\n"
+            "1.1.107 Definition\n"
+            "(a) Exclusions apply.\n"
+            "(1) Numbered item\n"
+            "(i) First sub-item\n"
+        )
+        start_lines = [text[offset:].splitlines()[0] for offset, _ in detect_clause_starts(text)]
+        assert start_lines == [
+            "ARTICLE I: Definitions",
+            "Section 1.1 Confidentiality obligations apply.",
+            "Clause 4 Payment",
+            "1. Payment",
+            "2. Payment",
+            "1.1 Late payment",
+            "1.1.1. Trailing dot sub-clause",
+            "2.3.4 Sub-sub-clause",
+            "1.1.107 Definition",
+            "(a) Exclusions apply.",
+            "(1) Numbered item",
+            "(i) First sub-item",
+        ]
+
+    def test_dotted_number_inside_a_sentence_is_not_a_clause_start(self) -> None:
+        """A number that merely appears mid-line must never split a clause."""
+        text = (
+            "The obligations described in 1.1 Confidentiality apply to both parties.\n"
+            "See also 2.3.4 Term of the schedule, and 1.5.1 as amended.\n"
+        )
+        assert detect_clause_starts(text) == []
+
+    def test_numeric_literals_at_line_start_are_not_clause_numbers(self) -> None:
+        """Years, long decimals and document numbers must not start clauses.
+
+        These are the lines the three-digit cap on each dotted component exists
+        for; every one of them is a real CUAD line, not a contrived example.
+        Without the cap they would split the clause they sit in and, because
+        ``detect_numbering_pattern`` agreed with the old, uncapped rule, they
+        would claim a numbering level too.
+        """
+        text = (
+            "1.3.2019 - 31.12.2019: All grades at the price below.\n"
+            "1162967.3\n"
+            "2510.03 D- Guest Kitchens - Install tile.\n"
+            "01.02.2024 Settlement Date payment.\n"
+        )
+        assert detect_clause_starts(text) == []
+        for line in text.splitlines():
+            assert detect_numbering_pattern(line) is None, line
+
+    def test_bare_decimal_at_line_start_is_pinned_as_agreeing_with_the_level_rule(self) -> None:
+        """A short decimal is syntactically identical to a two-level clause number.
+
+        ``3.14`` is indistinguishable from ``1.1`` without looking at the
+        surrounding document, so the two rules deliberately agree: the line is a
+        clause start *and* carries numbering level 1. The cost is at most one
+        extra boundary; disagreeing is worse, because a levelled clause that is
+        not a start (the bug this file fixes) or a start with no level (the
+        parser would fold it in anyway) both distort the hierarchy.
+        """
+        text = "3.14 is the ratio used in the calculation.\n"
+        assert [text[offset:].splitlines()[0] for offset, _ in detect_clause_starts(text)] == [
+            "3.14 is the ratio used in the calculation."
+        ]
+        level = detect_numbering_pattern("3.14 is the ratio used in the calculation.")
+        assert level is not None and level["level"] == 1
+
+    def test_plain_integer_with_trailing_dot_is_unchanged_by_this_fix(self) -> None:
+        """``2024.`` was already a start through the plain ``N.`` form.
+
+        A year followed by a full stop cannot be told apart from a top-level
+        ``1.`` clause number by this detector, and that behaviour predates the
+        bare-dotted-number fix -- pinning it here keeps the change honest about
+        what it did and did not alter.
+        """
+        text = "2024. All rights reserved.\n"
+        start_lines = [text[offset:].splitlines()[0] for offset, _ in detect_clause_starts(text)]
+        assert start_lines == ["2024. All rights reserved."]
+
+    def test_start_rule_and_level_rule_agree_line_by_line(self) -> None:
+        """The segmentation rule and the level rule must never disagree.
+
+        A line that ``detect_numbering_pattern`` levels but ``detect_clause_starts``
+        does not split on is exactly the bug this file fixes: the number claims a
+        rung of the hierarchy while the text stays folded into the clause above.
+        The converse -- a start that carries no level -- would make the parser
+        fold the line in anyway. The two rules share ``_DOTTED_NUMBER_END``, so
+        every separator the level rule tolerates (``:``, ``)``, ``-``, ``/``,
+        ``,`` ...) is a start here too, not just whitespace. Lines are checked with
+        a trailing newline, as they carry in a real document.
+        """
+        levelled = {
+            "ARTICLE I: Definitions": 0,
+            "Section 1.1 Confidentiality obligations apply.": 1,
+            "Clause 4 Payment": 0,
+            "1. Payment": 0,
+            "1.1 Confidentiality": 1,
+            "1.1.1. Trailing dot sub-clause": 1,
+            "2.3.4 Sub-sub-clause": 1,
+            "1.1.107 Definition": 1,
+            "9.02.5.1.4 Deeply nested term": 1,
+            # Separators other than whitespace: the level rule always tolerated
+            # these, so before the trailer was shared these lines were levelled
+            # but not split on -- the exact bug class this file fixes.
+            "1.1: Payment": 1,
+            "1.1) Payment": 1,
+            "1.2.3-beta tag": 1,
+            "1.1/Exhibits": 1,
+            "1.1, Definitions": 1,
+            "(a) Exclusions apply.": 2,
+            "(i) First sub-item": 2,
+            "(1) Numbered item": 2,
+        }
+        not_levelled = [
+            "1.3.2019 - 31.12.2019: All grades at the price below.",
+            "1162967.3",
+            "2510.03 D- Guest Kitchens - Install tile.",
+            "01.02.2024 Settlement Date payment.",
+            "1.1X Glued to a word, so not a number at all.",
+            "The obligations described in 1.1 Confidentiality apply.",
+            "See also 2.3.4 Term of the schedule.",
+            "This is just a sentence.",
+        ]
+
+        for line, expected_level in levelled.items():
+            match = detect_numbering_pattern(line)
+            assert match is not None, line
+            assert match["level"] == expected_level, line
+            assert detect_clause_starts(line + "\n"), line
+
+        for line in not_levelled:
+            assert detect_numbering_pattern(line) is None, line
+            assert detect_clause_starts(line + "\n") == [], line
+
+    def test_dotted_number_at_end_of_text_still_starts_a_clause(self) -> None:
+        """The last line needs no trailing newline to be a start."""
+        text = "The parties agree as follows.\n1.1 Term"
+        start_lines = [text[offset:].splitlines()[0] for offset, _ in detect_clause_starts(text)]
+        assert start_lines == ["1.1 Term"]
+        level = detect_numbering_pattern("1.1 Term")
+        assert level is not None and level["level"] == 1
+
+    def test_ip_like_number_at_line_start_is_a_known_residual(self) -> None:
+        """``192.168.1.1`` is shaped exactly like the real clause number ``4.1.2.1``.
+
+        Four all-short components cannot be told apart from a deeply nested
+        clause number, and rejecting four-component numbers would drop real
+        headings every deep contract has, so this stays a clause start (as the
+        level rule already treated it before this fix). Pinned so the residual is
+        a documented decision rather than a surprise.
+        """
+        text = "192.168.1.1 Upstream host\n"
+        assert detect_clause_starts(text)
+        level = detect_numbering_pattern("192.168.1.1 Upstream host")
+        assert level is not None and level["level"] == 1
+
+    def test_trailer_widening_leaves_the_documented_residuals_unchanged(self) -> None:
+        """Sharing the trailer widens the separator only; the residuals stay as they were.
+
+        ``1.50`` (a currency amount) and ``10.0.0.1`` (an address) were already
+        clause starts with level 1 before the trailer was shared -- a space follows
+        both -- so accepting any non-word separator leaves them unchanged. The
+        rejects stay rejects: the three-digit cap keeps ``1162967.3`` and
+        ``2510.03`` from matching either rule, and the line-start anchor keeps a
+        mid-sentence ``in 1.1`` from splitting its clause.
+        """
+        for line in ("1.50 USD per unit", "10.0.0.1 gateway"):
+            assert detect_clause_starts(line + "\n"), line
+            level = detect_numbering_pattern(line)
+            assert level is not None and level["level"] == 1, line
+
+        for line in ("1162967.3", "2510.03 D- Guest Kitchens - Install tile."):
+            assert detect_clause_starts(line + "\n") == [], line
+            assert detect_numbering_pattern(line) is None, line
+
+        mid_sentence = "The obligations described in 1.1 Confidentiality apply to both parties.\n"
+        assert detect_clause_starts(mid_sentence) == []
+        assert detect_numbering_pattern(mid_sentence.strip()) is None
+
 
 class TestBuildHierarchy:
     def test_flat_document_fallback(self) -> None:

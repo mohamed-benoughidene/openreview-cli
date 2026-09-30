@@ -1,8 +1,8 @@
 {
   "benchmark": "cuad-segmentation",
   "command": "uv run python scripts/benchmark_cuad_segmentation.py --output .benchmark-reports/cuad-segmentation.json",
-  "date": "2026-09-22",
-  "git_commit": "f7b08ba",
+  "date": "2026-09-30",
+  "git_commit": "74ce840",
   "provenance": [
     {
       "path": "scripts/benchmark_cuad_segmentation.py",
@@ -18,14 +18,14 @@
     "unreadable_file_paths": []
   },
   "metrics": {
-    "spans_contained": 5664,
-    "containment_rate": 0.906675,
-    "token_f1_mean": 0.307437,
+    "spans_contained": 5833,
+    "containment_rate": 0.933728,
+    "token_f1_mean": 0.425125,
     "tests_with_span": 4042,
-    "tests_any_span_contained": 3704,
-    "test_coverage_rate": 0.916378,
+    "tests_any_span_contained": 3797,
+    "test_coverage_rate": 0.939386,
     "missing_snippets": 0,
-    "elapsed_seconds": 85.31
+    "elapsed_seconds": 93.73
   },
-  "notes": "Corpus is gitignored (data/legalbenchrag/) and not redistributed; corpus_sha256 pins the exact file used. Wall time is machine-dependent. This measures segmentation (span containment and enclosure tightness), NOT query-answering accuracy. The detector groups whole sentences under section headings, so one detected clause often spans several labeled spans; enclosures are coarse, which is why token-F1 is low even where containment is high. All 462 referenced files now load: one corpus file_path is stored in NFD (decomposed) Unicode form while the file on disk is NFC, and the script resolves it by retrying the path under Unicode NFC normalization, so sample.unreadable_file_paths is empty. Mean token-F1 is taken over every evaluated span with a non-contained span counted as 0, so it is a deliberate conservative floor rather than an average over only the spans that were successfully contained. git_commit is informational; the top-level provenance pin is the authoritative content pin."
+  "notes": "Corpus is gitignored (data/legalbenchrag/) and not redistributed; corpus_sha256 pins the exact file used. Wall time is machine-dependent (93.73 s on the machine that wrote this receipt, against 97.82 s in the run this replaces; the difference is environment, not code). This measures segmentation (span containment and enclosure tightness), NOT query-answering accuracy. These numbers were produced from the branch's WORKING-TREE code, which carries the dotted-clause-number fix to detect_clause_starts (a bare `1.1 Title` now starts a clause); that fix is not yet contained in the commit git_commit names (74ce840), so the stamp is the branch point, not the exact tree that ran. The same-environment baseline was measured here by re-running the PRE-fix code on this machine: containment 0.907796, token-F1 0.308125, query coverage 0.917615. Against that baseline the fix moves containment 0.907796 -> 0.933728 (+2.59 pp), token-F1 0.308125 -> 0.425125, and query coverage 0.917615 -> 0.939386. The +2.69 pp (0.906675 -> 0.933728) an earlier draft quoted was wrong: 0.906675 came from the superseded receipt dated 2026-09-22 at f7b08ba, produced in a different environment, and is not comparable to today's runs; it is cited here only as that different-environment/date figure. A later change sharing one trailer between the start rule and the level rule (so a dotted number may be followed by any non-word separator, `:`, `)`, `-`, `/`, `,` ...) was re-run the same day: it added 29 clause starts across 9 documents, but none of the new boundaries crossed a gold span, so containment, query coverage and token-F1 are unchanged (0.933728 / 0.939386 / 0.425125). Across the whole fix the numbers moved on BOTH corpora -- CUAD up, and MAUD's containment down (0.803804 -> 0.798168, recorded plainly in its receipt) -- while the separator widening on its own left every CUAD metric flat and only nudged MAUD's token-F1. The detector groups whole sentences under section headings, so one detected clause often spans several labeled spans; enclosures are coarser than the gold spans, which is why token-F1 stays well below 1 even where containment is high. All 462 referenced files load: one corpus file_path is stored in NFD (decomposed) Unicode form while the file on disk is NFC, and the script resolves it by retrying the path under Unicode NFC normalization, so sample.unreadable_file_paths is empty. Mean token-F1 is taken over every evaluated span with a non-contained span counted as 0, so it is a deliberate conservative floor rather than an average over only the spans that were successfully contained. git_commit is informational; the top-level provenance pin is the authoritative content pin."
 }
