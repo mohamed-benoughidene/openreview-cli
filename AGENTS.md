@@ -424,5 +424,5 @@ Plain-English phase reports in `.specify/memory/reports/` (date-prefixed, regene
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/archive/034-multifield-provider-auth/plan.md
+at specs/035-post-measurement-cleanup/plan.md
 <!-- SPECKIT END -->
