@@ -222,6 +222,21 @@ uv run pre-commit run --all-files   # the required pre-commit gate
    the "19 of 20 good claims" figure with the re-measured numbers, and add one line to the method section
    stating the reader was fixed and the local grounding request now asks for JSON.
 
+**What the two runs do and do not cover.** Read this before treating a green run as proof of safety.
+
+| Risk | Local run | Cloud run | Unit tests |
+|---|---|---|---|
+| The JSON request leaks to a cloud provider | not applicable | Only if that provider *rejects* the parameter — then the pre-flight (`scripts/measure_slm_slots.py:418-448`) aborts the run loudly. If the provider accepts it, the run stays green and the leak is invisible | yes, explicit |
+| Several claims in one call breaks | **no** — the harness calls `ground_claim` one claim at a time (`:693`) | **no** | yes, required |
+| A fallback model inherits the request | **no** — the grounding slot ships with `fallback: None` (`config/loader.py:31-35`), and nothing forces a fallback | **no** | yes, required |
+| An unknown provider receives the request | no | no | yes |
+| Answers cut off partway | visible only through the new counter | same | yes |
+
+Consequence, stated plainly: the two runs confirm the main path of each arm and nothing more. The three
+structural risks (multi-claim batches, fallback, unknown provider) are covered by unit tests alone — which is
+exactly why those tests are mandatory rather than nice-to-have. The cloud arm is manual by design: it needs a
+key that can spend, so it is not part of CI.
+
 ---
 
 ## 9. Risks and mitigations
