@@ -59,7 +59,7 @@ def run_review(  # noqa: PLR0912
         Model slot name for the extraction agent.
     qa_model : str | None
         Model slot name for the QA verification agent. ``None`` uses the
-        same slot as extraction.
+        ``reasoning`` slot (the reader keeps ``extraction``).
     no_pii : bool
         Skip PII stripping when ``True``.
     verbose : bool
@@ -94,7 +94,7 @@ def run_review(  # noqa: PLR0912
         One report per document, in input order.
     """
     if qa_model is None:
-        qa_model = extraction_model
+        qa_model = "reasoning"
 
     # Load playbook with precedence: DB id > file path > bundled
     playbook_version: int | None = None

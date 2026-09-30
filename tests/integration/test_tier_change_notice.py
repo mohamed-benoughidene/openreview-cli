@@ -99,7 +99,7 @@ class TestTierChangeNotice:
             )
             assert result.exit_code == 0, f"CLI exited {result.exit_code}: {result.output}"
             log_output = log_stream.getvalue()
-            assert "Tier changed from maximum to performance" in log_output
+            assert "Tier changed from maximum to balanced" in log_output
         finally:
             root_logger.removeHandler(handler)
 
@@ -178,4 +178,5 @@ class TestTierChangeNotice:
         tier_cfg = TierConfig.from_config(config)
 
         msg = tracker.check_and_record(tier_cfg.tier)
-        assert msg == "Tier changed from maximum to performance"
+        # `performance` is a legacy alias normalized to `balanced` (spec 035 T1.4).
+        assert msg == "Tier changed from maximum to balanced"

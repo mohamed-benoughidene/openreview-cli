@@ -2,7 +2,7 @@
 
 These tests exercise the REAL ``Gateway`` class (not ``TierRouter``) and
 prove that ``maximum``/``balanced`` tier rules block cloud calls *before*
-any litellm dispatch, while ``performance`` and local providers pass through.
+any litellm dispatch, while local providers and the cloud-allowing tier pass through.
 
 The dispatch path is patched to raise ``AssertionError`` if reached, so a
 green test also proves the network call never happened.
@@ -84,67 +84,8 @@ class TestMaximumTierEnforcement:
         assert "MAXIMUM" in str(exc_info.value)
         assert "local provider" in str(exc_info.value)
 
-    def test_cloud_embed_raises(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        gw = _make_gateway(
-            monkeypatch, _config("maximum", "embedding", "openai/text-embedding-3-small"), tmp_path
-        )
-        monkeypatch.setattr(gw, "_resolve_provider_info", lambda slot: _cloud_info())
-        monkeypatch.setattr(gw, "_call_with_fallback", _assert_dispatch_not_reached)
-
-        with pytest.raises(NoMatchingProviderError) as exc_info:
-            gw.embed("embedding", ["hello"])
-
-        assert "MAXIMUM" in str(exc_info.value)
-
-    def test_cloud_rerank_raises(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        import litellm
-
-        gw = _make_gateway(
-            monkeypatch, _config("maximum", "reranking", "cohere/rerank-english-v3.0"), tmp_path
-        )
-        monkeypatch.setattr(gw, "_resolve_provider_info", lambda slot: _cloud_info(name="cohere"))
-        monkeypatch.setattr(litellm, "rerank", _assert_dispatch_not_reached)
-
-        with pytest.raises(NoMatchingProviderError) as exc_info:
-            gw.rerank("reranking", "query", ["doc a"])
-
-        assert "MAXIMUM" in str(exc_info.value)
-
-    def test_local_embed_proceeds(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        gw = _make_gateway(
-            monkeypatch, _config("maximum", "embedding", "ollama/nomic-embed-text"), tmp_path
-        )
-        monkeypatch.setattr(gw, "_resolve_provider_info", lambda slot: _local_info())
-        monkeypatch.setattr(
-            gw, "_get_litellm_kwargs", lambda slot: {"model": "ollama/nomic-embed-text"}
-        )
-
-        def _fake_fallback(slot: str, call_fn: Any, call_kwargs: dict[str, Any], **_kw: Any) -> Any:
-            return SimpleNamespace(data=[{"embedding": [0.1, 0.2]}])
-
-        monkeypatch.setattr(gw, "_call_with_fallback", _fake_fallback)
-        monkeypatch.setattr(
-            "openreview_cli.prompts.store.PromptStore", MagicMock(resolve=lambda slot: None)
-        )
-
-        result = gw.embed("embedding", ["hello"])
-
-        assert result == [[0.1, 0.2]]
-
 
 class TestBalancedTierEnforcement:
-    def test_cloud_embed_raises(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        gw = _make_gateway(
-            monkeypatch, _config("balanced", "embedding", "openai/text-embedding-3-small"), tmp_path
-        )
-        monkeypatch.setattr(gw, "_resolve_provider_info", lambda slot: _cloud_info())
-        monkeypatch.setattr(gw, "_call_with_fallback", _assert_dispatch_not_reached)
-
-        with pytest.raises(NoMatchingProviderError) as exc_info:
-            gw.embed("embedding", ["hello"])
-
-        assert "BALANCED" in str(exc_info.value)
-
     def test_cloud_llm_allowed(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from openreview_cli.gateway.router import mark_pii_available
 
@@ -160,34 +101,6 @@ class TestBalancedTierEnforcement:
         result = gw.chat("reasoning", [{"role": "user", "content": "hi"}])
 
         assert result == "ok"
-
-
-class TestPerformanceTierEnforcement:
-    def test_cloud_embed_allowed(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        from openreview_cli.gateway.router import mark_pii_available
-
-        mark_pii_available()
-        gw = _make_gateway(
-            monkeypatch,
-            _config("performance", "embedding", "openai/text-embedding-3-small"),
-            tmp_path,
-        )
-        monkeypatch.setattr(gw, "_resolve_provider_info", lambda slot: _cloud_info())
-        monkeypatch.setattr(
-            gw, "_get_litellm_kwargs", lambda slot: {"model": "openai/text-embedding-3-small"}
-        )
-
-        def _fake_fallback(slot: str, call_fn: Any, call_kwargs: dict[str, Any], **_kw: Any) -> Any:
-            return SimpleNamespace(data=[{"embedding": [0.1, 0.2]}])
-
-        monkeypatch.setattr(gw, "_call_with_fallback", _fake_fallback)
-        monkeypatch.setattr(
-            "openreview_cli.prompts.store.PromptStore", MagicMock(resolve=lambda slot: None)
-        )
-
-        result = gw.embed("embedding", ["hello"])
-
-        assert result == [[0.1, 0.2]]
 
 
 class TestProviderClassification:
@@ -241,24 +154,6 @@ class TestBalancedTierPiiGate:
 
         assert gw.chat("reasoning", [{"role": "user", "content": "hi"}]) == "ok"
 
-    def test_performance_cloud_embed_without_strip_raises(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Performance tier + cloud embed + no strip → blocked."""
-        from openreview_cli.gateway.router import reset_pii_available
-
-        reset_pii_available()
-        gw = _make_gateway(
-            monkeypatch,
-            _config("performance", "embedding", "openai/text-embedding-3-small"),
-            tmp_path,
-        )
-        monkeypatch.setattr(gw, "_resolve_provider_info", lambda slot: _cloud_info())
-        monkeypatch.setattr(gw, "_call_with_fallback", _assert_dispatch_not_reached)
-
-        with pytest.raises(PIIUnavailableError):
-            gw.embed("embedding", ["hello"])
-
 
 class TestCloudCallCounter:
     def test_cloud_call_increments_module_counter_and_reset_zeroes(
@@ -269,15 +164,15 @@ class TestCloudCallCounter:
         reset_total_cloud_calls()
         gw = _make_gateway(
             monkeypatch,
-            _config("performance", "embedding", "openai/text-embedding-3-small"),
+            _config("balanced", "reasoning", "openai/gpt-4"),
             tmp_path,
         )
         monkeypatch.setattr(gw, "_resolve_provider_info", lambda slot: _cloud_info())
 
-        gw._record_cloud_call("embedding")
+        gw._record_cloud_call("reasoning")
         assert get_total_cloud_calls() == 1
 
-        gw._record_cloud_call("embedding")
+        gw._record_cloud_call("reasoning")
         assert get_total_cloud_calls() == 2
 
         reset_total_cloud_calls()
@@ -290,11 +185,11 @@ class TestCloudCallCounter:
 
         reset_total_cloud_calls()
         gw = _make_gateway(
-            monkeypatch, _config("maximum", "embedding", "ollama/nomic-embed-text"), tmp_path
+            monkeypatch, _config("maximum", "reasoning", "ollama/qwen3:8b"), tmp_path
         )
         monkeypatch.setattr(gw, "_resolve_provider_info", lambda slot: _local_info())
 
-        gw._record_cloud_call("embedding")
+        gw._record_cloud_call("reasoning")
 
         assert get_total_cloud_calls() == 0
 
@@ -517,7 +412,8 @@ class TestR35RecoveryTierBypass:
             ("balanced", "openai/gpt-4", "anthropic/claude-3", False),  # different cloud
             ("balanced", "ollama/llama3.1", "openai/gpt-4", False),  # local→cloud override
             ("balanced", "openai/gpt-4", "ollama/llama3.1", False),  # cloud→local
-            # PERFORMANCE: cloud allowed; override path is unconstrained.
+            # LEGACY `performance` (spec 035 T1.4): still accepted by the tier
+            # parser and normalized to `balanced`, so cloud is allowed here too.
             ("performance", "openai/gpt-4", "anthropic/claude-3", False),
             ("performance", "ollama/llama3.1", "openai/gpt-4", False),
         ],
@@ -571,7 +467,7 @@ class TestR35RecoveryTierBypass:
             "_resolve_provider_info",
             lambda slot, _p=primary_prefix: _registry().get(_p),
         )
-        # Mark PII available so balanced/performance cloud calls don't fail
+        # Mark PII available so balanced cloud calls don't fail
         # on the PII gate (orthogonal to the tier matrix).
         from openreview_cli.gateway.router import mark_pii_available, reset_pii_available
 
@@ -724,7 +620,7 @@ class TestR35RecoveryTierBypass:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """R3-5 — when an override dispatches to a cloud provider at a tier
-        that allows it (balanced/performance), the counter must record the
+        that allows it (balanced), the counter must record the
         override as the cloud call, not silently underreport.
         """
         from openreview_cli.gateway.router import (

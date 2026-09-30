@@ -45,15 +45,21 @@ def test_save_slot_fallback_none_clears(tmp_path: Path, monkeypatch: pytest.Monk
     assert persisted["gateway"]["models"]["reasoning"]["fallback"] is None
 
 
-def test_save_slot_fallback_rejects_primary_only(
+def test_save_slot_fallback_allows_every_remaining_slot(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Spec 035 T1.3: embedding/reranking were the only primary-only
+    slots; with them gone every remaining slot accepts a backup."""
     config_path = tmp_path / "config.yml"
     config_path.write_text("gateway:\n  models: {}\n")
     monkeypatch.setitem(gw_domain._PATHS, "config", config_path)
 
-    with pytest.raises(ValueError):
-        gw_domain.save_slot_fallback("embedding", "cohere/embed-x")
+    for slot in ("reasoning", "extraction", "grounding"):
+        gw_domain.save_slot_fallback(slot, "anthropic/claude-3-5-haiku")
+
+    persisted = load_config(config_path)
+    for slot in ("reasoning", "extraction", "grounding"):
+        assert persisted["gateway"]["models"][slot]["fallback"] == "anthropic/claude-3-5-haiku"
 
 
 def test_get_slot_configs_includes_fallback(
@@ -67,7 +73,6 @@ def test_get_slot_configs_includes_fallback(
                 "primary": "anthropic/claude-opus",
                 "fallback": "anthropic/claude-3-5-haiku",
             },
-            "reranking": {"primary": "cohere/rerank-x", "fallback": "cohere/backup"},
         },
     )
     monkeypatch.setitem(gw_domain._PATHS, "config", config_path)
@@ -75,5 +80,3 @@ def test_get_slot_configs_includes_fallback(
     slots = gw_domain.get_slot_configs()
 
     assert slots["reasoning"]["fallback"] == "anthropic/claude-3-5-haiku"
-    assert slots["reranking"]["provider"] == "cohere"
-    assert slots["reranking"].get("fallback") is None

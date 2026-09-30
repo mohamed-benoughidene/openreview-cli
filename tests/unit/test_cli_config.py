@@ -76,12 +76,12 @@ def test_config_get_applies_known_key_env_override(
     """A schema-known key still honours its env override via load_config."""
     config_file = _setup_config(monkeypatch, tmp_path)
     config_file.write_text("version: 1\nprivacy:\n  tier: balanced\n")
-    monkeypatch.setenv("OPENREVIEW_PRIVACY__TIER", "performance")
+    monkeypatch.setenv("OPENREVIEW_PRIVACY__TIER", "maximum")
 
     result = runner.invoke(app, ["config", "get", "privacy.tier"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "performance"
+    assert result.stdout.strip() == "maximum"
 
 
 def test_config_get_round_trips_key_written_by_set(

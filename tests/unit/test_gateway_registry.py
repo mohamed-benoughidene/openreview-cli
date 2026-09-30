@@ -466,12 +466,14 @@ def test_load_registry_voyage_native_entry() -> None:
     assert p.env_key == "VOYAGE_API_KEY"
     assert p.source == "bundled"
     caps = p.capabilities
-    assert caps.embedding is True
-    assert caps.rerank is True
+    # Spec 035 T1.3: voyage served only the removed embedding and
+    # reranking sockets, so it declares neither capability flag and no
+    # model for the three remaining slots.
+    assert caps.embedding is False
+    assert caps.rerank is False
     assert caps.reasoning is False
     assert caps.tool_call is False
-    assert "voyage-3.5" in p.models
-    assert "rerank-2.5" in p.models
+    assert p.models == {}
 
 
 def test_load_registry_moonshot_native_entry() -> None:

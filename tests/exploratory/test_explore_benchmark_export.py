@@ -104,7 +104,7 @@ def test_benchmark_ci_regression_exits_75(
     result = invoke(["benchmark", "run", "--datasets", "pii", "--ci"])
     assert result.exit_code == EXIT_BENCHMARK_REGRESSION, (result.exit_code, _text(result))
     assert "code 75" in _text(result)
-    assert len(calls) == 3, calls  # one PII tier call per configured tier
+    assert len(calls) == 2, calls  # one PII tier call per configured tier (maximum, balanced)
 
 
 # ── export ────────────────────────────────────────────────────────────────

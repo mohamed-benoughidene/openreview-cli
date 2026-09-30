@@ -19,28 +19,17 @@ DEFAULT_CONFIG: dict[str, object] = {
     "gateway": {
         "models": {
             "reasoning": {
-                "primary": "ollama/qwen3:8b",
+                "primary": "ollama/granite4:3b",
                 "fallback": None,
                 "params": {"temperature": 0.1, "max_tokens": 4000},
             },
             "extraction": {
-                "primary": "ollama/qwen3:4b",
+                "primary": "ollama/granite4:3b",
                 "fallback": None,
                 "params": {"temperature": 0.0, "max_tokens": 2000},
             },
-            "embedding": {
-                "primary": "ollama/nomic-embed-text",
-            },
-            "reranking": {
-                "primary": "voyage/rerank-2.5",
-            },
-            "graph": {
-                "primary": "ollama/qwen3:8b",
-                "fallback": None,
-                "params": {"temperature": 0.0, "max_tokens": 4000},
-            },
             "grounding": {
-                "primary": "ollama/qwen3:8b",
+                "primary": "ollama/granite4:3b",
                 "fallback": None,
                 "params": {"temperature": 0.0, "max_tokens": 4000},
             },
@@ -108,26 +97,15 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
         params: ModelParams | None = None
         extra_params: dict[str, Any] | None = None
 
-    class EmbeddingSlot(BaseModel):
-        primary: str
-
-    class RerankingSlot(BaseModel):
-        primary: str
-
     class GatewayModels(BaseModel):
         reasoning: ModelSlot = ModelSlot(
-            primary="ollama/qwen3:8b", params=ModelParams(temperature=0.1, max_tokens=4000)
+            primary="ollama/granite4:3b", params=ModelParams(temperature=0.1, max_tokens=4000)
         )
         extraction: ModelSlot = ModelSlot(
-            primary="ollama/qwen3:4b", params=ModelParams(temperature=0.0, max_tokens=2000)
-        )
-        embedding: EmbeddingSlot = EmbeddingSlot(primary="ollama/nomic-embed-text")
-        reranking: RerankingSlot = RerankingSlot(primary="voyage/rerank-2.5")
-        graph: ModelSlot = ModelSlot(
-            primary="ollama/qwen3:8b", params=ModelParams(temperature=0.0, max_tokens=4000)
+            primary="ollama/granite4:3b", params=ModelParams(temperature=0.0, max_tokens=2000)
         )
         grounding: ModelSlot = ModelSlot(
-            primary="ollama/qwen3:8b", params=ModelParams(temperature=0.0, max_tokens=4000)
+            primary="ollama/granite4:3b", params=ModelParams(temperature=0.0, max_tokens=4000)
         )
 
     class FallbackConfig(BaseModel):
@@ -169,6 +147,11 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
     )
 
     class PrivacyConfig(BaseModel):
+        # Spec 035 T1.4: `performance` was identical to `balanced` and no longer
+        # ships as a mode. It stays in the Literal — this schema validates BEFORE
+        # PrivacyTier.parse runs — so a config written before the change loads
+        # instead of raising a validation error; the validator below then maps it
+        # to `balanced`, which is exactly how it behaved.
         tier: Literal["maximum", "balanced", "performance"] = "balanced"
         strip_pii: bool = True
         log_ttl_days: int = Field(default=30, ge=1)
@@ -177,6 +160,14 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
         retention_days: int = Field(default=30, ge=1, le=365)
         enabled_recognizers: list[str] = []
         placeholder_format: str = "[{type}]"
+
+        @field_validator("tier")
+        @classmethod
+        def _normalize_legacy_tier(cls, v: str) -> str:
+            # Compatibility shim only (spec 035 T1.4): the removed `performance`
+            # mode behaved exactly like `balanced`, so an old config keeps
+            # working by normalizing to it. No other alias is accepted.
+            return "balanced" if v == "performance" else v
 
         @field_validator("pii_encryption_key")
         @classmethod

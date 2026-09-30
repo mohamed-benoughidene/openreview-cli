@@ -17,11 +17,17 @@ def test_default_config_has_no_fallback_models(tmp_path: Path) -> None:
     config_path = tmp_path / "config.yml"
     result = load_config(config_path)
     models = result["gateway"]["models"]
-    for slot in ("reasoning", "extraction", "graph", "grounding"):
+    for slot in ("reasoning", "extraction", "grounding"):
         assert models[slot]["fallback"] is None
 
 
-def test_primary_only_slots_drop_fallback_key(tmp_path: Path) -> None:
+def test_removed_slot_keys_are_ignored_not_an_error(tmp_path: Path) -> None:
+    """A config written before the slot consolidation must still load.
+
+    ``embedding``/``reranking``/``graph`` are no longer schema fields, so an
+    old config carrying them is dropped from the validated view rather than
+    raising a validation error.
+    """
     config_path = tmp_path / "config.yml"
     config_path.write_text(
         "gateway:\n"
@@ -31,7 +37,40 @@ def test_primary_only_slots_drop_fallback_key(tmp_path: Path) -> None:
         "      fallback: cohere/backup\n"
     )
     result = load_config(config_path)
-    assert "fallback" not in result["gateway"]["models"]["reranking"]
+    assert "reranking" not in result["gateway"]["models"]
+
+
+def test_shipped_defaults_are_the_same_model_for_all_three_slots(tmp_path: Path) -> None:
+    """Spec 035 T1.5: granite4:3b is the shipped default for every slot."""
+    config_path = tmp_path / "config.yml"
+    models = load_config(config_path)["gateway"]["models"]
+    assert set(models) == {"extraction", "reasoning", "grounding"}
+    for slot in ("extraction", "reasoning", "grounding"):
+        assert models[slot]["primary"] == "ollama/granite4:3b"
+
+
+def test_legacy_performance_tier_loads_as_balanced(tmp_path: Path) -> None:
+    """Spec 035 T1.4 compatibility: an old ``performance`` value must not crash.
+
+    The pydantic schema validates before ``PrivacyTier.parse`` runs, so the old
+    value has to stay accepted and be normalized to ``balanced``.
+    """
+    config_path = tmp_path / "config.yml"
+    config_path.write_text("privacy:\n  tier: performance\n")
+    assert load_config(config_path)["privacy"]["tier"] == "balanced"
+
+
+def test_legacy_performance_tier_yields_balanced_rules(tmp_path: Path) -> None:
+    from openreview_cli.gateway.tier_config import TierConfig
+
+    config_path = tmp_path / "config.yml"
+    config_path.write_text("privacy:\n  tier: performance\n")
+    legacy = TierConfig.from_config(load_config(config_path))
+    balanced = TierConfig.from_config(load_config(tmp_path / "other.yml"))
+    assert legacy.tier == "balanced"
+    assert legacy.tier_source == "config"
+    assert legacy.llm_local_only == balanced.llm_local_only is False
+    assert legacy.pii_required_before_cloud == balanced.pii_required_before_cloud is True
 
 
 def test_config_yml_created_with_defaults(tmp_path: Path) -> None:

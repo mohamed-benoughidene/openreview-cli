@@ -233,7 +233,9 @@ class TestPrivacyTierThreading:
 
         assert len(captured_coordinator) == 1
         ctx = captured_coordinator[0].create_context()
-        assert ctx.user_privacy_tier == "none"
+        # `performance` is kept as an accepted alias of `balanced` (spec 035
+        # T1.4/decision 9), so an old config yields the balanced rules.
+        assert ctx.user_privacy_tier == "standard"
 
 
 class TestPipelineAdoption:

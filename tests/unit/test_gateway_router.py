@@ -10,7 +10,6 @@ import pytest
 from openreview_cli.gateway.errors import (
     AllProvidersFailedError,
     AuthError,
-    CapabilityMismatchError,
     ConnectionError,
     EmptyMessagesError,
     ModelNotFoundError,
@@ -18,7 +17,7 @@ from openreview_cli.gateway.errors import (
     SlotNotConfiguredError,
     UnclassifiedProviderError,
 )
-from openreview_cli.gateway.models import Capability, CapabilityRequirement, ProviderInfo
+from openreview_cli.gateway.models import Capability, ProviderInfo
 from openreview_cli.gateway.router import Gateway, classify_provider
 
 
@@ -44,16 +43,6 @@ class _MockChoice:
 class _MockCompletionResponse:
     def __init__(self, content: str) -> None:
         self.choices = [_MockChoice(content)]
-
-
-class _MockEmbeddingResponse:
-    def __init__(self, data: list[dict[str, Any]]) -> None:
-        self.data = data
-
-
-class _MockRerankResponse:
-    def __init__(self, results: list[dict[str, Any]]) -> None:
-        self.results = results
 
 
 class _UnauthorizedError(Exception):
@@ -404,150 +393,12 @@ gateway:
         assert len(calls) == 1, f"a permanent error was dispatched {len(calls)} times"
 
 
-class TestEmbed:
-    def test_returns_vectors(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        import openreview_cli.gateway.router as router_mod
-
-        monkeypatch.setattr(
-            router_mod,
-            "embedding",
-            lambda **kw: _MockEmbeddingResponse(
-                [{"embedding": [0.1, 0.2, 0.3]}, {"embedding": [0.4, 0.5, 0.6]}]
-            ),
-        )
-        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
-        result = gw.embed("embedding", ["hello", "world"])
-        assert result == [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
-
-    def test_survives_cost_logging_failure(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """Cost-logging failure must NOT block embed from returning vectors."""
-        import logging
-
-        caplog.set_level(logging.WARNING)
-
-        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
-
-        def _fake_fallback(
-            slot: str, call_fn: object, call_kwargs: dict[str, object], **_kw: Any
-        ) -> object:
-            return _MockEmbeddingResponse([{"embedding": [0.1, 0.2, 0.3]}])
-
-        monkeypatch.setattr(gw, "_call_with_fallback", _fake_fallback)
-
-        def _boom(*args: object, **kwargs: object) -> str:
-            raise RuntimeError("cost log exploded")
-
-        gw._cost_tracker.log_call = _boom  # type: ignore[method-assign]
-        result = gw.embed("embedding", ["hello"])
-        assert result == [[0.1, 0.2, 0.3]]
-        assert "Cost logging failed (non-fatal)" in caplog.text
-
-
-class TestRerank:
-    def test_returns_ranked_results(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        import litellm
-
-        monkeypatch.setattr(
-            litellm,
-            "rerank",
-            lambda **kw: _MockRerankResponse(
-                [{"index": 1, "relevance_score": 0.95}, {"index": 0, "relevance_score": 0.85}]
-            ),
-        )
-        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
-        result = gw.rerank("reranking", "test query", ["doc a", "doc b"])
-        assert result == [
-            {"index": 1, "relevance_score": 0.95},
-            {"index": 0, "relevance_score": 0.85},
-        ]
-
-    def test_survives_cost_logging_failure(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """Cost-logging failure must NOT block rerank from returning ranked results."""
-        import logging
-
-        import litellm
-
-        caplog.set_level(logging.WARNING)
-
-        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
-
-        monkeypatch.setattr(
-            litellm,
-            "rerank",
-            lambda **kw: _MockRerankResponse([{"index": 0, "relevance_score": 0.9}]),
-        )
-
-        def _boom(*args: object, **kwargs: object) -> str:
-            raise RuntimeError("cost log exploded")
-
-        gw._cost_tracker.log_call = _boom  # type: ignore[method-assign]
-        result = gw.rerank("reranking", "test query", ["doc a"])
-        assert result == [{"index": 0, "relevance_score": 0.9}]
-        assert "Cost logging failed (non-fatal)" in caplog.text
-
-    def test_rerank_error_names_provider(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        import litellm
-
-        def _boom(**kw: object) -> object:
-            raise RuntimeError("connection refused")
-
-        monkeypatch.setattr(litellm, "rerank", _boom)
-        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
-        with pytest.raises(Exception) as exc_info:
-            gw.rerank("reranking", "test query", ["doc a", "doc b"])
-        assert getattr(exc_info.value, "provider", None) == "cohere"
-
-    def test_rerank_applies_provider_credentials(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """T039 — FR-3: rerank must map multi-field creds like chat/embed."""
-        import litellm
-
-        captured: dict[str, Any] = {}
-
-        def fake_rerank(**kw: Any) -> _MockRerankResponse:
-            captured.update(kw)
-            return _MockRerankResponse([{"index": 0, "relevance_score": 0.9}])
-
-        monkeypatch.setattr(litellm, "rerank", fake_rerank)
-        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
-
-        from openreview_cli.gateway.models import CredentialField
-
-        bedrock_info = ProviderInfo(
-            name="bedrock",
-            base_url=None,
-            credentials=[
-                CredentialField(
-                    env_key="AWS_REGION_NAME",
-                    label="Region",
-                    litellm_param="aws_region_name",
-                    secret=False,
-                    required=True,
-                ),
-            ],
-        )
-        monkeypatch.setattr(gw, "_resolve_provider_info", lambda slot: bedrock_info)
-        monkeypatch.setenv("AWS_REGION_NAME", "us-east-1")
-        try:
-            gw.rerank("reranking", "q", ["d"])
-        finally:
-            monkeypatch.delenv("AWS_REGION_NAME", raising=False)
-        assert captured.get("aws_region_name") == "us-east-1"
-
-
 class TestSlotPrimaryModel:
     def test_returns_configured_primary(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
-        assert gw.slot_primary_model("reranking") == "cohere/rerank-english-v3.0"
+        assert gw.slot_primary_model("extraction") == "openai/gpt-4o"
 
     def test_returns_none_for_unconfigured_slot(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -768,7 +619,7 @@ gateway:
         gw = _gateway(tmp_path, monkeypatch, config, "{}")
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
         result = gw.health_check()
-        for slot in ("reasoning", "extraction", "embedding", "reranking", "graph"):
+        for slot in ("reasoning", "extraction", "grounding"):
             assert slot in result
             assert "status" in result[slot]
         assert result["reasoning"]["status"] == "missing_api_key"
@@ -903,54 +754,6 @@ class TestProviderClassificationTelemetry:
         gw = self._make_gateway(monkeypatch, registry)
         gw._config["gateway"]["models"]["extraction"]["primary"] = "deepseek/chat"
         info = gw._resolve_provider_info("extraction")
-
-
-def test_embedding_slot_chat_only_model_raises_pre_network() -> None:
-    """FR-4: capability gate fires BEFORE any network call.
-
-    A model declared without embedding capability, configured on the
-    embedding slot, must raise CapabilityMismatchError and must NOT reach
-    the litellm embedding call.
-    """
-    from unittest.mock import MagicMock
-
-    import openreview_cli.gateway.router as router_mod
-
-    # Embedding mock that would prove network happened if reached.
-    embedding_mock = MagicMock(side_effect=AssertionError("network called"))
-
-    gw = Gateway.__new__(Gateway)
-    gw._config = {
-        "gateway": {"models": {"embedding": {"primary": "openai/text-embedding-3-small"}}}
-    }
-    gw._cloud_calls_made = 0
-    gw._cost_tracker = MagicMock()
-
-    registry = {
-        "openai": ProviderInfo(
-            name="openai",
-            base_url="https://api.openai.com/v1",
-            is_local=False,
-            capabilities=Capability(
-                embedding=False, reasoning=True, context_window=8192, tool_call=False
-            ),
-        )
-    }
-
-    with (
-        pytest.MonkeyPatch().context() as mp,
-    ):
-        mp.setattr(router_mod, "load_registry", lambda: registry)
-        mp.setattr(router_mod, "embedding", embedding_mock)
-        with pytest.raises(CapabilityMismatchError):
-            gw.embed(
-                "embedding",
-                ["hello"],
-                requirement=CapabilityRequirement(capability="embedding"),
-            )
-
-    # Gate must raise before the network call is ever made.
-    embedding_mock.assert_not_called()
 
 
 def test_classify_error_429_names_provider() -> None:
@@ -1468,68 +1271,3 @@ class TestCustomProviderRouting:
         result = gw.health_check()
 
         assert result["extraction"]["status"] == "missing_api_key"
-
-
-def test_rerank_capability_passes_for_bundled_reranker_providers(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """B3: cohere/voyage declare rerank capability; ollama and a chat-only provider must fail."""
-    from openreview_cli.gateway.registry import load_registry
-
-    registry = load_registry()
-    gw = Gateway.__new__(Gateway)
-    req = CapabilityRequirement(capability="rerank")
-
-    # Providers with real rerank support pass.
-    for name in ("cohere", "voyage"):
-        info = registry.get(name)
-        assert info is not None, f"{name} missing from registry"
-        # Should not raise
-        gw.validate_capability(info, req)
-
-    # Ollama does not support reranking: litellm has no rerank provider branch for it
-    # and Ollama exposes no rerank endpoint, so the capability must be rejected.
-    ollama = registry.get("ollama")
-    assert ollama is not None
-    with pytest.raises(CapabilityMismatchError):
-        gw.validate_capability(ollama, req)
-
-    # A provider that genuinely lacks rerank must still be rejected.
-    info = registry.get("anthropic")
-    assert info is not None
-    with pytest.raises(CapabilityMismatchError):
-        gw.validate_capability(info, req)
-
-
-def test_registry_reranker_models_use_reranking_slot(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """B3: all reranker models must be tagged with the 'reranking' slot (not 'rerank')."""
-    from openreview_cli.gateway.registry import load_registry
-
-    registry = load_registry()
-    for name, info in registry.items():
-        for model_id, model in info.models.items():
-            assert "rerank" not in model.slots, (
-                f"{name}/{model_id} uses singular 'rerank' slot; should be 'reranking'"
-            )
-
-
-def test_clear_env_vars_removes_only_seeded_keys(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Pre-existing user-owned env var survives; seeded var is removed."""
-    import os
-
-    monkeypatch.setenv("OPENAI_API_KEY", "user-owned")
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)  # isolate from prior test
-    gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
-
-    # Gateway seeds ANTHROPIC_API_KEY (not in env) but not OPENAI_API_KEY (user-owned).
-    assert os.environ["OPENAI_API_KEY"] == "user-owned"
-    assert os.environ.get("ANTHROPIC_API_KEY") == "sk-ant-test"
-
-    gw.clear_env_vars()
-
-    assert "ANTHROPIC_API_KEY" not in os.environ
-    assert os.environ["OPENAI_API_KEY"] == "user-owned"

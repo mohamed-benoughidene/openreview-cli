@@ -21,7 +21,7 @@ _DOCS_URL: str = "https://" + "github.com/mohamed-benoughidene/openreview"
 if TYPE_CHECKING:
     from textual.app import ComposeResult
 
-SLOT_ORDER = ["reasoning", "extraction", "embedding", "reranking", "graph", "grounding"]
+SLOT_ORDER = ["reasoning", "extraction", "grounding"]
 
 _SECTION_RENDERERS: dict[str, Any] = {}
 

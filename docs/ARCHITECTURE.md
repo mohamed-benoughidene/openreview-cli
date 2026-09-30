@@ -51,18 +51,15 @@ The runner emits per-stage progress events and samples memory via tracemalloc wh
 
 ## Model routing
 
-All model calls go through the AI Gateway (litellm): `chat → completion`, `embed → embedding`, `rerank → rerank`. Six slots route per task:
+All model calls go through the AI Gateway (litellm): `chat → completion`. Three slots route per task:
 
 | Slot | Default (local, fully offline) | Cloud examples | Why |
 |---|---|---|---|
-| reasoning | `qwen3:8b` (Ollama) | `gpt-4o`, `claude-sonnet-latest`, `gemini-2.0-flash`, `deepseek-chat` | highest-capability local model; hard reasoning stays local by default |
-| extraction | `qwen3:4b` (Ollama) | `gpt-4o-mini`, `claude-haiku-latest` | smaller/faster, enough for structured JSON extraction |
-| embedding | `nomic-embed-text` (Ollama) | `text-embedding-3-small`, `text-embedding-004` | primary-only: no embedding fallback (fallback model would change vector space) |
-| reranking | `voyage/rerank-2.5` (cloud; unkeyed and inert — no local option, see limitations) | `cohere` (`rerank-english-v3.0`) | primary-only; disabled by default; Ollama is unsupported (see limitations) |
-| grounding | `qwen3:8b` (Ollama) | | claim-vs-source verification |
-| graph | `qwen3:8b` (Ollama) | | clause-graph health scoring and clustering |
+| extraction | `granite4:3b` (Ollama) | `gpt-4o-mini`, `claude-haiku-latest` | the reader: smaller/faster, enough for structured JSON extraction |
+| reasoning | `granite4:3b` (Ollama) | `gpt-4o`, `claude-sonnet-latest`, `gemini-2.0-flash`, `deepseek-chat` | the checker: verifies each extraction position; independently configurable, same default model as the reader |
+| grounding | `granite4:3b` (Ollama) | | the fact-checker: claim-vs-source verification |
 
-Privacy tier routing (`maximum` / `balanced` / `performance`) gates which providers a slot may use; `maximum` blocks cloud entirely. Fallback: 2 retries, 60 s timeout. Per-slot backup (fallback) models are optional and user-set, via `openreview gateway fallback <slot> <model>|--clear`, the CLI setup wizard, and the TUI wizard; none is configured by default and none is required to run. `embedding`/`reranking` are primary-only and never take a backup.
+Privacy tier routing (`maximum` / `balanced`) gates which providers a slot may use; `maximum` blocks cloud entirely, and an existing config value of `performance` is accepted and treated as `balanced`. Fallback: 2 retries, 60 s timeout. Per-slot backup (fallback) models are optional and user-set, via `openreview gateway fallback <slot> <model>|--clear`, the CLI setup wizard, and the TUI wizard; none is configured by default and none is required to run.
 
 ## Data flow and SQLite's two roles
 
@@ -75,7 +72,7 @@ Pipeline flow: parse → strip → review writes cost rows to the app DB (the TU
 
 ## AI Gateway
 
-- **Single abstraction**: litellm for chat, embedding, and rerank calls one surface over 17 providers, 27 bundled models in `models.json` (openai, anthropic, google, ollama with base URL localhost:11434, openrouter, cohere, huggingface, deepseek, qwen, minimax, voyage, moonshot, mistral, zai; bedrock/azure/vertex supported via multi-field credentials, spec 034). Ollama serves chat and embedding here, not rerank (see limitations). `openreview gateway models <provider>` merges locally discovered Ollama models into the freshly loaded registry (`--no-discover` opts out); discovered models are never persisted.
+- **Single abstraction**: litellm for chat calls one surface over 17 providers, 18 bundled models in `models.json` (openai, anthropic, google, ollama with base URL localhost:11434, openrouter, cohere, huggingface, deepseek, qwen, minimax, voyage, moonshot, mistral, zai; bedrock/azure/vertex supported via multi-field credentials, spec 034). `openreview gateway models <provider>` merges locally discovered Ollama models into the freshly loaded registry (`--no-discover` opts out); discovered models are never persisted.
 - **Ollama address**: `OLLAMA_HOST` (`host[:port]`, optional scheme; Ollama's default is 127.0.0.1:11434) overrides the bundled `ollama` base URL at registry load, and `ollama` is always classified local — even at a LAN or self-hosted address — because it is user-run infrastructure, not a third-party API.
 - **Fallback & streaming**: 2 retries default, 60 s timeout, optional per-slot backup model (unset by default); streaming chat with 15 s connect / 45 s idle timeouts.
 - **Cost tracking**: tokens from responses → `litellm.completion_cost` → cents → SQLite `cost_logs` (non-fatal on error the guard lives in the gateway callers, not in `cost.py`); configurable per-review/per-day limits (100¢ / 1,000¢ defaults, hard-exit with exit code 6 when exceeded).
@@ -85,7 +82,7 @@ Pipeline flow: parse → strip → review writes cost rows to the app DB (the TU
 ## Retrieval and chunking
 
 - **Chunking**: custom RCTS recursive char split on `["\n\n", ". "]` with word-split fallback and merge of undersized chunks; regex tokenizer (explicitly an approximation, not model-aware); defaults 512 tokens / 50 overlap; clause-boundary aware; groups short clauses; flattens tables.
-- **Retrieval**: keyword search only — BM25 over SQLite FTS5, stemmed with `porter unicode61` and a 2–3 prefix index. A reranker exists but is disabled by default: its effect on legal text is unmeasured a 26-query pilot found no degradation but was far too small to support any claim. It is opt-in (`--rerank`); when the latest stored validation record shows degradation (`degradation_pp <= 0`) the CLI warns and points at `--force-rerank`, but the reranker still runs and never auto-disables. The 3-consecutive-degradation counter lives in `RetrievalStorage.insert_rerank_validation` (kept), but no shipped path writes `rerank_validation` records, so on a normal install the warning has nothing to fire on.
+- **Retrieval**: keyword search only — BM25 over SQLite FTS5, stemmed with `porter unicode61` and a 2–3 prefix index. A reranker exists but is disabled by default: its effect on legal text is unmeasured a 26-query pilot found no degradation but was far too small to support any claim. It is opt-in (`--rerank`); when the latest stored validation record shows degradation (`degradation_pp <= 0`) the CLI warns and points at `--force-rerank`, but the `reranking` socket that the wrapper resolves its model from was removed (see [No reranking](#honest-limitations)), so the reranker path can no longer reach a provider and returns the original keyword (BM25) order. The 3-consecutive-degradation counter lives in `RetrievalStorage.insert_rerank_validation` (kept), but no shipped path writes `rerank_validation` records, so on a normal install the warning has nothing to fire on.
 - **Re-index after upgrade**: an index created before this release was tokenized with the older rules and cannot be searched as-is; it must be re-created with `openreview ingest`. There is no automatic detection and no migration.
 
 ## TUI document search
@@ -125,7 +122,7 @@ A **stored-PII screen** (`tui/screens/pii_data.py`, `tui/domain/pii.py`), reache
 
 ## Prompt management
 
-Prompts are versioned rows in the app DB (`prompt_versions`, `prompt_bindings`) owned by `PromptStore` (`prompts/store.py`). A prompt has a name and a version history that only grows (each update appends the next version, with content, tags and description), and it can be bound to one of the six gateway slots; `PromptStore.resolve(slot)` returns the bound version's content. The CLI surface is `openreview prompt` (create, update, list, show, delete, diff, bind, unbind, bindings, history, test, export, import, optimize).
+Prompts are versioned rows in the app DB (`prompt_versions`, `prompt_bindings`) owned by `PromptStore` (`prompts/store.py`). A prompt has a name and a version history that only grows (each update appends the next version, with content, tags and description), and it can be bound to one of the three gateway slots; `PromptStore.resolve(slot)` returns the bound version's content. The CLI surface is `openreview prompt` (create, update, list, show, delete, diff, bind, unbind, bindings, history, test, export, import, optimize).
 
 The TUI adds a Prompts tab (`tui/tabs/prompts.py`, registered in `tui/app.py`): a filterable list with `+ New prompt`, `+ Import` and `Export all` in the toolbar, plus a selection-gated action row (edit, bind, bindings, test, export, delete). Create and edit share one form screen (`screens/prompt_form.py`); bindings, test, export and import each have their own screen, and the version history/detail screen is `screens/prompt_detail.py` (`PromptHistoryScreen`), opened from a list selection. The export modal covers one prompt (the action row) or the whole library (the `Export all` toolbar button, which needs no selected row). Every TUI action goes through the `tui/domain/prompts.py` wrappers, the only layer that touches `PromptStore`; they translate store and filesystem errors to `ValueError`, so no exception reaches a Textual handler. Import validates through the same `parse_prompts_yaml` the CLI uses (`prompts/io.py`), so the TUI and the CLI cannot disagree about a document.
 
@@ -166,6 +163,6 @@ Deferred work is tracked in `specs/archive/DEFERRED.md` — check it before touc
 - **PII audit trail is never empty**: metadata redaction is on by default, so the filename (`FILENAME`, plus `AUTHOR`/`TITLE`/`COMPANY` when present) is always redacted and `entity_count` is at least 1. A document whose body carries no PII therefore still writes the encrypted mapping, `stripped.txt` and the `pii_cache` row; the empty-mapping branch that would skip those artifacts is unreachable under default settings.
 - **TUI discipline**: the Textual TUI must never import litellm at module level (lazy gateway via PEP 562 + domain wrappers) keeps TUI startup fast; treat that boundary as load-bearing.
 - **`index-clear --all` clears without the confirmation it advertises**: the help text and the CLI contract both promise a prompt, but the `--all` branch deletes every index immediately (see [TUI document search](#tui-document-search)). Known, recorded, and deliberately not fixed here.
-- **Reranking is not available on Ollama**: litellm has no rerank provider branch for `ollama` (its `rerank()` raises "Unsupported provider: ollama", and no model-name change fixes this), and Ollama itself exposes no rerank endpoint. There is therefore no local reranker; the `reranking` slot ships set to `voyage/rerank-2.5` (cloud), which stays inert until an API key is set. This is a limitation, not an open bug. The app neither falls back to another provider nor errors: reranking is off by default, and with the slot left on Ollama, `Reranker.rerank` catches the failure and returns the original order (`src/openreview_cli/retrieval/rerank.py:84-88`). Only `openreview gateway test reranking` exits non-zero. To enable reranking, point the `reranking` slot at a provider with a rerank API (`cohere`, `voyage`).
+- **No reranking**: the `reranking` slot was removed. It was never usable locally — litellm has no rerank provider branch for `ollama` and Ollama exposes no rerank endpoint — and the measurements found no reranker that helped legal text: a cheap lexical rerank and a local cross-encoder both made ordering worse than BM25's. Retrieval is keyword-only. The `--rerank`/`--rerank-depth`/`--force-rerank` flags remain on `retrieve`, but with no `reranking` slot to resolve a model from the wrapper is inert and returns the original BM25 order (`src/openreview_cli/retrieval/rerank.py:84-88`).
 
 Back to [README.md](../README.md) (overview) · [BENCHMARKS.md](BENCHMARKS.md) (measured numbers).

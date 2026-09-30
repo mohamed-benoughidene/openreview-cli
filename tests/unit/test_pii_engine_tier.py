@@ -62,12 +62,13 @@ class TestStripPiiForTier:
         assert isinstance(result, PiiResult)
         assert result.page_count >= 1
 
-    def test_strip_pii_for_tier_accepts_all_tiers(
+    def test_strip_pii_for_tier_accepts_every_remaining_tier(
         self, sample_clauses: list[Any], sample_document: Any
     ) -> None:
         from openreview_cli.pii.engine import strip_pii_for_tier
 
-        for tier in (PrivacyTier.MAXIMUM, PrivacyTier.BALANCED, PrivacyTier.PERFORMANCE):
+        # Spec 035 T1.4: only two privacy modes remain.
+        for tier in (PrivacyTier.MAXIMUM, PrivacyTier.BALANCED):
             result = strip_pii_for_tier(
                 text=sample_clauses[0].text,
                 tier=tier,
@@ -78,7 +79,7 @@ class TestStripPiiForTier:
     def test_strip_pii_for_tier_uses_different_thresholds(
         self, sample_clauses: list[Any], sample_document: Any
     ) -> None:
-        """Maximum (0.4) should catch more entities than Performance (0.8)."""
+        """Maximum (0.4) should catch at least as much as Balanced (0.6)."""
         from openreview_cli.pii.engine import strip_pii_for_tier
 
         max_result = strip_pii_for_tier(
@@ -86,15 +87,15 @@ class TestStripPiiForTier:
             tier=PrivacyTier.MAXIMUM,
             document=sample_document,
         )
-        perf_result = strip_pii_for_tier(
+        bal_result = strip_pii_for_tier(
             text=sample_clauses[0].text,
-            tier=PrivacyTier.PERFORMANCE,
+            tier=PrivacyTier.BALANCED,
             document=sample_document,
         )
 
         # Maximum (lower threshold) should catch at least as many entities
-        # as Performance (higher threshold)
-        assert len(max_result.entities) >= len(perf_result.entities)
+        # as Balanced (higher threshold)
+        assert len(max_result.entities) >= len(bal_result.entities)
 
     def test_does_not_mutate_existing_signature(self) -> None:
         """Confirm the original strip_pii still accepts its signature unchanged."""

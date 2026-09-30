@@ -111,7 +111,7 @@ class TierRouter:
     ) -> Any:
         """Enforce tier rules for a Gateway call, then dispatch.
 
-        Shared by chat() and embed(). Handles PII gate, provider
+        Shared by chat(). Handles PII gate, provider
         classification, local-only enforcement, and cloud call tracking.
         """
         self._enforce_cloud_pii_gate(call_type)
@@ -150,26 +150,6 @@ class TierRouter:
             ),
         )
 
-    def embed(
-        self,
-        slot: str,
-        texts: list[str],
-        *,
-        session_id: str | None = None,
-    ) -> list[list[float]]:
-        """Enforce tier rules for embedding calls, then delegate to Gateway."""
-        return cast(
-            "list[list[float]]",
-            self._route_call(
-                "embed",
-                slot,
-                texts,
-                local_only=self._config.embeddings_local_only,
-                call_type="embedding",
-                session_id=session_id,
-            ),
-        )
-
     def _get_provider_cfg(self, slot: str) -> dict[str, Any]:
         """Get the provider config dict for a given slot from the gateway config.
 
@@ -200,5 +180,5 @@ class TierRouter:
             f"{tier_name} privacy tier requires a local provider for {call_type}. "
             f"No local provider configured for slot '{slot}'. "
             f"Install Ollama and configure a local model, or change privacy tier "
-            f"to 'balanced' or 'performance'.",
+            f"to 'balanced'.",
         )

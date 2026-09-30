@@ -1366,7 +1366,7 @@ def review(
     qa_model: str | None = typer.Option(
         None,
         "--qa-model",
-        help="Model slot for the QA verification agent (defaults to --extraction-model).",
+        help="Model slot for the QA verification agent (defaults to the reasoning slot).",
     ),
     allow_partial_pii: bool = typer.Option(
         False,
@@ -1679,17 +1679,11 @@ def gateway_fallback(
     """Set or clear the optional backup model for a slot (no fallback by default)."""
     from openreview_cli.config.loader import set_config_value
     from openreview_cli.config.paths import get_config_dir
-    from openreview_cli.slots import PRIMARY_ONLY_SLOTS, VALID_SLOTS
+    from openreview_cli.slots import VALID_SLOTS
 
     if slot not in VALID_SLOTS:
         typer.echo(
             f"Invalid slot '{slot}'. Valid slots: {', '.join(sorted(VALID_SLOTS))}", err=True
-        )
-        raise typer.Exit(code=1)
-    if slot in PRIMARY_ONLY_SLOTS:
-        typer.echo(
-            f"Slot '{slot}' is primary-only — the gateway never uses a backup model for it.",
-            err=True,
         )
         raise typer.Exit(code=1)
     if clear == (model is not None):
@@ -1739,22 +1733,15 @@ def gateway_test(slot: str) -> None:
     from openreview_cli.gateway.router import Gateway
     from openreview_cli.slots import VALID_SLOTS
 
+    # Every surviving socket is smoke-testable, so VALID_SLOTS is the whole
+    # gate: a removed slot fails here with one clean line and no traceback.
     if slot not in VALID_SLOTS:
         typer.echo(f"Invalid slot '{slot}'. Valid slots: {', '.join(sorted(VALID_SLOTS))}")
         raise typer.Exit(code=1)
 
     gw = Gateway()
     try:
-        if slot in ("reasoning", "extraction", "graph"):
-            response = gw.chat(slot, [{"role": "user", "content": "Hello — respond with 'OK'."}])
-            typer.echo(f"Response: {response}")
-        elif slot == "embedding":
-            emb = gw.embed(slot, ["Hello world"])
-            typer.echo(f"Embedding: {len(emb[0])} dimensions")
-        elif slot == "reranking":
-            rnk = gw.rerank(slot, "test", ["doc1", "doc2"], top_n=2)
-            typer.echo(f"Reranked: {len(rnk)} results")
-        elif slot == "grounding":
+        if slot == "grounding":
             from openreview_cli.gateway.models import CapabilityRequirement
 
             response = gw.chat(
@@ -1762,6 +1749,9 @@ def gateway_test(slot: str) -> None:
                 [{"role": "user", "content": "Does clause 1 require confidentiality? Answer OK."}],
                 requirement=CapabilityRequirement(capability="reasoning"),
             )
+            typer.echo(f"Response: {response}")
+        else:
+            response = gw.chat(slot, [{"role": "user", "content": "Hello — respond with 'OK'."}])
             typer.echo(f"Response: {response}")
     except Exception as e:
         typer.echo(f"Error: {redact_text(str(e))}", err=True)
@@ -1805,7 +1795,6 @@ def provider_add(
     creds: list[str] | None = typer.Option(
         None, "--cred", help="key=value credential, repeatable (multi-field providers)."
     ),
-    cap_embedding: bool = typer.Option(False, "--cap-embedding", help="Supports embeddings."),
     cap_reasoning: bool = typer.Option(False, "--cap-reasoning", help="Supports reasoning/chat."),
     cap_tool_call: bool = typer.Option(False, "--cap-tool-call", help="Supports tool calls."),
     context_window: int | None = typer.Option(
@@ -1825,7 +1814,6 @@ def provider_add(
         env_key = re.sub(r"[^A-Z0-9]", "_", name.upper()) + "_API_KEY"
 
     capabilities = {
-        "embedding": cap_embedding,
         "reasoning": cap_reasoning,
         "tool_call": cap_tool_call,
         "context_window": context_window,
@@ -1915,7 +1903,7 @@ def compare(
     qa_model: str | None = typer.Option(
         None,
         "--qa-model",
-        help="Model slot for the QA verification agent (defaults to --extraction-model).",
+        help="Model slot for the QA verification agent (defaults to the reasoning slot).",
     ),
     comparison_model: str | None = typer.Option(
         None, "--comparison-model", help="Override model slot for the comparison agent (D-13)."
@@ -2036,7 +2024,7 @@ def compare(
             doc_b_path=doc_b,
             playbook=None,  # Use bundled playbook
             extraction_model=extraction_model or "extraction",
-            qa_model=qa_model or extraction_model,
+            qa_model=qa_model or "reasoning",
             no_pii=no_pii,
             allow_partial_pii=allow_partial_pii,
             verbose=verbose,

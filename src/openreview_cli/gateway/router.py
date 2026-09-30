@@ -12,7 +12,7 @@ import litellm
 if TYPE_CHECKING:
     from pathlib import Path
 
-from litellm import completion, embedding
+from litellm import completion
 
 from openreview_cli.config.auth import key_to_env, load_auth
 from openreview_cli.config.loader import load_config
@@ -45,7 +45,7 @@ from openreview_cli.gateway.models import (
 from openreview_cli.gateway.redaction import install_on_root_handlers, redact_key, redact_text
 from openreview_cli.gateway.registry import load_registry
 from openreview_cli.gateway.tier_config import TierConfig
-from openreview_cli.slots import PRIMARY_ONLY_SLOTS, VALID_SLOTS
+from openreview_cli.slots import VALID_SLOTS
 from openreview_cli.storage.costs import check_daily_limit, check_session_limit
 
 logger = logging.getLogger(__name__)
@@ -115,16 +115,6 @@ def _is_empty_parts(parts: list[dict[str, Any]]) -> bool:
         else:
             return False
     return True
-
-
-_SLOT_METHOD_MAP: dict[str, str] = {
-    "reasoning": "chat",
-    "extraction": "chat",
-    "embedding": "embed",
-    "reranking": "rerank",
-    "graph": "chat",
-    "grounding": "chat",
-}
 
 
 class Gateway:
@@ -216,7 +206,7 @@ class Gateway:
         primary = cfg.get("primary")
         return primary if isinstance(primary, str) and primary else None
 
-    def _enforce_tier(  # noqa: PLR0911, PLR0912, PLR0915 — tier rules branch on override vs slot, registry presence, klass, call_type, local_only, and PII gate, and fail closed on an unregistered provider prefix (R3-5, R-01)
+    def _enforce_tier(  # noqa: PLR0911, PLR0912 — tier rules branch on override vs slot, registry presence, klass, call_type, local_only, and PII gate, and fail closed on an unregistered provider prefix (R3-5, R-01)
         self,
         slot: str,
         call_type: str,
@@ -224,9 +214,10 @@ class Gateway:
     ) -> None:
         """Block cloud dispatch that the configured privacy tier forbids.
 
-        ``call_type`` is one of "llm" (chat/chat_stream), "embedding" (embed),
-        or "reranking" (rerank). Local providers are always allowed; cloud
-        providers are gated by the tier's local-only rules before any network.
+        ``call_type`` is "llm" (chat/chat_stream) — the only transport that
+        remains after spec 035 removed the embedding and reranking sockets.
+        Local providers are always allowed; cloud providers are gated by the
+        tier's local-only rule before any network.
 
         ``provider_prefix`` is the ACTUAL provider being dispatched (e.g. the
         prefix of a recovery-driven ``model=`` override). When supplied, tier
@@ -246,9 +237,7 @@ class Gateway:
                 # rather than allowing a possible cloud call. The slot primary
                 # is irrelevant — the caller supplied an override and the
                 # gateway must verify it.
-                if call_type in ("embedding", "reranking"):
-                    local_only = tier_config.embeddings_local_only
-                elif call_type == "llm":
+                if call_type == "llm":
                     local_only = tier_config.llm_local_only
                 else:
                     return
@@ -259,10 +248,9 @@ class Gateway:
                         f"{call_type}. Unknown provider '{provider_prefix}' "
                         f"(not in registry) cannot be classified as local. "
                         f"Install Ollama and configure a local model, or "
-                        f"change privacy tier to 'balanced' or 'performance'."
+                        f"change privacy tier to 'balanced'."
                     )
-                # Under balanced/performance an unknown override still gets
-                # the PII gate.
+                # Under balanced an unknown override still gets the PII gate.
                 if tier_config.pii_required_before_cloud and not _pii_available:
                     raise PIIUnavailableError(
                         f"{tier_config.tier.title()} privacy tier requires "
@@ -289,9 +277,7 @@ class Gateway:
                 # network, so an unclassifiable destination must never reach the
                 # dispatch seam while the tier requires a local provider.
                 slot_prefix = self._get_slot_config(slot)["primary"].split("/")[0]
-                if call_type in ("embedding", "reranking"):
-                    local_only = tier_config.embeddings_local_only
-                elif call_type == "llm":
+                if call_type == "llm":
                     local_only = tier_config.llm_local_only
                 else:
                     return
@@ -302,10 +288,9 @@ class Gateway:
                         f"{call_type}. Unknown provider '{slot_prefix}' "
                         f"(not in registry) cannot be classified as local. "
                         f"Install Ollama and configure a local model, or "
-                        f"change privacy tier to 'balanced' or 'performance'."
+                        f"change privacy tier to 'balanced'."
                     )
-                # Under balanced/performance an unknown slot primary still gets
-                # the PII gate.
+                # Under balanced an unknown slot primary still gets the PII gate.
                 if tier_config.pii_required_before_cloud and not _pii_available:
                     raise PIIUnavailableError(
                         f"{tier_config.tier.title()} privacy tier requires "
@@ -324,9 +309,7 @@ class Gateway:
         if klass != "cloud":
             return
 
-        if call_type in ("embedding", "reranking"):
-            local_only = tier_config.embeddings_local_only
-        elif call_type == "llm":
+        if call_type == "llm":
             local_only = tier_config.llm_local_only
         else:
             return
@@ -336,12 +319,11 @@ class Gateway:
             raise NoMatchingProviderError(
                 f"{tier} privacy tier requires a local provider for {call_type}. "
                 f"No local provider configured for slot '{slot}'. Install Ollama and "
-                "configure a local model, or change privacy tier to 'balanced' or "
-                "'performance'."
+                "configure a local model, or change privacy tier to 'balanced'."
             )
 
         # PII-before-egress gate (spec 020 FR-03/FR-04/SC-02/SC-03): a cloud
-        # call that would otherwise proceed under balanced/performance requires
+        # call that would otherwise proceed under balanced requires
         # a successful PII strip in this process. Fail closed before any network.
         if tier_config.pii_required_before_cloud and not _pii_available:
             raise PIIUnavailableError(
@@ -518,7 +500,7 @@ class Gateway:
         call_fn: Any,
         call_kwargs: dict[str, Any],
         *,
-        call_type: str = "llm",  # "llm" | "embedding" | "reranking"
+        call_type: str = "llm",  # "llm" — the only remaining transport (spec 035)
         provider_prefix: str | None = None,  # the prefix of the model actually dispatched
     ) -> Any:
         cfg = self._get_slot_config(slot)
@@ -530,7 +512,7 @@ class Gateway:
         # FR-6: chat_stream sets the dual httpx.Timeout (15s connect / 45s idle)
         # BEFORE dispatch; overwriting it with an int would destroy the idle-timeout
         # contract and break test_stream_timeout_is_dual_not_single. Only a stream
-        # keeps its own timeout; every non-stream caller (chat/embed/rerank) takes
+        # keeps its own timeout; every non-stream caller (chat) takes
         # the configured one exactly as before — a caller-supplied `timeout=` must
         # not widen it. (Expressed as one expression to stay inside PLR0912.)
         call_kwargs["timeout"] = (
@@ -556,7 +538,7 @@ class Gateway:
                     time.sleep(retry_delay)
 
         fallback = cfg.get("fallback")
-        if slot in PRIMARY_ONLY_SLOTS or not fallback:
+        if not fallback:
             if last_error is not None:
                 classified = self._classify_error(last_error, provider)
                 raise classified from last_error
@@ -779,89 +761,6 @@ class Gateway:
                 provider_prefix,
                 "stream ended without a terminal finish_reason (truncated or interrupted)",
             )
-
-    def embed(
-        self,
-        slot: str,
-        texts: list[str],
-        *,
-        session_id: str | None = None,
-        requirement: CapabilityRequirement | None = None,
-    ) -> list[list[float]]:
-        if slot not in VALID_SLOTS:
-            raise SlotNotConfiguredError(f"Invalid slot '{slot}'")
-        self._enforce_tier(slot, "embedding")
-        if requirement is not None:
-            info = self._resolve_provider_info(slot)
-            if info is not None:
-                self.validate_capability(info, requirement)
-        self._check_cost_limits(session_id)
-        from openreview_cli.prompts.store import PromptStore
-        from openreview_cli.prompts.variables import substitute as sub_vars
-
-        store = PromptStore(self._data_path)
-        resolved = store.resolve(slot)
-        if resolved:
-            resolved = sub_vars(resolved, slot, {})
-            texts = [resolved, *texts]
-        call_kwargs = self._get_litellm_kwargs(slot)
-        call_kwargs["input"] = texts
-        response = self._call_with_fallback(slot, embedding, call_kwargs, call_type="embedding")
-        orig_provider = self._get_slot_config(slot)["primary"].split("/")[0]
-        try:
-            self._cost_tracker.log_call(
-                session_id, slot, call_kwargs["model"], orig_provider, response
-            )
-        except Exception as cost_err:
-            logger.warning("Cost logging failed (non-fatal): %s", cost_err)
-        return [item["embedding"] for item in response.data]
-
-    def rerank(
-        self,
-        slot: str,
-        query: str,
-        documents: list[str],
-        top_n: int = 5,
-        *,
-        session_id: str | None = None,
-        requirement: CapabilityRequirement | None = None,
-    ) -> list[dict[str, Any]]:
-        if slot not in VALID_SLOTS:
-            raise SlotNotConfiguredError(f"Invalid slot '{slot}'")
-        self._enforce_tier(slot, "reranking")
-        if requirement is not None:
-            info = self._resolve_provider_info(slot)
-            if info is not None:
-                self.validate_capability(info, requirement)
-        self._check_cost_limits(session_id)
-        from openreview_cli.prompts.store import PromptStore
-        from openreview_cli.prompts.variables import substitute as sub_vars
-
-        store = PromptStore(self._data_path)
-        resolved = store.resolve(slot)
-        if resolved:
-            resolved = sub_vars(resolved, slot, {})
-            query = f"{resolved}\n\n{query}"
-
-        from litellm import rerank
-
-        cfg = self._get_slot_config(slot)
-        call_kwargs: dict[str, Any] = {
-            "query": query,
-            "documents": documents,
-            "top_n": top_n,
-            **self._get_litellm_kwargs(slot),
-        }
-        response = self._call_with_fallback(slot, rerank, call_kwargs, call_type="reranking")
-        try:
-            self._cost_tracker.log_call(
-                session_id, slot, cfg["primary"], cfg["primary"].split("/", 1)[0], response
-            )
-        except Exception as cost_err:
-            logger.warning("Cost logging failed (non-fatal): %s", cost_err)
-        return [
-            {"index": r["index"], "relevance_score": r["relevance_score"]} for r in response.results
-        ]
 
     def _record_cloud_call(self, slot: str, provider_prefix: str | None = None) -> None:
         """Increment the cloud-call counter for the actual dispatched provider.

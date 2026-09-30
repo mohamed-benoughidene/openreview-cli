@@ -6,24 +6,30 @@ import enum
 from dataclasses import dataclass, field
 from typing import Any
 
+# Spec 035 T1.4: only two modes ship. ``performance`` was identical to
+# ``balanced`` and is retained as an accepted legacy value (see parse); it is
+# deliberately not an enum member or a valid tier.
+_LEGACY_TIER_ALIASES: dict[str, str] = {"performance": "balanced"}
+
 
 class PrivacyTier(enum.StrEnum):
     """Privacy tier — enum members are plain strings."""
 
     MAXIMUM = "maximum"
     BALANCED = "balanced"
-    PERFORMANCE = "performance"
 
     @classmethod
     def parse(cls, value: str) -> tuple[str, str | None]:
         """Parse a tier value, returning (normalized_tier, warning_or_None).
 
         Case-insensitive. Falls back to MAXIMUM with warning on invalid/absent.
+        A legacy ``performance`` value is normalized to ``balanced`` so an old
+        config keeps working exactly as it did.
         """
-        valid = frozenset({"maximum", "balanced", "performance"})
+        valid = frozenset({"maximum", "balanced"})
         if not value:
             return "maximum", "privacy.tier not configured. Defaulting to Maximum."
-        lower = value.strip().lower()
+        lower = _LEGACY_TIER_ALIASES.get(value.strip().lower(), value.strip().lower())
         if lower not in valid:
             valid_str = ", ".join(sorted(valid))
             return (
@@ -43,16 +49,12 @@ class TierConfig:
 
     # Tier rule accessors — computed from tier value
     @property
-    def embeddings_local_only(self) -> bool:
-        return self.tier in (PrivacyTier.MAXIMUM, PrivacyTier.BALANCED)
-
-    @property
     def llm_local_only(self) -> bool:
         return self.tier == PrivacyTier.MAXIMUM
 
     @property
     def pii_required_before_cloud(self) -> bool:
-        return self.tier in (PrivacyTier.BALANCED, PrivacyTier.PERFORMANCE)
+        return self.tier == PrivacyTier.BALANCED
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> TierConfig:

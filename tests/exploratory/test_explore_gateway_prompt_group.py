@@ -80,12 +80,12 @@ def test_gateway_fallback_validation(
     assert no_slash.exit_code == EXIT_USER_ERROR, (no_slash.exit_code, _text(no_slash))
     assert "provider/model id" in _text(no_slash)
 
-    primary_only = invoke(["gateway", "fallback", "embedding", "openai/x"])
-    assert primary_only.exit_code == EXIT_USER_ERROR, (
-        primary_only.exit_code,
-        _text(primary_only),
+    removed_slot = invoke(["gateway", "fallback", "embedding", "openai/x"])
+    assert removed_slot.exit_code == EXIT_USER_ERROR, (
+        removed_slot.exit_code,
+        _text(removed_slot),
     )
-    assert "primary-only" in _text(primary_only)
+    assert "Invalid slot" in _text(removed_slot)
 
 
 @pytest.mark.fast

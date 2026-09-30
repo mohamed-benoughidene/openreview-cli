@@ -240,22 +240,6 @@ class CompletionResponse:
         self.choices = [_Choice(content)]
 
 
-class EmbeddingResponse:
-    """Minimal ``litellm`` embedding double: only ``data[*]['embedding']``."""
-
-    def __init__(self, dimensions: int = 3, count: int = 1) -> None:
-        self.data = [{"embedding": [0.0] * dimensions} for _ in range(count)]
-
-
-class RerankResponse:
-    """Minimal ``litellm`` rerank double: only ``results[*]`` keys."""
-
-    def __init__(self, count: int = 2) -> None:
-        self.results = [
-            {"index": index, "relevance_score": 1.0 - index * 0.1} for index in range(count)
-        ]
-
-
 @dataclass(frozen=True)
 class Dispatch:
     """One recorded call to a real dispatch seam."""
@@ -266,13 +250,12 @@ class Dispatch:
 
 
 class DispatchRecorder:
-    """The three real dispatch seams, instrumented.
+    """The one remaining dispatch seam, instrumented.
 
-    ``completion`` and ``embedding`` are module-level names on
-    ``gateway.router`` (``router.py:16``) and are patched there.
-    ``rerank`` is imported *inside* ``Gateway.rerank`` (``router.py:752``), so it
-    is patched on ``litellm`` itself — patching ``router.rerank`` would not
-    intercept it.
+    ``completion`` is a module-level name on ``gateway.router`` (``router.py:15``)
+    and is patched there. Spec 035 removed the ``embedding`` and ``reranking``
+    sockets, so those transports no longer exist to intercept: the gateway's only
+    outbound call site is now ``completion``.
     """
 
     def __init__(self, *, fail: bool = True, stream_mode: bool = False) -> None:
@@ -304,25 +287,11 @@ class DispatchRecorder:
             return TerminatedStream([StreamChunk("he"), StreamChunk("llo")])
         return CompletionResponse()
 
-    def embedding(self, **kwargs: Any) -> Any:
-        self._record("embedding", kwargs)
-        self._maybe_fail("embedding", kwargs)
-        return EmbeddingResponse()
-
-    def rerank(self, **kwargs: Any) -> Any:
-        self._record("rerank", kwargs)
-        self._maybe_fail("rerank", kwargs)
-        return RerankResponse()
-
     def install(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Patch every dispatch seam in-process. No sockets are involved."""
-        import litellm
-
+        """Patch the remaining dispatch seam in-process. No sockets are involved."""
         import openreview_cli.gateway.router as router_mod
 
         monkeypatch.setattr(router_mod, "completion", self.completion)
-        monkeypatch.setattr(router_mod, "embedding", self.embedding)
-        monkeypatch.setattr(litellm, "rerank", self.rerank)
 
     def models(self) -> list[str]:
         """Every model string the dispatch seam was handed, in call order."""

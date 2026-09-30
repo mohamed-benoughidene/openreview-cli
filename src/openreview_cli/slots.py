@@ -5,8 +5,4 @@ without triggering ``gateway/__init__.py`` (which pulls in litellm via
 ``cost.py``). Importing this module has no heavyweight dependencies.
 """
 
-VALID_SLOTS: frozenset[str] = frozenset(
-    {"reasoning", "extraction", "embedding", "reranking", "graph", "grounding"}
-)
-
-PRIMARY_ONLY_SLOTS: frozenset[str] = frozenset({"embedding", "reranking"})
+VALID_SLOTS: frozenset[str] = frozenset({"extraction", "reasoning", "grounding"})

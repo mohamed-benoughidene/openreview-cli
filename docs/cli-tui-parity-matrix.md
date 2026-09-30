@@ -2,8 +2,8 @@
 
 Generated from live source by `scripts/parity/build_parity_matrix.py`. Every row cites a source file and a line number.
 
-- Commit: `d89ba04`
-- Generated at: 2026-09-30T11:10:43+00:00
+- Commit: `b781a1a`
+- Generated at: 2026-09-30T12:37:50+00:00
 - CLI framework: Typer 0.26.7
 - TUI framework: Textual 8.2.8
 - Python: 3.12.3
@@ -20,7 +20,7 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 
 | Item | Count |
 |---|---|
-| CLI inventory rows | 553 |
+| CLI inventory rows | 552 |
 | TUI inventory rows | 127 |
 | Shared call argument rows | 89 |
 | Compared shared call argument pairs | 44 |
@@ -28,7 +28,7 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | Parity join rows | 255 |
 | Needs human confirmation | 32 |
 | Hidden single-key bindings | 140 |
-| Unmatched CLI items | 86 |
+| Unmatched CLI items | 85 |
 | Unmatched TUI items | 51 |
 | Semantic collisions | 19 |
 
@@ -473,22 +473,21 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | slot | argument | gateway fallback | slot | REQUIRED | src/openreview_cli/app.py:1673 |
 | model | argument | gateway fallback | model | None | src/openreview_cli/app.py:1675 |
 | --clear | option | gateway fallback | --clear | False | src/openreview_cli/app.py:1677 |
-| gateway refresh | command | gateway |  |  | src/openreview_cli/app.py:1725 |
-| gateway test | command | gateway |  |  | src/openreview_cli/app.py:1736 |
-| slot | argument | gateway test | slot | REQUIRED | src/openreview_cli/app.py:1737 |
-| gateway costs | command | gateway |  |  | src/openreview_cli/app.py:1771 |
-| --today | option | gateway costs | --today | False | src/openreview_cli/app.py:1773 |
-| --session | option | gateway costs | --session | None | src/openreview_cli/app.py:1774 |
+| gateway refresh | command | gateway |  |  | src/openreview_cli/app.py:1719 |
+| gateway test | command | gateway |  |  | src/openreview_cli/app.py:1737 |
+| slot | argument | gateway test | slot | REQUIRED | src/openreview_cli/app.py:1738 |
+| gateway costs | command | gateway |  |  | src/openreview_cli/app.py:1773 |
+| --today | option | gateway costs | --today | False | src/openreview_cli/app.py:1775 |
+| --session | option | gateway costs | --session | None | src/openreview_cli/app.py:1776 |
 | gateway provider | group | gateway |  |  | src/openreview_cli/app.py:1483 |
-| gateway provider add | command | provider |  |  | src/openreview_cli/app.py:1798 |
-| name | argument | gateway provider add | name | REQUIRED | src/openreview_cli/app.py:1800 |
-| --base-url | option | gateway provider add | --base-url | None | src/openreview_cli/app.py:1801 |
-| --env-key | option | gateway provider add | --env-key | None | src/openreview_cli/app.py:1803 |
-| --cred | option | gateway provider add | --cred | None | src/openreview_cli/app.py:1806 |
-| --cap-embedding | option | gateway provider add | --cap-embedding | False | src/openreview_cli/app.py:1808 |
-| --cap-reasoning | option | gateway provider add | --cap-reasoning | False | src/openreview_cli/app.py:1809 |
-| --cap-tool-call | option | gateway provider add | --cap-tool-call | False | src/openreview_cli/app.py:1810 |
-| --context-window | option | gateway provider add | --context-window | None | src/openreview_cli/app.py:1812 |
+| gateway provider add | command | provider |  |  | src/openreview_cli/app.py:1800 |
+| name | argument | gateway provider add | name | REQUIRED | src/openreview_cli/app.py:1802 |
+| --base-url | option | gateway provider add | --base-url | None | src/openreview_cli/app.py:1803 |
+| --env-key | option | gateway provider add | --env-key | None | src/openreview_cli/app.py:1805 |
+| --cred | option | gateway provider add | --cred | None | src/openreview_cli/app.py:1808 |
+| --cap-reasoning | option | gateway provider add | --cap-reasoning | False | src/openreview_cli/app.py:1810 |
+| --cap-tool-call | option | gateway provider add | --cap-tool-call | False | src/openreview_cli/app.py:1811 |
+| --context-window | option | gateway provider add | --context-window | None | src/openreview_cli/app.py:1813 |
 | graph | group |  |  |  | src/openreview_cli/app.py:2675 |
 | graph build | command | graph |  |  | src/openreview_cli/app.py:2682 |
 | input_path | argument | graph build | input_path | REQUIRED | src/openreview_cli/app.py:2685 |
@@ -518,31 +517,31 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | --contract-id | option | graph view | --contract-id | None | src/openreview_cli/app.py:2984 |
 | --db-path | option | graph view | --db-path | None | src/openreview_cli/app.py:2988 |
 | benchmark | group |  |  |  | src/openreview_cli/benchmark/cli.py:28 |
-| benchmark run | command | benchmark |  |  | src/openreview_cli/benchmark/cli.py:56 |
-| --datasets | option | benchmark run | --datasets | cuad | src/openreview_cli/benchmark/cli.py:60 |
-| --slots | option | benchmark run | --slots | default | src/openreview_cli/benchmark/cli.py:65 |
-| --modes | option | benchmark run | --modes | precheck | src/openreview_cli/benchmark/cli.py:70 |
-| --prompt-variant | option | benchmark run | --prompt-variant | None | src/openreview_cli/benchmark/cli.py:75 |
-| --all | option | benchmark run | --all | False | src/openreview_cli/benchmark/cli.py:80 |
-| --ci | option | benchmark run | --ci | False | src/openreview_cli/benchmark/cli.py:85 |
-| --compare | option | benchmark run | --compare | None | src/openreview_cli/benchmark/cli.py:90 |
-| --save-baseline | option | benchmark run | --save-baseline | False | src/openreview_cli/benchmark/cli.py:95 |
-| --download-datasets | option | benchmark run | --download-datasets | False | src/openreview_cli/benchmark/cli.py:100 |
-| --memory-watch | option | benchmark run | --memory-watch | False | src/openreview_cli/benchmark/cli.py:105 |
-| --multi-party | option | benchmark run | --multi-party | False | src/openreview_cli/benchmark/cli.py:110 |
-| --format | option | benchmark run | --format | terminal | src/openreview_cli/benchmark/cli.py:115 |
-| --output | option | benchmark run | --output | None | src/openreview_cli/benchmark/cli.py:120 |
-| --verbose | option | benchmark run | --verbose | False | src/openreview_cli/benchmark/cli.py:125 |
-| --hallucination-method | option | benchmark run | --hallucination-method | lexical | src/openreview_cli/benchmark/cli.py:130 |
-| --use-pipeline | option | benchmark run | --use-pipeline | False | src/openreview_cli/benchmark/cli.py:135 |
-| --benchmark-tier | option | benchmark run | --benchmark-tier | all | src/openreview_cli/benchmark/cli.py:140 |
-| benchmark baseline | command | benchmark |  |  | src/openreview_cli/benchmark/cli.py:352 |
-| --modes | option | benchmark baseline | --modes | assetcheck,buycheck,consultcheck,dealcheck,distrocheck,engagecheck,franchisecheck,guaranteecheck,hirecheck,indemnitycheck,leasecheck,licensecheck,loancheck,loicheck,opcheck,partnercheck,precheck,privacycheck,privacycheck_v2,settlementcheck,settlementcheck_v2,sponsorcheck,subcheck,workcheck | src/openreview_cli/benchmark/cli.py:356 |
-| --datasets | option | benchmark baseline | --datasets | cuad,maud,contract_nli | src/openreview_cli/benchmark/cli.py:361 |
-| --provider | option | benchmark baseline | --provider | mock | src/openreview_cli/benchmark/cli.py:366 |
-| --format | option | benchmark baseline | --format | terminal | src/openreview_cli/benchmark/cli.py:371 |
-| --output | option | benchmark baseline | --output | None | src/openreview_cli/benchmark/cli.py:376 |
-| --save-baseline | option | benchmark baseline | --save-baseline | False | src/openreview_cli/benchmark/cli.py:381 |
+| benchmark run | command | benchmark |  |  | src/openreview_cli/benchmark/cli.py:60 |
+| --datasets | option | benchmark run | --datasets | cuad | src/openreview_cli/benchmark/cli.py:64 |
+| --slots | option | benchmark run | --slots | default | src/openreview_cli/benchmark/cli.py:69 |
+| --modes | option | benchmark run | --modes | precheck | src/openreview_cli/benchmark/cli.py:74 |
+| --prompt-variant | option | benchmark run | --prompt-variant | None | src/openreview_cli/benchmark/cli.py:79 |
+| --all | option | benchmark run | --all | False | src/openreview_cli/benchmark/cli.py:84 |
+| --ci | option | benchmark run | --ci | False | src/openreview_cli/benchmark/cli.py:89 |
+| --compare | option | benchmark run | --compare | None | src/openreview_cli/benchmark/cli.py:94 |
+| --save-baseline | option | benchmark run | --save-baseline | False | src/openreview_cli/benchmark/cli.py:99 |
+| --download-datasets | option | benchmark run | --download-datasets | False | src/openreview_cli/benchmark/cli.py:104 |
+| --memory-watch | option | benchmark run | --memory-watch | False | src/openreview_cli/benchmark/cli.py:109 |
+| --multi-party | option | benchmark run | --multi-party | False | src/openreview_cli/benchmark/cli.py:114 |
+| --format | option | benchmark run | --format | terminal | src/openreview_cli/benchmark/cli.py:119 |
+| --output | option | benchmark run | --output | None | src/openreview_cli/benchmark/cli.py:124 |
+| --verbose | option | benchmark run | --verbose | False | src/openreview_cli/benchmark/cli.py:129 |
+| --hallucination-method | option | benchmark run | --hallucination-method | lexical | src/openreview_cli/benchmark/cli.py:134 |
+| --use-pipeline | option | benchmark run | --use-pipeline | False | src/openreview_cli/benchmark/cli.py:139 |
+| --benchmark-tier | option | benchmark run | --benchmark-tier | all | src/openreview_cli/benchmark/cli.py:144 |
+| benchmark baseline | command | benchmark |  |  | src/openreview_cli/benchmark/cli.py:356 |
+| --modes | option | benchmark baseline | --modes | assetcheck,buycheck,consultcheck,dealcheck,distrocheck,engagecheck,franchisecheck,guaranteecheck,hirecheck,indemnitycheck,leasecheck,licensecheck,loancheck,loicheck,opcheck,partnercheck,precheck,privacycheck,privacycheck_v2,settlementcheck,settlementcheck_v2,sponsorcheck,subcheck,workcheck | src/openreview_cli/benchmark/cli.py:360 |
+| --datasets | option | benchmark baseline | --datasets | cuad,maud,contract_nli | src/openreview_cli/benchmark/cli.py:365 |
+| --provider | option | benchmark baseline | --provider | mock | src/openreview_cli/benchmark/cli.py:370 |
+| --format | option | benchmark baseline | --format | terminal | src/openreview_cli/benchmark/cli.py:375 |
+| --output | option | benchmark baseline | --output | None | src/openreview_cli/benchmark/cli.py:380 |
+| --save-baseline | option | benchmark baseline | --save-baseline | False | src/openreview_cli/benchmark/cli.py:385 |
 | prompt | group |  |  |  | src/openreview_cli/prompts/cli.py:17 |
 | prompt create | command | prompt |  |  | src/openreview_cli/prompts/cli.py:57 |
 | --name | option | prompt create | --name | None | src/openreview_cli/prompts/cli.py:59 |
@@ -793,14 +792,14 @@ Note: `CERTAIN` in this table means only that the CLI item and the TUI item shar
 | CERTAIN | prompt | --prompt (option) | src/openreview_cli/prompts/cli.py:178 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
 | CERTAIN | prompt | --prompt (option) | src/openreview_cli/prompts/cli.py:178 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
 | CERTAIN | prompt | --prompt (option) | src/openreview_cli/prompts/cli.py:178 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
-| CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
-| CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
-| CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
-| CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:33 | none |
-| CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
-| CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
-| CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
-| CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:75 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
+| CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:79 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
+| CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:79 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
+| CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:79 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:79 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:33 | none |
+| CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:79 | PromptFormScreen (screen) | src/openreview_cli/tui/screens/prompt_form.py:21 | none |
+| CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:79 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
+| CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:79 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
+| CERTAIN | prompt | --prompt-variant (option) | src/openreview_cli/benchmark/cli.py:79 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
 | CERTAIN | summary | --summary (option) | src/openreview_cli/app.py:1447 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:63 | none |
 | CERTAIN | chunk | chunk (command) | src/openreview_cli/app.py:1868 | action_chunk_document (action) | src/openreview_cli/tui/screens/retrieve.py:190 | none |
 | CERTAIN | client | client add (command) | src/openreview_cli/app.py:473 | ClientDetailScreen (screen) | src/openreview_cli/tui/screens/client_detail.py:13 | none |
@@ -812,18 +811,18 @@ Note: `CERTAIN` in this table means only that the CLI item and the TUI item shar
 | CERTAIN | document | document_hash (argument) | src/openreview_cli/app.py:636 | action_chunk_document (action) | src/openreview_cli/tui/screens/retrieve.py:190 | none |
 | CERTAIN | document | document_hash (argument) | src/openreview_cli/app.py:636 | action_ingest_document (action) | src/openreview_cli/tui/screens/retrieve.py:214 | none |
 | CERTAIN | export | export (command) | src/openreview_cli/app.py:3242 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:33 | none |
-| CERTAIN | gateway | gateway costs (command) | src/openreview_cli/app.py:1771 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
+| CERTAIN | gateway | gateway costs (command) | src/openreview_cli/app.py:1773 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | gateway | gateway fallback (command) | src/openreview_cli/app.py:1671 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | gateway | gateway models (command) | src/openreview_cli/app.py:1572 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
-| CERTAIN | gateway | gateway provider add (command) | src/openreview_cli/app.py:1798 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
+| CERTAIN | gateway | gateway provider add (command) | src/openreview_cli/app.py:1800 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | gateway | gateway providers (command) | src/openreview_cli/app.py:1524 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
-| CERTAIN | gateway | gateway refresh (command) | src/openreview_cli/app.py:1725 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
+| CERTAIN | gateway | gateway refresh (command) | src/openreview_cli/app.py:1719 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | gateway | gateway set (command) | src/openreview_cli/app.py:1648 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | gateway | gateway setup (command) | src/openreview_cli/app.py:1490 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | gateway | gateway status (command) | src/openreview_cli/app.py:1502 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | statu | gateway status (command) | src/openreview_cli/app.py:1502 | action_index_status (action) | src/openreview_cli/tui/screens/retrieve.py:337 | none |
-| CERTAIN | gateway | gateway test (command) | src/openreview_cli/app.py:1736 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
-| CERTAIN | test | gateway test (command) | src/openreview_cli/app.py:1736 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
+| CERTAIN | gateway | gateway test (command) | src/openreview_cli/app.py:1737 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
+| CERTAIN | test | gateway test (command) | src/openreview_cli/app.py:1737 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
 | CERTAIN | graph | graph build (command) | src/openreview_cli/app.py:2682 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:63 | none |
 | CERTAIN | graph | graph build (command) | src/openreview_cli/app.py:2682 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
 | CERTAIN | graph | graph diff (command) | src/openreview_cli/app.py:2808 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:63 | none |
@@ -1121,38 +1120,37 @@ Grouped by the TUI screen each CLI item points at. 140 single and double charact
 | slot | argument | gateway set, gateway fallback, +1 more | src/openreview_cli/app.py:1649 |
 | model | argument | gateway set | src/openreview_cli/app.py:1649 |
 | model | argument | gateway fallback | src/openreview_cli/app.py:1675 |
-| --today | option | gateway costs | src/openreview_cli/app.py:1773 |
-| --session | option | gateway costs | src/openreview_cli/app.py:1774 |
-| --base-url | option | gateway provider add | src/openreview_cli/app.py:1801 |
-| --env-key | option | gateway provider add | src/openreview_cli/app.py:1803 |
-| --cred | option | gateway provider add | src/openreview_cli/app.py:1806 |
-| --cap-embedding | option | gateway provider add | src/openreview_cli/app.py:1808 |
-| --cap-reasoning | option | gateway provider add | src/openreview_cli/app.py:1809 |
-| --cap-tool-call | option | gateway provider add | src/openreview_cli/app.py:1810 |
-| --context-window | option | gateway provider add | src/openreview_cli/app.py:1812 |
+| --today | option | gateway costs | src/openreview_cli/app.py:1775 |
+| --session | option | gateway costs | src/openreview_cli/app.py:1776 |
+| --base-url | option | gateway provider add | src/openreview_cli/app.py:1803 |
+| --env-key | option | gateway provider add | src/openreview_cli/app.py:1805 |
+| --cred | option | gateway provider add | src/openreview_cli/app.py:1808 |
+| --cap-reasoning | option | gateway provider add | src/openreview_cli/app.py:1810 |
+| --cap-tool-call | option | gateway provider add | src/openreview_cli/app.py:1811 |
+| --context-window | option | gateway provider add | src/openreview_cli/app.py:1813 |
 | input_path | argument | graph build | src/openreview_cli/app.py:2685 |
 | --contract-id | option | graph build | src/openreview_cli/app.py:2696 |
 | --db-path | option | graph build, graph metrics, +2 more | src/openreview_cli/app.py:2700 |
 | --contract-id | option | graph metrics, graph health, +1 more | src/openreview_cli/app.py:2755 |
 | --json | option | graph diff | src/openreview_cli/app.py:2812 |
 | --weights | option | graph health | src/openreview_cli/app.py:2898 |
-| benchmark run | command | benchmark | src/openreview_cli/benchmark/cli.py:56 |
-| --datasets | option | benchmark run | src/openreview_cli/benchmark/cli.py:60 |
-| --slots | option | benchmark run | src/openreview_cli/benchmark/cli.py:65 |
-| --modes | option | benchmark run, benchmark baseline | src/openreview_cli/benchmark/cli.py:70 |
-| --ci | option | benchmark run | src/openreview_cli/benchmark/cli.py:85 |
-| --compare | option | benchmark run | src/openreview_cli/benchmark/cli.py:90 |
-| --save-baseline | option | benchmark run | src/openreview_cli/benchmark/cli.py:95 |
-| --download-datasets | option | benchmark run | src/openreview_cli/benchmark/cli.py:100 |
-| --memory-watch | option | benchmark run | src/openreview_cli/benchmark/cli.py:105 |
-| --multi-party | option | benchmark run | src/openreview_cli/benchmark/cli.py:110 |
-| --format | option | benchmark run, benchmark baseline | src/openreview_cli/benchmark/cli.py:115 |
-| --hallucination-method | option | benchmark run | src/openreview_cli/benchmark/cli.py:130 |
-| --use-pipeline | option | benchmark run | src/openreview_cli/benchmark/cli.py:135 |
-| --benchmark-tier | option | benchmark run | src/openreview_cli/benchmark/cli.py:140 |
-| --datasets | option | benchmark baseline | src/openreview_cli/benchmark/cli.py:361 |
-| --provider | option | benchmark baseline | src/openreview_cli/benchmark/cli.py:366 |
-| --save-baseline | option | benchmark baseline | src/openreview_cli/benchmark/cli.py:381 |
+| benchmark run | command | benchmark | src/openreview_cli/benchmark/cli.py:60 |
+| --datasets | option | benchmark run | src/openreview_cli/benchmark/cli.py:64 |
+| --slots | option | benchmark run | src/openreview_cli/benchmark/cli.py:69 |
+| --modes | option | benchmark run, benchmark baseline | src/openreview_cli/benchmark/cli.py:74 |
+| --ci | option | benchmark run | src/openreview_cli/benchmark/cli.py:89 |
+| --compare | option | benchmark run | src/openreview_cli/benchmark/cli.py:94 |
+| --save-baseline | option | benchmark run | src/openreview_cli/benchmark/cli.py:99 |
+| --download-datasets | option | benchmark run | src/openreview_cli/benchmark/cli.py:104 |
+| --memory-watch | option | benchmark run | src/openreview_cli/benchmark/cli.py:109 |
+| --multi-party | option | benchmark run | src/openreview_cli/benchmark/cli.py:114 |
+| --format | option | benchmark run, benchmark baseline | src/openreview_cli/benchmark/cli.py:119 |
+| --hallucination-method | option | benchmark run | src/openreview_cli/benchmark/cli.py:134 |
+| --use-pipeline | option | benchmark run | src/openreview_cli/benchmark/cli.py:139 |
+| --benchmark-tier | option | benchmark run | src/openreview_cli/benchmark/cli.py:144 |
+| --datasets | option | benchmark baseline | src/openreview_cli/benchmark/cli.py:365 |
+| --provider | option | benchmark baseline | src/openreview_cli/benchmark/cli.py:370 |
+| --save-baseline | option | benchmark baseline | src/openreview_cli/benchmark/cli.py:385 |
 | --tags | option | prompt create, prompt update | src/openreview_cli/prompts/cli.py:61 |
 | --description | option | prompt create | src/openreview_cli/prompts/cli.py:63 |
 | --description | option | prompt update | src/openreview_cli/prompts/cli.py:84 |
@@ -1226,7 +1224,7 @@ Grouped by the TUI screen each CLI item points at. 140 single and double charact
 - Clear ALL indexes (requires confirmation). (owners: index-clear; sources: src/openreview_cli/app.py:2554).
 - Delete ALL playbooks (owners: playbook delete; sources: src/openreview_cli/app.py:1113).
 - Export all playbooks (owners: playbook export; sources: src/openreview_cli/app.py:902).
-- Run all datasets, slots, and modes (owners: benchmark run; sources: src/openreview_cli/benchmark/cli.py:80).
+- Run all datasets, slots, and modes (owners: benchmark run; sources: src/openreview_cli/benchmark/cli.py:84).
 
 ### `--confidence-threshold`
 
@@ -1247,8 +1245,8 @@ Grouped by the TUI screen each CLI item points at. 140 single and double charact
 
 ### `--datasets`
 
-- Comma-separated datasets (owners: benchmark baseline; sources: src/openreview_cli/benchmark/cli.py:361).
-- Comma-separated list of datasets: cuad,maud,contract_nli,pii (owners: benchmark run; sources: src/openreview_cli/benchmark/cli.py:60).
+- Comma-separated datasets (owners: benchmark baseline; sources: src/openreview_cli/benchmark/cli.py:365).
+- Comma-separated list of datasets: cuad,maud,contract_nli,pii (owners: benchmark run; sources: src/openreview_cli/benchmark/cli.py:64).
 
 ### `--description`
 
@@ -1265,7 +1263,7 @@ Grouped by the TUI screen each CLI item points at. 140 single and double charact
 ### `--format`
 
 - Export format: md, json, docx. (owners: export; sources: src/openreview_cli/app.py:3249).
-- Output format: json, terminal (owners: benchmark run, benchmark baseline; sources: src/openreview_cli/benchmark/cli.py:115, src/openreview_cli/benchmark/cli.py:371).
+- Output format: json, terminal (owners: benchmark run, benchmark baseline; sources: src/openreview_cli/benchmark/cli.py:119, src/openreview_cli/benchmark/cli.py:375).
 - Output format: table, json (owners: pii list; sources: src/openreview_cli/app.py:595).
 - Output format: table, json, memo. (owners: negotiate; sources: src/openreview_cli/app.py:3073).
 - Output format: terminal, json (owners: retrieve; sources: src/openreview_cli/app.py:2305).
@@ -1297,9 +1295,9 @@ Grouped by the TUI screen each CLI item points at. 140 single and double charact
 - Output directory for review results. (owners: precheck; sources: src/openreview_cli/app.py:1277).
 - Output file path (default: stdout) (owners: prompt export; sources: src/openreview_cli/prompts/cli.py:270).
 - Path for the output graph JSON file (default: {input_stem}.graph.json). (owners: graph build; sources: src/openreview_cli/app.py:2690).
-- Write JSON report to file path (owners: benchmark run; sources: src/openreview_cli/benchmark/cli.py:120).
+- Write JSON report to file path (owners: benchmark run; sources: src/openreview_cli/benchmark/cli.py:124).
 - Write output to file instead of stdout. (owners: negotiate, licensecheck, leasecheck, privacycheck, +22 more; sources: src/openreview_cli/app.py:3071, src/openreview_cli/app.py:3341, src/openreview_cli/app.py:1346, src/openreview_cli/app.py:1946).
-- Write output to file path (owners: benchmark baseline; sources: src/openreview_cli/benchmark/cli.py:376).
+- Write output to file path (owners: benchmark baseline; sources: src/openreview_cli/benchmark/cli.py:380).
 
 ### `--output-dir`
 
@@ -1319,12 +1317,12 @@ Grouped by the TUI screen each CLI item points at. 140 single and double charact
 
 ### `--save-baseline`
 
-- Save as official baseline (requires --format json and --output) (owners: benchmark baseline; sources: src/openreview_cli/benchmark/cli.py:381).
-- Save this run as the regression baseline (owners: benchmark run; sources: src/openreview_cli/benchmark/cli.py:95).
+- Save as official baseline (requires --format json and --output) (owners: benchmark baseline; sources: src/openreview_cli/benchmark/cli.py:385).
+- Save this run as the regression baseline (owners: benchmark run; sources: src/openreview_cli/benchmark/cli.py:99).
 
 ### `--verbose`
 
-- Detailed per-item progress (owners: benchmark run; sources: src/openreview_cli/benchmark/cli.py:125).
+- Detailed per-item progress (owners: benchmark run; sources: src/openreview_cli/benchmark/cli.py:129).
 - Enable info-level logging (startup diagnostics). (owners: openreview; sources: src/openreview_cli/app.py:443).
 - Show full RCBSF classification and rationale. (owners: precheck compare; sources: src/openreview_cli/app.py:1952).
 - Show per-clause progress. (owners: negotiate, licensecheck, leasecheck, privacycheck, +21 more; sources: src/openreview_cli/app.py:3069, src/openreview_cli/app.py:3353, src/openreview_cli/app.py:1377).
@@ -1353,10 +1351,10 @@ Grouped by the TUI screen each CLI item points at. 140 single and double charact
 | default-state | 13 |
 | group | 11 |
 | mismatch | 3 |
-| option | 387 |
+| option | 386 |
 | screen | 30 |
 | shared-call-arg | 89 |
-| total | 772 |
+| total | 771 |
 
 Regenerate with:
 

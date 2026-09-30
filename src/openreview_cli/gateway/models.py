@@ -118,8 +118,7 @@ class PrivacyTierReport:
         tier_upper = self.tier.upper()
         descriptions = {
             "maximum": "all inference local",
-            "balanced": "local embeddings, cloud LLM (PII stripped)",
-            "performance": "cloud inference (PII stripped before egress)",
+            "balanced": "cloud chat allowed (PII stripped)",
         }
         desc = descriptions.get(self.tier, f"tier: {tier_upper}")
         return f"Privacy tier: {tier_upper} — {desc}"
@@ -139,17 +138,7 @@ class PrivacyTierReport:
             )
             parts.append(
                 "Processed under Balanced privacy tier. "
-                f"Embeddings processed locally. Cloud LLM received PII-stripped text{entities}."
-            )
-        elif self.tier == "performance":
-            entities = (
-                f" ({self.pii_entities_stripped} entities redacted)"
-                if self.pii_entities_stripped
-                else ""
-            )
-            parts.append(
-                "Processed under Performance privacy tier. "
-                f"All inference used cloud providers. PII was stripped before all external calls{entities}."
+                f"Cloud LLM received PII-stripped text{entities}."
             )
         else:
             parts.append(f"Processed under {self.tier.title()} privacy tier.")

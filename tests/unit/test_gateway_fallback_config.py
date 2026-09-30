@@ -79,13 +79,14 @@ def test_fallback_command_clear_restores_none(isolated_config: Path) -> None:
     assert persisted["gateway"]["models"]["reasoning"]["fallback"] is None
 
 
-def test_fallback_command_rejects_primary_only_slot(isolated_config: Path) -> None:
+def test_fallback_command_rejects_removed_slot(isolated_config: Path) -> None:
     before = isolated_config.read_text()
 
     result = runner.invoke(app, ["gateway", "fallback", "embedding", "cohere/embed-x"])
 
+    # `embedding` was primary-only; it is no longer a slot at all.
     assert result.exit_code == 1
-    assert "primary-only" in result.stderr
+    assert "Invalid slot" in result.stderr
     assert isolated_config.read_text() == before
 
 
@@ -116,7 +117,7 @@ def test_fallback_command_rejects_model_without_provider_prefix(
 
 
 def test_default_install_starts_without_fallback(isolated_config: Path) -> None:
-    for slot in ("reasoning", "extraction", "graph", "grounding"):
+    for slot in ("reasoning", "extraction", "grounding"):
         result = runner.invoke(app, ["gateway", "fallback", slot, "--clear"])
         assert result.exit_code == 0, result.output
 

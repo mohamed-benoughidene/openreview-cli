@@ -43,15 +43,15 @@ def test_read_privacy_tier_returns_balanced(tmp_path: Path) -> None:
         assert tier == "balanced"
 
 
-def test_read_privacy_tier_returns_performance(tmp_path: Path) -> None:
-    """T012: read_privacy_tier returns 'performance'."""
+def test_read_privacy_tier_maps_legacy_performance_to_balanced(tmp_path: Path) -> None:
+    """Spec 035 T1.4: an old 'performance' config keeps working as balanced."""
     from openreview_cli.tui.domain.privacy import read_privacy_tier
 
     _write_config(tmp_path, {"privacy": {"tier": "performance"}})
 
     with patch(f"{PRIVACY_MODULE}.get_config_dir", return_value=tmp_path):
         tier = read_privacy_tier()
-        assert tier == "performance"
+        assert tier == "balanced"
 
 
 def test_read_privacy_tier_returns_unknown_for_invalid(tmp_path: Path) -> None:
@@ -93,4 +93,4 @@ def test_read_privacy_tier_handles_empty_config_dir(
     with patch(f"{PRIVACY_MODULE}.get_config_dir", return_value=tmp_path):
         tier = read_privacy_tier()
         # Default config has privacy.tier = "balanced"
-        assert tier in ("maximum", "balanced", "performance", "\u2014", "unknown")
+        assert tier in ("maximum", "balanced", "\u2014", "unknown")

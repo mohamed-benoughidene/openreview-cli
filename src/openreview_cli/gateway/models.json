@@ -8,28 +8,20 @@
             "is_local": false,
             "source": "bundled",
             "capabilities": {
-                "embedding": true,
                 "reasoning": true,
                 "context_window": 128000,
                 "tool_call": true
             },
             "models": {
                 "gpt-4o": {
-                    "slots": ["reasoning", "extraction", "graph"],
+                    "slots": ["reasoning", "extraction"],
                     "context": 128000,
                     "recommended": true,
                     "status": "active"
                 },
                 "gpt-4o-mini": {
-                    "slots": ["reasoning", "extraction", "graph"],
+                    "slots": ["reasoning", "extraction"],
                     "context": 128000,
-                    "recommended": true,
-                    "status": "active"
-                },
-                "text-embedding-3-small": {
-                    "slots": ["embedding"],
-                    "context": 8192,
-                    "dimensions": 1536,
                     "recommended": true,
                     "status": "active"
                 }
@@ -43,20 +35,19 @@
             "is_local": false,
             "source": "bundled",
             "capabilities": {
-                "embedding": false,
                 "reasoning": true,
                 "context_window": 200000,
                 "tool_call": true
             },
             "models": {
                 "claude-sonnet-latest": {
-                    "slots": ["reasoning", "extraction", "graph"],
+                    "slots": ["reasoning", "extraction"],
                     "context": 200000,
                     "recommended": true,
                     "status": "active"
                 },
                 "claude-haiku-latest": {
-                    "slots": ["reasoning", "extraction", "graph"],
+                    "slots": ["reasoning", "extraction"],
                     "context": 200000,
                     "recommended": false,
                     "status": "active"
@@ -71,21 +62,14 @@
             "is_local": false,
             "source": "bundled",
             "capabilities": {
-                "embedding": true,
                 "reasoning": true,
                 "context_window": 1048576,
                 "tool_call": true
             },
             "models": {
                 "gemini-2.0-flash": {
-                    "slots": ["reasoning", "extraction", "graph"],
+                    "slots": ["reasoning", "extraction"],
                     "context": 1048576,
-                    "recommended": true,
-                    "status": "active"
-                },
-                "text-embedding-004": {
-                    "slots": ["embedding"],
-                    "dimensions": 768,
                     "recommended": true,
                     "status": "active"
                 }
@@ -99,15 +83,13 @@
             "is_local": true,
             "source": "bundled",
             "capabilities": {
-                "embedding": true,
                 "reasoning": true,
                 "context_window": 32768,
-                "tool_call": true,
-                "rerank": false
+                "tool_call": true
             },
             "models": {
                 "qwen3:8b": {
-                    "slots": ["reasoning", "extraction", "graph"],
+                    "slots": ["reasoning", "extraction"],
                     "context": 32768,
                     "ram": "5.2 GB",
                     "recommended": true,
@@ -116,7 +98,7 @@
                     "extra_params": {"num_ctx": 32768, "num_gpu": 1, "num_predict": 4096}
                 },
                 "qwen3:4b": {
-                    "slots": ["reasoning", "extraction", "graph"],
+                    "slots": ["reasoning", "extraction"],
                     "context": 32768,
                     "ram": "2.8 GB",
                     "recommended": false,
@@ -128,23 +110,6 @@
                         "num_predict": 2048,
                         "options": {"mirostat": 2}
                     }
-                },
-                "nomic-embed-text": {
-                    "slots": ["embedding"],
-                    "context": 8192,
-                    "dimensions": 768,
-                    "ram": "274 MB",
-                    "recommended": true,
-                    "status": "active",
-                    "note": "Local embedding, ~274 MB"
-                },
-                "qwen3-reranker-0.6b": {
-                    "slots": [],
-                    "context": 8192,
-                    "ram": "600 MB",
-                    "recommended": true,
-                    "status": "active",
-                    "note": "Local reranker"
                 }
             }
         },
@@ -156,21 +121,20 @@
             "is_local": false,
             "source": "bundled",
             "capabilities": {
-                "embedding": true,
                 "reasoning": true,
                 "context_window": 200000,
                 "tool_call": true
             },
             "models": {
                 "openai/gpt-4o": {
-                    "slots": ["reasoning", "extraction", "graph"],
+                    "slots": ["reasoning", "extraction"],
                     "context": 128000,
                     "recommended": true,
                     "status": "active",
                     "note": "Routed through OpenRouter"
                 },
                 "anthropic/claude-sonnet-latest": {
-                    "slots": ["reasoning", "extraction", "graph"],
+                    "slots": ["reasoning", "extraction"],
                     "context": 200000,
                     "recommended": false,
                     "status": "active",
@@ -186,28 +150,14 @@
             "is_local": false,
             "source": "bundled",
             "capabilities": {
-                "embedding": true,
                 "reasoning": true,
                 "context_window": 128000,
-                "tool_call": true,
-                "rerank": true
+                "tool_call": true
             },
             "models": {
                 "command-r-plus": {
-                    "slots": ["reasoning", "extraction", "graph"],
+                    "slots": ["reasoning", "extraction"],
                     "context": 128000,
-                    "recommended": true,
-                    "status": "active"
-                },
-                "embed-english-v3.0": {
-                    "slots": ["embedding"],
-                    "dimensions": 1024,
-                    "recommended": true,
-                    "status": "active"
-                },
-                "rerank-english-v3.0": {
-                    "slots": ["reranking"],
-                    "context": 8192,
                     "recommended": true,
                     "status": "active"
                 }
@@ -221,21 +171,14 @@
             "is_local": false,
             "source": "bundled",
             "capabilities": {
-                "embedding": true,
                 "reasoning": true,
                 "context_window": 8192,
                 "tool_call": true
             },
             "models": {
                 "meta-llama/Llama-3.3-70B-Instruct": {
-                    "slots": ["reasoning", "extraction", "graph"],
+                    "slots": ["reasoning", "extraction"],
                     "context": 8192,
-                    "recommended": true,
-                    "status": "active"
-                },
-                "BAAI/bge-large-en-v1.5": {
-                    "slots": ["embedding"],
-                    "dimensions": 1024,
                     "recommended": true,
                     "status": "active"
                 }
@@ -249,14 +192,13 @@
             "is_local": false,
             "source": "bundled",
             "capabilities": {
-                "embedding": false,
                 "reasoning": true,
                 "context_window": 64000,
                 "tool_call": true
             },
             "models": {
                 "deepseek-chat": {
-                    "slots": ["extraction", "reasoning", "qa"],
+                    "slots": ["extraction", "reasoning"],
                     "context": 64000,
                     "recommended": true,
                     "status": "active"
@@ -271,14 +213,13 @@
             "is_local": false,
             "source": "bundled",
             "capabilities": {
-                "embedding": true,
                 "reasoning": true,
                 "context_window": 32768,
                 "tool_call": true
             },
             "models": {
                 "qwen-plus": {
-                    "slots": ["extraction", "embedding", "reasoning"],
+                    "slots": ["extraction", "reasoning"],
                     "context": 32768,
                     "recommended": true,
                     "status": "active"
@@ -293,7 +234,6 @@
             "is_local": false,
             "source": "bundled",
             "capabilities": {
-                "embedding": false,
                 "reasoning": true,
                 "context_window": 32000,
                 "tool_call": true
@@ -315,21 +255,11 @@
             "is_local": false,
             "source": "bundled",
             "capabilities": {
-                "embedding": true,
                 "reasoning": false,
                 "context_window": null,
-                "tool_call": false,
-                "rerank": true
+                "tool_call": false
             },
-            "models": {
-                "voyage-3.5": {
-                    "slots": ["embedding"],
-                    "dimensions": 1024,
-                    "recommended": true,
-                    "status": "active"
-                },
-                "rerank-2.5": {"slots": ["reranking"], "recommended": true, "status": "active"}
-            }
+            "models": {}
         },
         "moonshot": {
             "name": "Moonshot AI (Kimi)",
@@ -339,14 +269,13 @@
             "is_local": false,
             "source": "bundled",
             "capabilities": {
-                "embedding": false,
                 "reasoning": true,
                 "context_window": 131072,
                 "tool_call": true
             },
             "models": {
                 "kimi-k2": {
-                    "slots": ["extraction", "reasoning", "qa"],
+                    "slots": ["extraction", "reasoning"],
                     "context": 131072,
                     "recommended": true,
                     "status": "active"
@@ -361,7 +290,6 @@
             "is_local": false,
             "source": "bundled",
             "capabilities": {
-                "embedding": false,
                 "reasoning": true,
                 "context_window": 128000,
                 "tool_call": true
@@ -374,7 +302,7 @@
                     "status": "active"
                 },
                 "mistral-large-latest": {
-                    "slots": ["extraction", "tool_call", "qa"],
+                    "slots": ["extraction"],
                     "context": 128000,
                     "status": "active"
                 }
@@ -388,14 +316,13 @@
             "is_local": false,
             "source": "bundled",
             "capabilities": {
-                "embedding": false,
                 "reasoning": true,
                 "context_window": 200000,
                 "tool_call": false
             },
             "models": {
                 "glm-4.7": {
-                    "slots": ["extraction", "reasoning", "qa"],
+                    "slots": ["extraction", "reasoning"],
                     "context": 200000,
                     "recommended": true,
                     "status": "active"
@@ -409,7 +336,7 @@
             "base_url": null,
             "is_local": false,
             "source": "bundled",
-            "capabilities": { "embedding": false, "reasoning": true, "context_window": 200000, "tool_call": true, "rerank": false },
+            "capabilities": { "reasoning": true, "context_window": 200000, "tool_call": true },
             "credentials": [
                 {"env_key": "AWS_REGION_NAME", "label": "AWS Region", "litellm_param": "aws_region_name", "secret": false, "required": true, "is_file_path": false},
                 {"env_key": "AWS_ACCESS_KEY_ID", "label": "AWS Access Key ID", "litellm_param": "aws_access_key_id", "secret": true, "required": true, "is_file_path": false},
@@ -424,7 +351,7 @@
             "base_url": null,
             "is_local": false,
             "source": "bundled",
-            "capabilities": { "embedding": true, "reasoning": true, "context_window": 200000, "tool_call": true, "rerank": false },
+            "capabilities": { "reasoning": true, "context_window": 200000, "tool_call": true },
             "credentials": [
                 {"env_key": "VERTEX_PROJECT", "label": "GCP Project ID", "litellm_param": "vertex_project", "secret": false, "required": true, "is_file_path": false},
                 {"env_key": "VERTEX_LOCATION", "label": "GCP Region", "litellm_param": "vertex_location", "secret": false, "required": true, "is_file_path": false},
@@ -439,7 +366,7 @@
             "base_url": "https://your-resource.openai.azure.com",
             "is_local": false,
             "source": "bundled",
-            "capabilities": { "embedding": true, "reasoning": true, "context_window": 128000, "tool_call": true, "rerank": false },
+            "capabilities": { "reasoning": true, "context_window": 128000, "tool_call": true },
             "credentials": [
                 {"env_key": "AZURE_API_KEY", "label": "Azure API Key", "litellm_param": "api_key", "secret": true, "required": true, "is_file_path": false},
                 {"env_key": "AZURE_API_VERSION", "label": "Azure API Version", "litellm_param": "api_version", "secret": false, "required": true, "is_file_path": false}

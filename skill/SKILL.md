@@ -53,7 +53,7 @@ Both must succeed. `--help` must list at least the expected subcommands (parse, 
 
 Installation and configuration are **separate states**. A freshly installed CLI is NOT ready to review:
 
-- **Check config:** `openreview gateway status` — shows each of the 6 slots (reasoning, extraction, graph, grounding, embedding, reranking) with status.
+- **Check config:** `openreview gateway status` — shows each of the 3 slots (extraction, reasoning, grounding) with status.
 - **`configured`** → provider assigned and ready: API key present for cloud providers; keyless for local ollama. Ready for that slot.
 - **`missing_api_key`** → a *cloud* slot has a provider but no credentials → must configure before cost-bearing work. Local/keyless providers (ollama) never show this — if they did, it would be a false alarm.
 - **`not_configured`** → no provider assigned to the slot yet (no config/primary) — the default for a fresh install. Configure it before a workflow that consumes that slot.
@@ -73,10 +73,9 @@ If a slot is `missing_api_key` or `gateway test` fails: report what is missing a
 ### 7. Privacy Tier (task-relevant configuration)
 
 - Check the active tier: `openreview config get privacy.tier`.
-- Set it: `openreview config set privacy.tier maximum|balanced|performance`.
-- `maximum` — all LLM + embedding inference runs local-only (Ollama); no data is transmitted externally.
-- `balanced` — PII stripped locally; LLM reasoning may use cloud; embeddings local.
-- `performance` — PII stripped locally; LLM + embeddings may use cloud.
+- Set it: `openreview config set privacy.tier maximum|balanced`.
+- `maximum` — all LLM inference runs local-only (Ollama); no data is transmitted externally.
+- `balanced` — PII stripped locally; LLM reasoning may use cloud. A legacy `performance` value is accepted and treated as `balanced`.
 - The tier is persistent (stored in `~/.config/openreview/config.yml`) and enforced per-operation by the gateway. This is a **processing-policy** control, distinct from PII stripping (see Privacy Routing below).
 
 ## When to Use
@@ -173,14 +172,14 @@ CLI: `openreview ingest <file.ndax>` → `openreview retrieve "<query>" [file]`;
 
 Required: for `ingest`, a JSON file containing a list of chunk dicts (`.ndax` is a user-applied extension; any JSON list works). For `retrieve`, a query string; `file` falls back to last indexed document.
 
-Key constraint: no CLI command produces `.ndax`. To build one: `openreview chunk <doc> --format json` (stdout) → save to file → `ingest` (`chunk` is OPTIONAL — see Optional Capabilities). `precheck review` does NOT require chunking or indexing. **Retrieval is keyword-only (BM25) — there is no retrieval-method choice. `--rerank` is opt-in and routes to the configured `reranking` slot (e.g. `cohere/rerank-english-v3.0`, `voyage/rerank-2.5`; Ollama cannot serve reranking — see `docs/ARCHITECTURE.md` "Honest limitations"); it needs a rerank-capable provider configured and reachable — check `gateway status` (slot `configured`) then `gateway test reranking` before relying on it.**
+Key constraint: no CLI command produces `.ndax`. To build one: `openreview chunk <doc> --format json` (stdout) → save to file → `ingest` (`chunk` is OPTIONAL — see Optional Capabilities). `precheck review` does NOT require chunking or indexing. **Retrieval is keyword-only (BM25) — there is no retrieval-method choice. `--rerank` is opt-in but inert: the `reranking` slot was removed and no local reranker works on legal text (see `docs/ARCHITECTURE.md` "Honest limitations"), so it returns the original keyword order.**
 
 #### `retrieve` and `ingest` flags
 
 These flags are part of the index-and-retrieve surface and are commonly needed but were not formally documented:
 
 - `retrieve --top-k <int>`: number of top chunks to return (1–50). The default is implementation-defined; raise it for broader context, lower it for tight scoping. Source: `app.py:2295`.
-- `retrieve --rerank` / `--rerank-depth <int>`: enable the opt-in cross-encoder reranker and choose how many chunks to re-rank before truncating to `--top-k`. Requires the `reranking` slot configured; larger depth improves quality at the cost of latency; `--force-rerank` overrides the validation warning. Source: `app.py:2296-2304`.
+- `retrieve --rerank` / `--rerank-depth <int>`: enable the opt-in cross-encoder reranker and choose how many chunks to re-rank before truncating to `--top-k`. With the `reranking` slot removed, it is inert and returns the original keyword order; `--force-rerank` overrides the validation warning. Source: `app.py:2296-2304`.
 - `retrieve --format <terminal|json>`: output format; `terminal` is the default. Source: `app.py:2305`.
 - `retrieve --no-header`: suppress the column header in text-format output (useful when piping into other tools). Source: `app.py:2307`.
 - `retrieve --db-dir <path>`: override the default DB directory. By default, the CLI uses `platformdirs.user_data_dir("openreview") / "openreview.db"` (Linux/macOS: `~/.local/share/openreview/openreview.db`); `--db-dir` lets the user point at a different index for isolation, testing, or multi-tenant setups. Source: `app.py:2306` (declaration; same parameter name used for `ingest`, `retrieve`, and other index commands).
@@ -224,7 +223,7 @@ Use when: user wants to set up/inspect LLM providers or costs.
 
 CLI: `openreview gateway setup` (interactive TTY wizard — a human runs this in their own terminal; the agent cannot drive it headless) | `status` | `providers` | `models <provider>` | `set <slot> <model>` | `refresh` | `test <slot>` | `costs [--today]`; custom provider (non-interactive): `openreview gateway provider add <name> --base-url <url> [--env-key VAR] [--cred k=v]...`.
 
-Key constraint: 6 slots — reasoning, extraction, graph, grounding, embedding, reranking. Agent-driven slot/provider config uses the non-interactive `gateway set <slot> <model>` and `gateway provider add`; only `gateway setup` is interactive. **`gateway setup` covers all 6 slots, including `grounding`.**
+Key constraint: 3 slots — extraction, reasoning, grounding. Agent-driven slot/provider config uses the non-interactive `gateway set <slot> <model>` and `gateway provider add`; only `gateway setup` is interactive. **`gateway setup` covers all 3 slots, including `grounding`.**
 
 #### Stale-model diagnostic (C-α)
 
@@ -263,11 +262,8 @@ Advisory only — this section helps the agent *recommend* models. Actual config
 | Slot | What it does | Model must be able to | Top selection criteria | User priorities that matter |
 | --- | --- | --- | --- | --- |
 | extraction | Per-clause position analysis (core review) | Generate text + emit parseable JSON | 1. structured-output reliability 2. legal extraction precision 3. citation fidelity | quality, cost/latency, local |
-| embedding | Declared embedding slot; **no current consumer** (dense/hybrid retrieval was removed) | Produce fixed-size embeddings (if exercised) | n/a (reserved surface) | n/a |
-| reranking | Opt-in rerank flag; uses the configured `reranking` slot | Score query-chunk pairs | 1. Precision@K improvement 2. latency 3. cost | quality, local; usually skip (disabled by default) |
+| reasoning | Second-opinion QA/checker: verifies each extraction position | Generate text + emit parseable verdicts | 1. verification judgment 2. structured-output reliability 3. latency | quality, cost/latency, local |
 | grounding | Verify citations post-review | Generate text + emit parseable verdicts | 1. entailment discrimination 2. structured-output reliability 3. consistency | quality, cost, local |
-| reasoning | Declared chat slot; **no current consumer** | Generate text (if exercised) | n/a (reserved surface) | n/a |
-| graph | Declared chat slot; graph subsystem is LLM-free | Generate text (if exercised) | n/a (reserved surface) | n/a |
 
 ### extraction
 
@@ -280,27 +276,16 @@ Advisory only — this section helps the agent *recommend* models. Actual config
 - **Avoid choosing primarily by:** general reasoning benchmark rank — verbose/unparseable output is a poor fit regardless of reasoning score.
 - **Candidate evaluation rule:** reject non-chat / non-JSON-reliable models; then compare on structured-output reliability, then legal precision; adjust by the user's priority.
 
-### embedding
+### reasoning
 
-- **What this slot does:** declared embedding surface. The dense/hybrid retrieval path that consumed it was removed — retrieval is now keyword-only (BM25) — so this slot currently has **no consumer**.
-- **What kind of model belongs here:** a dedicated embedding model.
-- **The model must:** (a) produce fixed-size embeddings; (b) have a provider declaring `embedding` capability; (c) return a consistent vector dimension. With no retrieval consumer, the choice no longer affects search quality or index consistency.
-- **Prioritize:** 1. retrieval relevance on legal text; 2. stable, documented dimension; 3. latency/cost.
-- **User requirements that change the choice:** quality → stronger/higher-dimension embedding; cost/speed → smaller/faster embedding; local/private → local embeddings are required under `balanced` and `maximum`.
-- **A strong choice looks like:** a dedicated embedding model with good semantic search on domain text.
-- **Avoid choosing primarily by:** chat reasoning ability — an embedding model does not generate text.
-- **Candidate evaluation rule:** reject non-embedding models; compare on retrieval relevance and dimension stability; adjust by priority.
-
-### reranking
-
-- **What this slot does:** `--rerank` (opt-in) routes to the configured `reranking` slot — the gateway resolves the provider/model from this slot's config. The reranker is disabled by default (degrades legal retrieval). When the stored validation record shows degradation (`degradation_pp <= 0`), the CLI prints a warning suggesting `--force-rerank`; the reranker still runs (advisory, not a hard auto-disable).
-- **What kind of model belongs here:** a reranker/cross-encoder.
-- **The model must:** (a) score query-document pairs; (b) have a provider declaring `rerank` capability.
-- **Prioritize:** 1. Precision@K improvement on legal text; 2. latency; 3. cost.
-- **User requirements that change the choice:** quality → a reranker that actually improves Precision@5; cost/speed → skip reranking (the default); local/private → reranking is unavailable: no local provider serves rerank (litellm has no rerank branch for Ollama, and Ollama exposes no rerank endpoint), and the `maximum` tier blocks the cloud rerank providers (`cohere`, `voyage`).
-- **A strong choice looks like:** a cross-encoder fine-tuned for legal/contract retrieval that beats the BM25 baseline. If no such evidence, the disabled default is correct.
-- **Avoid choosing primarily by:** popularity — a reranker that degrades legal retrieval is actively harmful. If a validation warning appears but the user still wants reranking, `--force-rerank` suppresses it.
-- **Candidate evaluation rule:** reject models without a `rerank` capability; compare on Precision@K improvement, then latency/cost; adjust by the user's priority.
+- **What this slot does:** the checker — the QA agent that reviews each extraction agent's position and returns agree / disagree / uncertain (the amber flag). It is the second LLM stage of `precheck review` and product modes, and it resolves its model from this slot rather than borrowing the reader's `extraction` slot.
+- **What kind of model belongs here:** a chat/text-generation model, independent of the reader.
+- **The model must:** (a) generate text; (b) have a provider declaring `reasoning` capability; (c) reliably emit a verdict (agree/disagree/uncertain) with a citation.
+- **Prioritize:** 1. verification judgment; 2. structured-output reliability; 3. latency.
+- **User requirements that change the choice:** quality → a stronger checker than the reader (point `reasoning` at a larger model without touching `extraction`); cost/latency → a smaller model is often fine; local/private → must be local under `maximum`.
+- **A strong choice looks like:** a chat model good at independent second-opinion verification.
+- **Avoid choosing primarily by:** generative flair — the checker verifies, it does not author.
+- **Candidate evaluation rule:** reject non-chat / non-verdict-reliable models; compare on verification quality; adjust by the user's priority.
 
 ### grounding
 
@@ -313,17 +298,12 @@ Advisory only — this section helps the agent *recommend* models. Actual config
 - **Avoid choosing primarily by:** creative/generative ability — grounding is verification, not generation.
 - **Candidate evaluation rule:** reject non-chat / non-verdict-reliable models; compare on entailment accuracy; adjust by priority.
 
-### reasoning and graph (reserved surfaces)
-
-- **What these slots do:** `reasoning` and `graph` are declared chat slots (`_SLOT_METHOD_MAP` maps both to `chat`) and configurable via `gateway set` / testable via `gateway test`, but **no current workflow consumes them**. The `graph` subsystem is pure structural analysis (no LLM); `--cluster-clauses` uses a hardcoded local legal-bert, not the `graph` or `embedding` slot. The `reasoning` slot is not called by the review pipeline (extraction/QA use the `extraction` slot).
-- **Guidance:** if a user asks about these slots, say they are configurable reserved surfaces without an active consumer today — do not claim a workflow depends on them. If the user's actual goal is analysis/review, redirect to the `extraction` slot guidance.
-
 ### How to Compare a User's Candidate Models
 
 1. **Identify each candidate's actual capabilities.** Do not assume from a name; if unknown, ask or verify.
 2. **Reject against each slot's hard requirements.** Compatible ≠ good — it means it passes the bar.
 3. **Compare the compatible set using slot-specific criteria** (never one universal ranking).
-4. **Apply the user's priority** — cost matters more for per-clause extraction than for a single-shot high-stakes analysis; locality matters most for embedding under `maximum`/`balanced`.
+4. **Apply the user's priority** — cost matters more for per-clause extraction than for a single-shot high-stakes analysis; locality matters most under `maximum`.
 5. **Recommend with reasoning.** State the slot, why the model fits, the trade-off, and why alternatives were not preferred. Avoid "Model X for reasoning" without explanation.
 
 Distinguish: **compatible** (passes hard requirements) vs **better fit** (higher on selection criteria) vs **trade-off** (preferable only under a specific priority) vs **unsuitable** (fails a hard requirement). Never conflate "good AI model" with "right model for this OpenReview slot."
@@ -375,30 +355,30 @@ These flags are commonly needed for templated exports but were not formally docu
 - `export --mode <mode>`: choose an export mode (`memo`, `summary`, `redline`, etc.). The available modes depend on the report shape; an unknown mode exits 1. Source: `app.py:3004-3010`.
 
 ### 10. Privacy Tier
-Control whether LLM/embedding processing runs local-only or may use cloud providers.
+Control whether LLM processing runs local-only or may use cloud providers.
 
 Use when: user requires on-device/local-only processing, wants to avoid cloud where supported, or expresses a privacy/offline/cost constraint.
 
-CLI: `openreview config get privacy.tier` | `openreview config set privacy.tier maximum|balanced|performance`.
+CLI: `openreview config get privacy.tier` | `openreview config set privacy.tier maximum|balanced`.
 
-Key constraint: persistent processing-policy setting (stored in config.yml). `maximum` = all-local (LLM + embeddings, Ollama only); `balanced` (default) = local PII strip + cloud LLM, local embeddings; `performance` = local PII strip + cloud LLM + cloud embeddings. **Distinct from PII stripping** — PII is always stripped before any cloud call (fail-closed) unless `--no-pii` (Rule 7). The tier controls *where inference runs*, not *whether PII is stripped*. Local processing does NOT mean nothing is stored — PII mappings, cost logs, review reports, and the retrieval index are stored locally; audit/delete stored mappings via Capability 8. Config commands beyond `privacy.tier` are operator-only and NOT routed (When NOT to Use).
+Key constraint: persistent processing-policy setting (stored in config.yml). `maximum` = all-local (Ollama only); `balanced` (default) = local PII strip + cloud LLM; a legacy `performance` value is accepted and treated as `balanced`. **Distinct from PII stripping** — PII is always stripped before any cloud call (fail-closed) unless `--no-pii` (Rule 7). The tier controls *where inference runs*, not *whether PII is stripped*. Local processing does NOT mean nothing is stored — PII mappings, cost logs, review reports, and the retrieval index are stored locally; audit/delete stored mappings via Capability 8. Config commands beyond `privacy.tier` are operator-only and NOT routed (When NOT to Use).
 
 #### Privacy Tier vs PII Stripping (do not conflate)
 
 The privacy tier and PII stripping are **two independent axes**. Conflating them is the root cause of the P0 CRITICAL anti-pattern (Rule 13) and the live S-5 reproduction (Phase 7 P0 evidence). The two axes:
 
-- **Privacy tier** (this Capability): controls **where inference runs** — local Ollama vs cloud provider. Three tiers: `maximum` (all-local), `balanced` (default when `privacy.tier` is absent in config.yml; local PII strip + cloud LLM + local embeddings), `performance` (local PII strip + cloud LLM + cloud embeddings). The tier is set via `config set privacy.tier <tier>` and is a persistent config value (`src/openreview_cli/gateway/tier_config.py:13-15`).
+- **Privacy tier** (this Capability): controls **where inference runs** — local Ollama vs cloud provider. Two tiers: `maximum` (all-local) and `balanced` (default when `privacy.tier` is absent in config.yml; local PII strip + cloud LLM). The retired `performance` value is still accepted on input and normalized to `balanced`. The tier is set via `config set privacy.tier <tier>` and is a persistent config value (`src/openreview_cli/gateway/tier_config.py:13-15`).
 - **PII stripping**: controls **whether the LLM sees raw or redacted text**. Stripping is **automatic and fail-closed** under all tiers (`src/openreview_cli/pii/engine.py: run unless no_pii=True`, called from `review/runner.py:268-269`). The LLM never sees unredacted text unless `--no-pii` is passed (or `--allow-partial-pii` is passed and partial processing fails — see below).
 
-**`--no-pii` is a PII-skip path, not a tier override.** `--no-pii` disables the PII strip stage entirely. It does **not** change the privacy tier; under `balanced` / `performance` it sends **raw unredacted contract text to a cloud LLM**. This is the exfiltration path. The two acceptable resolutions are documented in Rule 13: (a) set the tier to `maximum` (keep `--no-pii`, all inference local) and re-run; or (b) remove `--no-pii` (PII stripping is automatic, fail-closed) and re-run. **There is no resolution that keeps `--no-pii` + a non-`maximum` tier; that combination is the anti-pattern.**
+**`--no-pii` is a PII-skip path, not a tier override.** `--no-pii` disables the PII strip stage entirely. It does **not** change the privacy tier; under `balanced` it sends **raw unredacted contract text to a cloud LLM**. This is the exfiltration path. The two acceptable resolutions are documented in Rule 13: (a) set the tier to `maximum` (keep `--no-pii`, all inference local) and re-run; or (b) remove `--no-pii` (PII stripping is automatic, fail-closed) and re-run. **There is no resolution that keeps `--no-pii` + a non-`maximum` tier; that combination is the anti-pattern.**
 
 **`--allow-partial-pii` is a different PII-skip path.** It allows the strip stage to fail for individual pages (`PartialProcessingError` is raised in `pii/engine.py:191-197` when individual pages fail PII detection; the catch-and-re-raise site is `pipeline/adapters/strip.py:91-98`, which re-raises as `CriticalStageError`) rather than aborting the whole pipeline. The failed pages' raw text is then sent to the LLM. Under a non-`maximum` tier, this is also an exfiltration path for the failed pages and falls under Rule 13's anti-pattern check.
 
-**Embeddings locality:** the embedding slot is local-only under both `maximum` and `balanced` (`tier_config.py:46-47`); it may use a cloud provider only under `performance`. The LLM slot is local-only under `maximum`; may use a cloud provider under `balanced` or `performance`. The reranking slot follows the LLM slot. Reasoning and graph slots follow the LLM slot.
+**Slot locality:** every slot is local-only under `maximum`; under `balanced` the chat slots (`extraction`, `reasoning`, `grounding`) may use a cloud provider.
 
-**Recovery interaction:** the recovery subsystem's `provider_fallback` strategy respects the product tier (`recovery/models.py:50-60`): a `maximum` user is never moved to a cloud fallback; a `balanced` or `performance` user may be. The product → recovery tier mapping is: `product.maximum → recovery.strict`, `product.balanced → recovery.standard`, `product.performance → recovery.none`. See the Recovery Subsystem subsection for details.
+**Recovery interaction:** the recovery subsystem's `provider_fallback` strategy respects the product tier (`recovery/models.py:50-60`): a `maximum` user is never moved to a cloud fallback; a `balanced` user may be. The product → recovery tier mapping is: `product.maximum → recovery.strict`, `product.balanced → recovery.standard`. See the Recovery Subsystem subsection for details.
 
-**PII-unavailable is terminal.** If PII stripping fails for the whole document (engine not initialized, all pages fail under `--allow-partial-pii` without the flag), the pipeline raises `PIIUnavailableError` (`pii/engine.py`) which the router catches and refuses to send to a cloud provider even under `performance` (`router.py:331-337`, the per-process `_pii_available` flag). The agent must surface this as a hard error, not fall back to a cloud slot.
+**PII-unavailable is terminal.** If PII stripping fails for the whole document (engine not initialized, all pages fail under `--allow-partial-pii` without the flag), the pipeline raises `PIIUnavailableError` (`pii/engine.py`) which the router catches and refuses to send to a cloud provider even under `balanced` (`router.py:331-337`, the per-process `_pii_available` flag). The agent must surface this as a hard error, not fall back to a cloud slot.
 
 **Cross-references:** Rule 13 (CRITICAL anti-pattern) is the enforcement gate for this section. The Cost-Limit Behavior (P1.a) and Recovery Subsystem (P1.b) subsections document the gateway-side and recovery-side interactions. The `--no-pii` flag is on `precheck review`, `precheck compare`, product modes, and legacy `precheck`; it is **not** on `negotiate` (Capability 5), which has no PII strip and no `--no-pii` flag.
 
@@ -462,7 +442,7 @@ Key constraint: no CLI command writes `.ndax`. Save the chunk stdout to a file, 
 
 12. **Privacy routing.** If the user expresses a privacy/locality/cloud constraint (local-only, on-device, avoid cloud), check `config get privacy.tier` before choosing the workflow and surface `config set privacy.tier maximum` when the requirement is "everything stays local". PII stripping is automatic and separate — `--no-pii` disables stripping (Rule 7), never use it to satisfy a locality requirement. Ambiguous privacy requests: report the trade-off (tier vs cost vs accuracy) and let the user choose — do not guess. **Exception:** `negotiate` does not strip PII and has no `--no-pii` flag (Capability 5).
 
-13. **CRITICAL anti-pattern: `--no-pii` on a non-`maximum` privacy tier exfiltrates raw contract text to the cloud.** Before any workflow that includes `--no-pii`, run `config get privacy.tier`. If the tier is `balanced` or `performance` (or any non-`maximum` cloud tier), the destination is a **cloud** provider; `--no-pii` disables the local PII strip, so the raw unredacted text is sent to that cloud provider. **Do not run.** Surface the warning, **name the destination provider** explicitly (e.g. "this would send raw contract text to `openrouter/anthropic/claude-sonnet-4.6`"), and require explicit user confirmation before proceeding. The two acceptable resolutions are: (a) `config set privacy.tier maximum` (keep `--no-pii`, all inference local) and re-run; or (b) remove `--no-pii` and re-run (PII stripping is automatic, fail-closed, see Capability 10 and the Privacy Tier vs PII Stripping subsection). **Exemption:** `negotiate` (Capability 5) has no `--no-pii` flag and is exempt. **Back-references:** this rule is the enforcement gate for Capability 10's "Privacy Tier vs PII Stripping" subsection; recovery (Recovery Subsystem) cannot save a request that has already exfiltrated raw text.
+13. **CRITICAL anti-pattern: `--no-pii` on a non-`maximum` privacy tier exfiltrates raw contract text to the cloud.** Before any workflow that includes `--no-pii`, run `config get privacy.tier`. If the tier is `balanced` (or any non-`maximum` cloud tier), the destination is a **cloud** provider; `--no-pii` disables the local PII strip, so the raw unredacted text is sent to that cloud provider. **Do not run.** Surface the warning, **name the destination provider** explicitly (e.g. "this would send raw contract text to `openrouter/anthropic/claude-sonnet-4.6`"), and require explicit user confirmation before proceeding. The two acceptable resolutions are: (a) `config set privacy.tier maximum` (keep `--no-pii`, all inference local) and re-run; or (b) remove `--no-pii` and re-run (PII stripping is automatic, fail-closed, see Capability 10 and the Privacy Tier vs PII Stripping subsection). **Exemption:** `negotiate` (Capability 5) has no `--no-pii` flag and is exempt. **Back-references:** this rule is the enforcement gate for Capability 10's "Privacy Tier vs PII Stripping" subsection; recovery (Recovery Subsystem) cannot save a request that has already exfiltrated raw text.
 
 ## Examples / Operational Guidance
 
@@ -532,7 +512,7 @@ Each example: **intent → workflow selection → commands → prerequisites →
 - **Intent:** "What does the confidentiality section say?" — user confirms this document was indexed before.
 - **Workflow:** Retrieve (narrow factual question over an existing index).
 - **Command:** `openreview retrieve "confidentiality obligations" --top-k 3 --format json`
-- **Reranking note:** if a reranker validation warning appears and the user still wants reranking, re-run with `--force-rerank`.
+- **Reranker note:** if a reranker validation warning appears and the user still wants it, re-run with `--force-rerank`.
 - **Prerequisites:** An index exists for the document (`ingest` was run previously; confirm with `index-status <file.ndax>`). If no index exists, do **not** run `retrieve` — fall back to `precheck review` (Rule 5) or build the index (E-5).
 - **Result meaning:** Ranked chunks with `chunk_id`, `text`, and `score`; higher score = better match. Chunk text is the retrieval evidence.
 - **Next action:** Quote the matched chunk(s) as the answer, with the clause heading if present. If the user wants a deeper per-clause analysis, offer `precheck review`.
@@ -593,7 +573,7 @@ Each example: **intent → workflow selection → commands → prerequisites →
 - **Workflow:** Gateway status/costs/readiness.
 - **Command:** `openreview gateway status` or `openreview gateway costs --today`; before a cost-bearing review, pair with `openreview gateway test <slot>`.
 - **Prerequisites:** None.
-- **Result meaning:** `gateway status` shows slot → provider assignments for the 6 slots (reasoning, extraction, graph, grounding, embedding, reranking). A slot status of `configured` means provider assigned and ready — API key present for cloud providers, keyless for local ollama. `not_configured` means no provider assigned yet. `missing_api_key` means a *cloud* slot's credentials are absent — reviews using that slot will fail until configured. `gateway test <slot>` confirms the provider is reachable (may fail if local Ollama isn't running).
+- **Result meaning:** `gateway status` shows slot → provider assignments for the 3 slots (extraction, reasoning, grounding). A slot status of `configured` means provider assigned and ready — API key present for cloud providers, keyless for local ollama. `not_configured` means no provider assigned yet. `missing_api_key` means a *cloud* slot's credentials are absent — reviews using that slot will fail until configured. `gateway test <slot>` confirms the provider is reachable (may fail if local Ollama isn't running).
 - **Next action:** If a slot is `missing_api_key` or unconfigured, use the non-interactive `gateway set <slot> <model>` or `gateway provider add <name> --base-url <url>` (never `gateway setup` headless — it is interactive-only). For fully local processing, `gateway set <slot> ollama/<model>` needs no API key (only a running local Ollama server) — see Before Using OpenReview §5–6. Then re-check `gateway status` before running the review (E-1).
 
 ## 4. Choosing Between Similar Operations
@@ -729,11 +709,11 @@ The recovery subsystem (`src/openreview_cli/recovery/coordinator.py`) is invoked
 - **Gateway-failure path** (`coordinator.py:220-239`, `handle_gateway_failure`): a `transient` gateway error (e.g. 5xx, connection reset) goes **straight to `provider_fallback`**; auto-retry is skipped (the gateway already retried). Permanent errors (4xx, auth) skip recovery and surface the error.
 - **Stage-failure path** (`coordinator.py:142-176`, `handle_stage_failure`): a `transient` stage error chains `auto_retry` → `stage_isolation`. Permanent errors chain `stage_isolation` → `graceful_degradation`. Schema/parse errors skip recovery.
 
-**Privacy-tier interaction (SC-04):** `provider_fallback` consults `RecoveryContext.user_privacy_tier` (`recovery/models.py:50-60`). If the tier is `strict` (the recovery-internal strict tier, mapped from product `maximum`) and the fallback provider is a cloud provider, the strategy is skipped (the recovery respects the tier — it will not move a `maximum` user off local). The product → recovery tier mapping (`recovery/models.py:55-60`) is: `product.maximum → recovery.strict`, `product.balanced → recovery.standard`, `product.performance → recovery.none`.
+**Privacy-tier interaction (SC-04):** `provider_fallback` consults `RecoveryContext.user_privacy_tier` (`recovery/models.py:50-60`). If the tier is `strict` (the recovery-internal strict tier, mapped from product `maximum`) and the fallback provider is a cloud provider, the strategy is skipped (the recovery respects the tier — it will not move a `maximum` user off local). The product → recovery tier mapping (`recovery/models.py:55-60`) is: `product.maximum → recovery.strict`, `product.balanced → recovery.standard`.
 
 **Cost-limit interaction:** cost-limit failures bypass recovery entirely (they happen in the gateway pre-check, not in the LLM call). See the Cost-Limit Behavior (P1.a) subsection above.
 
-**PII-before-egress gate (R3-1, R3-2):** in addition to the recovery-time tier check, the router has a per-process `_pii_available` flag (`router.py:331-337`). If PII stripping fails (engine not initialized, no PII available), the router refuses to call a cloud provider even under `performance`. This is a runtime protection that recovery does not provide: recovery can swap providers, but it cannot re-enable PII stripping mid-pipeline. The agent must surface a PII-unavailable failure to the user, not fall back to a cloud slot.
+**PII-before-egress gate (R3-1, R3-2):** in addition to the recovery-time tier check, the router has a per-process `_pii_available` flag (`router.py:331-337`). If PII stripping fails (engine not initialized, no PII available), the router refuses to call a cloud provider even under `balanced`. This is a runtime protection that recovery does not provide: recovery can swap providers, but it cannot re-enable PII stripping mid-pipeline. The agent must surface a PII-unavailable failure to the user, not fall back to a cloud slot.
 
 **Strategy detail:**
 
@@ -756,6 +736,6 @@ The recovery subsystem (`src/openreview_cli/recovery/coordinator.py`) is invoked
 1. The recovery coordinator returns `unrecoverable` after exhausting all strategies.
 2. The slot has no configured fallback provider (and the primary is down).
 3. The privacy tier blocks the only available fallback (e.g. `maximum` + the only Ollama model is not pulled).
-4. The recovery surfaces a PII-unavailable error (do not silently fall back to a cloud slot under `performance`).
+4. The recovery surfaces a PII-unavailable error (do not silently fall back to a cloud slot under `balanced`).
 
 **No blind retry:** recovery itself exhausts strategies; the agent must not loop with the same command. If recovery returns `unrecoverable`, the agent stops and asks the user.

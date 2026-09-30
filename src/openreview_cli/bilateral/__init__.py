@@ -123,7 +123,8 @@ def run_comparison(
     extraction_model : str
         Model slot name for the extraction agent (also used for comparison per FR-3/Q3).
     qa_model : str | None
-        Model slot name for QA verification. ``None`` uses the same slot as extraction.
+        Model slot name for QA verification. ``None`` uses the ``reasoning``
+        slot (the reader keeps ``extraction``).
     no_pii : bool
         Skip PII stripping when ``True``.
     verbose : bool
@@ -151,7 +152,7 @@ def run_comparison(
     _check_first_run()
 
     if qa_model is None:
-        qa_model = extraction_model
+        qa_model = "reasoning"
 
     # Resolve playbook
     if playbook is None:

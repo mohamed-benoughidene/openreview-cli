@@ -28,7 +28,11 @@ class TestDefaultPrompts:
     def test_defaults_have_expected_slots(self, store: PromptStore) -> None:
         load_defaults(store)
         names = {p.name for p in store.list()}
-        expected_slots = {"extraction", "reasoning", "embedding", "reranking", "graph"}
+        # Only the surviving sockets ship a default prompt; the removed
+        # embedding/reranking/graph sockets can never resolve one (the gateway
+        # rejects the slot before PromptStore.resolve, and PromptStore.bind
+        # rejects a removed slot).
+        expected_slots = {"extraction", "reasoning"}
         assert expected_slots.issubset(names)
 
     def test_defaults_only_load_once(self, store: PromptStore) -> None:

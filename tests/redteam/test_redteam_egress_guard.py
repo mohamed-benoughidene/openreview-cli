@@ -340,7 +340,7 @@ def test_unclassifiable_provider_dispatch_increments_the_cloud_counter(
 def test_counter_equality_per_dispatch_site(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """One successful dispatch on each of the four real dispatch sites: 1 == 1."""
+    """One successful dispatch on each remaining real dispatch site: 1 == 1."""
     state = _w5.prepare_state(monkeypatch, tmp_path)
     registry = _w5.cloud_registry()
     monkeypatch.setattr("openreview_cli.gateway.router.load_registry", lambda: registry)
@@ -361,23 +361,9 @@ def test_counter_equality_per_dispatch_site(
     assert chunks[-1].type == "done"
     rows.append(SiteRow("chat_stream", len(stream_recorder.records), gw._cloud_calls_made))
 
-    embed_recorder = _w5.DispatchRecorder(fail=False)
-    embed_recorder.install(monkeypatch)
-    gw = _w5.make_gateway(state, primary=_w5.CLOUD_PRIMARY, tier="performance")
-    assert gw.embed("extraction", ["hi"]) == [[0.0, 0.0, 0.0]]
-    rows.append(SiteRow("embed", len(embed_recorder.records), gw._cloud_calls_made))
-
-    rerank_recorder = _w5.DispatchRecorder(fail=False)
-    rerank_recorder.install(monkeypatch)
-    gw = _w5.make_gateway(state, primary=_w5.CLOUD_PRIMARY, tier="performance")
-    assert len(gw.rerank("extraction", "hi", ["a", "b"], top_n=2)) == 2
-    rows.append(SiteRow("rerank", len(rerank_recorder.records), gw._cloud_calls_made))
-
     assert rows == [
         SiteRow("chat", 1, 1),
         SiteRow("chat_stream", 1, 1),
-        SiteRow("embed", 1, 1),
-        SiteRow("rerank", 1, 1),
     ], rows
 
 
