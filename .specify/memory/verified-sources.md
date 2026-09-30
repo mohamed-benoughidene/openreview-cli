@@ -277,11 +277,15 @@ zero consumers; the file carries labels but no source clause text or document.
 STATUS: CONFIRMED
 
 ## ITEM: Measurement scripts slot references
-SOURCE: `scripts/measure_slm_slots.py:36-37`, `scripts/measure_retrieval_slots.py:53`
+SOURCE: `scripts/measure_slm_slots.py:36-37`; `scripts/measure_retrieval_slots.py:53`
+(**SINCE-DELETED FILE** — `measure_retrieval_slots.py` was removed with the dense/embedding
+retrieval path; its citation records where the fact was originally observed and no longer
+resolves on disk)
 KEY FACTS: `measure_slm_slots.py` overrides
 `OPENREVIEW_GATEWAY__MODELS__{EXTRACTION,REASONING,GROUNDING,GRAPH}__PRIMARY` (`:36-37`);
-`measure_retrieval_slots.py` sets `...MODELS__EMBEDDING__PRIMARY` (`:53`). Both must change
-with the slot set or they fail with `SlotNotConfiguredError`.
+the since-deleted `measure_retrieval_slots.py` set `...MODELS__EMBEDDING__PRIMARY` (`:53`).
+Both had to change with the slot set or they failed with `SlotNotConfiguredError` (still
+true of the live `measure_slm_slots.py`).
 STATUS: CONFIRMED
 
 ## ITEM: CLI/TUI parity matrix graph rows

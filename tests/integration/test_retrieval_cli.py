@@ -65,7 +65,7 @@ def _truncated_index(db_dir: Path) -> Path:
     """A real index truncated to half its length, in the CLI's own db layout."""
     doc_id = json.loads(NDAX.read_text(encoding="utf-8"))[0]["document_id"]
     db_path = db_dir / f"{doc_id[:32]}.db"
-    ingest_from_file(NDAX, db_path, gateway=None, method="sparse")
+    ingest_from_file(NDAX, db_path)
     raw = db_path.read_bytes()
     db_path.write_bytes(raw[: len(raw) // 2])
     assert _sqlite_refuses(db_path), "premise: a truncated image must not be readable SQLite"
@@ -93,9 +93,7 @@ def test_retrieve_on_a_truncated_index_exits_3(runner: CliRunner, damaged_index:
 
 
 def test_ingest_rebuilds_a_truncated_index(runner: CliRunner, damaged_index: Path) -> None:
-    result = runner.invoke(
-        app, ["ingest", str(NDAX), "--method", "sparse", "--db-dir", str(damaged_index)]
-    )
+    result = runner.invoke(app, ["ingest", str(NDAX), "--db-dir", str(damaged_index)])
     text = _text(result)
     assert result.exit_code == 0, (result.exit_code, text)
     assert "Indexed" in text, text

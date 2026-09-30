@@ -24,13 +24,6 @@ class IndexNotFoundError(RetrievalError):
     """
 
 
-class EmbeddingError(RetrievalError):
-    """Embedding computation failed for a chunk.
-
-    Message: "Embedding computation failed for chunk '{chunk_id}': {reason}"
-    """
-
-
 class MalformedChunkError(RetrievalError):
     """A chunk dict is missing a required key.
 

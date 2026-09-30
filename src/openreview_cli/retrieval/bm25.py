@@ -46,7 +46,7 @@ def preprocess_query(query_text: str) -> str:
 def normalize_bm25_scores(
     raw_scores: list[tuple[str, float]],
 ) -> dict[str, int]:
-    """Convert FTS5 bm25() results to rank positions for RRF fusion.
+    """Convert FTS5 bm25() results to rank positions (best first).
 
     FTS5 bm25() returns negative scores where lower (more negative) = better.
     This function sorts by score ascending (best first) and assigns rank=1

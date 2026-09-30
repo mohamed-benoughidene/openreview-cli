@@ -136,7 +136,6 @@ def ingest_chunks(
         return ingest_document(
             chunks,
             db_path,
-            method=_METHOD,
             document_id=document_id,
         )
 

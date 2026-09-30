@@ -3,13 +3,13 @@
   "queries": [
     {
       "query": "confidentiality obligations",
-      "method": "hybrid",
+      "method": "sparse",
       "top_k": 5,
       "expected_chunk_ids": ["chunk-004", "chunk-003", "chunk-005"]
     },
     {
       "query": "return or destroy confidential information",
-      "method": "hybrid",
+      "method": "sparse",
       "top_k": 5,
       "expected_chunk_ids": ["chunk-008", "chunk-004"]
     },
@@ -27,7 +27,7 @@
     },
     {
       "query": "warranty disclaimer limitation liability",
-      "method": "hybrid",
+      "method": "sparse",
       "top_k": 5,
       "expected_chunk_ids": ["chunk-009"]
     }

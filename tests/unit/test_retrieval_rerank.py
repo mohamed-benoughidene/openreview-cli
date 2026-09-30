@@ -20,7 +20,7 @@ def _candidate(chunk_id: str, score: float) -> RetrievalResult:
         hierarchy_chain=[f"Article {chunk_id}"],
         parent_chunk_id=None,
         score=score,
-        method="hybrid",
+        method="sparse",
     )
 
 
@@ -65,7 +65,7 @@ class TestRerankerRerank:
                 hierarchy_chain=["H1"],
                 parent_chunk_id=None,
                 score=0.3,
-                method="hybrid",
+                method="sparse",
             ),
             RetrievalResult(
                 chunk_id="c2",
@@ -75,7 +75,7 @@ class TestRerankerRerank:
                 hierarchy_chain=["H2"],
                 parent_chunk_id=None,
                 score=0.6,
-                method="hybrid",
+                method="sparse",
             ),
             RetrievalResult(
                 chunk_id="c3",
@@ -85,7 +85,7 @@ class TestRerankerRerank:
                 hierarchy_chain=["H3"],
                 parent_chunk_id=None,
                 score=0.1,
-                method="hybrid",
+                method="sparse",
             ),
         ]
 
@@ -97,7 +97,7 @@ class TestRerankerRerank:
         assert results[1].rerank_score is not None
         assert results[0].rerank_score >= results[1].rerank_score
         # Method should indicate reranker was used
-        assert all(r.method == "hybrid+rerank" for r in results)
+        assert all(r.method == "sparse+rerank" for r in results)
 
     def test_rerank_labels_rows_with_the_candidate_method(self) -> None:
         mock_gateway = MagicMock()
@@ -138,7 +138,7 @@ class TestRerankerRerank:
                 hierarchy_chain=["H1"],
                 parent_chunk_id=None,
                 score=0.3,
-                method="hybrid",
+                method="sparse",
             ),
             RetrievalResult(
                 chunk_id="c2",
@@ -148,7 +148,7 @@ class TestRerankerRerank:
                 hierarchy_chain=["H2"],
                 parent_chunk_id=None,
                 score=0.6,
-                method="hybrid",
+                method="sparse",
             ),
         ]
 
@@ -176,7 +176,7 @@ class TestRerankerRerank:
                 hierarchy_chain=["H1"],
                 parent_chunk_id=None,
                 score=0.5,
-                method="hybrid",
+                method="sparse",
             ),
         ]
         results = reranker.rerank("test query", candidates, top_k=5)
@@ -202,7 +202,7 @@ class TestRerankerRerank:
                 hierarchy_chain=[f"H{i}"],
                 parent_chunk_id=None,
                 score=0.1 * i,
-                method="hybrid",
+                method="sparse",
             )
             for i in range(3)
         ]

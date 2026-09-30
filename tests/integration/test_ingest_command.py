@@ -29,8 +29,6 @@ class TestIngestCommand:
             [
                 "ingest",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--db-dir",
                 str(tmp_path),
             ],
@@ -48,8 +46,6 @@ class TestIngestCommand:
             [
                 "ingest",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--db-dir",
                 str(tmp_path),
             ],
@@ -69,8 +65,6 @@ class TestIngestCommand:
             [
                 "ingest",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--db-dir",
                 str(tmp_path),
             ],
@@ -88,8 +82,6 @@ class TestIngestCommand:
             [
                 "ingest",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--db-dir",
                 str(tmp_path),
             ],
@@ -113,8 +105,6 @@ class TestIngestCommand:
             [
                 "ingest",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--db-dir",
                 str(tmp_path),
             ],
@@ -133,7 +123,7 @@ class TestIngestCommand:
         assert "Document:" in result.output
         assert "Status:" in result.output
         assert "Chunks:" in result.output
-        assert "Method:" in result.output
+        assert "Method:" not in result.output
 
     def test_ingest_second_call_shows_already_indexed(
         self, runner: CliRunner, tmp_path: Path
@@ -144,8 +134,6 @@ class TestIngestCommand:
             [
                 "ingest",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--db-dir",
                 str(tmp_path),
             ],
@@ -156,8 +144,6 @@ class TestIngestCommand:
             [
                 "ingest",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--db-dir",
                 str(tmp_path),
             ],
@@ -208,8 +194,6 @@ class TestIngestCommand:
             [
                 "ingest",
                 str(ndax_path),
-                "--method",
-                "sparse",
                 "--db-dir",
                 str(tmp_path),
             ],
@@ -234,7 +218,7 @@ class TestIngestCommand:
         # First ingest creates a valid index
         first = runner.invoke(
             app,
-            ["ingest", str(FIXTURE_PATH), "--method", "sparse", "--db-dir", str(tmp_path)],
+            ["ingest", str(FIXTURE_PATH), "--db-dir", str(tmp_path)],
         )
         assert first.exit_code == 0
 
@@ -249,7 +233,7 @@ class TestIngestCommand:
         # Re-ingest must NOT say "already indexed"; it must rebuild
         second = runner.invoke(
             app,
-            ["ingest", str(FIXTURE_PATH), "--method", "sparse", "--db-dir", str(tmp_path)],
+            ["ingest", str(FIXTURE_PATH), "--db-dir", str(tmp_path)],
         )
         assert second.exit_code == 0
         assert "already indexed" not in second.output.lower()
@@ -259,3 +243,22 @@ class TestIngestCommand:
         status = conn.execute("SELECT index_status FROM index_meta").fetchone()[0]
         conn.close()
         assert status == "indexed"
+
+
+class TestNoMethodOption:
+    """T1.2: `ingest` no longer offers a retrieval method to choose."""
+
+    def test_ingest_rejects_a_method_option(self, runner: CliRunner, tmp_path: Path) -> None:
+        result = runner.invoke(
+            app,
+            [
+                "ingest",
+                str(FIXTURE_PATH),
+                "--method",
+                "sparse",
+                "--db-dir",
+                str(tmp_path),
+            ],
+        )
+        assert result.exit_code != 0, f"exit {result.exit_code}: {result.output[:200]}"
+        assert "no such option" in result.output.lower(), result.output[:300]

@@ -1,8 +1,7 @@
-"""Retrieval pipeline — BM25 + Dense + RRF hybrid retrieval."""
+"""Retrieval pipeline — keyword (BM25) search over SQLite FTS5."""
 
 from openreview_cli.retrieval.engine import RetrievalEngine
 from openreview_cli.retrieval.errors import (
-    EmbeddingError,
     IndexCorruptError,
     IndexNotFoundError,
     RetrievalError,
@@ -21,7 +20,6 @@ from openreview_cli.retrieval.rerank import Reranker
 from openreview_cli.retrieval.storage import RetrievalStorage
 
 __all__ = [
-    "EmbeddingError",
     "IndexCorruptError",
     "IndexMeta",
     "IndexNotFoundError",

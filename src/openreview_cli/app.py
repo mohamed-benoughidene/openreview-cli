@@ -2171,13 +2171,10 @@ def _show_clause_redlines(
 @app.command()
 def ingest(
     file: str = typer.Argument(..., help="Path to a .ndax file with pre-chunked data."),
-    method: str = typer.Option("hybrid", "--method", help="Retrieval method: sparse, hybrid"),
-    model: str | None = typer.Option(None, "--model", help="Embedding model override"),
     db_dir: str | None = typer.Option(None, "--db-dir", help="Index database directory"),
 ) -> None:
     """Index a pre-chunked .ndax JSON file for retrieval."""
-    from openreview_cli.gateway.router import Gateway
-    from openreview_cli.retrieval.errors import EmbeddingError, MalformedChunkError
+    from openreview_cli.retrieval.errors import MalformedChunkError
     from openreview_cli.retrieval.ingest import (
         _ensure_db_dir,
         get_index_for_document,
@@ -2216,10 +2213,6 @@ def ingest(
             # Corrupt/unreadable DB — fall through and rebuild
             logger.debug("Existing index unreadable; rebuilding", exc_info=True)
 
-    gateway: Gateway | None = None
-    with contextlib.suppress(Exception):
-        gateway = Gateway()
-
     try:
         start = time.time()
 
@@ -2230,28 +2223,17 @@ def ingest(
         meta = ingest_from_file(
             file_path,
             db_path,
-            gateway=gateway,
-            method=method,
-            model_id=model,
             progress_callback=_progress,
             document_id=doc_id,
         )
         elapsed = time.time() - start
 
         chunk_count = meta.get("chunk_count", len(chunks_data))
-        final_method = meta.get("method", method)
-        embed_info = ""
-        if meta.get("embedding_model"):
-            embed_info = f" ({meta['embedding_model']}, {meta.get('embedding_dimension', '?')}d)"
 
         typer.echo(f"Indexed {chunk_count} chunks in {elapsed:.1f}s")
-        typer.echo(f"  Method: {final_method}{embed_info}")
         typer.echo(f"  DB: {db_path}")
     except MalformedChunkError as e:
         usage_error(f"{e} in {file_path.name}")
-    except EmbeddingError as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(code=1) from None
 
 
 def _retrieval_config() -> dict[str, Any]:
@@ -2310,15 +2292,12 @@ def retrieve(
     file: str | None = typer.Argument(
         None, help="Document file (.ndax). Omit to use most recently indexed document."
     ),
-    method: str | None = typer.Option(
-        None, "--method", help="Retrieval method: sparse, dense, hybrid"
-    ),
     top_k: int | None = typer.Option(None, "--top-k", help="Number of results (1-50)"),
     rerank: bool = typer.Option(
         False, "--rerank", help="Enable cross-encoder reranker (experimental, opt-in)."
     ),
     rerank_depth: int | None = typer.Option(
-        None, "--rerank-depth", help="Number of hybrid results to rerank."
+        None, "--rerank-depth", help="Number of results to rerank."
     ),
     force_rerank: bool = typer.Option(
         False, "--force-rerank", help="Override reranker validation warning."
@@ -2382,8 +2361,6 @@ def retrieve(
 
     retrieval_cfg = _retrieval_config()
 
-    if method is None:
-        method = retrieval_cfg.get("default_method", "hybrid")
     if top_k is None:
         top_k = retrieval_cfg.get("top_k", 5)
     if rerank_depth is None:
@@ -2395,7 +2372,6 @@ def retrieve(
     try:
         rq = RetrievalQuery(
             query_text=query,
-            method=method,
             top_k=top_k,
             rerank=rerank_enabled,
             rerank_depth=rerank_depth,
@@ -2405,9 +2381,9 @@ def retrieve(
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1) from None
 
-    # Get gateway for dense/hybrid mode
+    # Get gateway when the reranker is enabled
     gateway: Gateway | None = None
-    if method in ("dense", "hybrid") or rerank_enabled:
+    if rerank_enabled:
         try:
             gateway = Gateway()
         except Exception:
@@ -2424,7 +2400,7 @@ def retrieve(
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=3) from None
 
-    # ── Offline/dense-fallback notices (T047) ──
+    # ── Retrieval notices (T047) ──
     for notice in engine.notices:
         typer.echo(f"⚠  {notice}", err=True)
 
@@ -2460,10 +2436,7 @@ def retrieve(
             results = results[:top_k]
 
     if not results:
-        typer.echo(
-            "No relevant clauses found for this query. "
-            "Try a different query or use --method sparse for broader matching."
-        )
+        typer.echo("No relevant clauses found for this query. Try a different query.")
         return
 
     if format == "json":
@@ -2479,8 +2452,6 @@ def retrieve(
                     "score": round(r.score, 4),
                     "method": r.method,
                     "rank_sparse": r.rank_sparse,
-                    "rank_dense": r.rank_dense,
-                    "rrf_score": round(r.rrf_score, 6) if r.rrf_score is not None else None,
                     "rerank_score": round(r.rerank_score, 6)
                     if r.rerank_score is not None
                     else None,
@@ -2488,7 +2459,7 @@ def retrieve(
             )
         typer.echo(
             json_lib.dumps(
-                {"query": query, "method": method, "top_k": top_k, "results": output}, indent=2
+                {"query": query, "method": rq.method, "top_k": top_k, "results": output}, indent=2
             )
         )
     else:
@@ -2566,13 +2537,6 @@ def index_status(
     ts = meta.get("index_timestamp", "")
     typer.echo(f"Status:   {status}" + (f" ({ts})" if ts else ""))
     typer.echo(f"Chunks:   {meta.get('chunk_count', 0)}")
-    typer.echo(f"Method:   {meta.get('method', '?')}")
-    model = meta.get("embedding_model")
-    dim = meta.get("embedding_dim")
-    if model:
-        typer.echo(f"Model:    {model}" + (f" ({dim}d)" if dim else ""))
-    else:
-        typer.echo("Model:    (none — sparse only)")
     size_bytes = meta.get("db_size_bytes", 0)
     if size_bytes > 1024 * 1024:
         size_str = f"{size_bytes / (1024 * 1024):.1f} MB"
