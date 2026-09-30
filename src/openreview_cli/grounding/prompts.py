@@ -148,7 +148,8 @@ def _first_json_value(text: str) -> Any | None:
     candidate start positions are offered to the standard library decoder. That
     decoder understands quoted strings and escapes, so a bracket or brace inside
     a reason string cannot unbalance the scan, and it stops at the end of the
-    first valid value, so trailing prose is ignored.
+    first valid value, so trailing prose is ignored. An answer too deeply nested
+    to decode is treated as unreadable rather than allowed to escape.
     """
     candidate_text = strip_fences(text)
     decoder = json.JSONDecoder()
@@ -159,5 +160,10 @@ def _first_json_value(text: str) -> Any | None:
             value, _ = decoder.raw_decode(candidate_text, index)
         except json.JSONDecodeError:
             continue
+        except RecursionError:
+            # A pathological payload. Every later candidate would raise the same
+            # way, so stop rather than walk the rest; an unreadable answer is
+            # counted by the discriminator, a crash is not.
+            break
         return value
     return None

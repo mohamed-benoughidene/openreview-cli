@@ -103,3 +103,22 @@ def test_a_single_object_parses_as_one_result() -> None:
 def test_two_arrays_back_to_back_take_the_first() -> None:
     response = json.dumps([_obj(0)]) + json.dumps([_obj(1)])
     assert _indices(response) == [0]
+
+
+def test_a_pathological_answer_is_treated_as_unreadable_not_as_a_crash() -> None:
+    """Deeply nested brackets must not abort the run that is measuring a model.
+
+    `raw_decode` raises `RecursionError` on such input, and that error would
+    escape the discriminator's try block in the real pipeline.
+    """
+    response = ("[" * 30_000) + json.dumps([GROUNDED])
+
+    assert parse_grounding_response(response) == []
+
+
+def test_trailing_prose_containing_brackets_still_parses() -> None:
+    """Regression guard: the old greedy regex returned empty when prose after
+    the answer itself contained a bracket pair."""
+    response = f"{json.dumps([GROUNDED])}\nNote: [see the clause above]"
+
+    assert [row[1] for row in parse_grounding_response(response)] == [GroundingVerdict.GROUNDED]
