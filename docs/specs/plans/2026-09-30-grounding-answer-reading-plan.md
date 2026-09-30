@@ -30,7 +30,7 @@
 | File | Responsibility | Change |
 |---|---|---|
 | `src/openreview_cli/grounding/prompts.py` | The grounding prompt and the answer reader | Modify: reader rewritten, `_extract_json_array` deleted, prompt tail replaced |
-| `src/openreview_cli/gateway/router.py` | Builds provider request kwargs; dispatches with fallback | Modify: `_LOCAL_ONLY_PARAMS`, `_strip_local_only_params`, two call sites |
+| `src/openreview_cli/gateway/router.py` | Builds provider request kwargs; dispatches with fallback | Modify: `_enforce_local_only_params`, enforced once per dispatch in both legs of `_call_with_fallback` |
 | `src/openreview_cli/config/loader.py` | Shipped gateway defaults | Modify: grounding slot gains `extra_params` |
 | `src/openreview_cli/grounding/discriminator.py` | Decides per-claim verdicts | Modify: `unreadable_answers` counter |
 | `scripts/measure_slm_slots.py` | The measurement harness and its receipt | Modify: receipt field, summary line |
@@ -295,18 +295,18 @@ git commit -m "fix(grounding): permit a single object for a single claim in the 
 ### Task 3: Ask only local models for JSON — including on the fallback path
 
 **Files:**
-- Modify: `src/openreview_cli/gateway/router.py` (add `_strip_local_only_params` near the other module helpers; call it in `_get_litellm_kwargs` after `:373` and in `_call_with_fallback` after `:564`)
+- Modify: `src/openreview_cli/gateway/router.py` (add `_enforce_local_only_params` near the other module helpers; call it in `_call_with_fallback` before the first attempt — never in `_get_litellm_kwargs`, which is build time)
 - Modify: `src/openreview_cli/config/loader.py` (the `grounding` entry in `DEFAULT_CONFIG` at `:31-35`)
 - Test: `tests/unit/test_gateway_router.py` (append a class after `TestExtraParamsPassThrough`)
 - Test: `tests/unit/test_gateway_models.py` (append one test pinning the shipped default)
 
 **Interfaces:**
-- Consumes: `ProviderInfo.is_local: bool` (`gateway/models.py:38`); `self._resolve_provider_info(slot)` (`router.py:189`); `load_registry().get(prefix)` (`:560`); the existing test helper `_gateway(tmp_path, monkeypatch, config)` and constant `COMMON_CONFIG`.
-- Produces: `_strip_local_only_params(kwargs: dict[str, Any], info: ProviderInfo | None) -> None`.
+- Consumes: `classify_provider(info) -> str` (`gateway/models.py:46`), the codebase's single notion of local; `load_registry().get(prefix)` (`router.py:604`); the slot's `extra_params`; the existing test helper `_gateway(tmp_path, monkeypatch, config)`, constant `COMMON_CONFIG` and response double `_MockCompletionResponse`.
+- Produces: `_enforce_local_only_params(kwargs: dict[str, Any], extra_params: dict[str, Any] | None, provider_prefix: str) -> None` — one gate per dispatch, against the provider actually dispatched.
 
 - [ ] **Step 1: Read the existing fallback test pattern**
 
-Read `tests/unit/test_gateway_router.py:161-238`. Note two things you will reuse: the config is built with `COMMON_CONFIG.replace(...)`, and a fallback is simulated by `monkeypatch.setattr(router_mod, "completion", failing_then_ok)` where the stub records each call's kwargs and raises on the first call. Also read `COMMON_CONFIG` (around `:81-101`) and copy its exact text for the two lines the helpers below replace — if those lines read differently, adjust the `replace()` arguments to match, keeping the same intent.
+Read `tests/unit/test_gateway_router.py:161-238`. Note two things you will reuse: the config is built with `COMMON_CONFIG.replace(...)`, and a fallback is simulated by `monkeypatch.setattr(router_mod, "completion", ...)` where the stub records each dispatch's kwargs and raises until the fallback is dispatched. The gate runs at **dispatch** time, so the kwargs must be read at that same `completion` seam — a build-time dict from `_get_litellm_kwargs` is never dispatched as-is and can still be rewritten by a `model=` override. Also read `COMMON_CONFIG` (around `:80-101`) and copy its exact text for the two lines the helpers below replace — if those lines read differently, adjust the `replace()` arguments to match, keeping the same intent.
 
 - [ ] **Step 2: Write the failing tests (the five mandatory cases)**
 
@@ -323,126 +323,154 @@ def _config_with(primary: str, *, fallback: str = "anthropic/claude-3") -> str:
     )
 
 
+def _capture_dispatches(
+    monkeypatch: pytest.MonkeyPatch, *, failures_before_success: int = 0
+) -> list[dict]:
+    """Patch ``router.completion`` to record the kwargs each dispatch received.
+
+    The gate runs at DISPATCH time, so a test must observe the kwargs at the
+    litellm seam — a dict that is never dispatched hides an override leak.
+    """
+    import openreview_cli.gateway.router as router_mod
+
+    seen: list[dict] = []
+
+    def stub(**kwargs) -> _MockCompletionResponse:
+        seen.append(dict(kwargs))
+        # `gateway.fallback.retries` is 2 in COMMON_CONFIG, so the primary is
+        # attempted three times before the fallback is dispatched. A stub that
+        # raises once would only trigger a primary retry and never reach the
+        # fallback at all — the test would then fail after implementation.
+        if len(seen) <= failures_before_success:
+            raise RuntimeError("primary unavailable")
+        return _MockCompletionResponse("from fallback" if failures_before_success else "ok")
+
+    monkeypatch.setattr(router_mod, "completion", stub)
+    return seen
+
+
 class TestLocalOnlyExtraParams:
     """`response_format` is a local-only hint; a cloud provider must never see it.
 
     An unsupported parameter raises in litellm rather than being dropped, so a
-    leak here turns a degraded parse into a hard failure.
+    leak here turns a degraded parse into a hard failure. The gate is enforced
+    for the provider ACTUALLY dispatched, so these tests assert on the kwargs
+    captured at the ``completion`` seam, never on ``_get_litellm_kwargs`` — a
+    build-time dict a dispatch-time ``model=`` override can still rewrite.
     """
 
-    def test_forwarded_for_a_local_provider(
+    def test_forwarded_to_a_local_provider(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        seen = _capture_dispatches(monkeypatch)
         gw = _gateway(tmp_path, monkeypatch, _config_with("ollama/granite4:3b"))
-        kwargs = gw._get_litellm_kwargs("reasoning")
-        assert kwargs.get("response_format") == {"type": "json_object"}
+        assert gw.chat("reasoning", [{"role": "user", "content": "Hi"}]) == "ok"
+        assert seen[0]["response_format"] == {"type": "json_object"}
 
     def test_dropped_for_a_cloud_provider(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        seen = _capture_dispatches(monkeypatch)
         gw = _gateway(tmp_path, monkeypatch, _config_with("openai/gpt-4"))
-        kwargs = gw._get_litellm_kwargs("reasoning")
-        assert "response_format" not in kwargs
+        gw.chat("reasoning", [{"role": "user", "content": "Hi"}])
+        assert "response_format" not in seen[0]
 
     def test_dropped_for_an_unknown_provider(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        seen = _capture_dispatches(monkeypatch)
         gw = _gateway(tmp_path, monkeypatch, _config_with("nosuchprovider/model-x"))
-        kwargs = gw._get_litellm_kwargs("reasoning")
-        assert "response_format" not in kwargs
+        gw.chat("reasoning", [{"role": "user", "content": "Hi"}])
+        assert "response_format" not in seen[0]
 
     def test_a_cloud_fallback_does_not_receive_the_param(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        import openreview_cli.gateway.router as router_mod
-
-        seen: list[dict] = []
-
-        def failing_then_ok(**kwargs) -> str:
-            seen.append(dict(kwargs))
-            # `gateway.fallback.retries` is 2 in COMMON_CONFIG, so the primary is
-            # attempted three times before the fallback is dispatched. A stub that
-            # raises once would only trigger a primary retry and never reach the
-            # fallback at all — the test would then fail after implementation.
-            if len(seen) <= 3:
-                raise RuntimeError("primary unavailable")
-            return "from fallback"
-
-        monkeypatch.setattr(router_mod, "completion", failing_then_ok)
+        seen = _capture_dispatches(monkeypatch, failures_before_success=3)
         gw = _gateway(tmp_path, monkeypatch, _config_with("ollama/granite4:3b"))
         assert gw.chat("reasoning", [{"role": "user", "content": "Hi"}]) == "from fallback"
-        assert seen[0].get("response_format") == {"type": "json_object"}
+        assert seen[0]["response_format"] == {"type": "json_object"}
         assert "response_format" not in seen[-1]
 
     def test_a_local_fallback_still_receives_the_param(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A guard, not a fail-first test: the strip must not over-reach.
-
-        Before the change the key is forwarded unconditionally, so this passes
-        already. It exists to catch an implementation that strips for every
-        fallback regardless of locality.
-        """
-        import openreview_cli.gateway.router as router_mod
-
-        seen: list[dict] = []
-
-        def failing_then_ok(**kwargs) -> str:
-            seen.append(dict(kwargs))
-            if len(seen) <= 3:
-                raise RuntimeError("primary unavailable")
-            return "from fallback"
-
-        monkeypatch.setattr(router_mod, "completion", failing_then_ok)
+        """A guard, not a fail-first test: the gate must not over-reach."""
+        seen = _capture_dispatches(monkeypatch, failures_before_success=3)
         cfg = _config_with("ollama/granite4:3b", fallback="ollama/granite4:3b")
         gw = _gateway(tmp_path, monkeypatch, cfg)
         assert gw.chat("reasoning", [{"role": "user", "content": "Hi"}]) == "from fallback"
-        assert seen[-1].get("response_format") == {"type": "json_object"}
+        assert seen[-1]["response_format"] == {"type": "json_object"}
 ```
 
 - [ ] **Step 3: Run it and confirm the failures**
 
 Run: `uv run pytest tests/unit/test_gateway_router.py -q -k LocalOnlyExtraParams`
-Expected: **3 failed, 3 passed.** `_get_litellm_kwargs` merges `extra_params` unconditionally today (`:361-371`), so the key is present for every provider: the failing three are `test_dropped_for_a_cloud_provider`, `test_dropped_for_an_unknown_provider` and `test_a_cloud_fallback_does_not_receive_the_param`. Already passing are the local-forwarded case and the local-fallback guard. The "other extra_params" behaviour is deliberately **not** re-tested here — `TestExtraParamsPassThrough.test_keys_appear_in_kwargs` (`tests/unit/test_gateway_router.py:481`) already pins it with the same config and slot. If the failing set differs, stop: the gate is not where you think it is.
+Expected: **3 failed, 2 passed.** `_get_litellm_kwargs` merges `extra_params` unconditionally today (`:401-411`) and nothing removes the key at dispatch, so it reaches every provider: the failing three are `test_dropped_for_a_cloud_provider`, `test_dropped_for_an_unknown_provider` and `test_a_cloud_fallback_does_not_receive_the_param`. Already passing are `test_forwarded_to_a_local_provider` and the local-fallback guard. The "other extra_params" behaviour is deliberately **not** re-tested here — `TestExtraParamsPassThrough.test_keys_appear_in_kwargs` (`tests/unit/test_gateway_router.py:481`) already pins it with the same config and slot. If the failing set differs, stop: the gate is not where you think it is.
 
-- [ ] **Step 4: Implement the strip**
+- [ ] **Step 4: Implement the gate**
 
 In `src/openreview_cli/gateway/router.py`, add near the other module-level helpers:
 
 ```python
-def _strip_local_only_params(kwargs: dict[str, Any], info: ProviderInfo | None) -> None:
-    """Drop request parameters that only a locally-hosted provider may receive.
+def _enforce_local_only_params(
+    kwargs: dict[str, Any],
+    extra_params: dict[str, Any] | None,
+    provider_prefix: str,
+) -> None:
+    """Enforce local-only request parameters for the provider ACTUALLY dispatched.
 
     ``response_format`` becomes Ollama's ``format: json``. A provider that does
-    not accept it raises rather than ignoring it, so the key is forwarded only
-    when the provider actually runs locally; an unknown provider counts as remote.
+    not accept it raises in litellm rather than ignoring it, so the key must be
+    present for a local provider and absent for every other one.
+
+    This runs at dispatch time, against ``provider_prefix`` — not at build time
+    against the slot's configured primary — because a dispatch-time ``model=``
+    override or a caller-supplied kwarg can point the call at a provider the
+    built kwargs never saw. It also RESTORES the declared value for a local
+    target, since an earlier non-local dispatch may have stripped it: the gate
+    is per-dispatch, not a permanent mutation.
+
+    Locality reuses ``classify_provider``, the codebase's one notion of local, so
+    a localhost custom provider counts as local exactly as it does for tier
+    enforcement. An unknown or unclassifiable prefix is remote.
     """
-    if info is not None and info.is_local:
+    info = load_registry().get(provider_prefix)
+    is_local = False
+    if info is not None:
+        try:
+            is_local = classify_provider(info) == "local"
+        except ValueError:
+            # No base_url and not flagged local: unclassifiable, so remote.
+            is_local = False
+    if not is_local:
+        # ponytail: one key today — a set-and-loop earns its keep when a second arrives.
+        if "response_format" in kwargs:
+            kwargs.pop("response_format")
+            logger.debug("Dropped local-only response_format for non-local %r", provider_prefix)
         return
-    # ponytail: one key today — a set-and-loop earns its keep when a second arrives.
-    if "response_format" in kwargs:
-        kwargs.pop("response_format")
-        logger.debug("Dropped local-only response_format for a non-local provider")
+    if "response_format" not in kwargs and extra_params and "response_format" in extra_params:
+        kwargs["response_format"] = extra_params["response_format"]
 ```
 
-Call it in `_get_litellm_kwargs` immediately after `info = self._resolve_provider_info(slot)` (`:373`):
+Call it once per dispatch, inside `_call_with_fallback` — before the first attempt (`:551`), for the provider named by `provider_prefix`:
 
 ```python
-        info = self._resolve_provider_info(slot)
-        _strip_local_only_params(kwargs, info)
+        extra_params = cfg.get("extra_params")
+        _enforce_local_only_params(call_kwargs, extra_params, provider)
 ```
 
-Call it in `_call_with_fallback` after the fallback's credentials are applied and before the model is swapped (`:564`, above `call_kwargs["model"] = fallback`):
+and again for the fallback leg (`:610`), after the fallback's credentials are applied and before the model is swapped, keyed to `fallback_prefix`:
 
 ```python
-        _strip_local_only_params(call_kwargs, info)
+        _enforce_local_only_params(call_kwargs, extra_params, fallback_prefix)
 ```
 
-The second call site is what protects a cloud fallback reached from a local primary; without it the primary's merged `extra_params` ride along to the fallback host.
+There is deliberately **no** call in `_get_litellm_kwargs`: that dict is built for the slot's configured primary, and a dispatch-time `model=` override or a caller-supplied kwarg can retarget the call after it is built. The second call site is what protects a cloud fallback reached from a local primary — and its restore half is what un-starves a local fallback reached from a cloud primary; without it, the primary's dispatch has already rewritten the kwargs that ride along to the fallback host.
 
 - [ ] **Step 5: Add the shipped default — in `DEFAULT_CONFIG`, not the model class**
 
-`_validate_and_merge` deep-merges `DEFAULT_CONFIG` over the pydantic class defaults (`src/openreview_cli/config/loader.py:208-209`), and the no-config path returns `dict(DEFAULT_CONFIG)` verbatim (`:329`). Changing the `ModelSlot` class default at `:104-106` therefore has **no effect on a real run** — the parameter would be inert and this whole task would measure nothing.
+`_validate_and_merge` deep-merges `DEFAULT_CONFIG` over the pydantic class defaults (`src/openreview_cli/config/loader.py:209-210`), and the no-config path returns `dict(DEFAULT_CONFIG)` verbatim (`:330`). Changing the `ModelSlot` class default at `:105-107` therefore has **no effect on a real run** — the parameter would be inert and this whole task would measure nothing.
 
 Add it to the `grounding` entry in `DEFAULT_CONFIG` (`:31-35`):
 
@@ -477,19 +505,19 @@ print(load_config()['gateway']['models']['grounding']['extra_params'])"
 
 Expected: `{'response_format': {'type': 'json_object'}}`. If it prints `None`, the parameter never reaches a request — stop and fix that before continuing. (If `load_config` requires an explicit config path, pass the repository default; the printed value is what matters.)
 
-- [ ] **Step 6: Run the tests again**
+- [ ] **Step 7: Run the tests again**
 
 Run: `uv run pytest tests/unit/test_gateway_router.py -q`
 Expected: all pass, including the pre-existing `TestExtraParamsPassThrough` cases and the fallback tests at `:161-238`.
 
-- [ ] **Step 7: Commit the gate on its own**
+- [ ] **Step 8: Commit the gate on its own**
 
 ```bash
 git add src/openreview_cli/gateway/router.py tests/unit/test_gateway_router.py
 git commit -m "feat(gateway): send response_format to local providers only, fallback included"
 ```
 
-- [ ] **Step 8: Commit the shipped default separately**
+- [ ] **Step 9: Commit the shipped default separately**
 
 It is the user-visible behaviour change and must be revert-able without the gate.
 
@@ -724,7 +752,7 @@ git push
 
 **Placeholder scan** — two instructions are deliberately conditional rather than placeholders: Task 3 Step 1 tells the implementer to confirm `COMMON_CONFIG`'s exact text before the `replace()` calls, and Task 3 Step 6 to pass a config path if `load_config` needs one. Inventing either value here would produce a check that fails for the wrong reason. Every other step carries its exact code, command and expected result.
 
-**Type consistency** — `parse_grounding_response` keeps its signature; `unreadable_answers` is a zero-initialised `int` attribute on the discriminator and an `int` receipt field; `_strip_local_only_params(kwargs, info)` takes the dict that `_get_litellm_kwargs` and `_call_with_fallback` both already hold, and `ProviderInfo | None` matches what `_resolve_provider_info` (`:373`) and `load_registry().get` (`:560`) return.
+**Type consistency** — `parse_grounding_response` keeps its signature; `unreadable_answers` is a zero-initialised `int` attribute on the discriminator and an `int` receipt field; `_enforce_local_only_params(kwargs, extra_params, provider_prefix)` takes the dict `_call_with_fallback` already holds, the slot's `extra_params`, and the `str` prefix of the provider being dispatched — the same value `_get_litellm_kwargs` resolves the primary from (`:413`) and `load_registry().get` (`:604`) resolves the fallback from.
 
 **Review record** — two independent sub-agents reviewed this plan on 2026-09-30 (one verified anchors and test behaviour against the code, one ran an over-engineering pass). Their blocking findings are folded in: the shipped default had to move to `DEFAULT_CONFIG` because a pydantic class default is dead code; the fallback tests had to survive three primary attempts (`gateway.fallback.retries` is 2), or they would never reach the fallback; `import re` had to be deleted alongside `_extract_json_array`; both harness stubs needed the counter; and the batch-site increment needed its own code and its own test. The 15-shape baseline is now executed rather than traced.
 

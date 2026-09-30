@@ -30,9 +30,9 @@ Same task, same 20 clauses, same reader, two models:
 
 Two facts pin the cause. Every one of the 32 local "uncertain" rows carries confidence exactly 0.0, and the
 job log holds 31 `Failed to parse grounding response` lines against 0 `Gateway call failed` lines. In
-`discriminator.py`, `UNCERTAIN` with confidence 0.0 has only two sources: a gateway exception (`:114-115`) and
-the reader returning nothing (`:117-120`). An empty claim is **not** one of them — it returns `UNGROUNDED`
-(`:83`); an independent review caught that error on 2026-09-30 and it is corrected here. The log rules out the
+`discriminator.py`, `UNCERTAIN` with confidence 0.0 has only two sources: a gateway exception (`:116-118`) and
+the reader returning nothing (`:120-124`). An empty claim is **not** one of them — it returns `UNGROUNDED`
+(`:86`); an independent review caught that error on 2026-09-30 and it is corrected here. The log rules out the
 gateway exception, so every such row came from the reader. The difference between the two models is the
 reader, not caution.
 
@@ -48,10 +48,10 @@ model "defers rather than decides" — is wrong. The local model's true ability 
    gateway-response parser must use it. `review/prompts.py:14`, `review/extraction.py:190`,
    `bilateral/comparison.py:138` and `benchmark/baseline.py:114` all do. `grep -c strip_fences
    src/openreview_cli/grounding/prompts.py` returns `0`.
-2. **It relies on greedy regexes instead.** `_extract_json_array` (`prompts.py:150`) tries a fenced match at
-   `:157`, then a bare greedy match `(\[[\s\S]*\])` at `:162`. The greedy match starts at the *first* `[` in
-   the whole reply, so prose containing brackets slices the wrong span.
-3. **The failure is invisible.** `parse_grounding_response` returns `[]` (`:101-103`), the caller logs a single
+2. **It relies on greedy regexes instead.** `_extract_json_array` tries a fenced match, then a bare greedy
+   match `(\[[\s\S]*\])`. The greedy match starts at the *first* `[` in the whole reply, so prose containing
+   brackets slices the wrong span.
+3. **The failure is invisible.** `parse_grounding_response` returns `[]` (`:100-102`), the caller logs a single
    warning and returns `UNCERTAIN, [], 0.0`, and the receipt records that as "uncertain" — the same value a
    genuine hesitant verdict would produce. Nothing in the measured numbers distinguishes the two.
 
@@ -96,13 +96,15 @@ with rows merged below wherever the outcome is identical:
 
 ### 4.1 Reader (Fix 1) — `src/openreview_cli/grounding/prompts.py`
 
-- `parse_grounding_response` (`:81`) first unwraps through `llm_json.strip_fences` (the project's rule).
+- `_first_json_value` (`:144`) first unwraps through `llm_json.strip_fences` (the project's rule); the unwrap
+  used to sit in `parse_grounding_response` (`:82`), which now calls the helper at `:100`.
 - Then it scans candidate start offsets — each position of `[` or `{` — calling the standard library's
   `json.JSONDecoder().raw_decode` until one decodes, and keeps the first value that does.
 - A decoded object becomes a one-element list; a decoded list is used as is.
 - Per-item validation is unchanged: skip non-dict items, skip items without an integer `claim_index`, skip
   unknown verdict strings.
-- `_extract_json_array` (`:150-166`) is **deleted** — verified to have exactly one caller (`:100`).
+- `_extract_json_array` is **deleted** — verified to have exactly one caller, the call site the helper now
+  occupies (`:100`).
 
 Why `raw_decode`: it understands quoted strings and escapes natively, so a `[`, `]` or `}` inside a quoted
 reason cannot unbalance the scan, and it stops at the end of the first valid value, so trailing prose is
@@ -116,32 +118,38 @@ truncated JSON still fails — but visibly, per 4.4.
 
 ### 4.2 Local-only JSON request (Fix 2) — `gateway/router.py` + `config/loader.py`
 
-- Add a module-level `_LOCAL_ONLY_PARAMS = frozenset({"response_format"})` in `gateway/router.py`.
-- In `_get_litellm_kwargs` (`:352`), resolve provider info *before* merging `extra_params`. Today
-  `info = self._resolve_provider_info(slot)` sits at `:373`, after the merge at `:361-371`; the resolution
-  moves one block up.
-- When merging `extra_params`, drop any key in `_LOCAL_ONLY_PARAMS` if the provider is not local — that is,
-  when `info is None` (unknown provider: fail safe) or `info.is_local` is false (`gateway/models.py:38`).
-  Log at debug level, not warning: the drop is expected, not an error.
-- **The fallback path needs the same rule at a second site — confirmed by reading the code, not assumed.**
-  `_call_with_fallback` (`router.py:497`) reuses the kwargs dict built for the primary and re-dispatches it
-  with only the model string swapped (`:540`, `:565`, `:568`): it pops the primary's credentials (`:556-557`)
-  and sets the fallback's `api_base` (`:562`), but it never re-runs the merge, so `extra_params` merged for the
-  primary's provider survive untouched. With a local primary and a cloud fallback, the cloud model would
-  therefore receive `response_format`. The fallback's own provider info is already resolved at `:560`, so the
-  same strip applies there. One rule, two call sites, held in a small shared helper.
+- Add a module helper `_enforce_local_only_params(kwargs, extra_params, provider_prefix)` in
+  `gateway/router.py` (`:120`), which hardcodes the one key it knows, `response_format`.
+- The gate runs at **dispatch** time, not build time. `_get_litellm_kwargs` (`:392`) was never reordered and
+  no longer gates anything; it says so at `:414`. It merges `extra_params` (`:401-411`) and then resolves
+  the primary's provider info at `:413` for `api_base` and credentials only.
+- Locality is `classify_provider(info) == "local"` (`gateway/models.py:46`) — the codebase's single notion of
+  local. An unknown prefix, and a provider that raises `ValueError` because it is unclassifiable, both count
+  as remote. A non-local target drops `response_format` from the kwargs; a local target **restores** it from
+  the slot's `extra_params` when the caller's kwargs do not already carry it, because an earlier non-local
+  dispatch may have removed it. Log at debug level, not warning: the drop is expected, not an error.
+- **The gate is enforced once per dispatch, inside `_call_with_fallback` — before the first attempt (`:551`)
+  and again for the fallback (`:610`), each against the provider actually dispatched** (`provider_prefix`, or
+  `fallback_prefix` at `:604`). This is what makes a dispatch-time `model=` override to a cloud provider safe,
+  and what lets a local fallback reached from a cloud primary receive the key the primary's dispatch removed.
+  `_call_with_fallback` (`:538`) reuses the kwargs dict built for the primary and never re-runs the merge, so
+  without the second call the primary's merged `extra_params` would ride along to the fallback host. One rule,
+  two call sites, held in a small shared helper.
 - Config default: the `grounding` slot gains
-  `extra_params={"response_format": {"type": "json_object"}}` in `config/loader.py:104-106`.
+  `extra_params={"response_format": {"type": "json_object"}}` in `DEFAULT_CONFIG` (`config/loader.py:35`) —
+  the live default. The `ModelSlot` class default at `:105-107` is dead code: `_validate_and_merge`
+  deep-merges `DEFAULT_CONFIG` over it (`:209-210`) and the no-config path returns `dict(DEFAULT_CONFIG)`
+  verbatim (`:330`).
 - The installed litellm honours this for Ollama: `response_format={"type":"json_object"}` becomes
   `optional_params["format"] = "json"` (`litellm/.../transformation.py:176-180`, emitted at `:319-320`).
 - The cloud path is provably untouched: a non-local provider never receives the key. This matters because
   unsupported parameters raise (`litellm/utils.py:3170`) rather than being dropped, so an unconditional flag
   would turn a degraded parse into a hard failure for cloud grounding users.
 
-### 4.3 Prompt (Fix 3) — `src/openreview_cli/grounding/prompts.py:41`
+### 4.3 Prompt (Fix 3) — `src/openreview_cli/grounding/prompts.py:42`
 
-The prompt is shared by two callers: `ground_claim` sends exactly one claim (`discriminator.py:99-102`), while
-`ground_report` batches up to `_BATCH_SIZE = 10` (`:32`, flush at `:199-201`, remainder at `:204-205`). The
+The prompt is shared by two callers: `ground_claim` sends exactly one claim (`discriminator.py:102-105`), while
+`ground_report` batches up to `_BATCH_SIZE = 10` (`:32`, flush at `:203-204`, remainder at `:208-209`). The
 current final line demands an array unconditionally, which is what invites the single-object reply that the
 old reader then rejected.
 
@@ -157,11 +165,11 @@ permits the natural shape that the new reader also accepts.
 ### 4.4 Unreadable-answer counter — `grounding/discriminator.py` + `scripts/measure_slm_slots.py`
 
 - `GroundingDiscriminator` gains a counter, incremented exactly where the reader returns nothing
-  (`discriminator.py:117-120`). It is not incremented on the gateway-exception path (`:114-115`) — that is a
+  (`discriminator.py:121-124`). It is not incremented on the gateway-exception path (`:116-118`) — that is a
   different fault and stays in the log.
-- The counter must remain correct across batching, including `_process_batch` (`:275`).
-- The harness adds `unreadable_answers` to the receipt near `scripts/measure_slm_slots.py:518-526` and prints
-  it beside the uncertain counts near `:547`.
+- The counter must remain correct across batching, including `_process_batch` (`:279-290`).
+- The harness adds `unreadable_answers` to the receipt near `scripts/measure_slm_slots.py:525-527` and prints
+  it beside the uncertain counts near `:549`.
 - Purpose: turn "the fix appears to work" into "the receipt shows zero". Without it, a regression hides
   inside "uncertain" exactly as this one did.
 
@@ -176,8 +184,10 @@ After: answer text → `strip_fences` → first value that `raw_decode` accepts 
 failure `[]` **and counter incremented** → `UNCERTAIN, confidence 0.0` → receipt shows both "uncertain" and
 "unreadable answers", so the two causes are separable.
 
-Request side: grounding slot config → `extra_params` → router merges, dropping `response_format` unless
-`info.is_local` → litellm → Ollama receives `format: "json"`; a cloud provider receives nothing extra.
+Request side: grounding slot config → `extra_params` → the router builds the request kwargs → at **dispatch**,
+`_call_with_fallback` classifies the provider it is actually sending to (`classify_provider`, unclassifiable =
+remote) and drops `response_format` for a non-local one or restores it for a local one → litellm → Ollama
+receives `format: "json"`; a cloud provider receives nothing extra.
 
 ---
 
@@ -189,7 +199,7 @@ Request side: grounding slot config → `extra_params` → router merges, droppi
   otherwise. If shape-level diagnostics are ever wanted, they record structure only (for example whether a
   fence was present), never content.
 - A dropped local-only parameter is a debug line; stripping a protected key keeps its existing warning
-  (`router.py:365-368`).
+  (`router.py:406-408`).
 
 ---
 
@@ -198,10 +208,10 @@ Request side: grounding slot config → `extra_params` → router merges, droppi
 | Where | What it pins |
 |---|---|
 | **new** `tests/unit/test_grounding_prompts.py` | The shape table from section 2, executed rather than traced: all four currently failing shapes now parse, the passing ones still parse, a quoted reason containing `[`/`]`/`}` still parses, truncated JSON still returns empty, empty string returns empty, a single object yields one result, and an array of three yields three |
-| `tests/unit/test_grounding_discriminator.py` | Existing tests unaffected (the suite's only parse input is a bare array at `:22`); batched shape links `claim_index` correctly; the counter increments on an unreadable answer and stays put on a readable one; the gateway-failure path does not touch the counter |
+| `tests/unit/test_grounding_discriminator.py` | Existing tests unaffected (the suite's only parse input is a bare array at `:23`); batched shape links `claim_index` correctly; the counter increments on an unreadable answer and stays put on a readable one; the gateway-failure path does not touch the counter |
 | `tests/unit/test_gateway_router.py` | `response_format` is forwarded when the provider is local; dropped when it is not; dropped when the provider is unknown; other `extra_params` still forwarded (no regression to existing `extra_params` tests) |
 | `tests/unit/test_grounding_harness.py` | The receipt carries `unreadable_answers`, and it is zero when every answer parses |
-| fallback path | A cloud fallback must not inherit `response_format`. Confirmed unprotected by a primary-only rule, so this pins a second strip inside `_call_with_fallback` (`router.py:497`, provider info at `:560`): a local primary with a cloud fallback sends no `response_format`, while a local fallback still receives it |
+| fallback path | A cloud fallback must not inherit `response_format`, and a local fallback reached from a cloud primary must still receive it. Observed at the `completion` seam, where `_call_with_fallback` enforces the gate for the provider actually dispatched — the primary at `router.py:551`, the fallback at `:610` against its own provider info (`:604`) |
 
 Commands:
 
@@ -235,8 +245,8 @@ uv run pre-commit run --all-files   # the required pre-commit gate
 
 | Risk | Local run | Cloud run | Unit tests |
 |---|---|---|---|
-| The JSON request leaks to a cloud provider | not applicable | Only if that provider *rejects* the parameter — then the pre-flight (`scripts/measure_slm_slots.py:418-448`) aborts the run loudly. If the provider accepts it, the run stays green and the leak is invisible | yes, explicit |
-| Several claims in one call breaks | **no** — the harness calls `ground_claim` one claim at a time (`:693`) | **no** | yes, required |
+| The JSON request leaks to a cloud provider | not applicable | Only if that provider *rejects* the parameter — then the pre-flight (`scripts/measure_slm_slots.py:418-452`) aborts the run loudly. If the provider accepts it, the run stays green and the leak is invisible | yes, explicit |
+| Several claims in one call breaks | **no** — the harness calls `ground_claim` one claim at a time (`:695`) | **no** | yes, required |
 | A fallback model inherits the request | **no** — the grounding slot ships with `fallback: None` (`config/loader.py:31-35`), and nothing forces a fallback | **no** | yes, required |
 | An unknown provider receives the request | no | no | yes |
 | Answers cut off partway | visible only through the new counter | same | yes |
@@ -254,7 +264,7 @@ key that can spend, so it is not part of CI.
 |---|---|
 | A cloud grounding user is affected by the new request | Local-only gate; `response_format` never reaches a non-local provider; tested for the local, cloud and unknown-provider cases |
 | The batched caller breaks | Prompt keeps the array contract for several claims; a three-object batch test; `_BATCH_SIZE` and both flush sites unchanged |
-| The fallback model inherits the flag | **Confirmed real**: a rule placed only in `_get_litellm_kwargs` does not protect a cloud fallback, because `_call_with_fallback` re-dispatches the primary's kwargs (`:540-568`) and that builder resolves only the primary's provider (`:373`). The strip is applied at the fallback site too, keyed to the fallback's provider info, tested for local→cloud and local→local |
+| The fallback model inherits the flag | **Confirmed real**: a rule placed only in `_get_litellm_kwargs` does not protect a cloud fallback, because `_call_with_fallback` re-dispatches the primary's kwargs (`:538`, fallback leg at `:611`) and that builder resolves only the primary's provider (`:413`). The single per-dispatch gate — `_enforce_local_only_params` before the first attempt (`:551`) and again against the fallback's own provider info (`:604`, applied at `:610`) — drops the key for a cloud fallback and restores it for a local one, tested for local→cloud and local→local |
 | A parameter drop is mistaken for a bug | Debug-level log explains it; the existing protected-key warning is untouched |
 | Truncated answers remain unreadable | Not solved by this change, but now counted and visible; the local JSON request reduces the chance |
 | The receipt guard or the CI gate erodes | Neither is edited; the existing known failure (`tests/unit/test_benchmark_receipts.py`, issue #180) is left alone |
