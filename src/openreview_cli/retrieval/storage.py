@@ -3,12 +3,9 @@ from __future__ import annotations
 import json
 import sqlite3
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from openreview_cli.retrieval.errors import IndexCorruptError
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
 
 
 class RetrievalStorage:
@@ -47,9 +44,7 @@ class RetrievalStorage:
                 index_timestamp  TEXT,
                 chunk_count      INTEGER NOT NULL DEFAULT 0,
                 method           TEXT NOT NULL DEFAULT 'sparse'
-                                 CHECK(method IN ('sparse','hybrid')),
-                embedding_model  TEXT,
-                embedding_dim    INTEGER,
+                                 CHECK(method IN ('sparse')),
                 db_size_bytes    INTEGER DEFAULT 0
             );
 
@@ -96,16 +91,6 @@ class RetrievalStorage:
                 INSERT INTO chunk_fts(rowid, chunk_id, text, clause_heading)
                 VALUES (new.rowid, new.chunk_id, new.text, new.clause_heading);
             END;
-
-            CREATE TABLE IF NOT EXISTS chunk_embeddings (
-                chunk_id    TEXT PRIMARY KEY REFERENCES chunks(chunk_id) ON DELETE CASCADE,
-                embedding   BLOB NOT NULL,
-                model_id    TEXT NOT NULL,
-                dimension   INTEGER NOT NULL CHECK(dimension > 0),
-                chunk_norm  REAL NOT NULL CHECK(chunk_norm > 0.0)
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_embeddings_model_id ON chunk_embeddings(model_id);
 
             CREATE TABLE IF NOT EXISTS rerank_validation (
                 model_id              TEXT NOT NULL,
@@ -160,22 +145,6 @@ class RetrievalStorage:
         )
         self.conn.commit()
 
-    def insert_embedding(
-        self,
-        chunk_id: str,
-        embedding: bytes,
-        model_id: str,
-        dimension: int,
-        norm: float,
-    ) -> None:
-        """Insert a single embedding row."""
-        self.conn.execute(
-            "INSERT INTO chunk_embeddings (chunk_id, embedding, model_id, dimension, chunk_norm) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (chunk_id, embedding, model_id, dimension, norm),
-        )
-        self.conn.commit()
-
     def search_fts(self, query_text: str, top_k: int) -> list[tuple[str, float]]:
         """BM25 search via FTS5.
 
@@ -189,16 +158,6 @@ class RetrievalStorage:
         )
         return [(row["chunk_id"], row["score"]) for row in cursor.fetchall()]
 
-    def load_embeddings(self) -> Iterator[tuple[str, bytes, float]]:
-        """Stream all (chunk_id, embedding_blob, chunk_norm) tuples.
-
-        Yields one row at a time — does not load all embeddings into memory.
-        """
-        # ponytail: streaming iterator — cursor.fetchone() implicit via ``for row``
-        cursor = self.conn.execute("SELECT chunk_id, embedding, chunk_norm FROM chunk_embeddings")
-        for row in cursor:
-            yield (row["chunk_id"], row["embedding"], row["chunk_norm"])
-
     def load_chunk(self, chunk_id: str) -> dict[str, Any] | None:
         """Load a single chunk by ID, or None if not found."""
         cursor = self.conn.execute("SELECT * FROM chunks WHERE chunk_id = ?", (chunk_id,))
@@ -206,17 +165,6 @@ class RetrievalStorage:
         if row is None:
             return None
         return dict(row)
-
-    def load_embedding(self, chunk_id: str) -> tuple[bytes, float] | None:
-        """Load a single embedding by chunk ID, or None if not found."""
-        cursor = self.conn.execute(
-            "SELECT embedding, chunk_norm FROM chunk_embeddings WHERE chunk_id = ?",
-            (chunk_id,),
-        )
-        row = cursor.fetchone()
-        if row is None:
-            return None
-        return (row["embedding"], row["chunk_norm"])
 
     def set_index_status(self, status: str) -> None:
         """Set the index status in the index_meta table."""

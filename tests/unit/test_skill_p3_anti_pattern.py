@@ -11,9 +11,9 @@ The 16 candidates are:
   P3-A6   ``playbook export --all``, ``--version``, ``--force`` flags
   P3-A10  ``playbook diff --json`` flag
   P3-A12  ``--mode-threshold MODE=VALUE`` (repeatable) for product modes
-  P3-A14  ``retrieve --method dense`` formally documented
+  P3-A14  retrieval is keyword-only; removed ``--method`` choice not advertised
   P3-A15  ``retrieve --top-k``, ``--rerank-depth``, ``--no-header``, ``--db-dir``
-  P3-A16  ``ingest --model``, ``--db-dir``
+  P3-A16  ``ingest --db-dir`` documented; removed ``--model`` not advertised
   P3-A18  Global ``--no-tui``, ``--debug`` flags
   P3-A19  ``chunk --summary`` flag
   P3-A20  ``negotiate --rationality``, ``--depth``, ``--weights``
@@ -114,12 +114,12 @@ def test_p3_a12_mode_threshold_documented(skill_text: str) -> None:
     assert "3111-3116" in body, "P3-A12: source line not cited"
 
 
-def test_p3_a14_retrieve_method_dense_documented(skill_text: str) -> None:
-    """P3-A14: ``retrieve --method dense`` is formally documented."""
+def test_p3_a14_no_retrieval_method_choice(skill_text: str) -> None:
+    """P3-A14: retrieval is keyword-only — the removed ``--method`` choice is not advertised."""
     body = _section_after_heading(skill_text, r"^#{3,4}\s+[^#\n]*Retrieval[^#\n]*$")
-    assert "--method" in body, "P3-A14: --method flag not mentioned"
-    assert "dense" in body, "P3-A14: dense method not mentioned"
-    assert "sparse" in body, "P3-A14: sparse method not mentioned (context for dense)"
+    assert "--method" not in body, "P3-A14: removed --method flag still advertised"
+    assert "hybrid" not in body, "P3-A14: removed hybrid method still advertised"
+    assert "dense" not in body, "P3-A14: removed dense method still advertised"
 
 
 def test_p3_a15_retrieve_flags_documented(skill_text: str) -> None:
@@ -132,13 +132,13 @@ def test_p3_a15_retrieve_flags_documented(skill_text: str) -> None:
 
 
 def test_p3_a16_ingest_flags_documented(skill_text: str) -> None:
-    """P3-A16: ``ingest --model``, ``--db-dir`` documented."""
+    """P3-A16: ``ingest --db-dir`` documented; removed ``--model`` not advertised."""
     body = _section_after_heading(skill_text, r"^#{3,4}\s+[^#\n]*Retrieval[^#\n]*$")
-    assert "ingest --model" in body or "ingest` --model" in body, (
-        "P3-A16: ingest --model not mentioned"
+    assert "ingest --model" not in body and "ingest` --model" not in body, (
+        "P3-A16: removed ingest --model still advertised"
     )
-    assert "1961" in body, "P3-A16: source line for ingest --model not cited"
-    assert "1962" in body, "P3-A16: source line for ingest --db-dir not cited"
+    assert "ingest --db-dir" in body, "P3-A16: ingest --db-dir not mentioned"
+    assert "2174" in body, "P3-A16: source line for ingest --db-dir not cited"
 
 
 def test_p3_a18_global_flags_documented(skill_text: str) -> None:

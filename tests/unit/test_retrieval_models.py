@@ -7,7 +7,7 @@ class TestRetrievalQuery:
     def test_creates_with_defaults(self) -> None:
         q = RetrievalQuery(query_text="confidentiality clause")
         assert q.query_text == "confidentiality clause"
-        assert q.method == "hybrid"
+        assert q.method == "sparse"
         assert q.top_k == 5
         assert q.rerank is False
         assert q.rerank_depth == 20
@@ -29,9 +29,9 @@ class TestRetrievalQuery:
         assert q.rerank_depth == 15
         assert q.force_rerank is True
 
-    def test_accepts_dense_method(self) -> None:
-        q = RetrievalQuery(query_text="test", method="dense")
-        assert q.method == "dense"
+    def test_accepts_sparse_method(self) -> None:
+        q = RetrievalQuery(query_text="test", method="sparse")
+        assert q.method == "sparse"
 
     def test_rejects_empty_query(self) -> None:
         with pytest.raises(ValueError) as exc:
@@ -91,13 +91,11 @@ class TestRetrievalResult:
             hierarchy_chain=["Article 3"],
             parent_chunk_id=None,
             score=0.95,
-            method="hybrid",
+            method="sparse",
         )
         assert r.chunk_id == "chunk-001"
         assert r.score == 0.95
         assert r.rank_sparse is None
-        assert r.rank_dense is None
-        assert r.rrf_score is None
         assert r.rerank_score is None
         assert r.char_start == 0
         assert r.char_end == 0
@@ -111,10 +109,8 @@ class TestRetrievalResult:
             hierarchy_chain=["Article 3 — Obligations", "Section 3.1"],
             parent_chunk_id=None,
             score=0.89,
-            method="hybrid+rerank",
+            method="sparse+rerank",
             rank_sparse=2,
-            rank_dense=1,
-            rrf_score=0.0164,
             rerank_score=0.92,
             char_start=100,
             char_end=400,
@@ -122,10 +118,8 @@ class TestRetrievalResult:
         assert r.chunk_id == "chunk-001"
         assert r.clause_heading == "Article 3 — Obligations"
         assert r.score == 0.89
-        assert r.method == "hybrid+rerank"
+        assert r.method == "sparse+rerank"
         assert r.rank_sparse == 2
-        assert r.rank_dense == 1
-        assert r.rrf_score == 0.0164
         assert r.rerank_score == 0.92
         assert r.char_start == 100
         assert r.char_end == 400
@@ -154,7 +148,7 @@ class TestRetrievalResult:
                 hierarchy_chain=[f"Heading {i}"],
                 parent_chunk_id=None,
                 score=1.0 - i * 0.1,
-                method="hybrid",
+                method="sparse",
             )
             for i in range(5)
         ]
@@ -168,15 +162,13 @@ class TestIndexMeta:
             document_id="a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
             document_path="/tmp/test-contract.ndax",
             chunk_count=12,
-            method="hybrid",
+            method="sparse",
         )
         assert (
             meta.document_id == "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
         )
         assert meta.chunk_count == 12
-        assert meta.method == "hybrid"
-        assert meta.embedding_model is None
-        assert meta.embedding_dimension is None
+        assert meta.method == "sparse"
         assert meta.index_timestamp == ""
         assert meta.index_status == "empty"
         assert meta.db_size_bytes == 0
@@ -186,15 +178,29 @@ class TestIndexMeta:
             document_id="a1b2c3d4",
             document_path="/tmp/test.ndax",
             chunk_count=47,
-            method="hybrid",
-            embedding_model="nomic-embed-text",
-            embedding_dimension=1024,
+            method="sparse",
             index_timestamp="2026-07-03T14:30:00Z",
             index_status="indexed",
             db_size_bytes=3_200_000,
         )
-        assert meta.embedding_model == "nomic-embed-text"
-        assert meta.embedding_dimension == 1024
+        assert meta.method == "sparse"
         assert meta.index_timestamp == "2026-07-03T14:30:00Z"
         assert meta.index_status == "indexed"
         assert meta.db_size_bytes == 3_200_000
+
+
+class TestSparseOnlyMethod:
+    """T1.2: keyword search is the only retrieval method the model exposes."""
+
+    def test_valid_methods_expose_only_sparse(self) -> None:
+        from openreview_cli.retrieval.models import VALID_METHODS
+
+        assert frozenset({"sparse"}) == VALID_METHODS
+
+    def test_query_defaults_to_sparse(self) -> None:
+        assert RetrievalQuery(query_text="confidentiality").method == "sparse"
+
+    @pytest.mark.parametrize("method", ["dense", "hybrid"])
+    def test_query_rejects_dense_and_hybrid(self, method: str) -> None:
+        with pytest.raises(ValueError, match="method"):
+            RetrievalQuery(query_text="confidentiality", method=method)

@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-Method = Literal["sparse", "dense", "hybrid"]
+Method = Literal["sparse"]
 
-VALID_METHODS: frozenset[str] = frozenset({"sparse", "dense", "hybrid"})
+VALID_METHODS: frozenset[str] = frozenset({"sparse"})
 
 
 @dataclass
@@ -14,15 +14,16 @@ class RetrievalQuery:
 
     Fields:
         query_text: Natural-language query (required, non-empty).
-        method: Retrieval method: "sparse", "dense", or "hybrid".
+        method: Retrieval method. Keyword search ("sparse") is the only method;
+            anything else is rejected.
         top_k: Number of results (1-50).
         rerank: Enable cross-encoder reranker.
-        rerank_depth: Number of hybrid results to rerank (raised to top_k when smaller).
+        rerank_depth: Number of candidates to rerank (raised to top_k when smaller).
         force_rerank: Override reranker validation warning.
     """
 
     query_text: str
-    method: str = "hybrid"
+    method: str = "sparse"
     top_k: int = 5
     rerank: bool = False
     rerank_depth: int = 20
@@ -54,8 +55,6 @@ class RetrievalResult:
         score: Final relevance score (0.0-1.0).
         method: Retrieval method used.
         rank_sparse: Rank in BM25 results (None if not in top-K).
-        rank_dense: Rank in dense results (None if not in top-K).
-        rrf_score: RRF fusion score (None if not hybrid mode).
         rerank_score: Cross-encoder score (None if reranker not used).
         char_start: Character offset (start) in the original document.
         char_end: Character offset (end) in the original document.
@@ -70,8 +69,6 @@ class RetrievalResult:
     score: float
     method: str
     rank_sparse: int | None = None
-    rank_dense: int | None = None
-    rrf_score: float | None = None
     rerank_score: float | None = None
     char_start: int = 0
     char_end: int = 0
@@ -85,9 +82,7 @@ class IndexMeta:
         document_id: SHA-256 hex hash of the original document.
         document_path: Original file path at ingest time.
         chunk_count: Number of chunks in the index.
-        method: Retrieval method used ("sparse" or "hybrid").
-        embedding_model: Embedding model identifier, None if sparse-only.
-        embedding_dimension: Vector dimension, None if sparse-only.
+        method: Retrieval method used (always "sparse").
         index_timestamp: ISO 8601 timestamp of indexing.
         index_status: One of "empty", "ingesting", "indexed", "corrupt".
         db_size_bytes: Size of the database file in bytes.
@@ -97,8 +92,6 @@ class IndexMeta:
     document_path: str
     chunk_count: int
     method: str
-    embedding_model: str | None = None
-    embedding_dimension: int | None = None
     index_timestamp: str = ""
     index_status: str = "empty"
     db_size_bytes: int = 0

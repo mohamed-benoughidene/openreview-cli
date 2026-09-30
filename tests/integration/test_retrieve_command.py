@@ -69,8 +69,6 @@ def indexed_db(tmp_path: Path) -> Path:
     ingest_from_file(
         FIXTURE_PATH,
         str(index_db),
-        gateway=None,
-        method="sparse",
     )
     return index_db
 
@@ -94,8 +92,6 @@ class TestRetrieveCommand:
                 "retrieve",
                 "confidentiality",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--top-k",
                 "5",
                 "--db-dir",
@@ -114,8 +110,6 @@ class TestRetrieveCommand:
                 "retrieve",
                 "confidentiality",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--top-k",
                 "2",
                 "--db-dir",
@@ -131,8 +125,6 @@ class TestRetrieveCommand:
                 "retrieve",
                 "confidentiality",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--top-k",
                 "3",
                 "--format",
@@ -161,8 +153,6 @@ class TestRetrieveCommand:
                 "retrieve",
                 query_info["query"],
                 str(FIXTURE_PATH),
-                "--method",
-                query_info["method"],
                 "--top-k",
                 str(query_info["top_k"]),
                 "--format",
@@ -186,8 +176,6 @@ class TestRetrieveCommand:
                 "retrieve",
                 "xyznonexistentqueryzzz",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--db-dir",
                 str(indexed_db.parent),
             ],
@@ -229,8 +217,6 @@ class TestRetrieveCommand:
             [
                 "retrieve",
                 "confidentiality",
-                "--method",
-                "sparse",
                 "--top-k",
                 "5",
                 "--db-dir",
@@ -240,18 +226,16 @@ class TestRetrieveCommand:
         assert result.exit_code == 0, f"Exit {result.exit_code}: {result.output}"
         assert "Retrieval Results" in result.output
 
-    # ── T028: Method switching ──
+    # ── T028: keyword search is the only method ──
 
-    def test_retrieve_method_sparse_json_schema(self, runner: CliRunner, indexed_db: Path) -> None:
-        """--method sparse returns BM25 results with correct JSON schema."""
+    def test_retrieve_json_schema(self, runner: CliRunner, indexed_db: Path) -> None:
+        """Keyword retrieval returns BM25 results with the documented JSON schema."""
         result = runner.invoke(
             app,
             [
                 "retrieve",
                 "confidentiality",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--top-k",
                 "3",
                 "--format",
@@ -267,56 +251,14 @@ class TestRetrieveCommand:
         for r in data["results"]:
             assert r["method"] == "sparse"
             assert r["rank_sparse"] is not None
-            assert r["rank_dense"] is None
-            assert r["rrf_score"] is None
             assert "chunk_id" in r
             assert "score" in r
             assert "clause_heading" in r
 
-    def test_retrieve_method_dense_fallback_graceful(
-        self, runner: CliRunner, indexed_db: Path
-    ) -> None:
-        """--method dense without gateway falls back gracefully (terminal output)."""
-        result = runner.invoke(
-            app,
-            [
-                "retrieve",
-                "confidentiality",
-                str(FIXTURE_PATH),
-                "--method",
-                "dense",
-                "--top-k",
-                "3",
-                "--db-dir",
-                str(indexed_db.parent),
-            ],
-        )
-        # Dense without gateway falls back to sparse — still exit 0
-        assert result.exit_code == 0, f"exit {result.exit_code}: {result.stderr[-200:]}"
-        # Should show some kind of result (no-error)
-        assert "Error" not in result.stderr or "Not found" not in result.output
-
-    def test_retrieve_method_hybrid_default(self, runner: CliRunner, indexed_db: Path) -> None:
-        """Default method is hybrid, returns results (no crash)."""
-        result = runner.invoke(
-            app,
-            [
-                "retrieve",
-                "confidentiality",
-                str(FIXTURE_PATH),
-                "--top-k",
-                "3",
-                "--db-dir",
-                str(indexed_db.parent),
-            ],
-        )
-        assert result.exit_code == 0, f"exit {result.exit_code}: {result.stderr[-200:]}"
-
-    def test_retrieve_uses_config_flag_defaults(self, runner: CliRunner, indexed_db: Path) -> None:
-        """`retrieval.default_method` / `retrieval.top_k` drive the flag defaults."""
+    def test_retrieve_uses_config_top_k_default(self, runner: CliRunner, indexed_db: Path) -> None:
+        """`retrieval.top_k` drives the `--top-k` default."""
         config_path = get_config_dir() / "config.yml"
         load_config(config_path)
-        set_config_value(config_path, "retrieval.default_method", "sparse")
         set_config_value(config_path, "retrieval.top_k", "2")
 
         result = runner.invoke(
@@ -336,23 +278,6 @@ class TestRetrieveCommand:
         assert data["method"] == "sparse"
         assert data["top_k"] == 2
 
-    def test_retrieve_invalid_method(self, runner: CliRunner, indexed_db: Path) -> None:
-        """Invalid --method value should error."""
-        result = runner.invoke(
-            app,
-            [
-                "retrieve",
-                "confidentiality",
-                str(FIXTURE_PATH),
-                "--method",
-                "invalid",
-                "--db-dir",
-                str(indexed_db.parent),
-            ],
-        )
-        # The Typer option validates choices, expect non-zero exit
-        assert result.exit_code != 0 or "invalid" in result.output.lower()
-
     # ── T039: Hierarchy in integration output ──
 
     def test_hierarchy_chain_in_json_output(self, runner: CliRunner, indexed_db: Path) -> None:
@@ -363,8 +288,6 @@ class TestRetrieveCommand:
                 "retrieve",
                 "confidentiality",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--top-k",
                 "5",
                 "--format",
@@ -427,7 +350,7 @@ class TestRetrieveCommand:
 
         from openreview_cli.retrieval.ingest import ingest_from_file
 
-        ingest_from_file(fixture_path, db_path, gateway=None, method="sparse")
+        ingest_from_file(fixture_path, db_path)
 
         # Retrieve query that matches sec-1
         result = runner.invoke(
@@ -436,8 +359,6 @@ class TestRetrieveCommand:
                 "retrieve",
                 "Confidential Information",
                 str(fixture_path),
-                "--method",
-                "sparse",
                 "--top-k",
                 "5",
                 "--format",
@@ -471,8 +392,6 @@ class TestRetrieveTopKAboveDefaultRerankDepth:
                 "retrieve",
                 "confidentiality",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--top-k",
                 "30",
                 "--format",
@@ -484,8 +403,18 @@ class TestRetrieveTopKAboveDefaultRerankDepth:
         assert result.exit_code == 0, f"exit {result.exit_code}: {result.output}"
         data = _extract_json_from_output(result.output)
         assert data["top_k"] == 30
-        assert len(data["results"]) == 2
-        assert [r["chunk_id"] for r in data["results"]] == ["chunk-004", "chunk-007"]
+        # porter unicode61 stemming broadens "confidentiality" to every chunk
+        # whose text shares the stem; the sparse index yields 7 candidates.
+        assert len(data["results"]) == 7
+        assert [r["chunk_id"] for r in data["results"]] == [
+            "chunk-003",
+            "chunk-004",
+            "chunk-009",
+            "chunk-008",
+            "chunk-006",
+            "chunk-007",
+            "chunk-005",
+        ]
 
     @patch("openreview_cli.gateway.router.Gateway")
     def test_retrieve_top_k_30_with_rerank_applies_scores_without_raising(
@@ -496,7 +425,7 @@ class TestRetrieveTopKAboveDefaultRerankDepth:
     ) -> None:
         """`--top-k 30 --rerank` must not raise on the rerank path and must apply scores.
 
-        The fixture yields only 2 candidates, so this does not prove the
+        The fixture yields only 7 candidates, so this does not prove the
         candidate pool widened to 30 — it guards that the rerank path accepts a
         `--top-k` above the default rerank depth and that the reranked scores
         are written onto the results.
@@ -508,8 +437,6 @@ class TestRetrieveTopKAboveDefaultRerankDepth:
                 "retrieve",
                 "confidentiality",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--top-k",
                 "30",
                 "--rerank",
@@ -521,7 +448,7 @@ class TestRetrieveTopKAboveDefaultRerankDepth:
         )
         assert result.exit_code == 0, f"exit {result.exit_code}: {result.output}"
         data = _extract_json_from_output(result.output)
-        assert len(data["results"]) == 2
+        assert len(data["results"]) == 7
         assert data["results"][0]["rerank_score"] == 0.9
         assert data["results"][1]["rerank_score"] == 0.0
 
@@ -532,8 +459,6 @@ class TestRetrieveTopKAboveDefaultRerankDepth:
                 "retrieve",
                 "confidentiality",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--top-k",
                 "51",
                 "--db-dir",
@@ -570,8 +495,6 @@ class TestRetrieveRerankDepthFromConfig:
                 "retrieve",
                 "confidential information",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--top-k",
                 "2",
                 "--rerank",
@@ -587,3 +510,23 @@ class TestRetrieveRerankDepthFromConfig:
         # only indices 0..2 are candidates, so chunk-008 can never be promoted.
         assert len(mock_cls.return_value.rerank.call_args.args[2]) == 3
         assert [r["chunk_id"] for r in data["results"]] == ["chunk-006", "chunk-003"]
+
+
+class TestNoMethodOption:
+    """T1.2: `retrieve` no longer offers a retrieval method to choose."""
+
+    def test_retrieve_rejects_a_method_option(self, runner: CliRunner, indexed_db: Path) -> None:
+        result = runner.invoke(
+            app,
+            [
+                "retrieve",
+                "confidentiality",
+                str(FIXTURE_PATH),
+                "--method",
+                "sparse",
+                "--db-dir",
+                str(indexed_db.parent),
+            ],
+        )
+        assert result.exit_code != 0, f"exit {result.exit_code}: {result.output[:200]}"
+        assert "no such option" in result.output.lower(), result.output[:300]

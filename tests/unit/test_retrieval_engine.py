@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
-import struct
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -21,7 +19,7 @@ def db_path(tmp_path: Path) -> str:
 
 @pytest.fixture
 def populated_db(db_path: str) -> str:
-    """Create a SQLite DB with a few chunks, FTS5, and embeddings."""
+    """Create a SQLite DB with a few chunks and an FTS5 index."""
     conn = sqlite3.connect(db_path)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
@@ -34,14 +32,12 @@ def populated_db(db_path: str) -> str:
             index_status TEXT NOT NULL DEFAULT 'indexed',
             index_timestamp TEXT,
             chunk_count INTEGER NOT NULL DEFAULT 0,
-            method TEXT NOT NULL DEFAULT 'hybrid',
-            embedding_model TEXT,
-            embedding_dim INTEGER,
+            method TEXT NOT NULL DEFAULT 'sparse',
             db_size_bytes INTEGER DEFAULT 0
         );
 
-        INSERT INTO index_meta (document_id, index_status, chunk_count, method, embedding_dim)
-        VALUES ('test-doc', 'indexed', 4, 'hybrid', 4);
+        INSERT INTO index_meta (document_id, index_status, chunk_count, method)
+        VALUES ('test-doc', 'indexed', 4, 'sparse');
 
         CREATE TABLE IF NOT EXISTS chunks (
             chunk_id TEXT PRIMARY KEY,
@@ -69,30 +65,7 @@ def populated_db(db_path: str) -> str:
 
         INSERT INTO chunk_fts (rowid, chunk_id, text, clause_heading)
         SELECT rowid, chunk_id, text, clause_heading FROM chunks;
-
-        CREATE TABLE IF NOT EXISTS chunk_embeddings (
-            chunk_id TEXT PRIMARY KEY,
-            embedding BLOB NOT NULL,
-            model_id TEXT NOT NULL,
-            dimension INTEGER NOT NULL,
-            chunk_norm REAL NOT NULL
-        );
     """)
-
-    # Insert embeddings (4-dim vectors for simplicity)
-    vecs = {
-        "c1": [0.5, 0.3, 0.1, 0.8],
-        "c2": [0.1, 0.9, 0.2, 0.1],
-        "c3": [0.8, 0.1, 0.3, 0.5],
-        "c4": [0.2, 0.4, 0.7, 0.2],
-    }
-    for cid, vec in vecs.items():
-        blob = struct.pack("<4f", *vec)
-        norm = (sum(v * v for v in vec)) ** 0.5
-        conn.execute(
-            "INSERT INTO chunk_embeddings VALUES (?, ?, ?, ?, ?)",
-            (cid, blob, "test-model", 4, norm),
-        )
 
     conn.commit()
     conn.close()
@@ -109,11 +82,10 @@ def pooled_db(tmp_path: Path) -> str:
             document_id TEXT PRIMARY KEY, document_path TEXT NOT NULL DEFAULT '',
             index_version INTEGER NOT NULL DEFAULT 1, index_status TEXT NOT NULL DEFAULT 'indexed',
             index_timestamp TEXT, chunk_count INTEGER NOT NULL DEFAULT 0,
-            method TEXT NOT NULL DEFAULT 'hybrid', embedding_model TEXT, embedding_dim INTEGER,
-            db_size_bytes INTEGER DEFAULT 0
+            method TEXT NOT NULL DEFAULT 'sparse', db_size_bytes INTEGER DEFAULT 0
         );
-        INSERT INTO index_meta (document_id, index_status, chunk_count, method, embedding_dim)
-        VALUES ('test-doc', 'indexed', 5, 'hybrid', 4);
+        INSERT INTO index_meta (document_id, index_status, chunk_count, method)
+        VALUES ('test-doc', 'indexed', 5, 'sparse');
         CREATE TABLE chunks (
             chunk_id TEXT PRIMARY KEY, document_id TEXT NOT NULL DEFAULT 'test-doc',
             text TEXT NOT NULL, clause_heading TEXT NOT NULL, clause_level INTEGER NOT NULL DEFAULT 0,
@@ -129,13 +101,8 @@ def pooled_db(tmp_path: Path) -> str:
         );
         INSERT INTO chunk_fts (rowid, chunk_id, text, clause_heading)
         SELECT rowid, chunk_id, text, clause_heading FROM chunks;
-        CREATE TABLE chunk_embeddings (
-            chunk_id TEXT PRIMARY KEY, embedding BLOB NOT NULL, model_id TEXT NOT NULL,
-            dimension INTEGER NOT NULL, chunk_norm REAL NOT NULL
-        );
     """)
-    extra = {"c3": [0.8, 0.1, 0.3, 0.5], "c4": [0.2, 0.4, 0.7, 0.2], "c5": [0.3, 0.2, 0.9, 0.1]}
-    for chunk_id, _vector in extra.items():
+    for chunk_id in ("c3", "c4", "c5"):
         heading = f"Article {chunk_id}"
         conn.execute(
             "INSERT INTO chunks VALUES (?, 'test-doc', ?, ?, 0, NULL, ?, 1000, 1100)",
@@ -145,16 +112,6 @@ def pooled_db(tmp_path: Path) -> str:
             "INSERT INTO chunk_fts (rowid, chunk_id, text, clause_heading) "
             "SELECT rowid, chunk_id, text, clause_heading FROM chunks WHERE chunk_id = ?",
             (chunk_id,),
-        )
-    vectors = {
-        "c1": [0.5, 0.3, 0.1, 0.8],
-        "c2": [0.1, 0.9, 0.2, 0.1],
-        **extra,
-    }
-    for chunk_id, vector in vectors.items():
-        conn.execute(
-            "INSERT INTO chunk_embeddings VALUES (?, ?, 'test-model', 4, ?)",
-            (chunk_id, struct.pack("<4f", *vector), (sum(v * v for v in vector)) ** 0.5),
         )
     conn.commit()
     conn.close()
@@ -172,8 +129,7 @@ def nl_query_db(tmp_path: Path) -> str:
             index_version INTEGER NOT NULL DEFAULT 1,
             index_status TEXT NOT NULL DEFAULT 'indexed',
             index_timestamp TEXT, chunk_count INTEGER NOT NULL DEFAULT 0,
-            method TEXT NOT NULL DEFAULT 'sparse', embedding_model TEXT,
-            embedding_dim INTEGER, db_size_bytes INTEGER DEFAULT 0
+            method TEXT NOT NULL DEFAULT 'sparse', db_size_bytes INTEGER DEFAULT 0
         );
         INSERT INTO index_meta (document_id, index_status, chunk_count, method)
         VALUES ('nl-doc', 'indexed', 4, 'sparse');
@@ -249,45 +205,6 @@ class TestRetrievalEngine:
         assert [r.chunk_id for r in results] == ["c3", "c1"]
         assert all(r.method == "sparse" for r in results)
 
-    def test_retrieve_dense_with_gateway(self, populated_db: str) -> None:
-        mock_gateway = MagicMock()
-        # Return a 4-dim embedding
-        mock_gateway.embed.return_value = [[0.3, 0.5, 0.2, 0.7]]
-
-        engine = RetrievalEngine(populated_db, gateway=mock_gateway)
-        query = RetrievalQuery(query_text="confidential information", method="dense", top_k=2)
-        results = engine.retrieve(query)
-        assert len(results) <= 2
-        assert all(r.method == "dense" for r in results)
-
-    def test_retrieve_dense_fallback_no_gateway(self, populated_db: str) -> None:
-        engine = RetrievalEngine(populated_db, gateway=None)
-        query = RetrievalQuery(query_text="confidential", method="dense", top_k=2)
-        results = engine.retrieve(query)
-        # Falls back to sparse
-        assert all(r.method == "sparse" for r in results)
-
-    def test_retrieve_hybrid_returns_results(self, populated_db: str) -> None:
-        mock_gateway = MagicMock()
-        mock_gateway.embed.return_value = [[0.3, 0.5, 0.2, 0.7]]
-
-        engine = RetrievalEngine(populated_db, gateway=mock_gateway)
-        query = RetrievalQuery(query_text="confidential information", method="hybrid", top_k=3)
-        results = engine.retrieve(query)
-        assert len(results) <= 3
-        assert all(r.method == "hybrid" for r in results)
-        # Check we have rrf_score populated
-        if results:
-            assert results[0].rrf_score is not None
-
-    def test_retrieve_hybrid_fallback_no_gateway(self, populated_db: str) -> None:
-        """Hybrid without gateway falls back to BM25-only."""
-        engine = RetrievalEngine(populated_db, gateway=None)
-        query = RetrievalQuery(query_text="confidential", method="hybrid", top_k=2)
-        results = engine.retrieve(query)
-        # Should still return results using BM25 only
-        assert len(results) <= 2
-
     def test_corrupt_db_raises(self, db_path: str) -> None:
         """A DB with status 'corrupt' raises IndexCorruptError."""
         conn = sqlite3.connect(db_path)
@@ -301,8 +218,6 @@ class TestRetrievalEngine:
                 index_timestamp TEXT,
                 chunk_count INTEGER NOT NULL DEFAULT 0,
                 method TEXT NOT NULL DEFAULT 'sparse',
-                embedding_model TEXT,
-                embedding_dim INTEGER,
                 db_size_bytes INTEGER DEFAULT 0
             )
         """)
@@ -331,55 +246,13 @@ class TestRetrievalEngine:
 
     def test_sparse_calls_bm25_only(self, populated_db: str) -> None:
         """sparse method only returns BM25 results, no dense/embedding calls."""
-        engine = RetrievalEngine(populated_db, gateway=None)
+        engine = RetrievalEngine(populated_db)
         query = RetrievalQuery(query_text="confidential", method="sparse", top_k=3)
         results = engine.retrieve(query)
         assert len(results) <= 3
         assert all(r.method == "sparse" for r in results)
         assert all(r.rank_sparse is not None for r in results)
-        assert all(r.rank_dense is None for r in results)
-        assert all(r.rrf_score is None for r in results)
         assert all(r.rerank_score is None for r in results)
-
-    def test_dense_calls_embedding_only_with_gateway(self, populated_db: str) -> None:
-        """dense method returns embedding-similarity results when gateway is available."""
-        mock_gateway = MagicMock()
-        mock_gateway.embed.return_value = [[0.3, 0.5, 0.2, 0.7]]
-
-        engine = RetrievalEngine(populated_db, gateway=mock_gateway)
-        query = RetrievalQuery(query_text="confidential", method="dense", top_k=2)
-        results = engine.retrieve(query)
-        assert len(results) <= 2
-        assert all(r.method == "dense" for r in results)
-        assert all(r.rank_dense is not None for r in results)
-        assert all(r.rank_sparse is None for r in results)
-
-    def test_hybrid_calls_both_sparse_and_dense(self, populated_db: str) -> None:
-        """hybrid method returns fused results with both ranks populated."""
-        mock_gateway = MagicMock()
-        mock_gateway.embed.return_value = [[0.3, 0.5, 0.2, 0.7]]
-
-        engine = RetrievalEngine(populated_db, gateway=mock_gateway)
-        query = RetrievalQuery(query_text="confidential", method="hybrid", top_k=3)
-        results = engine.retrieve(query)
-        assert len(results) <= 3
-        assert all(r.method == "hybrid" for r in results)
-        assert all(r.rrf_score is not None for r in results)
-        # At least one result should have a sparse rank
-        assert any(r.rank_sparse is not None for r in results)
-
-    def test_dense_fallback_to_sparse_when_gateway_fails(self, populated_db: str) -> None:
-        """dense method falls back to BM25 when embedding computation fails."""
-        mock_gateway = MagicMock()
-        mock_gateway.embed.side_effect = RuntimeError("model unavailable")
-
-        engine = RetrievalEngine(populated_db, gateway=mock_gateway)
-        query = RetrievalQuery(query_text="confidential", method="dense", top_k=2)
-        results = engine.retrieve(query)
-        assert len(results) <= 2
-        assert all(r.method == "sparse" for r in results), (
-            "Should fall back to sparse when embedding fails"
-        )
 
     # ── T035: Hierarchy preservation ──
 
@@ -416,32 +289,6 @@ class TestRetrievalEngine:
             assert c2.hierarchy_chain[0] == "Article 7"
             assert c2.hierarchy_chain[1] == "Section 7.2"
 
-    def test_hierarchy_chain_dense(self, populated_db: str) -> None:
-        """Dense retrieval populates hierarchy_chain."""
-        mock_gateway = MagicMock()
-        mock_gateway.embed.return_value = [[0.3, 0.5, 0.2, 0.7]]
-
-        engine = RetrievalEngine(populated_db, gateway=mock_gateway)
-        query = RetrievalQuery(query_text="confidential", method="dense", top_k=5)
-        results = engine.retrieve(query)
-        assert len(results) > 0
-        for r in results:
-            assert isinstance(r.hierarchy_chain, list)
-            assert len(r.hierarchy_chain) > 0
-
-    def test_hierarchy_chain_hybrid(self, populated_db: str) -> None:
-        """Hybrid retrieval populates hierarchy_chain."""
-        mock_gateway = MagicMock()
-        mock_gateway.embed.return_value = [[0.3, 0.5, 0.2, 0.7]]
-
-        engine = RetrievalEngine(populated_db, gateway=mock_gateway)
-        query = RetrievalQuery(query_text="confidential", method="hybrid", top_k=5)
-        results = engine.retrieve(query)
-        assert len(results) > 0
-        for r in results:
-            assert isinstance(r.hierarchy_chain, list)
-            assert len(r.hierarchy_chain) > 0
-
 
 class TestRerankCandidatePool:
     """B2: a rerank query must materialize rerank_depth candidates, a plain one must not."""
@@ -455,30 +302,6 @@ class TestRerankCandidatePool:
         results = engine.retrieve(query)
 
         assert {r.chunk_id for r in results} == {"c1", "c3", "c4", "c5"}
-
-    def test_dense_pool_reaches_rerank_depth(self, pooled_db: str) -> None:
-        mock_gateway = MagicMock()
-        mock_gateway.embed.return_value = [[0.3, 0.5, 0.2, 0.7]]
-        engine = RetrievalEngine(pooled_db, gateway=mock_gateway)
-        query = RetrievalQuery(
-            query_text="confidential", method="dense", top_k=1, rerank=True, rerank_depth=5
-        )
-
-        results = engine.retrieve(query)
-
-        assert len(results) == 5
-
-    def test_hybrid_pool_reaches_rerank_depth(self, pooled_db: str) -> None:
-        mock_gateway = MagicMock()
-        mock_gateway.embed.return_value = [[0.3, 0.5, 0.2, 0.7]]
-        engine = RetrievalEngine(pooled_db, gateway=mock_gateway)
-        query = RetrievalQuery(
-            query_text="confidential", method="hybrid", top_k=1, rerank=True, rerank_depth=5
-        )
-
-        results = engine.retrieve(query)
-
-        assert len(results) == 5
 
     def test_rerank_off_ignores_rerank_depth(self, pooled_db: str) -> None:
         engine = RetrievalEngine(pooled_db)
@@ -598,3 +421,34 @@ class TestOperatorSemantics:
         results = engine.retrieve(query)
 
         assert results == []
+
+
+class TestSparseOnlyEngine:
+    """T1.2: the engine offers keyword search only — no dense/hybrid paths."""
+
+    def test_default_query_returns_sparse_results(self, populated_db: str) -> None:
+        engine = RetrievalEngine(populated_db)
+
+        results = engine.retrieve(RetrievalQuery(query_text="confidential"))
+
+        assert results
+        assert all(r.method == "sparse" for r in results)
+
+    def test_engine_has_no_dense_or_hybrid_helpers(self, populated_db: str) -> None:
+        engine = RetrievalEngine(populated_db)
+
+        assert not hasattr(engine, "_retrieve_dense")
+        assert not hasattr(engine, "_retrieve_hybrid")
+        assert not hasattr(engine, "_search_dense_candidates")
+
+    @pytest.mark.parametrize("method", ["dense", "hybrid"])
+    def test_engine_is_not_offered_a_dense_or_hybrid_method(
+        self, populated_db: str, method: str
+    ) -> None:
+        engine = RetrievalEngine(populated_db)
+
+        with pytest.raises(ValueError, match="method"):
+            RetrievalQuery(query_text="confidential", method=method)
+
+        # the engine still answers a sparse query
+        assert engine.retrieve(RetrievalQuery(query_text="confidential"))

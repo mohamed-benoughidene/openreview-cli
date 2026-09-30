@@ -13,7 +13,6 @@ from openreview_cli.retrieval.errors import IndexCorruptError, MalformedChunkErr
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
-    from openreview_cli.gateway.router import Gateway
     from openreview_cli.retrieval.storage import RetrievalStorage
 
 logger = logging.getLogger(__name__)
@@ -198,37 +197,26 @@ def _index_meta_or_none(storage: RetrievalStorage) -> dict[str, Any] | None:
 def ingest_document(
     chunks: list[dict[str, Any]] | Iterator[dict[str, Any]],
     db_path: str | Path,
-    gateway: Gateway | None = None,
-    method: str = "hybrid",
-    model_id: str | None = None,
     progress_callback: Callable[[int, int], None] | None = None,
     document_id: str | None = None,
 ) -> dict[str, Any]:
-    """Ingest parsed chunks into a retrieval index.
+    """Ingest parsed chunks into a keyword-search (BM25) index.
 
     Args:
         chunks: Iterable of chunk dicts (as loaded from .ndax format).
         db_path: Path to the SQLite database file.
-        gateway: AI Gateway instance for embedding computation.
-        method: "sparse" (BM25 only) or "hybrid" (BM25 + dense embeddings).
-        model_id: Embedding model to use (None = use default "nomic-embed-text").
         progress_callback: Called with (current, total) after each chunk.
+        document_id: Override document id (defaults to per-chunk value).
 
     Returns:
         dict with index metadata (matching IndexMeta fields).
 
     Raises:
-        EmbeddingError: If embedding computation fails for a chunk.
+        MalformedChunkError: If a chunk is not an object or a required key is missing.
     """
-    from openreview_cli.retrieval.dense import (
-        compute_embedding,
-        compute_l2_norm,
-        serialize_embedding,
-    )
     from openreview_cli.retrieval.storage import RetrievalStorage
 
     db_path = Path(db_path)
-    resolved_model = model_id or "nomic-embed-text"
 
     # Clear existing DB if present
     if db_path.exists():
@@ -238,7 +226,7 @@ def ingest_document(
         storage.create_schema()
 
         # ponytail: stream-and-discard — convert to list only for counting,
-        # then process each chunk individually (embed → store → discard)
+        # then process each chunk individually (store → discard)
         chunk_list = list(chunks) if not isinstance(chunks, list) else chunks
         total = len(chunk_list)
 
@@ -253,92 +241,38 @@ def ingest_document(
         # T064: Large document warning
         if total > 5000:
             logger.warning(
-                "Large document (%d chunks). BM25-only recommended for best performance. "
-                "Embedding similarity may take several seconds.",
+                "Large document (%d chunks). BM25-only recommended for best performance.",
                 total,
             )
         storage.conn.execute(
             "INSERT OR REPLACE INTO index_meta "
             "(document_id, document_path, index_version, index_status, chunk_count, method, "
-            "embedding_model, embedding_dim, db_size_bytes, index_timestamp) "
-            "VALUES (?, ?, 1, 'ingesting', ?, ?, ?, NULL, 0, ?)",
+            "db_size_bytes, index_timestamp) "
+            "VALUES (?, ?, 1, 'ingesting', ?, 'sparse', 0, ?)",
             (
                 resolved_doc_id,
                 str(db_path),
                 total,
-                method,
-                resolved_model,
                 datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
             ),
         )
         storage.conn.commit()
-
-        embedding_dim: int | None = None
-        any_embedding_succeeded = False
 
         # ponytail: stream-and-discard — one chunk at a time, no accumulation
         for idx, chunk in enumerate(chunk_list):
             # Write chunk to SQLite (triggers FTS5 auto-insert)
             storage.insert_chunk(chunk)
 
-            # Compute and store embedding for hybrid mode
-            if method == "hybrid" and gateway is not None:
-                try:
-                    vector, dim = compute_embedding(chunk["text"], gateway, resolved_model)
-
-                    # T064: Embedding dimension mismatch check
-                    if embedding_dim is not None and dim != embedding_dim:
-                        logger.warning(
-                            "Embedding model changed; re-indexing document. "
-                            "(old dim=%d, new dim=%d)",
-                            embedding_dim,
-                            dim,
-                        )
-                        # Re-ingest will happen on next call — clear and retry
-                        storage.conn.execute("DELETE FROM chunk_embeddings")
-                        storage.conn.commit()
-                        break
-
-                    embedding_dim = dim
-                    norm = compute_l2_norm(vector)
-                    blob = serialize_embedding(vector)
-                    storage.insert_embedding(chunk["chunk_id"], blob, resolved_model, dim, norm)
-                    any_embedding_succeeded = True
-                except Exception as exc:
-                    logger.warning("Embedding failed for chunk %s: %s", chunk["chunk_id"], exc)
-                    # Continue with sparse-only for this chunk
-
             if progress_callback is not None:
                 progress_callback(idx + 1, total)
 
         # Update index status to indexed
-        final_method = (
-            "hybrid"
-            if (method == "hybrid" and gateway is not None and any_embedding_succeeded)
-            else "sparse"
-        )
         db_size = db_path.stat().st_size if db_path.exists() else 0
-
-        if embedding_dim is None:
-            storage.conn.execute(
-                "UPDATE index_meta SET index_status='indexed', method=?, embedding_model=NULL, "
-                "embedding_dim=NULL, db_size_bytes=?, "
-                "index_timestamp=?",
-                (final_method, db_size, datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")),
-            )
-        else:
-            storage.conn.execute(
-                "UPDATE index_meta SET index_status='indexed', method=?, embedding_model=?, "
-                "embedding_dim=?, db_size_bytes=?, "
-                "index_timestamp=?",
-                (
-                    final_method,
-                    resolved_model,
-                    embedding_dim,
-                    db_size,
-                    datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                ),
-            )
+        storage.conn.execute(
+            "UPDATE index_meta SET index_status='indexed', method='sparse', db_size_bytes=?, "
+            "index_timestamp=?",
+            (db_size, datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")),
+        )
         storage.conn.commit()
 
         # T062: Record as most recently indexed document
@@ -351,9 +285,7 @@ def ingest_document(
                 "document_id": resolved_doc_id,
                 "document_path": str(db_path),
                 "chunk_count": total,
-                "method": final_method,
-                "embedding_model": resolved_model if embedding_dim else None,
-                "embedding_dimension": embedding_dim,
+                "method": "sparse",
                 "index_status": "indexed",
                 "db_size_bytes": db_size,
                 "index_timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -365,9 +297,6 @@ def ingest_document(
 def ingest_from_file(
     file_path: str | Path,
     db_path: str | Path,
-    gateway: Gateway | None = None,
-    method: str = "hybrid",
-    model_id: str | None = None,
     progress_callback: Callable[[int, int], None] | None = None,
     document_id: str | None = None,
 ) -> dict[str, Any]:
@@ -376,9 +305,6 @@ def ingest_from_file(
     Args:
         file_path: Path to a .ndax JSON file with chunk data.
         db_path: Path to the SQLite database file.
-        gateway: AI Gateway instance for embedding computation.
-        method: "sparse" or "hybrid".
-        model_id: Embedding model override.
         progress_callback: Progress callback.
         document_id: Override document id (defaults to per-chunk value).
 
@@ -392,9 +318,6 @@ def ingest_from_file(
     return ingest_document(
         chunks,
         db_path,
-        gateway=gateway,
-        method=method,
-        model_id=model_id,
         progress_callback=progress_callback,
         document_id=document_id,
     )

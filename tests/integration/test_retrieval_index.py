@@ -43,7 +43,7 @@ def indexed_env(tmp_path: Path) -> tuple[Path, Path, str]:
     db_dir.mkdir(parents=True, exist_ok=True)
     db_path = db_dir / f"{doc_hash}.db"
 
-    ingest_document(chunks, str(db_path), gateway=None, method="sparse")
+    ingest_document(chunks, str(db_path))
     return db_dir, fixture_copy, doc_hash
 
 
@@ -69,8 +69,8 @@ class TestIndexStatus:
         assert "12" in output or "Chunks:" in output
         # Should show status
         assert "indexed" in output.lower() or "Indexed" in output
-        # Should show method
-        assert "sparse" in output.lower() or "Sparse" in output or "none" in output.lower()
+        # The retrieval method is no longer surfaced as per-document data
+        assert "Method:" not in output
 
     def test_index_status_error_no_index(self, runner: CliRunner, tmp_path: Path) -> None:
         """index-status prints error when no index exists."""
@@ -110,7 +110,7 @@ class TestIndexStatus:
         db_dir.mkdir(parents=True, exist_ok=True)
         db_path = db_dir / f"{doc_id}.db"
 
-        ingest_document(chunks, str(db_path), gateway=None, method="sparse")
+        ingest_document(chunks, str(db_path))
 
         result = runner.invoke(
             app,
@@ -122,7 +122,9 @@ class TestIndexStatus:
         # Check for metadata fields in human-readable output
         assert "Chunks:" in output or "chunks" in output.lower()
         assert "Status:" in output or "status" in output.lower()
-        assert "Method:" in output or "method" in output.lower()
+        # Neither the retrieval method nor an embedding model is rendered any more
+        assert "Method:" not in output
+        assert "embedding" not in output.lower()
 
 
 class TestIndexClear:
@@ -201,6 +203,6 @@ class TestIndexClear:
         # Re-ingest (via direct call since CLI ingest reads ndax data)
         with open(fixture_copy) as f:
             chunks: list[dict[str, Any]] = json_lib.load(f)
-        meta = ingest_document(chunks, str(db_path), gateway=None, method="sparse")
+        meta = ingest_document(chunks, str(db_path))
         assert meta["index_status"] == "indexed"
         assert db_path.exists()

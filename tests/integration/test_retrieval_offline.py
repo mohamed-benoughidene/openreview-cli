@@ -5,7 +5,6 @@ from __future__ import annotations
 import json as json_lib
 from pathlib import Path
 from typing import Any, cast
-from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
@@ -57,25 +56,21 @@ def indexed_db(tmp_path: Path) -> Path:
     ingest_document(
         chunks,
         str(index_db),
-        gateway=None,
-        method="sparse",
     )
     return index_db
 
 
 class TestOfflineIntegration:
-    """T048: Sparse-only offline mode integration tests."""
+    """T048: keyword-only offline mode integration tests."""
 
     def test_sparse_retrieve_works_offline(self, runner: CliRunner, indexed_db: Path) -> None:
-        """`openreview retrieve --method sparse` works without gateway."""
+        """`openreview retrieve` works without a gateway."""
         result = runner.invoke(
             app,
             [
                 "retrieve",
                 "confidentiality",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--top-k",
                 "3",
                 "--format",
@@ -88,66 +83,6 @@ class TestOfflineIntegration:
         data = _extract_json_from_output(result.output)
         assert data["method"] == "sparse"
         assert len(data["results"]) > 0
-
-    @patch("openreview_cli.gateway.router.Gateway", side_effect=Exception("no auth"))
-    def test_dense_offline_fallback_notice(
-        self,
-        _mock_gateway_class: MagicMock,
-        runner: CliRunner,
-        indexed_db: Path,
-    ) -> None:
-        """Dense retrieval without gateway falls back to BM25 and shows notice."""
-        result = runner.invoke(
-            app,
-            [
-                "retrieve",
-                "confidentiality",
-                str(FIXTURE_PATH),
-                "--method",
-                "dense",
-                "--top-k",
-                "3",
-                "--db-dir",
-                str(indexed_db.parent),
-            ],
-        )
-        assert result.exit_code == 0, f"Exit {result.exit_code}: {result.output[:200]}"
-        # Should contain fallback notice on stderr
-        assert (
-            "Dense retrieval unavailable" in result.output or "unavailable" in result.output.lower()
-        )
-
-    @patch("openreview_cli.gateway.router.Gateway")
-    def test_hybrid_offline_fallback_notice(
-        self,
-        mock_gateway_class: MagicMock,
-        runner: CliRunner,
-        indexed_db: Path,
-    ) -> None:
-        """Hybrid retrieval with offline gateway falls back and shows notice."""
-        mock_gw = MagicMock()
-        mock_gw.embed.side_effect = ConnectionError("Connection refused")
-        mock_gateway_class.return_value = mock_gw
-
-        result = runner.invoke(
-            app,
-            [
-                "retrieve",
-                "confidentiality",
-                str(FIXTURE_PATH),
-                "--method",
-                "hybrid",
-                "--top-k",
-                "3",
-                "--db-dir",
-                str(indexed_db.parent),
-            ],
-        )
-        assert result.exit_code == 0, f"Exit {result.exit_code}: {result.output[:200]}"
-        # Notice should be present (fallback message)
-        assert (
-            "Dense retrieval unavailable" in result.output or "unavailable" in result.output.lower()
-        )
 
 
 class TestOfflineE2E:
@@ -169,11 +104,8 @@ class TestOfflineE2E:
         meta = ingest_document(
             chunks,
             str(index_db),
-            gateway=None,
-            method="sparse",
         )
         assert meta["method"] == "sparse"
-        assert meta["embedding_model"] is None
 
         # Now retrieve using the CLI — same file, same db-dir, auto-resolved
         result = runner.invoke(
@@ -182,8 +114,6 @@ class TestOfflineE2E:
                 "retrieve",
                 "confidentiality",
                 str(FIXTURE_PATH),
-                "--method",
-                "sparse",
                 "--top-k",
                 "3",
                 "--format",
@@ -197,8 +127,8 @@ class TestOfflineE2E:
         assert len(data["results"]) > 0
         assert data["method"] == "sparse"
 
-    def test_sparse_ingest_skips_embedding(self, tmp_path: Path) -> None:
-        """Sparse-only ingest should not create chunk_embeddings table data."""
+    def test_sparse_ingest_creates_no_embedding_table(self, tmp_path: Path) -> None:
+        """Keyword ingest must not create any embedding storage."""
         with open(FIXTURE_PATH) as f:
             chunks: list[dict[str, Any]] = json_lib.load(f)
 
@@ -206,16 +136,16 @@ class TestOfflineE2E:
         ingest_document(
             chunks,
             str(db_path),
-            gateway=None,
-            method="sparse",
         )
 
-        # Verify no embeddings were stored
+        # Verify no embedding storage was created
         import sqlite3
 
         conn = sqlite3.connect(str(db_path))
         try:
-            count = conn.execute("SELECT COUNT(*) FROM chunk_embeddings").fetchone()[0]
-            assert count == 0, "Sparse ingest should not store embeddings"
+            rows = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='chunk_embeddings'"
+            ).fetchall()
+            assert rows == [], "Keyword ingest must not create chunk_embeddings"
         finally:
             conn.close()

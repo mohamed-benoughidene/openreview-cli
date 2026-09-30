@@ -78,7 +78,7 @@ and once in the part-3 edge-case pass. See
 [docs/benchmarks/results/pii-throughput.json](benchmarks/results/pii-throughput.json) for the
 file-level detail.
 
-Not measured: dense-retrieval/embedding throughput (needs a local Ollama server), graph clustering (needs a one-time legal-bert download).
+Not measured: graph clustering (needs a one-time legal-bert download).
 
 ## Pipeline-wiring recall (mocked)
 
@@ -266,7 +266,6 @@ Last verified: 2026-09-24 @ 882568c (receipt: docs/benchmarks/results/accuracy-s
 | Metric | Why | How to measure |
 |---|---|---|
 | Full LLM review latency + cost per review | needs API keys | `openreview gateway costs` (SQLite `cost_logs`) + `scripts/benchmark_review_accuracy.py` |
-| Dense-retrieval / embedding throughput | needs local Ollama | run the retrieval path with `nomic-embed-text` |
 | Graph clustering | needs legal-bert download | `openreview graph` with `--cluster-clauses` |
 | Reranker effect | unmeasured — disabled by default | opt-in `--rerank` on a labeled retrieval corpus (a 26-query pilot was inconclusive) |
 | MAUD deal-point accuracy | no bundled playbook's category taxonomy matches MAUD's deal-point labels: the nearest mode, `buycheck`, scores against the `asset-purchase-v1` playbook (purchase price, included/excluded assets, liabilities, reps and warranties, closing conditions), not MAUD's merger-agreement deal points | map the deal points onto a playbook whose categories match, then run `openreview benchmark baseline --modes=buycheck` (or a new M&A mode) |

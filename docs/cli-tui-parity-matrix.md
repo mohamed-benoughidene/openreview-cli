@@ -2,8 +2,8 @@
 
 Generated from live source by `scripts/parity/build_parity_matrix.py`. Every row cites a source file and a line number.
 
-- Commit: `632cfb2`
-- Generated at: 2026-09-28T06:03:45+00:00
+- Commit: `d89ba04`
+- Generated at: 2026-09-30T11:10:43+00:00
 - CLI framework: Typer 0.26.7
 - TUI framework: Textual 8.2.8
 - Python: 3.12.3
@@ -20,7 +20,7 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 
 | Item | Count |
 |---|---|
-| CLI inventory rows | 556 |
+| CLI inventory rows | 553 |
 | TUI inventory rows | 127 |
 | Shared call argument rows | 89 |
 | Compared shared call argument pairs | 44 |
@@ -28,9 +28,9 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | Parity join rows | 255 |
 | Needs human confirmation | 32 |
 | Hidden single-key bindings | 140 |
-| Unmatched CLI items | 89 |
+| Unmatched CLI items | 86 |
 | Unmatched TUI items | 51 |
-| Semantic collisions | 20 |
+| Semantic collisions | 19 |
 
 ## Table A: CLI inventory
 
@@ -50,320 +50,317 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | --summary | option | chunk | --summary | False | src/openreview_cli/app.py:1872 |
 | ingest | command |  |  |  | src/openreview_cli/app.py:2171 |
 | file | argument | ingest | file | REQUIRED | src/openreview_cli/app.py:2173 |
-| --method | option | ingest | --method | hybrid | src/openreview_cli/app.py:2174 |
-| --model | option | ingest | --model | None | src/openreview_cli/app.py:2175 |
-| --db-dir | option | ingest | --db-dir | None | src/openreview_cli/app.py:2176 |
-| retrieve | command |  |  |  | src/openreview_cli/app.py:2307 |
-| query | argument | retrieve | query | REQUIRED | src/openreview_cli/app.py:2309 |
-| file | argument | retrieve | file | None | src/openreview_cli/app.py:2311 |
-| --method | option | retrieve | --method | None | src/openreview_cli/app.py:2314 |
-| --top-k | option | retrieve | --top-k | None | src/openreview_cli/app.py:2316 |
-| --rerank | option | retrieve | --rerank | False | src/openreview_cli/app.py:2318 |
-| --rerank-depth | option | retrieve | --rerank-depth | None | src/openreview_cli/app.py:2321 |
-| --force-rerank | option | retrieve | --force-rerank | False | src/openreview_cli/app.py:2324 |
-| --format | option | retrieve | --format | terminal | src/openreview_cli/app.py:2326 |
-| --db-dir | option | retrieve | --db-dir | None | src/openreview_cli/app.py:2327 |
-| --no-header | option | retrieve | --no-header | False | src/openreview_cli/app.py:2329 |
-| index-status | command |  |  |  | src/openreview_cli/app.py:2524 |
-| file | argument | index-status | file | None | src/openreview_cli/app.py:2526 |
-| --db-dir | option | index-status | --db-dir | None | src/openreview_cli/app.py:2527 |
-| index-clear | command |  |  |  | src/openreview_cli/app.py:2586 |
-| file | argument | index-clear | file | None | src/openreview_cli/app.py:2588 |
-| --all | option | index-clear | --all | False | src/openreview_cli/app.py:2590 |
-| --db-dir | option | index-clear | --db-dir | None | src/openreview_cli/app.py:2592 |
-| negotiate | command |  |  |  | src/openreview_cli/app.py:3071 |
-| doc_path | argument | negotiate | doc_path | REQUIRED | src/openreview_cli/app.py:3073 |
-| --playbook-path | option | negotiate | --playbook-path | None | src/openreview_cli/app.py:3075 |
-| --solver | option | negotiate | --solver | qre | src/openreview_cli/app.py:3079 |
-| --rationality | option | negotiate | --rationality | 1.0 | src/openreview_cli/app.py:3084 |
-| --depth | option | negotiate | --depth | 2 | src/openreview_cli/app.py:3089 |
-| --weights | option | negotiate | --weights | None | src/openreview_cli/app.py:3094 |
-| --confidence-threshold | option | negotiate | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3101 |
-| --verbose | option | negotiate | --verbose | False | src/openreview_cli/app.py:3105 |
-| --output | option | negotiate | --output | None | src/openreview_cli/app.py:3107 |
-| --format | option | negotiate | --format | table | src/openreview_cli/app.py:3109 |
-| export | command |  |  |  | src/openreview_cli/app.py:3278 |
-| --batch-dir | option | export | --batch-dir | None | src/openreview_cli/app.py:3282 |
-| --format | option | export | --format | md | src/openreview_cli/app.py:3285 |
-| --output-dir | option | export | --output-dir | review_results | src/openreview_cli/app.py:3287 |
-| --mode | option | export | --mode | precheck | src/openreview_cli/app.py:3289 |
-| --template | option | export | --template | None | src/openreview_cli/app.py:3292 |
-| licensecheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | licensecheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | licensecheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | licensecheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | licensecheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | licensecheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | licensecheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | licensecheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | licensecheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | licensecheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | licensecheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | licensecheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| leasecheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | leasecheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | leasecheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | leasecheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | leasecheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | leasecheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | leasecheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | leasecheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | leasecheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | leasecheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | leasecheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | leasecheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| privacycheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | privacycheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | privacycheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | privacycheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | privacycheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | privacycheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | privacycheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | privacycheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | privacycheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | privacycheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | privacycheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | privacycheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| privacycheck_v2 | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | privacycheck_v2 | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | privacycheck_v2 | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | privacycheck_v2 | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | privacycheck_v2 | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | privacycheck_v2 | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | privacycheck_v2 | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | privacycheck_v2 | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | privacycheck_v2 | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | privacycheck_v2 | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | privacycheck_v2 | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | privacycheck_v2 | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| dealcheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | dealcheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | dealcheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | dealcheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | dealcheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | dealcheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | dealcheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | dealcheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | dealcheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | dealcheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | dealcheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | dealcheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| hirecheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | hirecheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | hirecheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | hirecheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | hirecheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | hirecheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | hirecheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | hirecheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | hirecheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | hirecheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | hirecheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | hirecheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| indemnitycheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | indemnitycheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | indemnitycheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | indemnitycheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | indemnitycheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | indemnitycheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | indemnitycheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | indemnitycheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | indemnitycheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | indemnitycheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | indemnitycheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | indemnitycheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| consultcheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | consultcheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | consultcheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | consultcheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | consultcheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | consultcheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | consultcheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | consultcheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | consultcheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | consultcheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | consultcheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | consultcheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| workcheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | workcheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | workcheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | workcheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | workcheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | workcheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | workcheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | workcheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | workcheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | workcheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | workcheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | workcheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| loicheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | loicheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | loicheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | loicheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | loicheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | loicheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | loicheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | loicheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | loicheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | loicheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | loicheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | loicheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| subcheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | subcheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | subcheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | subcheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | subcheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | subcheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | subcheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | subcheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | subcheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | subcheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | subcheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | subcheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| settlementcheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | settlementcheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | settlementcheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | settlementcheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | settlementcheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | settlementcheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | settlementcheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | settlementcheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | settlementcheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | settlementcheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | settlementcheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | settlementcheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| settlementcheck_v2 | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | settlementcheck_v2 | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | settlementcheck_v2 | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | settlementcheck_v2 | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | settlementcheck_v2 | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | settlementcheck_v2 | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | settlementcheck_v2 | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | settlementcheck_v2 | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | settlementcheck_v2 | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | settlementcheck_v2 | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | settlementcheck_v2 | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | settlementcheck_v2 | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| assetcheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | assetcheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | assetcheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | assetcheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | assetcheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | assetcheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | assetcheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | assetcheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | assetcheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | assetcheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | assetcheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | assetcheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| buycheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | buycheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | buycheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | buycheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | buycheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | buycheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | buycheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | buycheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | buycheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | buycheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | buycheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | buycheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| engagecheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | engagecheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | engagecheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | engagecheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | engagecheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | engagecheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | engagecheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | engagecheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | engagecheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | engagecheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | engagecheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | engagecheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| guaranteecheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | guaranteecheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | guaranteecheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | guaranteecheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | guaranteecheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | guaranteecheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | guaranteecheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | guaranteecheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | guaranteecheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | guaranteecheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | guaranteecheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | guaranteecheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| loancheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | loancheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | loancheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | loancheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | loancheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | loancheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | loancheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | loancheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | loancheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | loancheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | loancheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | loancheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| franchisecheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | franchisecheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | franchisecheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | franchisecheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | franchisecheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | franchisecheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | franchisecheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | franchisecheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | franchisecheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | franchisecheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | franchisecheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | franchisecheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| opcheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | opcheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | opcheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | opcheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | opcheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | opcheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | opcheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | opcheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | opcheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | opcheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | opcheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | opcheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| partnercheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | partnercheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | partnercheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | partnercheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | partnercheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | partnercheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | partnercheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | partnercheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | partnercheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | partnercheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | partnercheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | partnercheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| sponsorcheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | sponsorcheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | sponsorcheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | sponsorcheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | sponsorcheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | sponsorcheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | sponsorcheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | sponsorcheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | sponsorcheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | sponsorcheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | sponsorcheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | sponsorcheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
-| distrocheck | command |  |  |  | src/openreview_cli/app.py:3363 |
-| path | argument | distrocheck | path | REQUIRED | src/openreview_cli/app.py:3365 |
-| --allow-partial-pii | option | distrocheck | --allow-partial-pii | False | src/openreview_cli/app.py:3368 |
-| --no-pii | option | distrocheck | --no-pii | False | src/openreview_cli/app.py:3371 |
-| --playbook | option | distrocheck | --playbook | None | src/openreview_cli/app.py:3373 |
-| --format | option | distrocheck | --format | text | src/openreview_cli/app.py:3375 |
-| --output | option | distrocheck | --output | None | src/openreview_cli/app.py:3377 |
-| --memo-format | option | distrocheck | --memo-format | [] | src/openreview_cli/app.py:3381 |
-| --output-dir | option | distrocheck | --output-dir | None | src/openreview_cli/app.py:3386 |
-| --verbose | option | distrocheck | --verbose | False | src/openreview_cli/app.py:3389 |
-| --confidence-threshold | option | distrocheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3392 |
-| --mode-threshold | option | distrocheck | --mode-threshold | [] | src/openreview_cli/app.py:3399 |
+| --db-dir | option | ingest | --db-dir | None | src/openreview_cli/app.py:2174 |
+| retrieve | command |  |  |  | src/openreview_cli/app.py:2289 |
+| query | argument | retrieve | query | REQUIRED | src/openreview_cli/app.py:2291 |
+| file | argument | retrieve | file | None | src/openreview_cli/app.py:2293 |
+| --top-k | option | retrieve | --top-k | None | src/openreview_cli/app.py:2295 |
+| --rerank | option | retrieve | --rerank | False | src/openreview_cli/app.py:2297 |
+| --rerank-depth | option | retrieve | --rerank-depth | None | src/openreview_cli/app.py:2300 |
+| --force-rerank | option | retrieve | --force-rerank | False | src/openreview_cli/app.py:2303 |
+| --format | option | retrieve | --format | terminal | src/openreview_cli/app.py:2305 |
+| --db-dir | option | retrieve | --db-dir | None | src/openreview_cli/app.py:2306 |
+| --no-header | option | retrieve | --no-header | False | src/openreview_cli/app.py:2308 |
+| index-status | command |  |  |  | src/openreview_cli/app.py:2495 |
+| file | argument | index-status | file | None | src/openreview_cli/app.py:2497 |
+| --db-dir | option | index-status | --db-dir | None | src/openreview_cli/app.py:2498 |
+| index-clear | command |  |  |  | src/openreview_cli/app.py:2550 |
+| file | argument | index-clear | file | None | src/openreview_cli/app.py:2552 |
+| --all | option | index-clear | --all | False | src/openreview_cli/app.py:2554 |
+| --db-dir | option | index-clear | --db-dir | None | src/openreview_cli/app.py:2556 |
+| negotiate | command |  |  |  | src/openreview_cli/app.py:3035 |
+| doc_path | argument | negotiate | doc_path | REQUIRED | src/openreview_cli/app.py:3037 |
+| --playbook-path | option | negotiate | --playbook-path | None | src/openreview_cli/app.py:3039 |
+| --solver | option | negotiate | --solver | qre | src/openreview_cli/app.py:3043 |
+| --rationality | option | negotiate | --rationality | 1.0 | src/openreview_cli/app.py:3048 |
+| --depth | option | negotiate | --depth | 2 | src/openreview_cli/app.py:3053 |
+| --weights | option | negotiate | --weights | None | src/openreview_cli/app.py:3058 |
+| --confidence-threshold | option | negotiate | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3065 |
+| --verbose | option | negotiate | --verbose | False | src/openreview_cli/app.py:3069 |
+| --output | option | negotiate | --output | None | src/openreview_cli/app.py:3071 |
+| --format | option | negotiate | --format | table | src/openreview_cli/app.py:3073 |
+| export | command |  |  |  | src/openreview_cli/app.py:3242 |
+| --batch-dir | option | export | --batch-dir | None | src/openreview_cli/app.py:3246 |
+| --format | option | export | --format | md | src/openreview_cli/app.py:3249 |
+| --output-dir | option | export | --output-dir | review_results | src/openreview_cli/app.py:3251 |
+| --mode | option | export | --mode | precheck | src/openreview_cli/app.py:3253 |
+| --template | option | export | --template | None | src/openreview_cli/app.py:3256 |
+| licensecheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | licensecheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | licensecheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | licensecheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | licensecheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | licensecheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | licensecheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | licensecheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | licensecheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | licensecheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | licensecheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | licensecheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| leasecheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | leasecheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | leasecheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | leasecheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | leasecheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | leasecheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | leasecheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | leasecheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | leasecheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | leasecheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | leasecheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | leasecheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| privacycheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | privacycheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | privacycheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | privacycheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | privacycheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | privacycheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | privacycheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | privacycheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | privacycheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | privacycheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | privacycheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | privacycheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| privacycheck_v2 | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | privacycheck_v2 | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | privacycheck_v2 | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | privacycheck_v2 | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | privacycheck_v2 | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | privacycheck_v2 | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | privacycheck_v2 | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | privacycheck_v2 | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | privacycheck_v2 | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | privacycheck_v2 | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | privacycheck_v2 | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | privacycheck_v2 | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| dealcheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | dealcheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | dealcheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | dealcheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | dealcheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | dealcheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | dealcheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | dealcheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | dealcheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | dealcheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | dealcheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | dealcheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| hirecheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | hirecheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | hirecheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | hirecheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | hirecheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | hirecheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | hirecheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | hirecheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | hirecheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | hirecheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | hirecheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | hirecheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| indemnitycheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | indemnitycheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | indemnitycheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | indemnitycheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | indemnitycheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | indemnitycheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | indemnitycheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | indemnitycheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | indemnitycheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | indemnitycheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | indemnitycheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | indemnitycheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| consultcheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | consultcheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | consultcheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | consultcheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | consultcheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | consultcheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | consultcheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | consultcheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | consultcheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | consultcheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | consultcheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | consultcheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| workcheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | workcheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | workcheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | workcheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | workcheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | workcheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | workcheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | workcheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | workcheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | workcheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | workcheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | workcheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| loicheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | loicheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | loicheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | loicheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | loicheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | loicheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | loicheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | loicheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | loicheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | loicheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | loicheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | loicheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| subcheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | subcheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | subcheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | subcheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | subcheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | subcheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | subcheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | subcheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | subcheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | subcheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | subcheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | subcheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| settlementcheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | settlementcheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | settlementcheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | settlementcheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | settlementcheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | settlementcheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | settlementcheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | settlementcheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | settlementcheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | settlementcheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | settlementcheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | settlementcheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| settlementcheck_v2 | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | settlementcheck_v2 | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | settlementcheck_v2 | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | settlementcheck_v2 | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | settlementcheck_v2 | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | settlementcheck_v2 | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | settlementcheck_v2 | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | settlementcheck_v2 | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | settlementcheck_v2 | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | settlementcheck_v2 | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | settlementcheck_v2 | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | settlementcheck_v2 | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| assetcheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | assetcheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | assetcheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | assetcheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | assetcheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | assetcheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | assetcheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | assetcheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | assetcheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | assetcheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | assetcheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | assetcheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| buycheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | buycheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | buycheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | buycheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | buycheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | buycheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | buycheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | buycheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | buycheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | buycheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | buycheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | buycheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| engagecheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | engagecheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | engagecheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | engagecheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | engagecheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | engagecheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | engagecheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | engagecheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | engagecheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | engagecheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | engagecheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | engagecheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| guaranteecheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | guaranteecheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | guaranteecheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | guaranteecheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | guaranteecheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | guaranteecheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | guaranteecheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | guaranteecheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | guaranteecheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | guaranteecheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | guaranteecheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | guaranteecheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| loancheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | loancheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | loancheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | loancheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | loancheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | loancheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | loancheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | loancheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | loancheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | loancheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | loancheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | loancheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| franchisecheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | franchisecheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | franchisecheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | franchisecheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | franchisecheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | franchisecheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | franchisecheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | franchisecheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | franchisecheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | franchisecheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | franchisecheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | franchisecheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| opcheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | opcheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | opcheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | opcheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | opcheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | opcheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | opcheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | opcheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | opcheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | opcheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | opcheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | opcheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| partnercheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | partnercheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | partnercheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | partnercheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | partnercheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | partnercheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | partnercheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | partnercheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | partnercheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | partnercheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | partnercheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | partnercheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| sponsorcheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | sponsorcheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | sponsorcheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | sponsorcheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | sponsorcheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | sponsorcheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | sponsorcheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | sponsorcheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | sponsorcheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | sponsorcheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | sponsorcheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | sponsorcheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
+| distrocheck | command |  |  |  | src/openreview_cli/app.py:3327 |
+| path | argument | distrocheck | path | REQUIRED | src/openreview_cli/app.py:3329 |
+| --allow-partial-pii | option | distrocheck | --allow-partial-pii | False | src/openreview_cli/app.py:3332 |
+| --no-pii | option | distrocheck | --no-pii | False | src/openreview_cli/app.py:3335 |
+| --playbook | option | distrocheck | --playbook | None | src/openreview_cli/app.py:3337 |
+| --format | option | distrocheck | --format | text | src/openreview_cli/app.py:3339 |
+| --output | option | distrocheck | --output | None | src/openreview_cli/app.py:3341 |
+| --memo-format | option | distrocheck | --memo-format | [] | src/openreview_cli/app.py:3345 |
+| --output-dir | option | distrocheck | --output-dir | None | src/openreview_cli/app.py:3350 |
+| --verbose | option | distrocheck | --verbose | False | src/openreview_cli/app.py:3353 |
+| --confidence-threshold | option | distrocheck | --confidence-threshold, -ct | 0.7 | src/openreview_cli/app.py:3356 |
+| --mode-threshold | option | distrocheck | --mode-threshold | [] | src/openreview_cli/app.py:3363 |
 | client | group |  |  |  | src/openreview_cli/app.py:466 |
 | client add | command | client |  |  | src/openreview_cli/app.py:473 |
 | id | argument | client add | id | REQUIRED | src/openreview_cli/app.py:474 |
@@ -492,34 +489,34 @@ uv run python scripts/parity/build_parity_matrix.py --cli-json draft/parity/cli-
 | --cap-reasoning | option | gateway provider add | --cap-reasoning | False | src/openreview_cli/app.py:1809 |
 | --cap-tool-call | option | gateway provider add | --cap-tool-call | False | src/openreview_cli/app.py:1810 |
 | --context-window | option | gateway provider add | --context-window | None | src/openreview_cli/app.py:1812 |
-| graph | group |  |  |  | src/openreview_cli/app.py:2711 |
-| graph build | command | graph |  |  | src/openreview_cli/app.py:2718 |
-| input_path | argument | graph build | input_path | REQUIRED | src/openreview_cli/app.py:2721 |
-| --output | option | graph build | --output, -o | None | src/openreview_cli/app.py:2726 |
-| --store | option | graph build | --store | False | src/openreview_cli/app.py:2730 |
-| --contract-id | option | graph build | --contract-id | None | src/openreview_cli/app.py:2732 |
-| --db-path | option | graph build | --db-path | None | src/openreview_cli/app.py:2736 |
-| --cluster-clauses | option | graph build | --cluster-clauses | False | src/openreview_cli/app.py:2741 |
-| graph metrics | command | graph |  |  | src/openreview_cli/app.py:2784 |
-| graph_path | argument | graph metrics | graph_path | None | src/openreview_cli/app.py:2787 |
-| --from-db | option | graph metrics | --from-db | False | src/openreview_cli/app.py:2789 |
-| --contract-id | option | graph metrics | --contract-id | None | src/openreview_cli/app.py:2791 |
-| --db-path | option | graph metrics | --db-path | None | src/openreview_cli/app.py:2795 |
-| graph diff | command | graph |  |  | src/openreview_cli/app.py:2844 |
-| file_a | argument | graph diff | file_a | REQUIRED | src/openreview_cli/app.py:2846 |
-| file_b | argument | graph diff | file_b | REQUIRED | src/openreview_cli/app.py:2847 |
-| --json | option | graph diff | --json | False | src/openreview_cli/app.py:2848 |
-| graph health | command | graph |  |  | src/openreview_cli/app.py:2927 |
-| graph_path | argument | graph health | graph_path | None | src/openreview_cli/app.py:2930 |
-| --weights | option | graph health | --weights, -w | None | src/openreview_cli/app.py:2934 |
-| --from-db | option | graph health | --from-db | False | src/openreview_cli/app.py:2942 |
-| --contract-id | option | graph health | --contract-id | None | src/openreview_cli/app.py:2944 |
-| --db-path | option | graph health | --db-path | None | src/openreview_cli/app.py:2948 |
-| graph view | command | graph |  |  | src/openreview_cli/app.py:3013 |
-| graph_path | argument | graph view | graph_path | None | src/openreview_cli/app.py:3016 |
-| --from-db | option | graph view | --from-db | False | src/openreview_cli/app.py:3018 |
-| --contract-id | option | graph view | --contract-id | None | src/openreview_cli/app.py:3020 |
-| --db-path | option | graph view | --db-path | None | src/openreview_cli/app.py:3024 |
+| graph | group |  |  |  | src/openreview_cli/app.py:2675 |
+| graph build | command | graph |  |  | src/openreview_cli/app.py:2682 |
+| input_path | argument | graph build | input_path | REQUIRED | src/openreview_cli/app.py:2685 |
+| --output | option | graph build | --output, -o | None | src/openreview_cli/app.py:2690 |
+| --store | option | graph build | --store | False | src/openreview_cli/app.py:2694 |
+| --contract-id | option | graph build | --contract-id | None | src/openreview_cli/app.py:2696 |
+| --db-path | option | graph build | --db-path | None | src/openreview_cli/app.py:2700 |
+| --cluster-clauses | option | graph build | --cluster-clauses | False | src/openreview_cli/app.py:2705 |
+| graph metrics | command | graph |  |  | src/openreview_cli/app.py:2748 |
+| graph_path | argument | graph metrics | graph_path | None | src/openreview_cli/app.py:2751 |
+| --from-db | option | graph metrics | --from-db | False | src/openreview_cli/app.py:2753 |
+| --contract-id | option | graph metrics | --contract-id | None | src/openreview_cli/app.py:2755 |
+| --db-path | option | graph metrics | --db-path | None | src/openreview_cli/app.py:2759 |
+| graph diff | command | graph |  |  | src/openreview_cli/app.py:2808 |
+| file_a | argument | graph diff | file_a | REQUIRED | src/openreview_cli/app.py:2810 |
+| file_b | argument | graph diff | file_b | REQUIRED | src/openreview_cli/app.py:2811 |
+| --json | option | graph diff | --json | False | src/openreview_cli/app.py:2812 |
+| graph health | command | graph |  |  | src/openreview_cli/app.py:2891 |
+| graph_path | argument | graph health | graph_path | None | src/openreview_cli/app.py:2894 |
+| --weights | option | graph health | --weights, -w | None | src/openreview_cli/app.py:2898 |
+| --from-db | option | graph health | --from-db | False | src/openreview_cli/app.py:2906 |
+| --contract-id | option | graph health | --contract-id | None | src/openreview_cli/app.py:2908 |
+| --db-path | option | graph health | --db-path | None | src/openreview_cli/app.py:2912 |
+| graph view | command | graph |  |  | src/openreview_cli/app.py:2977 |
+| graph_path | argument | graph view | graph_path | None | src/openreview_cli/app.py:2980 |
+| --from-db | option | graph view | --from-db | False | src/openreview_cli/app.py:2982 |
+| --contract-id | option | graph view | --contract-id | None | src/openreview_cli/app.py:2984 |
+| --db-path | option | graph view | --db-path | None | src/openreview_cli/app.py:2988 |
 | benchmark | group |  |  |  | src/openreview_cli/benchmark/cli.py:28 |
 | benchmark run | command | benchmark |  |  | src/openreview_cli/benchmark/cli.py:56 |
 | --datasets | option | benchmark run | --datasets | cuad | src/openreview_cli/benchmark/cli.py:60 |
@@ -733,7 +730,7 @@ Note: `CERTAIN` in this table means only that the CLI item and the TUI item shar
 |---|---|---|---|---|---|---|
 | MISMATCH-ABSENT | n/a | --grounding-mode (precheck review) | src/openreview_cli/app.py:1424 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | strict (CLI src/openreview_cli/app.py:1424) vs NOT PASSED (TUI src/openreview_cli/tui/domain/review.py:51) |
 | MISMATCH-ABSENT | n/a | precheck review (allow_password_prompt) | src/openreview_cli/app.py:1416 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:61 | NOT PASSED (CLI src/openreview_cli/app.py:1416) vs False (TUI src/openreview_cli/tui/domain/review.py:61) |
-| MISMATCH-ABSENT | n/a | product modes (allow_password_prompt) | src/openreview_cli/app.py:3497 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:61 | NOT PASSED (CLI src/openreview_cli/app.py:3497) vs False (TUI src/openreview_cli/tui/domain/review.py:61) |
+| MISMATCH-ABSENT | n/a | product modes (allow_password_prompt) | src/openreview_cli/app.py:3461 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:61 | NOT PASSED (CLI src/openreview_cli/app.py:3461) vs False (TUI src/openreview_cli/tui/domain/review.py:61) |
 | SHARED-CALL | n/a | --align-only (precheck compare) | src/openreview_cli/app.py:2044 | no TUI control for align_only | (none) | none |
 | SHARED-CALL | n/a | --allow-partial-pii (precheck compare) | src/openreview_cli/app.py:2041 | no TUI control for allow_partial_pii | (none) | none |
 | SHARED-CALL | n/a | --allow-partial-pii (precheck review) | src/openreview_cli/app.py:1427 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
@@ -761,32 +758,32 @@ Note: `CERTAIN` in this table means only that the CLI item and the TUI item shar
 | SHARED-CALL | n/a | precheck review (progress_callback) | src/openreview_cli/app.py:1416 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:62 | none |
 | SHARED-CALL | n/a | precheck review (qa_model) | src/openreview_cli/app.py:1421 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:56 | none |
 | SHARED-CALL | n/a | precheck review (session_id) | src/openreview_cli/app.py:1416 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
-| SHARED-CALL | n/a | product modes (allow_partial_pii) | src/openreview_cli/app.py:3507 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
-| SHARED-CALL | n/a | product modes (confidence_threshold) | src/openreview_cli/app.py:3504 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:59 | none |
-| SHARED-CALL | n/a | product modes (extraction_model) | src/openreview_cli/app.py:3500 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:55 | none |
-| SHARED-CALL | n/a | product modes (grounding_mode) | src/openreview_cli/app.py:3497 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
-| SHARED-CALL | n/a | product modes (mode) | src/openreview_cli/app.py:3506 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:60 | none |
-| SHARED-CALL | n/a | product modes (mode_threshold_overrides) | src/openreview_cli/app.py:3505 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
-| SHARED-CALL | n/a | product modes (no_pii) | src/openreview_cli/app.py:3502 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:57 | none |
-| SHARED-CALL | n/a | product modes (paths) | src/openreview_cli/app.py:3498 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:52 | none |
-| SHARED-CALL | n/a | product modes (playbook_id) | src/openreview_cli/app.py:3497 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:54 | none |
-| SHARED-CALL | n/a | product modes (playbook_path) | src/openreview_cli/app.py:3499 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:53 | none |
-| SHARED-CALL | n/a | product modes (progress_callback) | src/openreview_cli/app.py:3497 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:62 | none |
-| SHARED-CALL | n/a | product modes (qa_model) | src/openreview_cli/app.py:3501 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:56 | none |
-| SHARED-CALL | n/a | product modes (session_id) | src/openreview_cli/app.py:3497 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
-| SHARED-CALL | n/a | product modes (verbose) | src/openreview_cli/app.py:3503 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:58 | none |
-| CERTAIN | pii | --allow-partial-pii (option) | src/openreview_cli/app.py:3368 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
+| SHARED-CALL | n/a | product modes (allow_partial_pii) | src/openreview_cli/app.py:3471 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
+| SHARED-CALL | n/a | product modes (confidence_threshold) | src/openreview_cli/app.py:3468 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:59 | none |
+| SHARED-CALL | n/a | product modes (extraction_model) | src/openreview_cli/app.py:3464 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:55 | none |
+| SHARED-CALL | n/a | product modes (grounding_mode) | src/openreview_cli/app.py:3461 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
+| SHARED-CALL | n/a | product modes (mode) | src/openreview_cli/app.py:3470 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:60 | none |
+| SHARED-CALL | n/a | product modes (mode_threshold_overrides) | src/openreview_cli/app.py:3469 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
+| SHARED-CALL | n/a | product modes (no_pii) | src/openreview_cli/app.py:3466 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:57 | none |
+| SHARED-CALL | n/a | product modes (paths) | src/openreview_cli/app.py:3462 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:52 | none |
+| SHARED-CALL | n/a | product modes (playbook_id) | src/openreview_cli/app.py:3461 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:54 | none |
+| SHARED-CALL | n/a | product modes (playbook_path) | src/openreview_cli/app.py:3463 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:53 | none |
+| SHARED-CALL | n/a | product modes (progress_callback) | src/openreview_cli/app.py:3461 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:62 | none |
+| SHARED-CALL | n/a | product modes (qa_model) | src/openreview_cli/app.py:3465 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:56 | none |
+| SHARED-CALL | n/a | product modes (session_id) | src/openreview_cli/app.py:3461 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:51 | none |
+| SHARED-CALL | n/a | product modes (verbose) | src/openreview_cli/app.py:3467 | openreview_cli.tui.domain.review.run_review_via_tui | src/openreview_cli/tui/domain/review.py:58 | none |
+| CERTAIN | pii | --allow-partial-pii (option) | src/openreview_cli/app.py:3332 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
 | CERTAIN | clear | --clear (option) | src/openreview_cli/app.py:1677 | action_index_clear (action) | src/openreview_cli/tui/screens/retrieve.py:347 | none |
-| CERTAIN | clause | --cluster-clauses (option) | src/openreview_cli/app.py:2741 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
+| CERTAIN | clause | --cluster-clauses (option) | src/openreview_cli/app.py:2705 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
 | CERTAIN | document | --document (option) | src/openreview_cli/app.py:1265 | action_chunk_document (action) | src/openreview_cli/tui/screens/retrieve.py:190 | none |
 | CERTAIN | document | --document (option) | src/openreview_cli/app.py:1265 | action_ingest_document (action) | src/openreview_cli/tui/screens/retrieve.py:214 | none |
-| CERTAIN | pii | --no-pii (option) | src/openreview_cli/app.py:3371 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
+| CERTAIN | pii | --no-pii (option) | src/openreview_cli/app.py:3335 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
 | CERTAIN | pii | --no-pii (option) | src/openreview_cli/app.py:1268 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
 | CERTAIN | pii | --no-pii (option) | src/openreview_cli/app.py:1954 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
 | CERTAIN | pii | --pii-threshold (option) | src/openreview_cli/app.py:1272 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
-| CERTAIN | playbook | --playbook (option) | src/openreview_cli/app.py:3373 | PlaybookDetailScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:40 | none |
+| CERTAIN | playbook | --playbook (option) | src/openreview_cli/app.py:3337 | PlaybookDetailScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:40 | none |
 | CERTAIN | playbook | --playbook (option) | src/openreview_cli/app.py:1342 | PlaybookDetailScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:40 | none |
-| CERTAIN | playbook | --playbook-path (option) | src/openreview_cli/app.py:3075 | PlaybookDetailScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:40 | none |
+| CERTAIN | playbook | --playbook-path (option) | src/openreview_cli/app.py:3039 | PlaybookDetailScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:40 | none |
 | CERTAIN | playbook | --playbook-path (option) | src/openreview_cli/app.py:1339 | PlaybookDetailScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:40 | none |
 | CERTAIN | prompt | --prompt (option) | src/openreview_cli/prompts/cli.py:178 | PromptBindModal (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:176 | none |
 | CERTAIN | prompt | --prompt (option) | src/openreview_cli/prompts/cli.py:178 | PromptBindingsScreen (screen) | src/openreview_cli/tui/screens/prompt_bindings.py:55 | none |
@@ -814,7 +811,7 @@ Note: `CERTAIN` in this table means only that the CLI item and the TUI item shar
 | CERTAIN | client | client list (command) | src/openreview_cli/app.py:483 | ClientForm (screen) | src/openreview_cli/tui/screens/client_form.py:13 | none |
 | CERTAIN | document | document_hash (argument) | src/openreview_cli/app.py:636 | action_chunk_document (action) | src/openreview_cli/tui/screens/retrieve.py:190 | none |
 | CERTAIN | document | document_hash (argument) | src/openreview_cli/app.py:636 | action_ingest_document (action) | src/openreview_cli/tui/screens/retrieve.py:214 | none |
-| CERTAIN | export | export (command) | src/openreview_cli/app.py:3278 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:33 | none |
+| CERTAIN | export | export (command) | src/openreview_cli/app.py:3242 | PromptExportModal (screen) | src/openreview_cli/tui/screens/prompt_export.py:33 | none |
 | CERTAIN | gateway | gateway costs (command) | src/openreview_cli/app.py:1771 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | gateway | gateway fallback (command) | src/openreview_cli/app.py:1671 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | gateway | gateway models (command) | src/openreview_cli/app.py:1572 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
@@ -827,24 +824,24 @@ Note: `CERTAIN` in this table means only that the CLI item and the TUI item shar
 | CERTAIN | statu | gateway status (command) | src/openreview_cli/app.py:1502 | action_index_status (action) | src/openreview_cli/tui/screens/retrieve.py:337 | none |
 | CERTAIN | gateway | gateway test (command) | src/openreview_cli/app.py:1736 | GatewayWizard (screen) | src/openreview_cli/tui/screens/gateway_wizard.py:30 | none |
 | CERTAIN | test | gateway test (command) | src/openreview_cli/app.py:1736 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
-| CERTAIN | graph | graph build (command) | src/openreview_cli/app.py:2718 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:63 | none |
-| CERTAIN | graph | graph build (command) | src/openreview_cli/app.py:2718 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
-| CERTAIN | graph | graph diff (command) | src/openreview_cli/app.py:2844 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:63 | none |
-| CERTAIN | diff | graph diff (command) | src/openreview_cli/app.py:2844 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
-| CERTAIN | diff | graph diff (command) | src/openreview_cli/app.py:2844 | VersionDiffScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:250 | none |
-| CERTAIN | graph | graph diff (command) | src/openreview_cli/app.py:2844 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
-| CERTAIN | graph | graph health (command) | src/openreview_cli/app.py:2927 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:63 | none |
-| CERTAIN | graph | graph health (command) | src/openreview_cli/app.py:2927 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
-| CERTAIN | graph | graph metrics (command) | src/openreview_cli/app.py:2784 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:63 | none |
-| CERTAIN | graph | graph metrics (command) | src/openreview_cli/app.py:2784 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
-| CERTAIN | graph | graph view (command) | src/openreview_cli/app.py:3013 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:63 | none |
-| CERTAIN | graph | graph view (command) | src/openreview_cli/app.py:3013 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
-| CERTAIN | graph | graph_path (argument) | src/openreview_cli/app.py:2787 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:63 | none |
-| CERTAIN | graph | graph_path (argument) | src/openreview_cli/app.py:2787 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
-| CERTAIN | clear, index | index-clear (command) | src/openreview_cli/app.py:2586 | action_index_clear (action) | src/openreview_cli/tui/screens/retrieve.py:347 | none |
-| CERTAIN | index | index-clear (command) | src/openreview_cli/app.py:2586 | action_index_status (action) | src/openreview_cli/tui/screens/retrieve.py:337 | none |
-| CERTAIN | index | index-status (command) | src/openreview_cli/app.py:2524 | action_index_clear (action) | src/openreview_cli/tui/screens/retrieve.py:347 | none |
-| CERTAIN | index, statu | index-status (command) | src/openreview_cli/app.py:2524 | action_index_status (action) | src/openreview_cli/tui/screens/retrieve.py:337 | none |
+| CERTAIN | graph | graph build (command) | src/openreview_cli/app.py:2682 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:63 | none |
+| CERTAIN | graph | graph build (command) | src/openreview_cli/app.py:2682 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
+| CERTAIN | graph | graph diff (command) | src/openreview_cli/app.py:2808 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:63 | none |
+| CERTAIN | diff | graph diff (command) | src/openreview_cli/app.py:2808 | PromptDiffScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:49 | none |
+| CERTAIN | diff | graph diff (command) | src/openreview_cli/app.py:2808 | VersionDiffScreen (screen) | src/openreview_cli/tui/screens/playbook_detail.py:250 | none |
+| CERTAIN | graph | graph diff (command) | src/openreview_cli/app.py:2808 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
+| CERTAIN | graph | graph health (command) | src/openreview_cli/app.py:2891 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:63 | none |
+| CERTAIN | graph | graph health (command) | src/openreview_cli/app.py:2891 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
+| CERTAIN | graph | graph metrics (command) | src/openreview_cli/app.py:2748 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:63 | none |
+| CERTAIN | graph | graph metrics (command) | src/openreview_cli/app.py:2748 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
+| CERTAIN | graph | graph view (command) | src/openreview_cli/app.py:2977 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:63 | none |
+| CERTAIN | graph | graph view (command) | src/openreview_cli/app.py:2977 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
+| CERTAIN | graph | graph_path (argument) | src/openreview_cli/app.py:2751 | GraphSummaryScreen (screen) | src/openreview_cli/tui/screens/graph.py:63 | none |
+| CERTAIN | graph | graph_path (argument) | src/openreview_cli/app.py:2751 | action_open_clause_graph (action) | src/openreview_cli/tui/screens/result.py:317 | none |
+| CERTAIN | clear, index | index-clear (command) | src/openreview_cli/app.py:2550 | action_index_clear (action) | src/openreview_cli/tui/screens/retrieve.py:347 | none |
+| CERTAIN | index | index-clear (command) | src/openreview_cli/app.py:2550 | action_index_status (action) | src/openreview_cli/tui/screens/retrieve.py:337 | none |
+| CERTAIN | index | index-status (command) | src/openreview_cli/app.py:2495 | action_index_clear (action) | src/openreview_cli/tui/screens/retrieve.py:347 | none |
+| CERTAIN | index, statu | index-status (command) | src/openreview_cli/app.py:2495 | action_index_status (action) | src/openreview_cli/tui/screens/retrieve.py:337 | none |
 | CERTAIN | ingest | ingest (command) | src/openreview_cli/app.py:2171 | action_ingest_document (action) | src/openreview_cli/tui/screens/retrieve.py:214 | none |
 | CERTAIN | pii | pii cleanup (command) | src/openreview_cli/app.py:657 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
 | CERTAIN | pii | pii delete (command) | src/openreview_cli/app.py:634 | PiiDataScreen (screen) | src/openreview_cli/tui/screens/pii_data.py:90 | none |
@@ -984,14 +981,14 @@ Note: `CERTAIN` in this table means only that the CLI item and the TUI item shar
 | CERTAIN | prompt | prompt update (command) | src/openreview_cli/prompts/cli.py:79 | PromptHistoryScreen (screen) | src/openreview_cli/tui/screens/prompt_detail.py:23 | none |
 | CERTAIN | prompt | prompt update (command) | src/openreview_cli/prompts/cli.py:79 | PromptImportModal (screen) | src/openreview_cli/tui/screens/prompt_import.py:26 | none |
 | CERTAIN | prompt | prompt update (command) | src/openreview_cli/prompts/cli.py:79 | PromptTestModal (screen) | src/openreview_cli/tui/screens/prompt_test.py:33 | none |
-| CERTAIN | retrieve | retrieve (command) | src/openreview_cli/app.py:2307 | RetrieveScreen (screen) | src/openreview_cli/tui/screens/retrieve.py:111 | none |
-| CERTAIN | retrieve | retrieve (command) | src/openreview_cli/app.py:2307 | action_retrieve (action) | src/openreview_cli/tui/screens/retrieve.py:261 | none |
+| CERTAIN | retrieve | retrieve (command) | src/openreview_cli/app.py:2289 | RetrieveScreen (screen) | src/openreview_cli/tui/screens/retrieve.py:111 | none |
+| CERTAIN | retrieve | retrieve (command) | src/openreview_cli/app.py:2289 | action_retrieve (action) | src/openreview_cli/tui/screens/retrieve.py:261 | none |
 
 ## Default-value mismatches
 
 - `run_review.grounding_mode` (MISMATCH-ABSENT): CLI `strict` at src/openreview_cli/app.py:1424 (precheck review) against TUI `NOT PASSED` at src/openreview_cli/tui/domain/review.py:51 (openreview_cli.tui.domain.review.run_review_via_tui). Callee default: `None`.
 - `run_review.allow_password_prompt` (MISMATCH-ABSENT): CLI `NOT PASSED` at src/openreview_cli/app.py:1416 (precheck review) against TUI `False` at src/openreview_cli/tui/domain/review.py:61 (openreview_cli.tui.domain.review.run_review_via_tui). Callee default: `True`.
-- `run_review.allow_password_prompt` (MISMATCH-ABSENT): CLI `NOT PASSED` at src/openreview_cli/app.py:3497 (product modes) against TUI `False` at src/openreview_cli/tui/domain/review.py:61 (openreview_cli.tui.domain.review.run_review_via_tui). Callee default: `True`.
+- `run_review.allow_password_prompt` (MISMATCH-ABSENT): CLI `NOT PASSED` at src/openreview_cli/app.py:3461 (product modes) against TUI `False` at src/openreview_cli/tui/domain/review.py:61 (openreview_cli.tui.domain.review.run_review_via_tui). Callee default: `True`.
 
 ## Shared call sites without a counterpart
 
@@ -1013,12 +1010,12 @@ Note: `CERTAIN` in this table means only that the CLI item and the TUI item shar
 ## Unresolved shared call arguments
 
 - `run_review.paths`: CLI `REQUIRED` (src/openreview_cli/app.py:1417) against TUI `paths` (src/openreview_cli/tui/domain/review.py:52).
-- `run_review.paths`: CLI `[path]` (src/openreview_cli/app.py:3498) against TUI `paths` (src/openreview_cli/tui/domain/review.py:52).
-- `run_review.playbook_path`: CLI `resolved_playbook_path` (src/openreview_cli/app.py:3499) against TUI `None` (src/openreview_cli/tui/domain/review.py:53).
+- `run_review.paths`: CLI `[path]` (src/openreview_cli/app.py:3462) against TUI `paths` (src/openreview_cli/tui/domain/review.py:52).
+- `run_review.playbook_path`: CLI `resolved_playbook_path` (src/openreview_cli/app.py:3463) against TUI `None` (src/openreview_cli/tui/domain/review.py:53).
 - `run_review.extraction_model`: CLI `extraction_model or 'extraction'` (src/openreview_cli/app.py:1420) against TUI `extraction` (src/openreview_cli/tui/domain/review.py:55).
-- `run_review.no_pii`: CLI `no_pii` (src/openreview_cli/app.py:3502) against TUI `False` (src/openreview_cli/tui/domain/review.py:57).
-- `run_review.mode_threshold_overrides`: CLI `mode_threshold_overrides` (src/openreview_cli/app.py:3505) against TUI `NOT PASSED` (src/openreview_cli/tui/domain/review.py:51).
-- `run_review.mode`: CLI `mode` (src/openreview_cli/app.py:3506) against TUI `precheck` (src/openreview_cli/tui/domain/review.py:60).
+- `run_review.no_pii`: CLI `no_pii` (src/openreview_cli/app.py:3466) against TUI `False` (src/openreview_cli/tui/domain/review.py:57).
+- `run_review.mode_threshold_overrides`: CLI `mode_threshold_overrides` (src/openreview_cli/app.py:3469) against TUI `NOT PASSED` (src/openreview_cli/tui/domain/review.py:51).
+- `run_review.mode`: CLI `mode` (src/openreview_cli/app.py:3470) against TUI `precheck` (src/openreview_cli/tui/domain/review.py:60).
 
 ## Needs human confirmation
 
@@ -1041,8 +1038,8 @@ Grouped by the TUI screen each CLI item points at. 140 single and double charact
 
 | CLI item | CLI source | TUI item | TUI source | Shared token | Reason |
 |---|---|---|---|---|---|
-| doc_path (argument) | src/openreview_cli/app.py:3073 | action_next_doc (action) | src/openreview_cli/tui/screens/result.py:378 | doc | generic token only: doc |
-| doc_path (argument) | src/openreview_cli/app.py:3073 | action_prev_doc (action) | src/openreview_cli/tui/screens/result.py:385 | doc | generic token only: doc |
+| doc_path (argument) | src/openreview_cli/app.py:3037 | action_next_doc (action) | src/openreview_cli/tui/screens/result.py:378 | doc | generic token only: doc |
+| doc_path (argument) | src/openreview_cli/app.py:3037 | action_prev_doc (action) | src/openreview_cli/tui/screens/result.py:385 | doc | generic token only: doc |
 | doc_a (argument) | src/openreview_cli/app.py:1910 | action_next_doc (action) | src/openreview_cli/tui/screens/result.py:378 | doc | generic token only: doc |
 | doc_a (argument) | src/openreview_cli/app.py:1910 | action_prev_doc (action) | src/openreview_cli/tui/screens/result.py:385 | doc | generic token only: doc |
 | doc_b (argument) | src/openreview_cli/app.py:1911 | action_next_doc (action) | src/openreview_cli/tui/screens/result.py:378 | doc | generic token only: doc |
@@ -1081,26 +1078,23 @@ Grouped by the TUI screen each CLI item points at. 140 single and double charact
 | --debug | option | openreview | src/openreview_cli/app.py:438 |
 | parse | command |  | src/openreview_cli/app.py:1443 |
 | --format | option | parse, chunk | src/openreview_cli/app.py:1446 |
-| --method | option | ingest | src/openreview_cli/app.py:2174 |
-| --model | option | ingest | src/openreview_cli/app.py:2175 |
-| --db-dir | option | ingest, retrieve, +2 more | src/openreview_cli/app.py:2176 |
-| query | argument | retrieve | src/openreview_cli/app.py:2309 |
-| --method | option | retrieve | src/openreview_cli/app.py:2314 |
-| --rerank | option | retrieve | src/openreview_cli/app.py:2318 |
-| --rerank-depth | option | retrieve | src/openreview_cli/app.py:2321 |
-| --force-rerank | option | retrieve | src/openreview_cli/app.py:2324 |
-| --format | option | retrieve | src/openreview_cli/app.py:2326 |
-| --no-header | option | retrieve | src/openreview_cli/app.py:2329 |
-| --solver | option | negotiate | src/openreview_cli/app.py:3079 |
-| --rationality | option | negotiate | src/openreview_cli/app.py:3084 |
-| --depth | option | negotiate | src/openreview_cli/app.py:3089 |
-| --weights | option | negotiate | src/openreview_cli/app.py:3094 |
-| --format | option | negotiate | src/openreview_cli/app.py:3109 |
-| --format | option | export | src/openreview_cli/app.py:3285 |
-| --mode | option | export | src/openreview_cli/app.py:3289 |
-| --template | option | export | src/openreview_cli/app.py:3292 |
-| --format | option | licensecheck, leasecheck, +22 more | src/openreview_cli/app.py:3375 |
-| --mode-threshold | option | licensecheck, leasecheck, +21 more | src/openreview_cli/app.py:3399 |
+| --db-dir | option | ingest, retrieve, +2 more | src/openreview_cli/app.py:2174 |
+| query | argument | retrieve | src/openreview_cli/app.py:2291 |
+| --rerank | option | retrieve | src/openreview_cli/app.py:2297 |
+| --rerank-depth | option | retrieve | src/openreview_cli/app.py:2300 |
+| --force-rerank | option | retrieve | src/openreview_cli/app.py:2303 |
+| --format | option | retrieve | src/openreview_cli/app.py:2305 |
+| --no-header | option | retrieve | src/openreview_cli/app.py:2308 |
+| --solver | option | negotiate | src/openreview_cli/app.py:3043 |
+| --rationality | option | negotiate | src/openreview_cli/app.py:3048 |
+| --depth | option | negotiate | src/openreview_cli/app.py:3053 |
+| --weights | option | negotiate | src/openreview_cli/app.py:3058 |
+| --format | option | negotiate | src/openreview_cli/app.py:3073 |
+| --format | option | export | src/openreview_cli/app.py:3249 |
+| --mode | option | export | src/openreview_cli/app.py:3253 |
+| --template | option | export | src/openreview_cli/app.py:3256 |
+| --format | option | licensecheck, leasecheck, +22 more | src/openreview_cli/app.py:3339 |
+| --mode-threshold | option | licensecheck, leasecheck, +21 more | src/openreview_cli/app.py:3363 |
 | id | argument | client add, client delete | src/openreview_cli/app.py:474 |
 | config get | command | config | src/openreview_cli/app.py:555 |
 | key | argument | config get, config set | src/openreview_cli/app.py:556 |
@@ -1136,12 +1130,12 @@ Grouped by the TUI screen each CLI item points at. 140 single and double charact
 | --cap-reasoning | option | gateway provider add | src/openreview_cli/app.py:1809 |
 | --cap-tool-call | option | gateway provider add | src/openreview_cli/app.py:1810 |
 | --context-window | option | gateway provider add | src/openreview_cli/app.py:1812 |
-| input_path | argument | graph build | src/openreview_cli/app.py:2721 |
-| --contract-id | option | graph build | src/openreview_cli/app.py:2732 |
-| --db-path | option | graph build, graph metrics, +2 more | src/openreview_cli/app.py:2736 |
-| --contract-id | option | graph metrics, graph health, +1 more | src/openreview_cli/app.py:2791 |
-| --json | option | graph diff | src/openreview_cli/app.py:2848 |
-| --weights | option | graph health | src/openreview_cli/app.py:2934 |
+| input_path | argument | graph build | src/openreview_cli/app.py:2685 |
+| --contract-id | option | graph build | src/openreview_cli/app.py:2696 |
+| --db-path | option | graph build, graph metrics, +2 more | src/openreview_cli/app.py:2700 |
+| --contract-id | option | graph metrics, graph health, +1 more | src/openreview_cli/app.py:2755 |
+| --json | option | graph diff | src/openreview_cli/app.py:2812 |
+| --weights | option | graph health | src/openreview_cli/app.py:2898 |
 | benchmark run | command | benchmark | src/openreview_cli/benchmark/cli.py:56 |
 | --datasets | option | benchmark run | src/openreview_cli/benchmark/cli.py:60 |
 | --slots | option | benchmark run | src/openreview_cli/benchmark/cli.py:65 |
@@ -1229,7 +1223,7 @@ Grouped by the TUI screen each CLI item points at. 140 single and double charact
 ### `--all`
 
 - Also list clean documents (no PII) (owners: pii list; sources: src/openreview_cli/app.py:596).
-- Clear ALL indexes (requires confirmation). (owners: index-clear; sources: src/openreview_cli/app.py:2590).
+- Clear ALL indexes (requires confirmation). (owners: index-clear; sources: src/openreview_cli/app.py:2554).
 - Delete ALL playbooks (owners: playbook delete; sources: src/openreview_cli/app.py:1113).
 - Export all playbooks (owners: playbook export; sources: src/openreview_cli/app.py:902).
 - Run all datasets, slots, and modes (owners: benchmark run; sources: src/openreview_cli/benchmark/cli.py:80).
@@ -1237,8 +1231,8 @@ Grouped by the TUI screen each CLI item points at. 140 single and double charact
 ### `--confidence-threshold`
 
 - Amber boundary for divergence detection confidence (0.0-1.0). Independent of single-party threshold. Note: accuracy ceiling ~64% F1 - set generously. (owners: precheck compare; sources: src/openreview_cli/app.py:1925).
-- Confidence threshold for Amber flagging (0.0-1.0). (owners: negotiate; sources: src/openreview_cli/app.py:3101).
-- Confidence threshold for Green/Amber/Red (0.0-1.0). (owners: licensecheck, leasecheck, privacycheck, privacycheck_v2, +19 more; sources: src/openreview_cli/app.py:3392).
+- Confidence threshold for Amber flagging (0.0-1.0). (owners: negotiate; sources: src/openreview_cli/app.py:3065).
+- Confidence threshold for Green/Amber/Red (0.0-1.0). (owners: licensecheck, leasecheck, privacycheck, privacycheck_v2, +19 more; sources: src/openreview_cli/app.py:3356).
 - Confidence threshold for Green/Amber/Red assignment (0.0-1.0). Clauses with effective confidence below this threshold are marked Amber. Note: The comparison accuracy of automated review is bounded by approximately 64% F1. Three-color output (Green/Amber/Red) is designed to mitigate this - set the threshold generously to push uncertain comparisons to Amber rather than risking false Green or Red. (owners: precheck review; sources: src/openreview_cli/app.py:1388).
 
 ### `--content`
@@ -1248,8 +1242,8 @@ Grouped by the TUI screen each CLI item points at. 140 single and double charact
 
 ### `--contract-id`
 
-- Contract ID for SQLite storage (default: input file stem). (owners: graph build; sources: src/openreview_cli/app.py:2732).
-- Contract ID in SQLite (required with --from-db). (owners: graph metrics, graph health, graph view; sources: src/openreview_cli/app.py:2791, src/openreview_cli/app.py:2944, src/openreview_cli/app.py:3020).
+- Contract ID for SQLite storage (default: input file stem). (owners: graph build; sources: src/openreview_cli/app.py:2696).
+- Contract ID in SQLite (required with --from-db). (owners: graph metrics, graph health, graph view; sources: src/openreview_cli/app.py:2755, src/openreview_cli/app.py:2908, src/openreview_cli/app.py:2984).
 
 ### `--datasets`
 
@@ -1270,63 +1264,58 @@ Grouped by the TUI screen each CLI item points at. 140 single and double charact
 
 ### `--format`
 
-- Export format: md, json, docx. (owners: export; sources: src/openreview_cli/app.py:3285).
+- Export format: md, json, docx. (owners: export; sources: src/openreview_cli/app.py:3249).
 - Output format: json, terminal (owners: benchmark run, benchmark baseline; sources: src/openreview_cli/benchmark/cli.py:115, src/openreview_cli/benchmark/cli.py:371).
 - Output format: table, json (owners: pii list; sources: src/openreview_cli/app.py:595).
-- Output format: table, json, memo. (owners: negotiate; sources: src/openreview_cli/app.py:3109).
-- Output format: terminal, json (owners: retrieve; sources: src/openreview_cli/app.py:2326).
+- Output format: table, json, memo. (owners: negotiate; sources: src/openreview_cli/app.py:3073).
+- Output format: terminal, json (owners: retrieve; sources: src/openreview_cli/app.py:2305).
 - Output format: text (terminal) or json. (owners: precheck compare; sources: src/openreview_cli/app.py:1944).
-- Output format: text or json. (owners: licensecheck, leasecheck, privacycheck, privacycheck_v2, +20 more; sources: src/openreview_cli/app.py:3375, src/openreview_cli/app.py:1344).
+- Output format: text or json. (owners: licensecheck, leasecheck, privacycheck, privacycheck_v2, +20 more; sources: src/openreview_cli/app.py:3339, src/openreview_cli/app.py:1344).
 - Output format: text, json (owners: parse, chunk; sources: src/openreview_cli/app.py:1446, src/openreview_cli/app.py:1871).
 - Output format: text, json. (owners: precheck; sources: src/openreview_cli/app.py:1279).
 
 ### `--json`
 
 -  (owners: gateway providers, gateway models; sources: src/openreview_cli/app.py:1525, src/openreview_cli/app.py:1575).
-- Output as JSON. (owners: graph diff; sources: src/openreview_cli/app.py:2848).
+- Output as JSON. (owners: graph diff; sources: src/openreview_cli/app.py:2812).
 - Output diff as JSON (owners: playbook diff; sources: src/openreview_cli/app.py:1006).
 
 ### `--memo-format`
 
 - Export format(s) for the review memo. Supported values: md (Markdown), json (JSON), docx (Word document). May be specified multiple times to produce multiple formats in one run. (owners: precheck review; sources: src/openreview_cli/app.py:1350).
-- Export format(s) for the review memo. Supported: md, json, docx. (owners: licensecheck, leasecheck, privacycheck, privacycheck_v2, +19 more; sources: src/openreview_cli/app.py:3381).
-
-### `--method`
-
-- Retrieval method: sparse, dense, hybrid (owners: retrieve; sources: src/openreview_cli/app.py:2314).
-- Retrieval method: sparse, hybrid (owners: ingest; sources: src/openreview_cli/app.py:2174).
+- Export format(s) for the review memo. Supported: md, json, docx. (owners: licensecheck, leasecheck, privacycheck, privacycheck_v2, +19 more; sources: src/openreview_cli/app.py:3345).
 
 ### `--no-pii`
 
 - Disable PII stripping. Processes raw text. (owners: precheck; sources: src/openreview_cli/app.py:1268).
 - Skip PII stripping on both documents. (owners: precheck compare; sources: src/openreview_cli/app.py:1954).
-- Skip PII stripping. (owners: licensecheck, leasecheck, privacycheck, privacycheck_v2, +20 more; sources: src/openreview_cli/app.py:3371, src/openreview_cli/app.py:1376).
+- Skip PII stripping. (owners: licensecheck, leasecheck, privacycheck, privacycheck_v2, +20 more; sources: src/openreview_cli/app.py:3335, src/openreview_cli/app.py:1376).
 
 ### `--output`
 
 - Destination file path (or directory with --all) (owners: playbook export; sources: src/openreview_cli/app.py:899).
 - Output directory for review results. (owners: precheck; sources: src/openreview_cli/app.py:1277).
 - Output file path (default: stdout) (owners: prompt export; sources: src/openreview_cli/prompts/cli.py:270).
-- Path for the output graph JSON file (default: {input_stem}.graph.json). (owners: graph build; sources: src/openreview_cli/app.py:2726).
+- Path for the output graph JSON file (default: {input_stem}.graph.json). (owners: graph build; sources: src/openreview_cli/app.py:2690).
 - Write JSON report to file path (owners: benchmark run; sources: src/openreview_cli/benchmark/cli.py:120).
-- Write output to file instead of stdout. (owners: negotiate, licensecheck, leasecheck, privacycheck, +22 more; sources: src/openreview_cli/app.py:3107, src/openreview_cli/app.py:3377, src/openreview_cli/app.py:1346, src/openreview_cli/app.py:1946).
+- Write output to file instead of stdout. (owners: negotiate, licensecheck, leasecheck, privacycheck, +22 more; sources: src/openreview_cli/app.py:3071, src/openreview_cli/app.py:3341, src/openreview_cli/app.py:1346, src/openreview_cli/app.py:1946).
 - Write output to file path (owners: benchmark baseline; sources: src/openreview_cli/benchmark/cli.py:376).
 
 ### `--output-dir`
 
-- Directory for exported files. (owners: export; sources: src/openreview_cli/app.py:3287).
-- Directory for memo files. Defaults to review_results/. (owners: licensecheck, leasecheck, privacycheck, privacycheck_v2, +19 more; sources: src/openreview_cli/app.py:3386).
+- Directory for exported files. (owners: export; sources: src/openreview_cli/app.py:3251).
+- Directory for memo files. Defaults to review_results/. (owners: licensecheck, leasecheck, privacycheck, privacycheck_v2, +19 more; sources: src/openreview_cli/app.py:3350).
 - Directory where memo files are written. Created automatically if it does not exist. Defaults to review_results/ in the current working directory. (owners: precheck review; sources: src/openreview_cli/app.py:1357).
 
 ### `--playbook`
 
-- Path to a custom YAML playbook override. (owners: licensecheck, leasecheck, privacycheck, privacycheck_v2, +19 more; sources: src/openreview_cli/app.py:3373).
+- Path to a custom YAML playbook override. (owners: licensecheck, leasecheck, privacycheck, privacycheck_v2, +19 more; sources: src/openreview_cli/app.py:3337).
 - Playbook ID to load from database. (owners: precheck review; sources: src/openreview_cli/app.py:1342).
 
 ### `--playbook-path`
 
 - Path to a custom YAML playbook override. (owners: precheck review; sources: src/openreview_cli/app.py:1339).
-- Path to a custom YAML playbook. (owners: negotiate; sources: src/openreview_cli/app.py:3075).
+- Path to a custom YAML playbook. (owners: negotiate; sources: src/openreview_cli/app.py:3039).
 
 ### `--save-baseline`
 
@@ -1338,7 +1327,7 @@ Grouped by the TUI screen each CLI item points at. 140 single and double charact
 - Detailed per-item progress (owners: benchmark run; sources: src/openreview_cli/benchmark/cli.py:125).
 - Enable info-level logging (startup diagnostics). (owners: openreview; sources: src/openreview_cli/app.py:443).
 - Show full RCBSF classification and rationale. (owners: precheck compare; sources: src/openreview_cli/app.py:1952).
-- Show per-clause progress. (owners: negotiate, licensecheck, leasecheck, privacycheck, +21 more; sources: src/openreview_cli/app.py:3105, src/openreview_cli/app.py:3389, src/openreview_cli/app.py:1377).
+- Show per-clause progress. (owners: negotiate, licensecheck, leasecheck, privacycheck, +21 more; sources: src/openreview_cli/app.py:3069, src/openreview_cli/app.py:3353, src/openreview_cli/app.py:1377).
 
 ### `--version`
 
@@ -1349,8 +1338,8 @@ Grouped by the TUI screen each CLI item points at. 140 single and double charact
 
 ### `--weights`
 
-- Five custom weights: density depth orphans broken-refs coverage. Defaults to '0 0 0.35 0.40 0.25': density and depth score nothing, so the score measures missing parents, broken cross-refs and uncovered definitions. Space-separated, e.g. --weights '0 0 0.35 0.40 0.25'. Auto-normalised to sum 1.0. (owners: graph health; sources: src/openreview_cli/app.py:2934).
-- Payoff component weights as comma-separated values: risk,financial,obligation (e.g. 0.7,0.15,0.15). Must sum to ~1.0. (owners: negotiate; sources: src/openreview_cli/app.py:3094).
+- Five custom weights: density depth orphans broken-refs coverage. Defaults to '0 0 0.35 0.40 0.25': density and depth score nothing, so the score measures missing parents, broken cross-refs and uncovered definitions. Space-separated, e.g. --weights '0 0 0.35 0.40 0.25'. Auto-normalised to sum 1.0. (owners: graph health; sources: src/openreview_cli/app.py:2898).
+- Payoff component weights as comma-separated values: risk,financial,obligation (e.g. 0.7,0.15,0.15). Must sum to ~1.0. (owners: negotiate; sources: src/openreview_cli/app.py:3058).
 
 ## Row counts
 
@@ -1364,10 +1353,10 @@ Grouped by the TUI screen each CLI item points at. 140 single and double charact
 | default-state | 13 |
 | group | 11 |
 | mismatch | 3 |
-| option | 390 |
+| option | 387 |
 | screen | 30 |
 | shared-call-arg | 89 |
-| total | 775 |
+| total | 772 |
 
 Regenerate with:
 

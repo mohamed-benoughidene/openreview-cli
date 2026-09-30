@@ -62,11 +62,7 @@ DEFAULT_CONFIG: dict[str, object] = {
         "logs_keep_days": 30,
     },
     "retrieval": {
-        "default_method": "hybrid",
         "top_k": 5,
-        "rrf_k": 60,
-        "embedding_model": "nomic-embed-text",
-        "embedding_dimension": 1024,
         "reranker_model": None,
         "rerank_enabled": False,
         "rerank_depth": 20,
@@ -211,11 +207,7 @@ def _validate_and_merge(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[s
         logs_keep_days: int = Field(default=30, ge=1)
 
     class RetrievalConfig(BaseModel):
-        default_method: Literal["sparse", "dense", "hybrid"] = "hybrid"
         top_k: int = Field(default=5, ge=1, le=50)
-        rrf_k: int = Field(default=60, ge=1)
-        embedding_model: str = "nomic-embed-text"
-        embedding_dimension: int = 1024
         reranker_model: str | None = None
         rerank_enabled: bool = False
         rerank_depth: int = Field(default=20, ge=1)

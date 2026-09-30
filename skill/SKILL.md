@@ -173,19 +173,18 @@ CLI: `openreview ingest <file.ndax>` → `openreview retrieve "<query>" [file]`;
 
 Required: for `ingest`, a JSON file containing a list of chunk dicts (`.ndax` is a user-applied extension; any JSON list works). For `retrieve`, a query string; `file` falls back to last indexed document.
 
-Key constraint: no CLI command produces `.ndax`. To build one: `openreview chunk <doc> --format json` (stdout) → save to file → `ingest` (`chunk` is OPTIONAL — see Optional Capabilities). `precheck review` does NOT require chunking or indexing. **`ingest`/`retrieve` default to `hybrid`, which needs the `embedding` slot configured; without it the CLI silently falls back to BM25/sparse and prints a fallback notice. Surface that notice to the user, or use `--method sparse` deliberately to avoid the silent quality drop. `--rerank` is opt-in and routes to the configured `reranking` slot (e.g. `cohere/rerank-english-v3.0`, `voyage/rerank-2.5`; Ollama cannot serve reranking — see `docs/ARCHITECTURE.md` "Honest limitations"); it needs a rerank-capable provider configured and reachable — check `gateway status` (slot `configured`) then `gateway test reranking` before relying on it.**
+Key constraint: no CLI command produces `.ndax`. To build one: `openreview chunk <doc> --format json` (stdout) → save to file → `ingest` (`chunk` is OPTIONAL — see Optional Capabilities). `precheck review` does NOT require chunking or indexing. **Retrieval is keyword-only (BM25) — there is no retrieval-method choice. `--rerank` is opt-in and routes to the configured `reranking` slot (e.g. `cohere/rerank-english-v3.0`, `voyage/rerank-2.5`; Ollama cannot serve reranking — see `docs/ARCHITECTURE.md` "Honest limitations"); it needs a rerank-capable provider configured and reachable — check `gateway status` (slot `configured`) then `gateway test reranking` before relying on it.**
 
 #### `retrieve` and `ingest` flags
 
 These flags are part of the index-and-retrieve surface and are commonly needed but were not formally documented:
 
-- `retrieve --method <sparse|dense|hybrid>` (default `hybrid`): chooses the retrieval method. `hybrid` requires the `embedding` slot; without it the CLI falls back to BM25/sparse with a notice (see above). `dense` requires the `embedding` slot configured and reachable — verify with `gateway test embedding` before relying on it. `sparse` is BM25-only and needs no embedding model. Source: `app.py:2064-2066`.
-- `retrieve --top-k <int>`: number of top chunks to return. The default is implementation-defined; raise it for broader context, lower it for tight scoping. Source: `app.py:2067`.
-- `retrieve --rerank-depth <int>`: number of chunks to re-rank before truncating to `--top-k`. Requires the `reranking` slot configured. Larger values improve quality at the cost of latency. Source: `app.py:2071`.
-- `retrieve --no-header`: suppress the column header in text-format output (useful when piping into other tools). Source: `app.py:2078`.
-- `retrieve --db-dir <path>`: override the default DB directory. By default, the CLI uses `platformdirs.user_data_dir("openreview") / "openreview.db"` (Linux/macOS: `~/.local/share/openreview/openreview.db`); `--db-dir` lets the user point at a different index for isolation, testing, or multi-tenant setups. Source: `app.py:2078` (declaration; same parameter name used for `ingest`, `retrieve`, and other index commands).
-- `ingest --model <id>`: override the embedding model used to vectorize chunks at ingest time. Defaults to the configured `embedding` slot. If the model used at ingest differs from the one configured at retrieve time, dense retrieval will be incoherent; surface this to the user. Source: `app.py:1961`.
-- `ingest --db-dir <path>`: same semantics as `retrieve --db-dir` (above). The `--db-dir` passed at `ingest` must match the one passed at `retrieve` for results to be visible. Source: `app.py:1962`.
+- `retrieve --top-k <int>`: number of top chunks to return (1–50). The default is implementation-defined; raise it for broader context, lower it for tight scoping. Source: `app.py:2295`.
+- `retrieve --rerank` / `--rerank-depth <int>`: enable the opt-in cross-encoder reranker and choose how many chunks to re-rank before truncating to `--top-k`. Requires the `reranking` slot configured; larger depth improves quality at the cost of latency; `--force-rerank` overrides the validation warning. Source: `app.py:2296-2304`.
+- `retrieve --format <terminal|json>`: output format; `terminal` is the default. Source: `app.py:2305`.
+- `retrieve --no-header`: suppress the column header in text-format output (useful when piping into other tools). Source: `app.py:2307`.
+- `retrieve --db-dir <path>`: override the default DB directory. By default, the CLI uses `platformdirs.user_data_dir("openreview") / "openreview.db"` (Linux/macOS: `~/.local/share/openreview/openreview.db`); `--db-dir` lets the user point at a different index for isolation, testing, or multi-tenant setups. Source: `app.py:2306` (declaration; same parameter name used for `ingest`, `retrieve`, and other index commands).
+- `ingest --db-dir <path>`: same semantics as `retrieve --db-dir` (above). The `--db-dir` passed at `ingest` must match the one passed at `retrieve` for results to be visible. Source: `app.py:2174`.
 
 ### 4. Query Saved Artifacts
 List previously-produced review outputs.
@@ -264,7 +263,7 @@ Advisory only — this section helps the agent *recommend* models. Actual config
 | Slot | What it does | Model must be able to | Top selection criteria | User priorities that matter |
 | --- | --- | --- | --- | --- |
 | extraction | Per-clause position analysis (core review) | Generate text + emit parseable JSON | 1. structured-output reliability 2. legal extraction precision 3. citation fidelity | quality, cost/latency, local |
-| embedding | Dense retrieval vector search | Produce fixed-size dense embeddings | 1. retrieval relevance 2. stable dimension 3. latency/cost | quality, cost, local |
+| embedding | Declared embedding slot; **no current consumer** (dense/hybrid retrieval was removed) | Produce fixed-size embeddings (if exercised) | n/a (reserved surface) | n/a |
 | reranking | Opt-in rerank flag; uses the configured `reranking` slot | Score query-chunk pairs | 1. Precision@K improvement 2. latency 3. cost | quality, local; usually skip (disabled by default) |
 | grounding | Verify citations post-review | Generate text + emit parseable verdicts | 1. entailment discrimination 2. structured-output reliability 3. consistency | quality, cost, local |
 | reasoning | Declared chat slot; **no current consumer** | Generate text (if exercised) | n/a (reserved surface) | n/a |
@@ -283,9 +282,9 @@ Advisory only — this section helps the agent *recommend* models. Actual config
 
 ### embedding
 
-- **What this slot does:** embeds query and clause text into vectors for cosine-similarity dense retrieval (`retrieve --method dense|hybrid` only).
+- **What this slot does:** declared embedding surface. The dense/hybrid retrieval path that consumed it was removed — retrieval is now keyword-only (BM25) — so this slot currently has **no consumer**.
 - **What kind of model belongs here:** a dedicated embedding model.
-- **The model must:** (a) produce dense embeddings; (b) have a provider declaring `embedding` capability; (c) return a fixed-size vector. Changing the model after indexing breaks dimension consistency — re-index.
+- **The model must:** (a) produce fixed-size embeddings; (b) have a provider declaring `embedding` capability; (c) return a consistent vector dimension. With no retrieval consumer, the choice no longer affects search quality or index consistency.
 - **Prioritize:** 1. retrieval relevance on legal text; 2. stable, documented dimension; 3. latency/cost.
 - **User requirements that change the choice:** quality → stronger/higher-dimension embedding; cost/speed → smaller/faster embedding; local/private → local embeddings are required under `balanced` and `maximum`.
 - **A strong choice looks like:** a dedicated embedding model with good semantic search on domain text.

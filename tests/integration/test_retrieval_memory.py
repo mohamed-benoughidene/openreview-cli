@@ -74,8 +74,6 @@ class TestIngestMemory:
             ingest_document(
                 chunks,
                 db_path,
-                gateway=None,
-                method="sparse",
             )
         finally:
             _current, peak = tracemalloc.get_traced_memory()
@@ -94,8 +92,6 @@ class TestIngestMemory:
         ingest_document(
             chunks,
             db_path,
-            gateway=None,
-            method="sparse",
         )
         elapsed = time.time() - start
 
@@ -111,12 +107,11 @@ class TestRetrieveMemory:
         chunks = _generate_chunks(500)
         db_path = tmp_path / "retrieve_500.db"
 
-        ingest_document(chunks, db_path, gateway=None, method="sparse")
+        ingest_document(chunks, db_path)
 
         engine = RetrievalEngine(db_path)
         query = RetrievalQuery(
             query_text="confidentiality governing law",
-            method="sparse",
             top_k=5,
         )
 
