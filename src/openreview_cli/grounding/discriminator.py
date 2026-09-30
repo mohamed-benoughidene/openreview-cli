@@ -277,15 +277,17 @@ class CitationGroundingDiscriminator:
             ]
 
         parsed = parse_grounding_response(response)
-        if not parsed:
-            # No early return here: every claim in the batch falls through to the
-            # UNCERTAIN mapping below, so the whole batch was unreadable.
-            self.unreadable_answers += len(batch)
 
         # Build lookup from parsed results
         parsed_by_index: dict[int, tuple[GroundingVerdict, list[CitationProvenance], float]] = {}
         for claim_index, verdict, provenances, confidence in parsed:
             parsed_by_index[claim_index] = (verdict, provenances, confidence)
+
+        # No early return here: a claim whose index the reader did not answer falls
+        # through to the UNCERTAIN mapping below, so every absent index is one
+        # unreadable answer. A wholly unparsable batch gives an empty mapping and
+        # therefore counts the whole batch.
+        self.unreadable_answers += sum(1 for index, _, _ in batch if index not in parsed_by_index)
 
         # Map results back to batch items
         results: list[GroundingResult] = []
