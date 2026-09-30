@@ -51,6 +51,9 @@ class CitationGroundingDiscriminator:
         self._model = model
         self._output_dir = output_dir
         self._session_id = session_id
+        # Answers the reader could not parse: distinct from a model that said
+        # "uncertain", which also returns UNCERTAIN at confidence 0.0.
+        self.unreadable_answers = 0
 
         from openreview_cli.gateway.router import Gateway as _Gateway
 
@@ -117,6 +120,7 @@ class CitationGroundingDiscriminator:
         results = parse_grounding_response(response)
         if not results:
             logger.warning("Failed to parse grounding response for claim")
+            self.unreadable_answers += 1
             return (GroundingVerdict.UNCERTAIN, [], 0.0)
 
         _, verdict, provenances, confidence = results[0]
@@ -273,6 +277,10 @@ class CitationGroundingDiscriminator:
             ]
 
         parsed = parse_grounding_response(response)
+        if not parsed:
+            # No early return here: every claim in the batch falls through to the
+            # UNCERTAIN mapping below, so the whole batch was unreadable.
+            self.unreadable_answers += len(batch)
 
         # Build lookup from parsed results
         parsed_by_index: dict[int, tuple[GroundingVerdict, list[CitationProvenance], float]] = {}

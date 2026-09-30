@@ -524,6 +524,7 @@ def _grounding_skip_receipt(
         # No matrix ran, so nothing can be all-uncertain.
         "all_uncertain": False,
         "all_uncertain_note": None,
+        "unreadable_answers": 0,
         "latency": {"calls": 0, "mean": None, "median": None, "p95": None, "max": None},
         "caveats": list(GROUNDING_ACCURACY_CAVEATS),
         "per_label": [],
@@ -544,7 +545,8 @@ def _print_grounding_summary(receipt: dict[str, Any], out: Path) -> None:
         f"(caught_rate={receipt['caught_rate']}) "
         f"good_rejected={receipt['good_rejected']}/{receipt['positives']} "
         f"(false_reject_rate={receipt['false_reject_rate']}) "
-        f"uncertain good/bad={receipt['good_uncertain']}/{receipt['bad_uncertain']}"
+        f"uncertain good/bad={receipt['good_uncertain']}/{receipt['bad_uncertain']} "
+        f"unreadable={receipt['unreadable_answers']}"
     )
     if receipt.get("all_uncertain"):
         print(
@@ -745,6 +747,7 @@ def run_grounding_accuracy(
         **matrix,
         "all_uncertain": all_uncertain,
         "all_uncertain_note": all_uncertain_note,
+        "unreadable_answers": discriminator.unreadable_answers,
         "negatives_generated": generated,
         "negatives_dropped_guard": sum(drops.values()),
         "negatives_dropped_guard_by_generator": drops,
