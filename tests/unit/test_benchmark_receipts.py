@@ -37,7 +37,8 @@ RECEIPT_KEYS = {
 }
 MAX_RECEIPT_BYTES = 20_000
 
-# Decision D9: exactly these ten receipts.
+# Decision D9, plus the two CUAD-retrieval tokenizer receipts added with the
+# reproducible keyword-retrieval measurement.
 EXPECTED_RECEIPTS = frozenset(
     {
         "pii-throughput.json",
@@ -50,6 +51,8 @@ EXPECTED_RECEIPTS = frozenset(
         "maud-segmentation.json",
         "accuracy-suite.json",
         "test-collection.json",
+        "cuad-retrieval-porter.json",
+        "cuad-retrieval-unicode61.json",
     }
 )
 FORBIDDEN_KEYS = frozenset({"citation", "clause_text", "document_text", "text", "original_value"})
@@ -67,6 +70,8 @@ GENERATED_RECEIPTS = frozenset(
         "maud-segmentation.json",
         "accuracy-suite.json",
         "test-collection.json",
+        "cuad-retrieval-porter.json",
+        "cuad-retrieval-unicode61.json",
     }
 )
 EXPECTED_MODELS: dict[str, Any] = {
@@ -85,6 +90,8 @@ EXPECTED_MODELS: dict[str, Any] = {
     "maud-segmentation.json": "none (nupunkt sentence segmentation, local)",
     "accuracy-suite.json": "none (offline pytest; no model calls)",
     "test-collection.json": "none (offline pytest collection; no model calls)",
+    "cuad-retrieval-porter.json": "none (offline: SQLite FTS5 keyword search; no model calls)",
+    "cuad-retrieval-unicode61.json": "none (offline: SQLite FTS5 keyword search; no model calls)",
 }
 UNKNOWN_GIT_COMMITS: dict[str, str] = {
     "contractnli-coverage.json": (
@@ -111,6 +118,10 @@ TABLES: dict[str, tuple[str, ...]] = {
         "contractnli-live.json",
     ),
     "## CUAD public benchmark (scale and timing)": ("cuad-segmentation.json",),
+    "## CUAD keyword retrieval (tokenizer comparison)": (
+        "cuad-retrieval-porter.json",
+        "cuad-retrieval-unicode61.json",
+    ),
     "## Accuracy signals": ("accuracy-suite.json",),
     "## MAUD public benchmark (segmentation and timing)": ("maud-segmentation.json",),
     "## Measured vs. not measured": ("test-collection.json", "accuracy-suite.json"),

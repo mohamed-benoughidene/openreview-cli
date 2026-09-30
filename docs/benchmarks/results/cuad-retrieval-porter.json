@@ -1,0 +1,57 @@
+{
+  "benchmark": "cuad-retrieval-porter",
+  "command": "uv run python scripts/measure_retrieval_accuracy.py --tokenizer porter --out /tmp/ret-porter.json",
+  "date": "2026-09-30",
+  "git_commit": "8bd72a3",
+  "provenance": [
+    {
+      "path": "scripts/measure_retrieval_accuracy.py",
+      "sha256": "9c1f65b6396a6c91f1fa6b4073cf05a8a4e5981905397e81f2ca3ae4a544fb64"
+    },
+    {
+      "path": "src/openreview_cli/retrieval/storage.py",
+      "sha256": "a779adab149de439781e7db4a9bcc4a11d119d9ebd1a630992611769d0e1bf0b"
+    }
+  ],
+  "models": "none (offline: SQLite FTS5 keyword search; no model calls)",
+  "benchmark_input": "data/legalbenchrag/benchmarks/cuad.json",
+  "sample": {
+    "queries_total": 4042,
+    "queries_with_usable_span": 4042,
+    "queries_scored": 4042,
+    "queries_skipped_missing_contract": 0,
+    "queries_skipped_no_span": 0,
+    "queries_with_no_relevant_chunk": 0,
+    "contracts_used": 462,
+    "chunks_indexed_total": 73222
+  },
+  "metrics": {
+    "hit_at_1": 0.043543,
+    "hit_at_5": 0.320633,
+    "mrr_at_5": 0.1274
+  },
+  "notes": "Arm: --tokenizer porter (FTS5 tokenize='porter unicode61'; the shipped default is 'porter'). This receipt is one arm of a two-arm tokenizer comparison and must be read with its sibling: docs/benchmarks/results/cuad-retrieval-porter.json (the shipped arm) and docs/benchmarks/results/cuad-retrieval-unicode61.json (stemming off). The index tokenizer is the only variable: both arms chunk identically and score identically, and each recorded every query in the committed benchmark (4,042 queries over 462 contracts). The shipped choice was originally made on a 1,536-query comparison whose harness was never committed and whose query count matches no benchmark in the tree, so that evidence cannot be reproduced; this pair is the re-derivation on the committed set. It reproduces the same direction (porter ahead) but not the same magnitudes: porter is +0.0123 hit@1, +0.0658 hit@5 and +0.0273 MRR@5 here, against the remembered +1.7 / +2.1 / +1.9 percentage points. Measured by scripts/measure_retrieval_accuracy.py, which reuses the product chunker (stream_chunks(ChunkConfig()) over one Clause per blank-line paragraph) and the product ingest path (ingest_document, per-document SQLite FTS5 index) but cannot reuse the product parser, which reads PDF/DOCX only and not the CUAD .txt corpus; chunk boundaries therefore approximate a real product parse. Ground truth is character-span overlap between a retrieved chunk and the query's CUAD answer span, not answer correctness, so a chunk that merely touches an answer span counts as relevant - this is the weakest link and it is why the absolute hit@1 is low. Retrieval depth is 20, deeper than the product default top_k of 5, so hit@5/MRR@5 are not an artifact of the cut. The receipt is the raw script output plus this metadata block (command/date/git_commit/models/provenance/notes), matching the other receipts here; wall time is machine-dependent. The corpus and the benchmark are gitignored (data/legalbenchrag/) and not redistributed. This measures retrieval, not query answering: nothing here checks whether an extracted answer is right.",
+  "corpus_root": "data/legalbenchrag/corpus",
+  "method": "sparse: BM25 over SQLite FTS5",
+  "fts": {
+    "tokenizer": "porter",
+    "tokenize": "porter unicode61",
+    "prefix": "2 3",
+    "ordering": "ORDER BY bm25(chunk_fts)",
+    "default_tokenizer": "porter"
+  },
+  "chunking_rule": "one chunk per blank-line-separated paragraph via openreview_cli.chunking.stream_chunks(ChunkConfig()) (chunk_size=512 tokens, chunk_overlap=50, group_short_clauses=True); paragraphs longer than 512 tokens are split by the product splitter. Offsets are document-global, translated through each clause's source_span.",
+  "ground_truth_rule": "a chunk is relevant if its document character span [char_start, char_end) overlaps the query's CUAD answer span [start, end): char_start < end and char_end > start",
+  "retrieval_depth": 20,
+  "product_default_top_k": 5,
+  "caveats": [
+    "Ground truth is character-span overlap, not semantic answer correctness; a chunk that merely touches an answer span counts as relevant. This is the weakest link.",
+    "The product parses PDF/DOCX only; the CUAD .txt corpus is chunked by building paragraph-level Clause objects and driving the product chunker directly, so chunk boundaries approximate -- but do not equal -- a real product parse.",
+    "Each contract is indexed alone and its index reused across its queries, matching the product's per-document index; there is no cross-document retrieval.",
+    "hit@1/hit@5/MRR@5 are macro-averages over queries (each query weighs equally).",
+    "Equal BM25 scores are ordered by SQLite without a stable tiebreak."
+  ],
+  "elapsed_seconds": 48.49,
+  "skipped": false,
+  "reason": null
+}
