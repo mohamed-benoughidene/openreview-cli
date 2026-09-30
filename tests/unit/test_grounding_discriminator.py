@@ -1091,3 +1091,53 @@ def test_no_model_override_omits_model_kwarg(mock_gateway: MagicMock) -> None:
     assert mock_gateway.chat.called
     _, kwargs = mock_gateway.chat.call_args
     assert "model" not in kwargs
+
+
+def test_an_unreadable_answer_increments_the_counter(mock_gateway: MagicMock) -> None:
+    mock_gateway.chat.return_value = "I cannot help with that."
+    d = CitationGroundingDiscriminator(mode="strict", gateway=mock_gateway)
+
+    verdict, _provenances, confidence = d.ground_claim("claim text", "4.3", "clause text")
+
+    assert verdict is GroundingVerdict.UNCERTAIN
+    assert confidence == 0.0
+    assert d.unreadable_answers == 1
+
+
+def test_a_readable_answer_leaves_the_counter_at_zero(mock_gateway: MagicMock) -> None:
+    d = CitationGroundingDiscriminator(mode="strict", gateway=mock_gateway)
+
+    d.ground_claim("claim text", "4.3", "clause text")
+
+    assert d.unreadable_answers == 0
+
+
+def test_a_gateway_failure_is_not_counted_as_unreadable(mock_gateway: MagicMock) -> None:
+    mock_gateway.chat.side_effect = RuntimeError("connection refused")
+    d = CitationGroundingDiscriminator(mode="strict", gateway=mock_gateway)
+
+    verdict, _provenances, confidence = d.ground_claim("claim text", "4.3", "clause text")
+
+    assert verdict is GroundingVerdict.UNCERTAIN
+    assert confidence == 0.0
+    assert d.unreadable_answers == 0
+
+
+def test_an_unreadable_batch_counts_every_claim_in_it(
+    mock_gateway: MagicMock, sample_report: MagicMock, sample_document: MagicMock
+) -> None:
+    """The batch path has no early return: it maps missing indices to UNCERTAIN.
+
+    Copy the `ground_report(...)` call shape from an existing test in this file
+    (see `test_ground_report_with_clause_text`) so the fixtures are wired the
+    same way.
+    """
+    mock_gateway.chat.return_value = "I cannot help with that."
+    d = CitationGroundingDiscriminator(mode="strict", gateway=mock_gateway)
+
+    d.ground_report(sample_report, sample_document)
+
+    # One unreadable answer per claim in the batch the reader could not parse.
+    # For this fixture that is every assessment; if the pipeline filters any, use
+    # the count the ground_report test you copied already asserts on.
+    assert d.unreadable_answers == len(sample_report.assessments)

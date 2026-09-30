@@ -163,6 +163,7 @@ class _StubDiscriminator:
 
     def __init__(self) -> None:
         self.calls: list[tuple[str, str, str]] = []
+        self.unreadable_answers = 0
 
     def ground_claim(
         self, claim_text: str, cited_clause_id: str, clause_text: str
@@ -205,6 +206,7 @@ class TestGroundingAccuracyEndToEnd:
 
         assert receipt["skipped"] is False
         assert receipt["all_uncertain"] is False
+        assert receipt["unreadable_answers"] == 0
         assert receipt["units"] == 2
         # --no-pii is recorded, not silently ignored: the receipt says raw text was sent.
         assert receipt["pii_stripped"] is False
@@ -373,6 +375,7 @@ class TestGroundingAccuracyGracefulSkip:
         assert receipt["corpus_dir"] == str(missing)
         assert receipt["arm"] == "configured"
         assert receipt["limit"] == 3
+        assert receipt["unreadable_answers"] == 0
 
     def test_empty_corpus_dir_also_skips(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
@@ -397,6 +400,7 @@ class _AlwaysUncertainDiscriminator:
 
     def __init__(self) -> None:
         self.calls: list[tuple[str, str, str]] = []
+        self.unreadable_answers = 0
 
     def ground_claim(
         self, claim_text: str, cited_clause_id: str, clause_text: str
