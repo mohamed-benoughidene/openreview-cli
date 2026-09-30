@@ -1,8 +1,8 @@
 {
   "benchmark": "maud-segmentation",
   "command": "uv run python scripts/benchmark_cuad_segmentation.py --dataset maud --output .benchmark-reports/maud-segmentation.json",
-  "date": "2026-09-22",
-  "git_commit": "f7b08ba",
+  "date": "2026-09-30",
+  "git_commit": "74ce840",
   "provenance": [
     {
       "path": "scripts/benchmark_cuad_segmentation.py",
@@ -18,14 +18,14 @@
     "unreadable_file_paths": []
   },
   "metrics": {
-    "spans_contained": 2282,
-    "containment_rate": 0.803804,
-    "token_f1_mean": 0.182747,
+    "spans_contained": 2266,
+    "containment_rate": 0.798168,
+    "token_f1_mean": 0.190353,
     "tests_with_span": 1676,
-    "tests_any_span_contained": 1435,
-    "test_coverage_rate": 0.856205,
+    "tests_any_span_contained": 1425,
+    "test_coverage_rate": 0.850239,
     "missing_snippets": 0,
-    "elapsed_seconds": 160.55
+    "elapsed_seconds": 171.19
   },
-  "notes": "Corpus is gitignored (data/legalbenchrag/) and not redistributed; corpus_sha256 pins the exact file used. Wall time is machine-dependent. This measures clause segmentation (span containment and enclosure tightness), NOT query-answering accuracy, and NOT deal-point accuracy: there is no M&A playbook among the 23 named modes, so no per-category or recall number comparable to the product-mode table can be produced without authoring one. Mean token-F1 is taken over every evaluated span with a non-contained span counted as 0. git_commit is informational; the top-level provenance pin is the authoritative content pin."
+  "notes": "Corpus is gitignored (data/legalbenchrag/) and not redistributed; corpus_sha256 pins the exact file used. Wall time is machine-dependent (171.19 s on the machine that wrote this receipt, against 349.94 s and 160.55 s in the two superseded receipts; wall clock moves with the environment, not the code). This measures clause segmentation (span containment and enclosure tightness), NOT query-answering accuracy, and NOT deal-point accuracy: there is no M&A playbook among the 23 named modes, so no per-category or recall number comparable to the product-mode table can be produced without authoring one. These numbers were produced from the branch's WORKING-TREE code, which carries the dotted-clause-number fix to detect_clause_starts; that fix is not yet contained in the commit git_commit names (74ce840), so the stamp is the branch point, not the exact tree that ran. The same-environment baseline was measured here by re-running the PRE-fix code on this machine: containment 0.803804, token-F1 0.182747, query coverage 0.856205 -- these reproduce the superseded 2026-09-22 receipt exactly, so this corpus's before/after is a genuine same-environment comparison. Against that baseline the fix is a mixed result and it is reported as such: containment FELL 0.803804 -> 0.798168 and query coverage 0.856205 -> 0.850239, while enclosure tightness improved, token-F1 0.182747 -> 0.190353. The later change sharing one trailer between the start rule and the level rule (any non-word separator, `:`, `)`, `-`, `/`, `,` ...) was re-run the same day and moved only the enclosure number: containment and coverage are unchanged at 0.798168 / 0.850239, while token-F1 ticks 0.190268 -> 0.190353 (10 extra clause starts across 9 documents). The mechanism is finer segmentation: splitting more precisely tightens enclosures (which lifts token-F1) but a new boundary can land inside a single large gold span, so that span is no longer contained and the containment/coverage rates dip. MAUD is therefore the counter-example to CUAD (whose containment ROSE 0.907796 -> 0.933728, +2.59 pp on the same-environment baseline) and is not omitted. Mean token-F1 is taken over every evaluated span with a non-contained span counted as 0. git_commit is informational; the top-level provenance pin is the authoritative content pin."
 }
