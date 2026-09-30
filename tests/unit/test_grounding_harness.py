@@ -177,6 +177,9 @@ class TestGroundingAccuracyEndToEnd:
             },
         )
         monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda: stub)
+        # The arm reachability pre-flight is a real gateway call; stub it as reachable so this
+        # offline test exercises the measurement, not the network.
+        monkeypatch.setattr(SCRIPT, "_preflight_arm_reachability", lambda: (True, None))
         # Force every cross-clause negative to be the cited clause itself, so the guard
         # drops it; the hallucination override is genuinely unsupported and survives.
         monkeypatch.setattr(SCRIPT, "unsupported_claim", lambda a, b: a.text)
@@ -187,6 +190,7 @@ class TestGroundingAccuracyEndToEnd:
         )
 
         assert receipt["skipped"] is False
+        assert receipt["all_uncertain"] is False
         assert receipt["units"] == 2
         # --no-pii is recorded, not silently ignored: the receipt says raw text was sent.
         assert receipt["pii_stripped"] is False
@@ -297,6 +301,7 @@ class TestGroundingAccuracyPiiStrip:
         )
         monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda: stub)
         monkeypatch.setattr(SCRIPT, "hallucination", lambda claim: FABRICATED)
+        monkeypatch.setattr(SCRIPT, "_preflight_arm_reachability", lambda: (True, None))
         monkeypatch.setattr(pii_pkg, "strip_pii_clauses", fake_strip)
         monkeypatch.setattr("openreview_cli.gateway.router.mark_pii_available", fake_mark)
 
@@ -348,6 +353,7 @@ class TestGroundingAccuracyGracefulSkip:
 
         receipt = json.loads(out.read_text())
         assert receipt["skipped"] is True
+        assert receipt["skip_kind"] == "corpus_absent"
         assert receipt["corpus_dir"] == str(missing)
         assert receipt["arm"] == "configured"
         assert receipt["limit"] == 3
@@ -363,3 +369,143 @@ class TestGroundingAccuracyGracefulSkip:
 
         assert json.loads(out.read_text())["skipped"] is True
         assert "corpus absent" in capsys.readouterr().out
+
+
+class _AlwaysUncertainDiscriminator:
+    """Stands in for a broken arm: the gateway call fails and the verdict comes back uncertain.
+
+    This mirrors what ``CitationGroundingDiscriminator.ground_claim`` actually does when the
+    gateway raises (``grounding/discriminator.py``): it swallows the error and returns
+    ``UNCERTAIN``. The harness must not read that as model caution.
+    """
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, str]] = []
+
+    def ground_claim(
+        self, claim_text: str, cited_clause_id: str, clause_text: str
+    ) -> tuple[GroundingVerdict, list[Any], float]:
+        self.calls.append((claim_text, cited_clause_id, clause_text))
+        return (GroundingVerdict.UNCERTAIN, [], 0.0)
+
+
+def _stub_reachable_slots(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The offline scaffolding shared by the pre-flight tests: slots + a passing check."""
+    monkeypatch.setattr(
+        SCRIPT,
+        "_configured_slots",
+        lambda: {"extraction": "x", "reasoning": "x", "grounding": "stub/grounding"},
+    )
+    monkeypatch.setattr(SCRIPT, "unsupported_claim", lambda a, b: a.text)
+    monkeypatch.setattr(SCRIPT, "hallucination", lambda claim: FABRICATED)
+
+
+class TestGroundingArmPreflight:
+    """Guard 1: an arm that cannot be reached aborts before the matrix, with a distinct receipt.
+
+    The failure is *observable live*: no local server gives ``Connection refused``, a cloud
+    key at its spend limit gives ``403 Key limit exceeded``. Either way the discriminator
+    would have returned ``uncertain`` for every claim, so the harness must refuse to measure.
+    """
+
+    def test_unreachable_arm_aborts_with_error_receipt_and_no_matrix(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        corpus = _tiny_corpus(tmp_path)
+        out = tmp_path / "ga.json"
+        _stub_reachable_slots(monkeypatch)
+        built = {"discriminator": False}
+
+        monkeypatch.setattr(
+            SCRIPT,
+            "_preflight_arm_reachability",
+            lambda: (False, "ConnectionError: Connection refused"),
+        )
+
+        def _record_build() -> _StubDiscriminator:
+            built["discriminator"] = True
+            return _StubDiscriminator()
+
+        monkeypatch.setattr(SCRIPT, "_make_discriminator", _record_build)
+
+        with pytest.raises(SystemExit) as excinfo:
+            SCRIPT.main(
+                [
+                    "--grounding-accuracy",
+                    "--corpus-dir",
+                    str(corpus),
+                    "--limit",
+                    "2",
+                    "--arm",
+                    "configured",
+                    "--no-pii",
+                    "--out",
+                    str(out),
+                ]
+            )
+
+        # A measurement that could not run is not a measurement: non-zero exit, no matrix.
+        assert excinfo.value.code == 1
+        assert built["discriminator"] is False  # never even built; no call was attempted
+
+        receipt = json.loads(out.read_text())
+        assert receipt["skipped"] is True
+        assert receipt["skip_kind"] == "arm_unreachable"
+        assert "arm 'configured' unreachable" in receipt["skip_reason"]
+        assert "Connection refused" in receipt["skip_reason"]
+        assert receipt["preflight"]["ok"] is False
+        assert receipt["preflight"]["arm"] == "configured"
+        assert receipt["preflight"]["error"] == "ConnectionError: Connection refused"
+        assert receipt["per_label"] == []
+        assert receipt["positives"] == 0
+
+        captured = capsys.readouterr().out
+        assert "arm 'configured' unreachable" in captured
+        assert "Connection refused" in captured
+
+    def test_reachable_arm_proceeds_and_says_so(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        corpus = _tiny_corpus(tmp_path)
+        out = tmp_path / "ga.json"
+        stub = _StubDiscriminator()
+        _stub_reachable_slots(monkeypatch)
+        monkeypatch.setattr(SCRIPT, "_preflight_arm_reachability", lambda: (True, None))
+        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda: stub)
+
+        receipt = SCRIPT.run_grounding_accuracy(
+            corpus_dir=corpus, limit=2, arm="configured", out=out, no_pii=True
+        )
+
+        assert receipt["skipped"] is False
+        assert receipt["all_uncertain"] is False
+        assert len(receipt["per_label"]) == 4
+        assert len(stub.calls) == 4
+        assert json.loads(out.read_text())["skipped"] is False
+        assert "pre-flight OK" in capsys.readouterr().out
+
+    def test_all_uncertain_run_is_flagged_in_print_and_receipt(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        corpus = _tiny_corpus(tmp_path)
+        out = tmp_path / "ga.json"
+        stub = _AlwaysUncertainDiscriminator()
+        _stub_reachable_slots(monkeypatch)
+        monkeypatch.setattr(SCRIPT, "_preflight_arm_reachability", lambda: (True, None))
+        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda: stub)
+
+        receipt = SCRIPT.run_grounding_accuracy(
+            corpus_dir=corpus, limit=2, arm="configured", out=out, no_pii=True
+        )
+
+        # An all-uncertain run is a broken-arm smell, not a cautious model.
+        assert receipt["skipped"] is False
+        assert receipt["all_uncertain"] is True
+        assert receipt["caught_rate"] == 0.0
+        assert receipt["good_uncertain"] == receipt["positives"]
+        assert "arm" in receipt["all_uncertain_note"].lower()
+        assert json.loads(out.read_text())["all_uncertain"] is True
+
+        captured = capsys.readouterr().out
+        assert "WARNING" in captured
+        assert "uncertain" in captured.lower()
