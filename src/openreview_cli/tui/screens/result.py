@@ -54,6 +54,7 @@ class ResultScreen(Screen[None]):
         Binding("t", "open_amber_queue", "Triage"),
         Binding("m", "open_amber_queue", "Amber queue", show=False),
         Binding("g", "open_clause_graph", "Clause graph"),
+        Binding("b", "build_clause_graph", "Build clause graph"),
         Binding("]", "next_doc", "Next document"),
         Binding("[", "prev_doc", "Prev document"),
         Binding("right", "next_page", "Next page"),
@@ -212,6 +213,7 @@ class ResultScreen(Screen[None]):
                 # and the helper is a no-op (never raises) on empty/error screens.
                 if self._document_path_for_active_report() is not None:
                     yield Button("Clause graph", id="btn-clause-graph", variant="default")
+                    yield Button("Build graph (B)", id="btn-graph-build", variant="default")
                 yield Button("Close", id="btn-close", variant="default")
                 if total_pages > 1:
                     yield Button(
@@ -323,14 +325,27 @@ class ResultScreen(Screen[None]):
 
         self.app.push_screen(GraphSummaryScreen(path))
 
+    def action_build_clause_graph(self) -> None:
+        """Open the build-and-save clause tree for the active document.
+
+        Same path check as ``action_open_clause_graph``: the build screen is
+        only offered when an on-disk document is named.
+        """
+        path = self._document_path_for_active_report()
+        if path is None:
+            return
+        from openreview_cli.tui.screens.graph_build import GraphBuildScreen
+
+        self.app.push_screen(GraphBuildScreen(path))
+
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
-        """Disable the clause-graph binding when no document path is known.
+        """Disable the clause-graph bindings when no document path is known.
 
         Unavailable for saved-report screens (no ``document_paths``), empty
         batches and error screens, and when the active index runs past the end
         of the supplied paths. Never raises on an error screen.
         """
-        if action == "open_clause_graph":
+        if action in ("open_clause_graph", "build_clause_graph"):
             return self._document_path_for_active_report() is not None
         return super().check_action(action, parameters)
 
@@ -441,6 +456,8 @@ class ResultScreen(Screen[None]):
             self.action_open_amber_queue()
         elif btn_id == "btn-clause-graph":
             self.action_open_clause_graph()
+        elif btn_id == "btn-graph-build":
+            self.action_build_clause_graph()
         elif btn_id == "btn-export":
             self.query_one("#step-content", Container).display = False
             self.query_one("#export-view", Container).display = True

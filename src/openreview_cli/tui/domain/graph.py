@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from openreview_cli.graph.metrics import GraphMetrics
+    from openreview_cli.graph.models import ContractGraph
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,13 +39,17 @@ class GraphSummary:
     parent_child_edge_count: int
     metrics: GraphMetrics
     score: int
+    #: The built ``ContractGraph`` itself, so a screen can render the tree from
+    #: the very graph the counts above were read off. One parse, one build.
+    graph: ContractGraph
 
 
 def graph_summary_via_tui(document_path: Path) -> GraphSummary:
     """Parse *document_path* and summarise its clause graph and health.
 
-    Returns the real ``GraphMetrics`` object and the real ``HealthScore.score``
-    read off ``compute_health`` -- no weight or formula is recomputed here.
+    Returns the real ``GraphMetrics`` object, the real ``HealthScore.score``
+    read off ``compute_health``, and the built ``ContractGraph`` itself -- no
+    weight or formula is recomputed here and no caller needs a second parse.
 
     ``parse_document`` is called with ``allow_password_prompt=False``: the
     screen must never prompt, so an encrypted document is refused by the parser
@@ -82,6 +87,7 @@ def graph_summary_via_tui(document_path: Path) -> GraphSummary:
         parent_child_edge_count=parent_child_edge_count,
         metrics=metrics,
         score=score,
+        graph=graph,
     )
 
 

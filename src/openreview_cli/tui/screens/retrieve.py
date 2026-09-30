@@ -61,7 +61,21 @@ _PASSWORD_NOTE = (
     "openreview after setting it."
 )
 
-_BUTTON_IDS = ("#btn-chunk", "#btn-ingest", "#btn-search", "#btn-clear", "#btn-back")
+_BUTTON_IDS = (
+    "#btn-chunk",
+    "#btn-ingest",
+    "#btn-search",
+    "#btn-clear",
+    "#btn-graph",
+    "#btn-back",
+)
+
+#: The reach into the graph build screen is a button, not a bare ``b`` binding:
+#: ``on_mount`` focuses ``#retrieve-path``, and a single-letter widget binding is
+#: dead while an ``Input`` owns printable keys. The path it uses is whatever the
+#: path box names now.
+GRAPH_NO_PATH_MESSAGE = "Enter a path above, then Build graph to see that document's clause tree."
+GRAPH_NOT_FOUND_MESSAGE = "No file found at that path, so there is no clause graph to build."
 
 #: Stand-in for the metadata of a file that exists but cannot be read at all.
 #: Such a file has no ``index_status`` to read, and the adapter reports it as
@@ -155,6 +169,7 @@ class RetrieveScreen(Screen[None]):
             yield ListView(id="retrieve-results")
             with Horizontal(id="retrieve-actions"):
                 yield Button("Clear index", id="btn-clear", variant="error")
+                yield Button("Graph (B)", id="btn-graph", variant="default")
                 yield Button("Back (Esc)", id="btn-back", variant="default")
 
     def on_mount(self) -> None:
@@ -179,6 +194,7 @@ class RetrieveScreen(Screen[None]):
             "btn-ingest": self.action_ingest_document,
             "btn-search": self.action_retrieve,
             "btn-clear": self.action_index_clear,
+            "btn-graph": self.action_build_clause_graph,
             "btn-back": self.action_go_back,
         }
         handler = handlers.get(event.button.id or "")
@@ -379,6 +395,26 @@ class RetrieveScreen(Screen[None]):
 
     async def action_go_back(self) -> None:
         self.app.pop_screen()
+
+    async def action_build_clause_graph(self) -> None:
+        """Open the clause tree for the document the path box names.
+
+        A button, not a binding: the path box holds focus here, so a bare ``b``
+        would be dead. Nothing is pushed unless the path names an existing file,
+        and the reason is written to the status line when it does not.
+        """
+        if self._busy:
+            return
+        raw, path = self._path_value()
+        if not raw:
+            self._fail(GRAPH_NO_PATH_MESSAGE, severity="warning")
+            return
+        if not path.exists():
+            self._fail(GRAPH_NOT_FOUND_MESSAGE, severity="warning")
+            return
+        from openreview_cli.tui.screens.graph_build import GraphBuildScreen
+
+        self.app.push_screen(GraphBuildScreen(path))
 
     # ── confirmation plumbing (D6) ──
 
