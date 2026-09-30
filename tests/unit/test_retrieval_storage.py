@@ -1,4 +1,5 @@
 import json
+import re
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
@@ -56,6 +57,19 @@ class TestSchemaCreation:
             "SELECT name FROM sqlite_master WHERE type='table' AND name='chunk_fts'"
         )
         assert cursor.fetchone() is not None
+
+    def test_fts_tokenizer_is_porter_unicode61(self, storage: RetrievalStorage) -> None:
+        """FR-001: the FTS table is created with the ``porter unicode61`` tokenizer.
+
+        Asserts on the DDL SQLite actually recorded, not on a constant in the source.
+        """
+        cursor = storage.conn.execute("SELECT sql FROM sqlite_master WHERE name='chunk_fts'")
+        row = cursor.fetchone()
+        assert row is not None, "chunk_fts was not created"
+        ddl = cast("str", row["sql"])
+        match = re.search(r"tokenize\s*=\s*'([^']+)'", ddl)
+        assert match is not None, f"no tokenizer recorded in chunk_fts DDL: {ddl}"
+        assert match.group(1) == "porter unicode61"
 
     def test_creates_triggers(self, storage: RetrievalStorage) -> None:
         cursor = storage.conn.execute(

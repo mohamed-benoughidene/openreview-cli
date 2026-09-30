@@ -64,7 +64,7 @@ def populated_db(db_path: str) -> str:
         CREATE VIRTUAL TABLE IF NOT EXISTS chunk_fts USING fts5(
             chunk_id UNINDEXED, text, clause_heading,
             content='chunks', content_rowid='rowid',
-            tokenize='unicode61', prefix='2 3'
+            tokenize='porter unicode61', prefix='2 3'
         );
 
         INSERT INTO chunk_fts (rowid, chunk_id, text, clause_heading)
@@ -125,7 +125,7 @@ def pooled_db(tmp_path: Path) -> str:
             ('c2','test-doc','governing law is delaware','Section 7.2',1,'c1','["Article 7","Section 7.2"]',200,300);
         CREATE VIRTUAL TABLE chunk_fts USING fts5(
             chunk_id UNINDEXED, text, clause_heading, content='chunks', content_rowid='rowid',
-            tokenize='unicode61', prefix='2 3'
+            tokenize='porter unicode61', prefix='2 3'
         );
         INSERT INTO chunk_fts (rowid, chunk_id, text, clause_heading)
         SELECT rowid, chunk_id, text, clause_heading FROM chunks;
@@ -191,7 +191,7 @@ def nl_query_db(tmp_path: Path) -> str:
             ('n4','nl-doc','confidential information shall be protected by the receiving party','Section 3',0,NULL,'["Section 3"]',600,700);
         CREATE VIRTUAL TABLE chunk_fts USING fts5(
             chunk_id UNINDEXED, text, clause_heading, content='chunks', content_rowid='rowid',
-            tokenize='unicode61', prefix='2 3'
+            tokenize='porter unicode61', prefix='2 3'
         );
         INSERT INTO chunk_fts (rowid, chunk_id, text, clause_heading)
         SELECT rowid, chunk_id, text, clause_heading FROM chunks;

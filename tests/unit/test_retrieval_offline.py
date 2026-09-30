@@ -56,7 +56,7 @@ def populated_db(tmp_path: Path) -> str:
         CREATE VIRTUAL TABLE IF NOT EXISTS chunk_fts USING fts5(
             chunk_id UNINDEXED, text, clause_heading,
             content='chunks', content_rowid='rowid',
-            tokenize='unicode61', prefix='2 3'
+            tokenize='porter unicode61', prefix='2 3'
         );
         INSERT INTO chunk_fts (rowid, chunk_id, text, clause_heading)
         SELECT rowid, chunk_id, text, clause_heading FROM chunks;
