@@ -165,7 +165,7 @@ def test_two_arrays_back_to_back_take_the_first() -> None:
 - [ ] **Step 2: Run it and confirm three failures**
 
 Run: `uv run pytest tests/unit/test_grounding_prompts.py -q`
-Expected: **3 failed, 12 passed.** The failures are `test_bracketed_preamble_before_the_array_parses`, `test_a_single_object_parses_as_one_result`, `test_two_arrays_back_to_back_take_the_first`. If the count differs, stop and re-read the reader before continuing.
+Expected: **3 failed, 12 passed.** The failures are `test_bracketed_preamble_before_the_array_parses`, `test_a_single_object_parses_as_one_result` and `test_two_arrays_back_to_back_take_the_first`. This baseline was **executed** against the unmodified reader on 2026-09-30, not traced. The three tests that assert emptiness (`truncated`, `empty string`, `text without json`) also pass before the change — they are regression guards, not evidence. If your failure set differs, stop and re-read the reader before continuing.
 
 - [ ] **Step 3: Implement the reader**
 
@@ -186,7 +186,7 @@ Replace the block at `:99-109` — from `# Try to extract JSON array from respon
 
 Then change the loop header `for item in data:` to `for item in items:`. Leave everything inside the loop (the `claim_index` check, verdict parsing, provenance parsing) exactly as it is.
 
-Delete the whole `_extract_json_array` function (`:150-166`, including its docstring) — its only caller was the code you just replaced. Add in its place:
+Delete the whole `_extract_json_array` function (`:150-166`, including its docstring) — its only caller was the code you just replaced. **Also delete `import re` (`:12`)**: its only two uses are the regexes inside the function you removed, and leaving it trips ruff `F401`, which fails the pre-commit gate you must pass in Task 5. Confirm with `uv run ruff check src/openreview_cli/grounding/prompts.py` (expected: no output). Add in its place:
 
 ```python
 def _first_json_value(text: str) -> Any | None:
@@ -266,17 +266,17 @@ def test_prompt_no_longer_demands_an_array_unconditionally() -> None:
 - [ ] **Step 2: Run it and confirm one failure**
 
 Run: `uv run pytest tests/unit/test_grounding_prompts.py -q -k prompt`
-Expected: `test_prompt_permits_a_single_object_and_keeps_the_array_for_batches` FAILS; the other one passes already (the old sentence is present today, so `not in` is currently false → it fails too). Expect **2 failed** before the change.
+Expected: **2 failed.** Both assertions read the unmodified template — the new sentence is absent and the old sentence is still present, so each is false before the change.
 
 - [ ] **Step 3: Replace the template's final line**
 
-Replace line `:41`:
+Replace the sentence on line `:41`. That line also carries the template's closing triple quote, so replace only the sentence text and keep the `"""` — deleting the whole line leaves an unterminated string and a `SyntaxError`:
 
 ```
 Respond with a JSON array of these objects, one per claim, in the same order as the input claims.
 ```
 
-with the exact sentence from Global Constraints (copy it verbatim; it contains no braces).
+Use the exact sentence from Global Constraints, copied verbatim; it contains no braces.
 
 - [ ] **Step 4: Run the tests again**
 
@@ -295,13 +295,14 @@ git commit -m "fix(grounding): permit a single object for a single claim in the 
 ### Task 3: Ask only local models for JSON — including on the fallback path
 
 **Files:**
-- Modify: `src/openreview_cli/gateway/router.py` (add `_LOCAL_ONLY_PARAMS` and `_strip_local_only_params` near the other module helpers; call it in `_get_litellm_kwargs` after `:373` and in `_call_with_fallback` after `:564`)
-- Modify: `src/openreview_cli/config/loader.py` (the `grounding` `ModelSlot` at `:104-106`)
+- Modify: `src/openreview_cli/gateway/router.py` (add `_strip_local_only_params` near the other module helpers; call it in `_get_litellm_kwargs` after `:373` and in `_call_with_fallback` after `:564`)
+- Modify: `src/openreview_cli/config/loader.py` (the `grounding` entry in `DEFAULT_CONFIG` at `:31-35`)
 - Test: `tests/unit/test_gateway_router.py` (append a class after `TestExtraParamsPassThrough`)
+- Test: `tests/unit/test_gateway_models.py` (append one test pinning the shipped default)
 
 **Interfaces:**
 - Consumes: `ProviderInfo.is_local: bool` (`gateway/models.py:38`); `self._resolve_provider_info(slot)` (`router.py:189`); `load_registry().get(prefix)` (`:560`); the existing test helper `_gateway(tmp_path, monkeypatch, config)` and constant `COMMON_CONFIG`.
-- Produces: module-level `_LOCAL_ONLY_PARAMS: frozenset[str]` and `_strip_local_only_params(kwargs: dict[str, Any], info: ProviderInfo | None) -> None`.
+- Produces: `_strip_local_only_params(kwargs: dict[str, Any], info: ProviderInfo | None) -> None`.
 
 - [ ] **Step 1: Read the existing fallback test pattern**
 
@@ -350,13 +351,6 @@ class TestLocalOnlyExtraParams:
         kwargs = gw._get_litellm_kwargs("reasoning")
         assert "response_format" not in kwargs
 
-    def test_other_extra_params_are_still_forwarded(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
-        kwargs = gw._get_litellm_kwargs("reasoning")
-        assert kwargs.get("top_p") == 0.9
-
     def test_a_cloud_fallback_does_not_receive_the_param(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -366,7 +360,11 @@ class TestLocalOnlyExtraParams:
 
         def failing_then_ok(**kwargs) -> str:
             seen.append(dict(kwargs))
-            if len(seen) == 1:
+            # `gateway.fallback.retries` is 2 in COMMON_CONFIG, so the primary is
+            # attempted three times before the fallback is dispatched. A stub that
+            # raises once would only trigger a primary retry and never reach the
+            # fallback at all — the test would then fail after implementation.
+            if len(seen) <= 3:
                 raise RuntimeError("primary unavailable")
             return "from fallback"
 
@@ -379,13 +377,19 @@ class TestLocalOnlyExtraParams:
     def test_a_local_fallback_still_receives_the_param(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """A guard, not a fail-first test: the strip must not over-reach.
+
+        Before the change the key is forwarded unconditionally, so this passes
+        already. It exists to catch an implementation that strips for every
+        fallback regardless of locality.
+        """
         import openreview_cli.gateway.router as router_mod
 
         seen: list[dict] = []
 
         def failing_then_ok(**kwargs) -> str:
             seen.append(dict(kwargs))
-            if len(seen) == 1:
+            if len(seen) <= 3:
                 raise RuntimeError("primary unavailable")
             return "from fallback"
 
@@ -399,16 +403,13 @@ class TestLocalOnlyExtraParams:
 - [ ] **Step 3: Run it and confirm the failures**
 
 Run: `uv run pytest tests/unit/test_gateway_router.py -q -k LocalOnlyExtraParams`
-Expected: the two local cases FAIL (the key is absent for a local provider today) and the fallback-to-cloud case FAILS (the key reaches the cloud fallback today). The two "dropped" cases may already pass — that is the correct baseline, not a problem.
+Expected: **3 failed, 3 passed.** `_get_litellm_kwargs` merges `extra_params` unconditionally today (`:361-371`), so the key is present for every provider: the failing three are `test_dropped_for_a_cloud_provider`, `test_dropped_for_an_unknown_provider` and `test_a_cloud_fallback_does_not_receive_the_param`. Already passing are the local-forwarded case and the local-fallback guard. The "other extra_params" behaviour is deliberately **not** re-tested here — `TestExtraParamsPassThrough.test_keys_appear_in_kwargs` (`tests/unit/test_gateway_router.py:481`) already pins it with the same config and slot. If the failing set differs, stop: the gate is not where you think it is.
 
 - [ ] **Step 4: Implement the strip**
 
-In `src/openreview_cli/gateway/router.py`, add near the other module-level constants:
+In `src/openreview_cli/gateway/router.py`, add near the other module-level helpers:
 
 ```python
-_LOCAL_ONLY_PARAMS = frozenset({"response_format"})
-
-
 def _strip_local_only_params(kwargs: dict[str, Any], info: ProviderInfo | None) -> None:
     """Drop request parameters that only a locally-hosted provider may receive.
 
@@ -418,10 +419,10 @@ def _strip_local_only_params(kwargs: dict[str, Any], info: ProviderInfo | None) 
     """
     if info is not None and info.is_local:
         return
-    for key in _LOCAL_ONLY_PARAMS:
-        if key in kwargs:
-            kwargs.pop(key)
-            logger.debug("Dropped local-only param %s for a non-local provider", key)
+    # ponytail: one key today — a set-and-loop earns its keep when a second arrives.
+    if "response_format" in kwargs:
+        kwargs.pop("response_format")
+        logger.debug("Dropped local-only response_format for a non-local provider")
 ```
 
 Call it in `_get_litellm_kwargs` immediately after `info = self._resolve_provider_info(slot)` (`:373`):
@@ -439,28 +440,62 @@ Call it in `_call_with_fallback` after the fallback's credentials are applied an
 
 The second call site is what protects a cloud fallback reached from a local primary; without it the primary's merged `extra_params` ride along to the fallback host.
 
-- [ ] **Step 5: Add the shipped default**
+- [ ] **Step 5: Add the shipped default — in `DEFAULT_CONFIG`, not the model class**
 
-In `src/openreview_cli/config/loader.py`, the `grounding` slot at `:104-106` becomes:
+`_validate_and_merge` deep-merges `DEFAULT_CONFIG` over the pydantic class defaults (`src/openreview_cli/config/loader.py:208-209`), and the no-config path returns `dict(DEFAULT_CONFIG)` verbatim (`:329`). Changing the `ModelSlot` class default at `:104-106` therefore has **no effect on a real run** — the parameter would be inert and this whole task would measure nothing.
+
+Add it to the `grounding` entry in `DEFAULT_CONFIG` (`:31-35`):
 
 ```python
-        grounding: ModelSlot = ModelSlot(
-            primary="ollama/granite4:3b",
-            params=ModelParams(temperature=0.0, max_tokens=4000),
-            extra_params={"response_format": {"type": "json_object"}},
-        )
+            "grounding": {
+                "primary": "ollama/granite4:3b",
+                "fallback": None,
+                "params": {"temperature": 0.0, "max_tokens": 4000},
+                "extra_params": {"response_format": {"type": "json_object"}},
+            },
 ```
+
+Then add the test that pins it, to `tests/unit/test_gateway_models.py`:
+
+```python
+def test_the_shipped_default_asks_the_local_grounding_slot_for_json() -> None:
+    from openreview_cli.config.loader import DEFAULT_CONFIG
+
+    grounding = DEFAULT_CONFIG["gateway"]["models"]["grounding"]
+    assert grounding["extra_params"] == {"response_format": {"type": "json_object"}}
+```
+
+- [ ] **Step 6: Prove the default is not inert**
+
+A merge or a pydantic model can silently drop a key, so check the value a run actually sees — not the constant:
+
+```bash
+uv run python -c "
+from openreview_cli.config.loader import load_config
+print(load_config()['gateway']['models']['grounding']['extra_params'])"
+```
+
+Expected: `{'response_format': {'type': 'json_object'}}`. If it prints `None`, the parameter never reaches a request — stop and fix that before continuing. (If `load_config` requires an explicit config path, pass the repository default; the printed value is what matters.)
 
 - [ ] **Step 6: Run the tests again**
 
 Run: `uv run pytest tests/unit/test_gateway_router.py -q`
 Expected: all pass, including the pre-existing `TestExtraParamsPassThrough` cases and the fallback tests at `:161-238`.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: Commit the gate on its own**
 
 ```bash
-git add src/openreview_cli/gateway/router.py src/openreview_cli/config/loader.py tests/unit/test_gateway_router.py
+git add src/openreview_cli/gateway/router.py tests/unit/test_gateway_router.py
 git commit -m "feat(gateway): send response_format to local providers only, fallback included"
+```
+
+- [ ] **Step 8: Commit the shipped default separately**
+
+It is the user-visible behaviour change and must be revert-able without the gate.
+
+```bash
+git add src/openreview_cli/config/loader.py tests/unit/test_gateway_models.py
+git commit -m "feat(config): ask the local grounding slot for JSON by default"
 ```
 
 ---
@@ -474,7 +509,7 @@ git commit -m "feat(gateway): send response_format to local providers only, fall
 
 **Interfaces:**
 - Consumes: `CitationGroundingDiscriminator(mode=..., gateway=..., output_dir=...)` and its `ground_claim(...)`
-- Produces: `CitationGroundingDiscriminator.unreadable_answers: int` (read-only property over a private counter); receipt key `unreadable_answers: int`
+- Produces: `CitationGroundingDiscriminator.unreadable_answers: int` (plain public attribute, zero-initialised); receipt key `unreadable_answers: int`
 
 - [ ] **Step 1: Write the failing discriminator tests**
 
@@ -509,47 +544,61 @@ def test_a_gateway_failure_is_not_counted_as_unreadable(mock_gateway: MagicMock)
     assert verdict is GroundingVerdict.UNCERTAIN
     assert confidence == 0.0
     assert d.unreadable_answers == 0
+
+
+def test_an_unreadable_batch_counts_every_claim_in_it(
+    mock_gateway: MagicMock, sample_report: MagicMock, sample_document: MagicMock
+) -> None:
+    """The batch path has no early return: it maps missing indices to UNCERTAIN.
+
+    Copy the `ground_report(...)` call shape from an existing test in this file
+    (see `test_ground_report_with_clause_text`) so the fixtures are wired the
+    same way.
+    """
+    mock_gateway.chat.return_value = "I cannot help with that."
+    d = CitationGroundingDiscriminator(mode="strict", gateway=mock_gateway)
+
+    d.ground_report(sample_report, sample_document)
+
+    # One unreadable answer per claim in the batch the reader could not parse.
+    # For this fixture that is every assessment; if the pipeline filters any, use
+    # the count the ground_report test you copied already asserts on.
+    assert d.unreadable_answers == len(sample_report.assessments)
 ```
 
 - [ ] **Step 2: Run them and confirm the failures**
 
-Run: `uv run pytest tests/unit/test_grounding_discriminator.py -q -k counter or unreadable`
+Run: `uv run pytest tests/unit/test_grounding_discriminator.py -q -k "counter or unreadable"`
 Expected: the increment test FAILS with `AttributeError: 'CitationGroundingDiscriminator' object has no attribute 'unreadable_answers'`; the zero test fails the same way. The gateway-failure test fails identically (the attribute does not exist yet).
 
 - [ ] **Step 3: Implement the counter**
 
-In `src/openreview_cli/grounding/discriminator.py`:
-
-In `__init__`, alongside the other instance state:
+In `src/openreview_cli/grounding/discriminator.py`, declare the counter in `__init__` as a plain public attribute — the class uses plain attributes elsewhere, so a property would be ceremony:
 
 ```python
-        self._unreadable_answers = 0
+        self.unreadable_answers = 0
 ```
 
-Add the read-only accessor next to the other properties:
+Increment it in **both** places the reader can return nothing.
 
-```python
-    @property
-    def unreadable_answers(self) -> int:
-        """Answers the reader could not parse.
-
-        Counted separately from a gateway failure: both end in an UNCERTAIN
-        verdict, and conflating them is what hid this defect inside the
-        "uncertain" column of the measurement receipt.
-        """
-        return self._unreadable_answers
-```
-
-Increment exactly where the reader returns nothing — the single-claim site (`:119-120`) and the batch site (`:275` onward, where `_process_batch` handles the same empty result):
+Single-claim site (`:119-120`):
 
 ```python
         if not results:
             logger.warning("Failed to parse grounding response for claim")
-            self._unreadable_answers += 1
+            self.unreadable_answers += 1
             return (GroundingVerdict.UNCERTAIN, [], 0.0)
 ```
 
-Do **not** increment on the gateway-exception path (`:113-115`).
+Batch site: `_process_batch` has **no** early return — it maps each missing index onto an UNCERTAIN verdict (`:295-300`). Read `:255-300` first so your variable names match, then count the batch the reader failed to parse, next to its parse call at `:275`:
+
+```python
+        parsed = parse_grounding_response(response)
+        if not parsed:
+            self.unreadable_answers += len(batch)
+```
+
+Do **not** increment on the gateway-exception path (`:113-115`): a failed call and an unreadable answer are different faults, and conflating them is exactly what hid this defect inside the "uncertain" column.
 
 - [ ] **Step 4: Run the tests again**
 
@@ -558,19 +607,18 @@ Expected: all pass.
 
 - [ ] **Step 5: Write the failing harness test**
 
-In `tests/unit/test_grounding_harness.py`, the end-to-end test's stub discriminator must expose the attribute (a `MagicMock` would otherwise hand the receipt a mock). Set `stub.unreadable_answers = 0` where the stub is created, and add to the receipt assertions:
+Every receipt in `tests/unit/test_grounding_harness.py` is assembled from a stub discriminator, and there are **two** of them — both need the attribute or the new receipt line raises `AttributeError`:
+
+- `_StubDiscriminator` (around `:161`): add `self.unreadable_answers = 0` in its `__init__`.
+- `_AlwaysUncertainDiscriminator` (around `:390-405`): add `self.unreadable_answers = 0` in its `__init__` — the all-uncertain test also assembles a receipt.
+
+Then extend the existing end-to-end test that already inspects receipt fields (the one asserting counts and per-generator drops) with one line:
 
 ```python
-def test_receipt_reports_unreadable_answers(...) -> None:
-    # same setup as the existing end-to-end grounding test in this file
     assert receipt["unreadable_answers"] == 0
 ```
 
-Also copy the assertion into the existing end-to-end test if that is where the fixture is cheapest to reuse, and add one line asserting the skip receipt carries the key:
-
-```python
-    assert "unreadable_answers" in skip_receipt
-```
+Do not add a separate placeholder test, and do not touch a variable named `skip_receipt` — it does not exist in that file. If the file has a corpus-absent skip test, add the same one-line assertion there, because the skip receipt builder emits the key at `:519-526` and an untested field can quietly disappear.
 
 - [ ] **Step 6: Run it and confirm it fails**
 
@@ -582,13 +630,13 @@ Expected: FAIL with `KeyError: 'unreadable_answers'`.
 In `scripts/measure_slm_slots.py`:
 
 - In the skip receipt dict (`:519-526`, beside `all_uncertain`): `"unreadable_answers": 0,`
-- In the main receipt, where the confused-matrix fields are assembled (`:719-726`, beside `all_uncertain`):
+- In the main receipt dict (the block at `:730-764`, which already carries `all_uncertain`; the `all_uncertain` *computation* sits just above at `:719-726`), add:
 
 ```python
-    receipt["unreadable_answers"] = discriminator.unreadable_answers
+        "unreadable_answers": discriminator.unreadable_answers,
 ```
 
-using the same discriminator instance the run loop calls `ground_claim` on (`:693`); if that instance is constructed inside a helper, hoist it so the loop and the receipt share one object.
+The discriminator is already a single local created at `:675` and used by the run loop at `:693`, so both the loop and the receipt see the same instance — no hoisting is needed.
 
 - In `_print_grounding_summary` (`:533`, in the `uncertain good/bad` line at `:547`), extend the line so the two causes are listed side by side:
 
@@ -674,8 +722,10 @@ git push
 
 **Spec coverage** — every design requirement maps to a task: reader (Task 1), prompt (Task 2), local-only request with both call sites (Task 3), unreadable-answer counter (Task 4), re-measurement and the report correction (Task 5). The design's five mandatory structural tests all live in Task 3 Step 2 and Task 4 Step 1: local provider, cloud provider, unknown provider, cloud fallback, local fallback — plus the batch-of-three shape in Task 1.
 
-**Placeholder scan** — one instruction is deliberately conditional rather than a placeholder: Task 3 Step 1 tells the implementer to confirm `COMMON_CONFIG`'s exact text before the `replace()` calls, because inventing that text here would produce a test that fails for the wrong reason. Every other step carries its exact code, command and expected result.
+**Placeholder scan** — two instructions are deliberately conditional rather than placeholders: Task 3 Step 1 tells the implementer to confirm `COMMON_CONFIG`'s exact text before the `replace()` calls, and Task 3 Step 6 to pass a config path if `load_config` needs one. Inventing either value here would produce a check that fails for the wrong reason. Every other step carries its exact code, command and expected result.
 
-**Type consistency** — `parse_grounding_response` keeps its signature; `unreadable_answers` is an `int` property on the discriminator and an `int` receipt field; `_strip_local_only_params(kwargs, info)` takes the dict that `_get_litellm_kwargs` and `_call_with_fallback` both already hold, and `ProviderInfo | None` matches what `_resolve_provider_info` (`:373`) and `load_registry().get` (`:560`) return.
+**Type consistency** — `parse_grounding_response` keeps its signature; `unreadable_answers` is a zero-initialised `int` attribute on the discriminator and an `int` receipt field; `_strip_local_only_params(kwargs, info)` takes the dict that `_get_litellm_kwargs` and `_call_with_fallback` both already hold, and `ProviderInfo | None` matches what `_resolve_provider_info` (`:373`) and `load_registry().get` (`:560`) return.
+
+**Review record** — two independent sub-agents reviewed this plan on 2026-09-30 (one verified anchors and test behaviour against the code, one ran an over-engineering pass). Their blocking findings are folded in: the shipped default had to move to `DEFAULT_CONFIG` because a pydantic class default is dead code; the fallback tests had to survive three primary attempts (`gateway.fallback.retries` is 2), or they would never reach the fallback; `import re` had to be deleted alongside `_extract_json_array`; both harness stubs needed the counter; and the batch-site increment needed its own code and its own test. The 15-shape baseline is now executed rather than traced.
 
 **Known open point carried from the design** — nobody has observed which malformation the local model emits; the new counter is the instrument that answers it. If unreadable answers remain after Task 5, the next lever is the model and its parameters, not the reader.

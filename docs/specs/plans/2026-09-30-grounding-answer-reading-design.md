@@ -30,9 +30,11 @@ Same task, same 20 clauses, same reader, two models:
 
 Two facts pin the cause. Every one of the 32 local "uncertain" rows carries confidence exactly 0.0, and the
 job log holds 31 `Failed to parse grounding response` lines against 0 `Gateway call failed` lines. In
-`discriminator.py`, `UNCERTAIN` with confidence 0.0 has only three sources: an empty claim (`:81-83`), a
-gateway exception (`:114-115`), and the reader returning nothing (`:117-120`). The log rules out the first
-two. The difference between the two models is the reader, not caution.
+`discriminator.py`, `UNCERTAIN` with confidence 0.0 has only two sources: a gateway exception (`:114-115`) and
+the reader returning nothing (`:117-120`). An empty claim is **not** one of them — it returns `UNGROUNDED`
+(`:83`); an independent review caught that error on 2026-09-30 and it is corrected here. The log rules out the
+gateway exception, so every such row came from the reader. The difference between the two models is the
+reader, not caution.
 
 **Consequence.** The published sentence in `docs/benchmarks/results/slot-measurement.md` — that the local
 model "defers rather than decides" — is wrong. The local model's true ability is currently unmeasured.
