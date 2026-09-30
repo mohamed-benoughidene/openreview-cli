@@ -87,7 +87,9 @@ GROUNDING_ACCURACY_CAVEATS: tuple[str, ...] = (
     "the signal.",
     "Single-sample smoke measurement, not a benchmark: model replies vary run to run.",
     "Clause ids here are harness-local units (c<index>), not the product's clause numbering.",
-    "The corpus under data/ is gitignored, so CI runs this mode only as the skip path.",
+    "The CUAD corpus under data/ is gitignored, so CI cannot use it. CI instead assembles a "
+    "deterministic corpus from the repository's tracked fixtures and runs this mode on that; the "
+    "full CUAD sample remains a local/on-demand run.",
     "Clause text is PII-stripped before any model call with the review path's own "
     "strip_pii_clauses machinery; --no-pii is the explicit, receipt-recorded opt-out.",
     "negatives_dropped_guard counts generated negatives whose claim text appears verbatim in "
