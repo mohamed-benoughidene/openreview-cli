@@ -1,3 +1,5 @@
+from openreview_cli.graph.builder import ClauseHierarchyBuilder
+from openreview_cli.graph.models import EdgeType
 from openreview_cli.parsing.clause_detector import (
     annotate_clauses,
     build_hierarchy,
@@ -5,6 +7,7 @@ from openreview_cli.parsing.clause_detector import (
     detect_non_english,
     detect_numbering_pattern,
     detect_tofu,
+    link_parent_ids,
     nupunkt_detect_boundaries,
 )
 from openreview_cli.parsing.models import Clause
@@ -129,3 +132,53 @@ class TestAnnotateClauses:
         warnings = annotate_clauses(clauses)
         assert warnings == []
         assert all(c.is_non_english is False for c in clauses)
+
+
+class TestLinkParentIds:
+    """T2.1: the parser -> graph bridge, exercised the way the parser calls it.
+
+    ``link_parent_ids`` is the only function that turns numbering levels into
+    ``Clause.parent_id`` links, and the graph's ``parent_child`` edges depend
+    entirely on it -- yet every graph unit test builds ``Clause`` objects with
+    ``parent_id`` already set, so they prove nothing about this path. This test
+    mirrors ``PdfParser.parse`` end to end: ``detect_clause_starts`` ->
+    ``build_hierarchy`` -> per-clause numbering level -> ``link_parent_ids`` ->
+    ``ClauseHierarchyBuilder().build``.
+    """
+
+    def test_numbered_text_links_parents_and_survives_into_the_graph(self) -> None:
+        page_text = (
+            "ARTICLE I: Definitions\n"
+            "Section 1.1 Confidentiality obligations apply.\n"
+            "(a) Exclusions to the definition apply.\n"
+        )
+
+        # Exactly the PDF parser's steps (parsing/pdf_parser.py:171-178):
+        # segment, build clauses, read each clause's numbering level (the
+        # parser's ``_extract_numbering_level`` wraps ``detect_numbering_pattern``),
+        # then link parents across the page.
+        clause_starts = detect_clause_starts(page_text)
+        clauses = build_hierarchy([], clause_starts, [], 0, 0, page_text)
+        matches = [detect_numbering_pattern(c.text.splitlines()[0]) for c in clauses]
+        levels = [m["level"] if m else None for m in matches]
+        link_parent_ids(clauses, [], levels=levels)
+
+        by_first_line = {c.text.splitlines()[0]: c for c in clauses}
+        article = by_first_line["ARTICLE I: Definitions"]
+        section = by_first_line["Section 1.1 Confidentiality obligations apply."]
+        item = by_first_line["(a) Exclusions to the definition apply."]
+
+        # The links the graph depends on: ARTICLE I -> Section 1.1 -> (a).
+        assert article.parent_id is None
+        assert section.parent_id == article.id
+        assert item.parent_id == section.id
+
+        # ...and they survive into the graph as parent_child edges.
+        graph = ClauseHierarchyBuilder().build(clauses)
+        parent_child = {
+            (edge.source_id, edge.target_id)
+            for edge in graph.edges
+            if edge.edge_type == EdgeType.parent_child
+        }
+        assert (article.id, section.id) in parent_child
+        assert (section.id, item.id) in parent_child
