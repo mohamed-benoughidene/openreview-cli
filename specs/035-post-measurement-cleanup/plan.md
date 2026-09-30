@@ -230,7 +230,7 @@ Also: repoint the `<!-- SPECKIT START/END -->` block in `AGENTS.md:424-428` (cur
 | R3 | An old `privacy.tier: performance` keeps working as `balanced` (mapping required — see T1.4). No other compatibility code. | Decision 9 |
 | R4 | The `Tree` widget is a second renderer beside `render_tree`; mitigated by T2.2 **only if** the annotations helper genuinely has two callers. | Inference |
 | R5 | The harness's positives are verbatim clause sentences, so the positive set is easier than a human-labelled one; bad-claim detection is the meaningful signal. Do not claim real-world false-positive rates from this. | Fact |
-| R6 | `data/legalbenchrag` is gitignored, so the harness cannot run on the full sample in CI; it must skip cleanly. | Fact |
+| R6 | `data/legalbenchrag` is gitignored, so the harness cannot run the full sample in CI; CI assembles a deterministic corpus from the repository's tracked fixtures instead, and the harness still skips cleanly when no corpus is present. | Fact |
 | R7 | Spec-kit scripts cannot resolve a feature (no `feature.json`) and the commands target OpenCode; artifacts are hand-written. A reviewer may expect `/speckit.analyze` output. | Fact |
 | R8 | `compute_cg_metrics` **is** consumed — `grounding/discriminator.py:219` (`ground_report`), exported at `grounding/__init__.py:14,40`. Its behaviour must be left untouched. (Corrected from UNKNOWN.) | Fact |
 | R9 | TUI rules: no module-level gateway/litellm imports, no `sys.exit`, `markup=False` on literal text, keys in parentheses (`DESIGN.md:192-196`, `AGENTS.md:247,313`). | Fact |

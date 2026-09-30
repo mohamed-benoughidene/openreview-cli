@@ -61,7 +61,7 @@ Grounding runs, but its accuracy is unknowable: strict mode removes unsupported 
 
 ### Edge Cases
 
-- **Corpus absent**: `data/legalbenchrag` is gitignored, so the grounding harness (and the CUAD retrieval re-measurement) must skip cleanly and leave CI green.
+- **Corpus absent**: `data/legalbenchrag` is gitignored, so the CUAD retrieval re-measurement must skip cleanly and leave CI green, and the grounding harness must do the same when no corpus is present. CI no longer relies on that skip for the grounding harness: it assembles a deterministic corpus from the repository's tracked fixtures (`.github/workflows/slm-measurement.yml`, `grounding-accuracy` job) and runs the mode for real, while the full CUAD sample stays a local/on-demand run.
 - **Old index in place**: an index built with the previous tokenizer cannot answer correctly after the change; the product documents that indexes must be re-created, and adds no detection or migration code.
 - **Old `performance` config**: the configuration loader validates the tier against a schema before the tier parser runs, so the backwards-compatibility path must be exercised at load time, not only at parse time — an old value must not raise.
 - **TUI retrieve screen**: existing documentation says the TUI retrieve screen already pins `method="sparse"` and never renders `method`; the change is a no-op there if verified, in which case no TUI edit is made.
@@ -137,7 +137,7 @@ This feature deletes stored data structures rather than adding models, so the en
 
 - **No existing users**: there is no deployed install, so re-creating retrieval indexes is acceptable and no migration code is written.
 - **Branch/worktree**: work happens in the `feat/035-post-measurement-cleanup` worktree, based on the measurement branch; the main line is never touched during branch work.
-- **Corpus is local but untracked**: the CUAD corpus is present for local runs and absent in CI; the harness must therefore degrade to a clean skip.
+- **Corpus is local but untracked**: the CUAD corpus is present for local runs and absent in CI, so the harness must degrade to a clean skip when no corpus is present; CI runs the mode for real by supplying a deterministic corpus assembled from the repository's tracked fixtures rather than the gitignored CUAD one.
 - **Cloud key availability**: the grounding harness's cloud arm needs a provider key; if it is unavailable, that arm is skipped and the report says so.
 - **Reader sample size**: the reader accuracy comparison used five documents, so the difference between the top local models may be noise; the failure of the previously shipped default is unambiguous.
 - **No new dependency**: the `porter unicode61` tokenizer ships inside the installed SQLite, the tree widget ships inside the pinned UI library, and the harness reuses existing modules.

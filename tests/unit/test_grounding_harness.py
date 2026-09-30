@@ -323,7 +323,9 @@ class TestGroundingAccuracyPiiStrip:
 
 
 class TestGroundingAccuracyGracefulSkip:
-    """The corpus is gitignored, so CI runs this path; it must never fail the build."""
+    """The CUAD corpus is gitignored, so when no corpus is present the mode must skip
+    cleanly and never fail the build (CI now runs the mode for real on a deterministic
+    corpus assembled from the repository's tracked fixtures, not this skip path)."""
 
     def test_missing_corpus_writes_a_skip_receipt_and_prints_one_line(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]

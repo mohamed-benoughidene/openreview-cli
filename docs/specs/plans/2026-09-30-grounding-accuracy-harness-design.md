@@ -289,7 +289,9 @@ confidence, seconds) so a reader can audit any single number.
    quoted from this;
 4. the number of negatives the guard dropped, per generator, and what that means;
 5. that clause ids are harness-local units, not the product's clause numbering;
-6. that the corpus is gitignored, so CI runs this mode only as the skip path.
+6. that the CUAD corpus is gitignored so CI cannot use it — CI instead assembles a deterministic
+   corpus from the repository's tracked fixtures and runs this mode on that, while the full CUAD
+   sample remains a local/on-demand run.
 
 ---
 
@@ -414,7 +416,11 @@ Plus, checked by review (and by test 8.2.5):
 - **No new top-level script** and **no new dependency.** The mode lives in
   `scripts/measure_slm_slots.py` and reuses its helpers (master plan T3.2, §12 ponytail item).
   Splitting helpers out of that file is explicitly deferred ("not now").
-- **No CI job that requires the corpus.** CI exercises only the skip path.
+- **No CI job that requires the CUAD corpus.** That corpus is gitignored, so CI instead assembles a
+  deterministic corpus from the repository's tracked fixtures (`.github/workflows/slm-measurement.yml`,
+  `grounding-accuracy` job) and runs the mode on it; the full CUAD sample stays a local/on-demand run.
+  The graceful skip above remains the behaviour when no corpus is present, so a corpus-less CI stays
+  green.
 - **No scoring of citation validity** (`anachronism`) or of claim categorisation (`category_swap`).
   Each would be a different harness with a different contract (§2.3).
 - **No re-run of the retrieval or slot measurements here.** Those are Phase 4 items (master plan
