@@ -1283,78 +1283,167 @@ def _config_with(primary: str, *, fallback: str = "anthropic/claude-3") -> str:
     )
 
 
+def _grounding_config(primary: str, *, fallback: str = "anthropic/claude-3") -> str:
+    """A config whose `grounding` slot declares `response_format`, mirroring the
+    shipped default in ``config/loader.py`` (ollama primary, JSON extra_param)."""
+    return f"""\
+privacy:
+  tier: performance
+gateway:
+  models:
+    grounding:
+      primary: {primary}
+      fallback: {fallback}
+      params:
+        temperature: 0.0
+        max_tokens: 1024
+      extra_params:
+        response_format:
+          type: json_object
+  fallback:
+    retries: 2
+    retry_delay: 0.01
+    timeout: 5
+"""
+
+
+def _capture_dispatches(
+    monkeypatch: pytest.MonkeyPatch, *, failures_before_success: int = 0
+) -> list[dict[str, Any]]:
+    """Patch ``router.completion`` to record the kwargs each dispatch received.
+
+    The gate runs at DISPATCH time, so a test must observe the kwargs at the
+    litellm seam — a dict that is never dispatched hides an override leak.
+    """
+    import openreview_cli.gateway.router as router_mod
+
+    seen: list[dict[str, Any]] = []
+
+    def stub(**kwargs: Any) -> _MockCompletionResponse:
+        seen.append(dict(kwargs))
+        # `gateway.fallback.retries` is 2 in the configs here, so the primary is
+        # attempted three times before the fallback is dispatched.
+        if len(seen) <= failures_before_success:
+            raise RuntimeError("primary unavailable")
+        return _MockCompletionResponse("from fallback" if failures_before_success else "ok")
+
+    monkeypatch.setattr(router_mod, "completion", stub)
+    return seen
+
+
 class TestLocalOnlyExtraParams:
     """`response_format` is a local-only hint; a cloud provider must never see it.
 
     An unsupported parameter raises in litellm rather than being dropped, so a
-    leak here turns a degraded parse into a hard failure.
+    leak here turns a degraded parse into a hard failure. The gate is enforced
+    for the provider ACTUALLY dispatched, so these tests assert on the kwargs
+    captured at the ``completion`` seam, never on ``_get_litellm_kwargs`` — a
+    build-time dict a dispatch-time ``model=`` override can still rewrite.
     """
 
-    def test_forwarded_for_a_local_provider(
+    JSON = {"type": "json_object"}
+
+    def test_forwarded_to_a_local_provider(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        seen = _capture_dispatches(monkeypatch)
         gw = _gateway(tmp_path, monkeypatch, _config_with("ollama/granite4:3b"))
-        kwargs = gw._get_litellm_kwargs("reasoning")
-        assert kwargs.get("response_format") == {"type": "json_object"}
+        assert gw.chat("reasoning", [{"role": "user", "content": "Hi"}]) == "ok"
+        assert seen[0]["response_format"] == {"type": "json_object"}
 
     def test_dropped_for_a_cloud_provider(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        seen = _capture_dispatches(monkeypatch)
         gw = _gateway(tmp_path, monkeypatch, _config_with("openai/gpt-4"))
-        kwargs = gw._get_litellm_kwargs("reasoning")
-        assert "response_format" not in kwargs
+        gw.chat("reasoning", [{"role": "user", "content": "Hi"}])
+        assert "response_format" not in seen[0]
 
     def test_dropped_for_an_unknown_provider(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        seen = _capture_dispatches(monkeypatch)
         gw = _gateway(tmp_path, monkeypatch, _config_with("nosuchprovider/model-x"))
-        kwargs = gw._get_litellm_kwargs("reasoning")
-        assert "response_format" not in kwargs
+        gw.chat("reasoning", [{"role": "user", "content": "Hi"}])
+        assert "response_format" not in seen[0]
 
     def test_a_cloud_fallback_does_not_receive_the_param(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        import openreview_cli.gateway.router as router_mod
-
-        seen: list[dict[str, Any]] = []
-
-        def failing_then_ok(**kwargs: Any) -> _MockCompletionResponse:
-            seen.append(dict(kwargs))
-            # `gateway.fallback.retries` is 2 in COMMON_CONFIG, so the primary is
-            # attempted three times before the fallback is dispatched. A stub that
-            # raises once would only trigger a primary retry and never reach the
-            # fallback at all — the test would then fail after implementation.
-            if len(seen) <= 3:
-                raise RuntimeError("primary unavailable")
-            return _MockCompletionResponse("from fallback")
-
-        monkeypatch.setattr(router_mod, "completion", failing_then_ok)
+        seen = _capture_dispatches(monkeypatch, failures_before_success=3)
         gw = _gateway(tmp_path, monkeypatch, _config_with("ollama/granite4:3b"))
         assert gw.chat("reasoning", [{"role": "user", "content": "Hi"}]) == "from fallback"
-        assert seen[0].get("response_format") == {"type": "json_object"}
+        assert seen[0]["response_format"] == {"type": "json_object"}
         assert "response_format" not in seen[-1]
 
     def test_a_local_fallback_still_receives_the_param(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A guard, not a fail-first test: the strip must not over-reach.
-
-        Before the change the key is forwarded unconditionally, so this passes
-        already. It exists to catch an implementation that strips for every
-        fallback regardless of locality.
-        """
-        import openreview_cli.gateway.router as router_mod
-
-        seen: list[dict[str, Any]] = []
-
-        def failing_then_ok(**kwargs: Any) -> _MockCompletionResponse:
-            seen.append(dict(kwargs))
-            if len(seen) <= 3:
-                raise RuntimeError("primary unavailable")
-            return _MockCompletionResponse("from fallback")
-
-        monkeypatch.setattr(router_mod, "completion", failing_then_ok)
+        """A guard, not a fail-first test: the strip must not over-reach."""
+        seen = _capture_dispatches(monkeypatch, failures_before_success=3)
         cfg = _config_with("ollama/granite4:3b", fallback="ollama/granite4:3b")
         gw = _gateway(tmp_path, monkeypatch, cfg)
         assert gw.chat("reasoning", [{"role": "user", "content": "Hi"}]) == "from fallback"
-        assert seen[-1].get("response_format") == {"type": "json_object"}
+        assert seen[-1]["response_format"] == {"type": "json_object"}
+
+    def test_a_model_override_to_cloud_carries_no_param(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The leak: a dispatch-time `model=` override to a cloud provider.
+
+        The kwargs were built for the slot's local primary (so the key is
+        present), then the override rewrote `model=`. The gate must follow the
+        provider that actually receives the call.
+        """
+        seen = _capture_dispatches(monkeypatch)
+        gw = _gateway(tmp_path, monkeypatch, _grounding_config("ollama/granite4:3b"))
+        gw.chat("grounding", [{"role": "user", "content": "Hi"}], model="openai/gpt-4")
+        assert seen[0]["model"] == "openai/gpt-4"
+        assert "response_format" not in seen[0]
+
+    def test_a_caller_supplied_param_is_dropped_for_cloud(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A caller kwarg bypasses the slot's extra_params entirely."""
+        seen = _capture_dispatches(monkeypatch)
+        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)  # reasoning: openai/gpt-4
+        gw.chat(
+            "reasoning",
+            [{"role": "user", "content": "Hi"}],
+            response_format={"type": "json_object"},
+        )
+        assert "response_format" not in seen[0]
+        # Other extra_params must still reach a cloud provider untouched.
+        assert seen[0]["top_p"] == 0.9
+
+    def test_a_local_fallback_is_restored_for_a_cloud_primary(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The starvation: the build-time strip never restores the local value."""
+        seen = _capture_dispatches(monkeypatch, failures_before_success=3)
+        cfg = _grounding_config("openai/gpt-4", fallback="ollama/granite4:3b")
+        gw = _gateway(tmp_path, monkeypatch, cfg)
+        assert gw.chat("grounding", [{"role": "user", "content": "Hi"}]) == "from fallback"
+        assert all("response_format" not in k for k in seen[:3])
+        assert seen[-1]["response_format"] == {"type": "json_object"}
+
+    def test_stream_drops_the_param_for_a_model_override_to_cloud(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`chat_stream` shares the dispatch seam, so case 1 must hold there too."""
+        from tests.helpers.stream_doubles import StreamChunk, TerminatedStream
+
+        seen: list[dict[str, Any]] = []
+
+        def stub(**kwargs: Any) -> TerminatedStream:
+            seen.append(dict(kwargs))
+            return TerminatedStream([StreamChunk("hi")])
+
+        monkeypatch.setattr("openreview_cli.gateway.router.completion", stub)
+        gw = _gateway(tmp_path, monkeypatch, _grounding_config("ollama/granite4:3b"))
+        events = list(
+            gw.chat_stream("grounding", [{"role": "user", "content": "Hi"}], model="openai/gpt-4")
+        )
+        assert [e.type for e in events] == ["chunk", "done"]
+        assert seen[0]["model"] == "openai/gpt-4"
+        assert "response_format" not in seen[0]
