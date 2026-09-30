@@ -117,6 +117,21 @@ def _is_empty_parts(parts: list[dict[str, Any]]) -> bool:
     return True
 
 
+def _strip_local_only_params(kwargs: dict[str, Any], info: ProviderInfo | None) -> None:
+    """Drop request parameters that only a locally-hosted provider may receive.
+
+    ``response_format`` becomes Ollama's ``format: json``. A provider that does
+    not accept it raises rather than ignoring it, so the key is forwarded only
+    when the provider actually runs locally; an unknown provider counts as remote.
+    """
+    if info is not None and info.is_local:
+        return
+    # ponytail: one key today — a set-and-loop earns its keep when a second arrives.
+    if "response_format" in kwargs:
+        kwargs.pop("response_format")
+        logger.debug("Dropped local-only response_format for a non-local provider")
+
+
 class Gateway:
     def __init__(
         self,
@@ -371,6 +386,7 @@ class Gateway:
             kwargs.update(stripped)
         # T008: populate api_base from real provider config for reachability
         info = self._resolve_provider_info(slot)
+        _strip_local_only_params(kwargs, info)
         if info is not None and info.base_url:
             kwargs["api_base"] = info.base_url
         # spec 034: map each declared credential field to its litellm kwarg.
@@ -562,6 +578,9 @@ class Gateway:
             call_kwargs["api_base"] = info.base_url
         if info is not None and info.credentials:
             self._apply_provider_credentials(info, call_kwargs)
+        # The reused kwargs were merged for the primary's provider, so a parameter
+        # that is local-only must be re-gated against the fallback's own locality.
+        _strip_local_only_params(call_kwargs, info)
         call_kwargs["model"] = fallback
         self._record_cloud_call(slot, provider_prefix=fallback_prefix)
         try:

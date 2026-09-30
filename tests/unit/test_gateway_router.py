@@ -1271,3 +1271,90 @@ class TestCustomProviderRouting:
         result = gw.health_check()
 
         assert result["extraction"]["status"] == "missing_api_key"
+
+
+def _config_with(primary: str, *, fallback: str = "anthropic/claude-3") -> str:
+    """COMMON_CONFIG with a chosen reasoning primary and fallback plus a local-only param."""
+    cfg = COMMON_CONFIG.replace("      primary: openai/gpt-4\n", f"      primary: {primary}\n")
+    cfg = cfg.replace("      fallback: anthropic/claude-3\n", f"      fallback: {fallback}\n")
+    return cfg.replace(
+        "      extra_params:\n        top_p: 0.9\n",
+        "      extra_params:\n        response_format:\n          type: json_object\n",
+    )
+
+
+class TestLocalOnlyExtraParams:
+    """`response_format` is a local-only hint; a cloud provider must never see it.
+
+    An unsupported parameter raises in litellm rather than being dropped, so a
+    leak here turns a degraded parse into a hard failure.
+    """
+
+    def test_forwarded_for_a_local_provider(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        gw = _gateway(tmp_path, monkeypatch, _config_with("ollama/granite4:3b"))
+        kwargs = gw._get_litellm_kwargs("reasoning")
+        assert kwargs.get("response_format") == {"type": "json_object"}
+
+    def test_dropped_for_a_cloud_provider(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        gw = _gateway(tmp_path, monkeypatch, _config_with("openai/gpt-4"))
+        kwargs = gw._get_litellm_kwargs("reasoning")
+        assert "response_format" not in kwargs
+
+    def test_dropped_for_an_unknown_provider(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        gw = _gateway(tmp_path, monkeypatch, _config_with("nosuchprovider/model-x"))
+        kwargs = gw._get_litellm_kwargs("reasoning")
+        assert "response_format" not in kwargs
+
+    def test_a_cloud_fallback_does_not_receive_the_param(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import openreview_cli.gateway.router as router_mod
+
+        seen: list[dict[str, Any]] = []
+
+        def failing_then_ok(**kwargs: Any) -> _MockCompletionResponse:
+            seen.append(dict(kwargs))
+            # `gateway.fallback.retries` is 2 in COMMON_CONFIG, so the primary is
+            # attempted three times before the fallback is dispatched. A stub that
+            # raises once would only trigger a primary retry and never reach the
+            # fallback at all — the test would then fail after implementation.
+            if len(seen) <= 3:
+                raise RuntimeError("primary unavailable")
+            return _MockCompletionResponse("from fallback")
+
+        monkeypatch.setattr(router_mod, "completion", failing_then_ok)
+        gw = _gateway(tmp_path, monkeypatch, _config_with("ollama/granite4:3b"))
+        assert gw.chat("reasoning", [{"role": "user", "content": "Hi"}]) == "from fallback"
+        assert seen[0].get("response_format") == {"type": "json_object"}
+        assert "response_format" not in seen[-1]
+
+    def test_a_local_fallback_still_receives_the_param(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A guard, not a fail-first test: the strip must not over-reach.
+
+        Before the change the key is forwarded unconditionally, so this passes
+        already. It exists to catch an implementation that strips for every
+        fallback regardless of locality.
+        """
+        import openreview_cli.gateway.router as router_mod
+
+        seen: list[dict[str, Any]] = []
+
+        def failing_then_ok(**kwargs: Any) -> _MockCompletionResponse:
+            seen.append(dict(kwargs))
+            if len(seen) <= 3:
+                raise RuntimeError("primary unavailable")
+            return _MockCompletionResponse("from fallback")
+
+        monkeypatch.setattr(router_mod, "completion", failing_then_ok)
+        cfg = _config_with("ollama/granite4:3b", fallback="ollama/granite4:3b")
+        gw = _gateway(tmp_path, monkeypatch, cfg)
+        assert gw.chat("reasoning", [{"role": "user", "content": "Hi"}]) == "from fallback"
+        assert seen[-1].get("response_format") == {"type": "json_object"}
