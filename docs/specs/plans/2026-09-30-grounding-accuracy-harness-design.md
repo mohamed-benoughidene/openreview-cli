@@ -275,9 +275,10 @@ report states the actual counts, not the requested limit.
 `slots`, `corpus_dir`, `corpus_files_scanned`, `limit`, `skipped`, `git_sha`, `measured_at_utc`,
 `positives`, `negatives_kept`, `negatives_dropped_guard` (total **and** per generator),
 `good_accepted`, `good_rejected`, `good_uncertain`, `bad_caught`, `bad_missed`, `bad_uncertain`,
-`caught_rate`, `false_reject_rate`, latency (`calls`, `mean`, `median`, `p95`, `max`), and a
-`caveats` list. Per-label rows are kept in the receipt (claim text, unit id, expected, verdict,
-confidence, seconds) so a reader can audit any single number.
+`unreadable_answers` (answers the grounding reader could not parse), `caught_rate`,
+`false_reject_rate`, latency (`calls`, `mean`, `median`, `p95`, `max`), and a `caveats` list.
+Per-label rows are kept in the receipt (claim text, unit id, expected, verdict, confidence,
+seconds) so a reader can audit any single number.
 
 **Caveats the report must state in its own prose:**
 
