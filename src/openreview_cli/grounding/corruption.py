@@ -64,9 +64,7 @@ GROUNDING_VALID_NEGATIVES: tuple[str, ...] = (
 # clause:
 #   - "receiving party" -> "recipient": the same defined role under its plain name;
 #   - "in no event" -> "under no circumstances": the same exclusion, an equivalent idiom;
-#   - "shall not" -> "must not" and "shall" -> "must": the same prohibition/obligation under a
-#     different modal verb ("shall not" is listed before "shall" so the prohibition reads as a
-#     unit, not as a modal plus a stray "not");
+#   - "shall not" -> "must not": the same prohibition under a different modal verb;
 #   - "prior to" -> "before": the same temporal order.
 # Longest source first, so no shorter term rewrites part of a longer one's match or of an
 # earlier replacement.
@@ -75,7 +73,6 @@ _PARAPHRASE_MAP: tuple[tuple[str, str], ...] = (
     ("in no event", "under no circumstances"),
     ("shall not", "must not"),
     ("prior to", "before"),
-    ("shall", "must"),
 )
 
 # Word-bounded at both ends so a term never rewrites part of a longer word ("shall" inside
@@ -85,6 +82,17 @@ _PARAPHRASE_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = tuple(
     (re.compile(rf"\b{re.escape(source)}\b"), replacement)
     for source, replacement in _PARAPHRASE_MAP
 )
+
+# The bare modal is the one pair that is not meaning-preserving on its own. Under a negated or
+# quantified subject ("Neither party shall disclose...", "No party shall be liable...",
+# "Nothing shall obligate...") "shall" states a prohibition, and "must" would read as an
+# absence of obligation -- a different claim. So it is applied last, and skipped entirely when
+# the sentence contains a negation word; the sentence then comes back unchanged (or partly
+# rewritten by the other pairs) and the caller counts the no-op skip. This keeps the map
+# meaning-safe without dropping the bare modal's coverage.
+_BARE_MODAL_PATTERN = re.compile(r"\bshall\b")
+_BARE_MODAL_REPLACEMENT = "must"
+_NEGATION_RE = re.compile(r"\b(?:no|neither|none|nothing|nor|not)\b", re.IGNORECASE)
 
 
 class ClauseUnit(NamedTuple):
@@ -139,12 +147,16 @@ def paraphrase(sentence: str) -> str:
 
     The map is deliberately small and meaning-preserving, so a rewritten clause sentence is
     still supported by its clause and a rewritten cross-clause sentence is still unsupported by
-    the clause it is asserted against. It under-represents real human paraphrases, and the
-    receipt says so.
+    the clause it is asserted against. The one unsafe swap, the bare modal (``shall`` ->
+    ``must``), is skipped when the sentence contains a negation word (``no``, ``neither``,
+    ``none``, ``nothing``, ``nor``, ``not``): under a negated or quantified subject the swap
+    would turn a prohibition into an absence of obligation, a different claim. The map
+    under-represents real human paraphrases, and the receipt says so.
 
     Always returns a ``str`` — never ``None`` — including ``sentence`` unchanged when no map
-    term occurs. The caller drops an unchanged rewrite and counts the drop: such a label would
-    duplicate one already present, not add a harder one.
+    term occurs (or when only the negation-guarded bare modal would have matched). The caller
+    drops an unchanged rewrite and counts the drop: such a label would duplicate one already
+    present, not add a harder one.
 
     Args:
         sentence: The sentence to rewrite.
@@ -154,6 +166,9 @@ def paraphrase(sentence: str) -> str:
     """
     for pattern, replacement in _PARAPHRASE_PATTERNS:
         sentence = pattern.sub(replacement, sentence)
+    # Last, and only when no negation word is present: see ``_BARE_MODAL_PATTERN`` above.
+    if not _NEGATION_RE.search(sentence):
+        sentence = _BARE_MODAL_PATTERN.sub(_BARE_MODAL_REPLACEMENT, sentence)
     return sentence
 
 

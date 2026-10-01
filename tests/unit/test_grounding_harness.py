@@ -246,6 +246,8 @@ class TestGroundingAccuracyEndToEnd:
         # The caveat no longer promises that every positive is a verbatim clause sentence.
         assert not any("Positives are verbatim" in c for c in receipt["caveats"])
         assert any("two classes" in c for c in receipt["caveats"])
+        # ... and it names the map's under-representation of real paraphrases.
+        assert any("under-represent" in c for c in receipt["caveats"])
 
         # The same receipt is on disk, in one output format.
         assert json.loads(out.read_text())["negatives_dropped_guard"] == 2
@@ -291,9 +293,19 @@ class TestGroundingParaphraseLabels:
             for row in labels
         )
         # The paraphrased negative joins the negative counters; no positive counter exists.
-        assert set(generated) == set(SCRIPT.GROUNDING_VALID_NEGATIVES)
-        assert generated["paraphrased_unsupported"] == 2
-        assert set(drops) == set(SCRIPT.GROUNDING_VALID_NEGATIVES)
+        # These assert the actual per-class counts, not just the key set: both dicts are
+        # seeded with ``dict.fromkeys(GROUNDING_VALID_NEGATIVES)``, so comparing key sets (or
+        # against that same tuple) is a tautology that passes even if a generator never runs.
+        assert generated == {
+            "unsupported_claim": 2,
+            "hallucination": 2,
+            "paraphrased_unsupported": 2,
+        }
+        assert drops == {
+            "unsupported_claim": 0,
+            "hallucination": 0,
+            "paraphrased_unsupported": 0,
+        }
         assert skips == 0
 
     def test_unchanged_rewrites_are_skipped_and_counted_not_labelled(
@@ -318,6 +330,40 @@ class TestGroundingParaphraseLabels:
             for row in labels
         )
         assert generated["paraphrased_unsupported"] == 0
+
+    def test_negation_guarded_no_op_is_counted_as_a_skip_not_a_label(self) -> None:
+        # The meaning-safe map declines to rewrite a bare modal under a negated/quantified
+        # subject, so the paraphrase writer returns the sentence unchanged. When that sentence
+        # is the only candidate rewrite for its label, the harness counts a skip and keeps no
+        # paraphrase label — it is not silently labelled as a harder duplicate.
+        negated = ClauseUnit(
+            id="c000",
+            text=(
+                "4.7 Non-disclosure. Neither party shall disclose Confidential Information to "
+                "any third party. This obligation survives termination for five years."
+            ),
+        )
+        other = ClauseUnit(
+            id="c001",
+            text=(
+                "9.3 Payment Terms. The customer shall pay all undisputed invoices within thirty "
+                "days of receipt. Late payments accrue interest until paid in full."
+            ),
+        )
+
+        labels, _drops, _generated, skips = SCRIPT._build_grounding_labels([negated, other])
+
+        # The negated unit's own sentence is a no-op rewrite -> skipped, never labelled ...
+        assert not any(
+            row["generator"] == "paraphrased_supported" and row["unit_id"] == "c000"
+            for row in labels
+        )
+        # ... and so is the other unit's cross-clause paraphrase, which draws on it.
+        assert not any(
+            row["generator"] == "paraphrased_unsupported" and row["unit_id"] == "c001"
+            for row in labels
+        )
+        assert skips == 2
 
 
 class TestGroundingAccuracyPiiStrip:

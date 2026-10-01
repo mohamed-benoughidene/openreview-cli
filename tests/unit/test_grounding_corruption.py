@@ -24,6 +24,7 @@ from openreview_cli.grounding.corruption import (
     paraphrased_unsupported,
     unsupported_claim,
 )
+from openreview_cli.grounding.presence import coverage
 from openreview_cli.parsing.models import Clause
 
 
@@ -267,6 +268,34 @@ class TestParaphraseMap:
             "The marshall company must comply."
         )
 
+    def test_negated_or_quantified_subject_never_flips_the_prohibition(self) -> None:
+        # Under a negated/quantified subject the bare modal states a prohibition ("No party
+        # shall disclose" = no party may disclose); swapping it for "must" would read as an
+        # absence of obligation, a different claim. The bare-modal swap is guarded, so these
+        # come back unchanged.
+        for source in (
+            "Neither party shall disclose Confidential Information.",
+            "No party shall be liable for any indirect or consequential damages.",
+            "Nor shall the supplier be required to deliver the goods.",
+        ):
+            assert paraphrase(source) == source
+
+    def test_nothing_shall_obligate_keeps_its_prohibition(self) -> None:
+        # A quantifier-negated subject anywhere in the sentence holds the bare modal back, so
+        # the prohibition is not weakened into an absence of obligation.
+        rewritten = paraphrase("Nothing in this agreement shall obligate the receiving party.")
+        assert "shall obligate" in rewritten
+        assert "must obligate" not in rewritten
+
+    def test_safe_pairs_still_rewrite_under_the_negation_guard(self) -> None:
+        # The guard holds back only the bare modal; the unambiguous pairs still apply.
+        assert paraphrase("The receiving party shall not disclose it prior to notice.") == (
+            "The recipient must not disclose it before notice."
+        )
+        assert paraphrase("The customer shall pay all invoices within thirty days.") == (
+            "The customer must pay all invoices within thirty days."
+        )
+
 
 class TestParaphrasedWriters:
     """The two paraphrase label writers: a genuine positive and a genuine negative."""
@@ -285,6 +314,16 @@ class TestParaphrasedWriters:
         rewritten = paraphrased_unsupported(UNIT_A, UNIT_B)
         assert rewritten is not None
         assert is_genuine_negative(rewritten, CLAUSE_A_TEXT) is True
+
+    def test_unsupported_variant_preserves_provenance_from_the_other_clause(self) -> None:
+        # The guard is a substring test and cannot see through a rewrite, so a mutation that
+        # paraphrased the *cited* clause A sentence instead of the other clause B sentence
+        # would pass every other assertion here. Pin provenance directly: the rewrite must
+        # share more wording with B than with A, and B's distinctive token must survive.
+        rewritten = paraphrased_unsupported(UNIT_A, UNIT_B)
+        assert rewritten is not None
+        assert "indemnify" in rewritten
+        assert coverage(rewritten, CLAUSE_B_TEXT) > coverage(rewritten, CLAUSE_A_TEXT)
 
     def test_guard_passes_the_unsupported_variant_and_fails_the_supported_sentence(self) -> None:
         negative = paraphrased_unsupported(UNIT_A, UNIT_B)
