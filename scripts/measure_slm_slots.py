@@ -633,6 +633,8 @@ def _grounding_skip_receipt(
         "all_uncertain": False,
         "all_uncertain_note": None,
         "unreadable_answers": 0,
+        # No call ran, so the second pass neither ran nor fell back.
+        "second_pass_fallbacks": 0,
         "latency": {"calls": 0, "mean": None, "median": None, "p95": None, "max": None},
         "caveats": list(GROUNDING_ACCURACY_CAVEATS),
         "per_label": [],
@@ -654,7 +656,8 @@ def _print_grounding_summary(receipt: dict[str, Any], out: Path) -> None:
         f"good_rejected={receipt['good_rejected']}/{receipt['positives']} "
         f"(false_reject_rate={receipt['false_reject_rate']}) "
         f"uncertain good/bad={receipt['good_uncertain']}/{receipt['bad_uncertain']} "
-        f"unreadable={receipt['unreadable_answers']}"
+        f"unreadable={receipt['unreadable_answers']} "
+        f"second_pass_fallbacks={receipt['second_pass_fallbacks']}"
     )
     if receipt.get("all_uncertain"):
         print(
@@ -864,6 +867,9 @@ def run_grounding_accuracy(
         "all_uncertain": all_uncertain,
         "all_uncertain_note": all_uncertain_note,
         "unreadable_answers": discriminator.unreadable_answers,
+        # Second passes that failed or were unreadable, so a run whose second pass never
+        # answered is visible in the receipt instead of looking like an enabled rule.
+        "second_pass_fallbacks": discriminator.second_pass_fallbacks,
         "negatives_generated": generated,
         "negatives_dropped_guard": sum(drops.values()),
         "negatives_dropped_guard_by_generator": drops,

@@ -186,6 +186,7 @@ class _StubDiscriminator:
     def __init__(self) -> None:
         self.calls: list[tuple[str, str, str]] = []
         self.unreadable_answers = 0
+        self.second_pass_fallbacks = 0
 
     def ground_claim(
         self, claim_text: str, cited_clause_id: str, clause_text: str
@@ -233,6 +234,7 @@ class TestGroundingAccuracyEndToEnd:
         assert receipt["skipped"] is False
         assert receipt["all_uncertain"] is False
         assert receipt["unreadable_answers"] == 0
+        assert receipt["second_pass_fallbacks"] == 0
         assert receipt["units"] == 2
         # --no-pii is recorded, not silently ignored: the receipt says raw text was sent.
         assert receipt["pii_stripped"] is False
@@ -338,6 +340,62 @@ class TestGroundingAccuracyEndToEnd:
         assert "cloud" in receipt["skip_reason"]
         assert json.loads(out.read_text())["skipped"] is True
         assert "skipping" in capsys.readouterr().out
+
+
+class _FallingBackDiscriminator:
+    """The rule is on but every second pass failed: the first pass's verdict is kept.
+
+    This mirrors the real discriminator when ``require_pass_agreement`` is on and the second
+    call raises or returns nothing (``grounding/discriminator.py`` ``_apply_pass_agreement``):
+    it increments ``second_pass_fallbacks`` and returns the first verdict unchanged. In the
+    verdict columns that is indistinguishable from a run where the rule worked, so the counter
+    is the only evidence of what happened.
+    """
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, str]] = []
+        self.unreadable_answers = 0
+        self.second_pass_fallbacks = 0
+
+    def ground_claim(
+        self, claim_text: str, cited_clause_id: str, clause_text: str
+    ) -> tuple[GroundingVerdict, list[Any], float]:
+        self.calls.append((claim_text, cited_clause_id, clause_text))
+        self.second_pass_fallbacks += 1  # every second pass fell back to the first verdict
+        return (GroundingVerdict.GROUNDED, [], 0.9)
+
+
+class TestGroundingSecondPassFallbacksReported:
+    """The review item: the second-pass fallback count must be visible in the measurement.
+
+    A run whose second pass failed for every claim keeps the first verdict in each row, so its
+    matrix can look exactly like a run where the rule worked. The receipt and the console both
+    carry ``second_pass_fallbacks`` so the two cannot be confused.
+    """
+
+    def test_fallbacks_are_counted_in_the_receipt_and_printed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        corpus = _tiny_corpus(tmp_path)
+        out = tmp_path / "ga.json"
+        stub = _FallingBackDiscriminator()
+        _stub_reachable_slots(monkeypatch)
+        monkeypatch.setattr(SCRIPT, "_preflight_arm_reachability", lambda: (True, None))
+        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda: stub)
+
+        receipt = SCRIPT.run_grounding_accuracy(
+            corpus_dir=corpus, limit=2, arm="configured", out=out, no_pii=True
+        )
+
+        # One fallback per scored claim: the stub kept the first verdict every time.
+        assert len(stub.calls) == 8
+        assert receipt["second_pass_fallbacks"] == len(stub.calls)
+        assert json.loads(out.read_text())["second_pass_fallbacks"] == 8
+        assert "second_pass_fallbacks=8" in capsys.readouterr().out
+
+        # The field is present on a skip receipt too, so it is never merely absent.
+        skip = SCRIPT._grounding_skip_receipt(corpus, 2, "configured", "corpus absent")
+        assert skip["second_pass_fallbacks"] == 0
 
 
 class TestGroundingParaphraseLabels:
@@ -668,6 +726,7 @@ class _AlwaysUncertainDiscriminator:
     def __init__(self) -> None:
         self.calls: list[tuple[str, str, str]] = []
         self.unreadable_answers = 0
+        self.second_pass_fallbacks = 0
 
     def ground_claim(
         self, claim_text: str, cited_clause_id: str, clause_text: str
