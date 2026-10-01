@@ -59,6 +59,10 @@ class MemoClause:
     citation: MemoCitation | None = None
     severity: str | None = None
     source_filename: str | None = None
+    # Claim-wording presence — display-only: it drives one memo note (below),
+    # never a verdict, a colour, or which clauses are kept.
+    grounding_presence: float | None = None
+    wording_absent: bool = False
 
 
 @dataclass
@@ -115,6 +119,12 @@ class MemoReport:
                     citation=citation,
                     severity=c.get("severity"),
                     source_filename=c.get("source_filename"),
+                    grounding_presence=(
+                        float(c["grounding_presence"])
+                        if c.get("grounding_presence") is not None
+                        else None
+                    ),
+                    wording_absent=bool(c.get("wording_absent", False)),
                 )
             )
 

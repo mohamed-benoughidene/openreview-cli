@@ -10,7 +10,7 @@ from docx import Document as DocxDocument
 from docx.oxml.ns import qn
 from docx.shared import Pt
 
-from openreview_cli.review.memo.models import MemoCitation
+from openreview_cli.review.memo.models import MemoCitation, MemoClause
 
 if TYPE_CHECKING:
     from openreview_cli.review.memo.models import MemoReport
@@ -56,6 +56,23 @@ def _truncate(text: str, limit: int = 10000) -> str:
     if len(text) > limit:
         return text[:limit] + "\n\n... Truncated to 10,000 characters."
     return text
+
+
+def _wording_note(clause: MemoClause) -> str | None:
+    """Display-only note: the model accepted a claim whose wording is absent.
+
+    A fact with the coverage number, never a verdict.  Returns ``None`` for
+    every other clause — the note fires only on the risky pattern, which the
+    builder marks via ``wording_absent``.
+    """
+    if not clause.wording_absent:
+        return None
+    if clause.grounding_presence is None:
+        return "Citation wording not present in the cited clause"
+    return (
+        "Citation wording not present in the cited clause "
+        f"(coverage {clause.grounding_presence:.2f})"
+    )
 
 
 # ── Markdown Renderer ──
@@ -108,6 +125,9 @@ def render_markdown(memo: MemoReport) -> str:
         lines.append(f"- **Playbook Requirement**: {clause.playbook_requirement}")
         lines.append(f"- **Contract Text**: {_truncate(clause.contract_text)}")
         lines.append(f"- {_citation_str(clause.citation)}")
+        note = _wording_note(clause)
+        if note is not None:
+            lines.append(f"- {note}")
         if clause.severity:
             lines.append(f"- **Severity**: {clause.severity}")
         lines.append("")
@@ -264,6 +284,11 @@ def render_docx(memo: MemoReport) -> Any:
             # Citation line as a separate paragraph
             cite_para = doc.add_paragraph(_citation_str(clause.citation))
             cite_para.style = doc.styles["Normal"]
+
+            note = _wording_note(clause)
+            if note is not None:
+                note_para = doc.add_paragraph(note)
+                note_para.style = doc.styles["Normal"]
 
             if clause.severity:
                 sev_p = doc.add_paragraph()

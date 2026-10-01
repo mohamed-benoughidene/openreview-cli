@@ -301,3 +301,74 @@ class TestRenderDocx:
         texts = [p.text for p in doc.paragraphs]
         assert any("Citation Locality" in t for t in texts)
         assert any("0.95" in t for t in texts)
+
+
+# ── Display-only wording note (Task 4): the risky pattern only ──
+
+WORDING_NOTE_TEXT = "Citation wording not present in the cited clause"
+
+
+def _make_wording_note_memo(
+    *, wording_absent: bool, grounding_presence: float | None
+) -> MemoReport:
+    summary = MemoSummary(
+        recommendation="approve",
+        clauses_checked=1,
+        matches=1,
+        differences=0,
+        confidence_avg=0.90,
+    )
+    clause = MemoClause(
+        id="c1",
+        title="Confidentiality Term",
+        playbook_requirement="Preferred: 3 years",
+        contract_text="The confidentiality term shall be 3 years.",
+        assessment="match",
+        color="green",
+        confidence=0.90,
+        citation=MemoCitation(clause_id="§3.1", paragraph_index=0),
+        grounding_presence=grounding_presence,
+        wording_absent=wording_absent,
+    )
+    return MemoReport(
+        memo_version="1.0",
+        mode="precheck",
+        document_name="nda-sample.pdf",
+        playbook_name="precheck-nda-v1",
+        playbook_version="1.2.0",
+        review_date="2026-07-05T14:30:22+00:00",
+        overall=summary,
+        clauses=[clause],
+        disclaimer="AI-generated review. Not legal advice.",
+    )
+
+
+class TestMarkdownWordingNote:
+    def test_note_rendered_for_absent_wording(self) -> None:
+        memo = _make_wording_note_memo(wording_absent=True, grounding_presence=0.46)
+        output = render_markdown(memo)
+        assert "Citation wording not present in the cited clause (coverage 0.46)" in output
+
+    def test_no_note_for_present_wording(self) -> None:
+        memo = _make_wording_note_memo(wording_absent=False, grounding_presence=1.0)
+        assert WORDING_NOTE_TEXT not in render_markdown(memo)
+
+    def test_no_note_when_fields_default(self) -> None:
+        memo = _make_wording_note_memo(wording_absent=False, grounding_presence=None)
+        assert WORDING_NOTE_TEXT not in render_markdown(memo)
+
+
+class TestDocxWordingNote:
+    def test_note_rendered_for_absent_wording(self) -> None:
+        memo = _make_wording_note_memo(wording_absent=True, grounding_presence=0.46)
+        doc = render_docx(memo)
+        texts = [p.text for p in doc.paragraphs]
+        assert any(
+            "Citation wording not present in the cited clause (coverage 0.46)" in t for t in texts
+        )
+
+    def test_no_note_for_present_wording(self) -> None:
+        memo = _make_wording_note_memo(wording_absent=False, grounding_presence=1.0)
+        doc = render_docx(memo)
+        texts = [p.text for p in doc.paragraphs]
+        assert not any(WORDING_NOTE_TEXT in t for t in texts)
