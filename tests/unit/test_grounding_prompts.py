@@ -16,6 +16,7 @@ from openreview_cli.grounding.prompts import (
     build_grounding_messages,
     build_second_pass_messages,
     parse_grounding_response,
+    parse_miscited_ids,
 )
 from openreview_cli.parsing.models import Clause
 
@@ -356,6 +357,26 @@ class TestClauseWindow:
         body = window[: -len(_TRUNCATION_MARKER)]
         assert text.startswith(body) and body.rstrip().endswith(".")
 
+    def test_a_long_clause_window_fills_the_bound(self) -> None:
+        """The window is only a window if it actually approaches the bound.
+
+        ``test_a_long_clause_is_cut_on_a_sentence_boundary_and_marked`` pins the upper bound
+        and the marker, so an implementation that stopped at the *first* sentence boundary
+        passes it while keeping ~100 characters of a ~6000-character clause (5% of the
+        bound) and dropping the rest. This pins the fill ratio so that wrong cut fails.
+        """
+        sentence = "The receiving party shall not disclose Confidential Information to anyone. "
+        text = sentence * 80  # 6000 characters, all sentence-boundaried
+        window = _clause_window(text)
+        body = window[: -len(_TRUNCATION_MARKER)]
+
+        assert len(window) <= _CLAUSE_WINDOW_CHARS + len(_TRUNCATION_MARKER)
+        # Measured: 1949 of 2000 characters (97.5%). A first-sentence-only cut would keep 75
+        # (3.8%), so this fails loudly against it.
+        assert len(body) >= 0.90 * _CLAUSE_WINDOW_CHARS, (
+            f"window filled only {len(body)} of {_CLAUSE_WINDOW_CHARS} characters"
+        )
+
     def test_a_single_oversized_first_sentence_is_hard_clipped(self) -> None:
         # The bound in the sentence-boundary test must hold for every input, so a first
         # sentence longer than the window is clamped at the window, not kept whole.
@@ -486,6 +507,24 @@ def test_the_prompt_offers_the_fourth_answer_as_a_field() -> None:
 
 def test_the_verdict_enum_has_no_fourth_member() -> None:
     assert set(GroundingVerdict.__members__) == {"GROUNDED", "UNGROUNDED", "UNCERTAIN"}
+
+
+def test_miscited_ids_are_keyed_by_the_claimed_index_not_the_array_position() -> None:
+    """A batch's answer may not come back in index order, and the pointers must follow the
+    finding each one names — not the slot it happened to occupy in the array.
+
+    Keying by array position instead of ``claim_index`` returns ``{0: ..., 1: ...}`` for
+    this answer and misattributes every pointer, while every batch-path test (which uses
+    in-order indices) stays green.
+    """
+    response = json.dumps(
+        [
+            {"claim_index": 7, "miscited_to_clause_id": "4.7"},
+            {"claim_index": 3, "miscited_to_clause_id": "9.2"},
+        ]
+    )
+
+    assert parse_miscited_ids(response) == {7: "4.7", 3: "9.2"}
 
 
 # ── item 4: the second narrow question, closed, sharing the same machinery ────
