@@ -97,6 +97,12 @@ class TestGroundingResult:
         with pytest.raises(AttributeError):
             result.nonexistent = 1  # type: ignore[attr-defined]
 
+    def test_presence_defaults_to_none_and_false(self) -> None:
+        """A result that never measured a claim carries no number and no hint."""
+        result = GroundingResult(claim_index=0, verdict=GroundingVerdict.GROUNDED, provenances=[])
+        assert result.grounding_presence is None
+        assert result.wording_absent is False
+
 
 class TestCGMetrics:
     def test_field_ranges_valid(self) -> None:
@@ -243,6 +249,63 @@ class TestCGReport:
         assert review_report.assessments[0].grounding_verdict == GroundingVerdict.GROUNDED
         assert review_report.assessments[0].grounding_provenances == [prov]
         assert review_report.assessments[0].grounding_confidence == 0.95
+
+    def test_merge_into_copies_presence_and_absence(self) -> None:
+        """The two presence signals ride from the GroundingResult onto the assessment."""
+        from datetime import datetime
+
+        from openreview_cli.review.models import (
+            ClauseAssessment,
+            DocMeta,
+            Position,
+            QAVerdict,
+            ReviewReport,
+            ReviewSummary,
+        )
+
+        assessment = ClauseAssessment(
+            clause_id="4.3",
+            clause_text="Test clause",
+            playbook_category="confidentiality",
+            position=Position.PREFERRED,
+            confidence=0.9,
+            citation="4.3",
+            qa_verdict=QAVerdict.agree,
+            extraction_model="test",
+            qa_model="test",
+        )
+        review_report = ReviewReport(
+            document=DocMeta(filename="test.pdf", page_count=1, clause_count=1, pii_stripped=False),
+            assessments=[assessment],
+            summary=ReviewSummary(),
+            playbook_id="test",
+            generated_at=datetime.now(),
+        )
+
+        prov = CitationProvenance(clause_id="4.3", paragraph_index=0, confidence=0.95)
+        result = GroundingResult(
+            claim_index=0,
+            verdict=GroundingVerdict.GROUNDED,
+            provenances=[prov],
+            reason=None,
+            grounding_presence=0.42,
+            wording_absent=True,
+        )
+        cg_report = CGReport(
+            verdicts=[result],
+            mode="lenient",
+            metrics=CGMetrics(
+                citation_precision=1.0, citation_relevance=1.0, citation_locality=1.0
+            ),
+            total_claims=1,
+            grounded_count=1,
+            ungrounded_count=0,
+            uncertain_count=0,
+        )
+        cg_report.merge_into(review_report)
+
+        assert review_report.assessments[0].grounding_presence == 0.42
+        assert review_report.assessments[0].wording_absent is True
 
     def test_merge_into_removes_ungrounded_in_strict(self) -> None:
         """In strict mode, UNGROUNDED and UNCERTAIN claims are removed."""

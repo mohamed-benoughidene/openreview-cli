@@ -115,6 +115,9 @@ class ClauseAssessment:
     grounding_verdict: GroundingVerdict | None = None
     grounding_provenances: list[CitationProvenance] | None = None
     grounding_confidence: float | None = None
+    # Claim-wording presence: a number and a hint only, never a verdict.
+    grounding_presence: float | None = None
+    wording_absent: bool = False
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.confidence <= 1.0:

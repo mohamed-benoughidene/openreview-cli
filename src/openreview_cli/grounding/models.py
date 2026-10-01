@@ -40,6 +40,10 @@ class GroundingResult:
     verdict: GroundingVerdict
     provenances: list[CitationProvenance]
     reason: str | None = None
+    # Share of the claim's wording found in the clause it cites; ``None`` when the
+    # measure never ran (no clause text in hand). Neither value is a verdict.
+    grounding_presence: float | None = None
+    wording_absent: bool = False
 
 
 @dataclass(slots=True)
@@ -98,6 +102,8 @@ class CGReport:
             assessment.grounding_verdict = result.verdict
             assessment.grounding_provenances = result.provenances
             assessment.grounding_confidence = confidence
+            assessment.grounding_presence = result.grounding_presence
+            assessment.wording_absent = result.wording_absent
 
             if self.mode == "strict" and result.verdict in (
                 GroundingVerdict.UNGROUNDED,
