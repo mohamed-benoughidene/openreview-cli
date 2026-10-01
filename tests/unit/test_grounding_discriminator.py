@@ -1497,3 +1497,46 @@ class TestGroundClaimAsksTheProductQuestion:
         # follow ``measure(claim, clause)`` surfaces here as the wrong presence.
         assert claim_first is not clause_first
         assert (self._HINT in self._content(mock_gateway)) is claim_first
+
+
+class TestConfidenceIsNeverTheVerdict:
+    """The checker's confidence is recorded and shown; no verdict path reads it.
+
+    The number does not separate wrong from right — measured misses came with the checker
+    0.9-0.95 sure, and correct answers with 1.0 — so there is no threshold and no
+    confidence-derived warning field. If no verdict path read the number, the verdict is the
+    same at both extremes and is what the checker answered.
+    """
+
+    _fixtures = TestGroundingPresenceRecorded()
+
+    def _grounded_at(
+        self, confidence: float, gateway: MagicMock, document: MagicMock
+    ) -> GroundingVerdict:
+        gateway.chat.return_value = json.dumps(
+            [
+                {
+                    "claim_index": 0,
+                    "verdict": "grounded",
+                    "provenances": [],
+                    "confidence": confidence,
+                    "reason": None,
+                }
+            ]
+        )
+        d = CitationGroundingDiscriminator(mode="lenient", gateway=gateway)
+        cg = d.ground_report(
+            self._fixtures._report(self._fixtures._CLAIM),
+            document,
+            self._fixtures._source_clauses(),
+        )
+        return cg.verdicts[0].verdict
+
+    def test_the_verdict_is_identical_at_both_confidence_extremes(
+        self, mock_gateway: MagicMock, sample_document: MagicMock
+    ) -> None:
+        assert (
+            self._grounded_at(0.0, mock_gateway, sample_document)
+            is self._grounded_at(1.0, mock_gateway, sample_document)
+            is GroundingVerdict.GROUNDED
+        )
