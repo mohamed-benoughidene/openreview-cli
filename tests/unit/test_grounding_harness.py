@@ -55,6 +55,11 @@ PARA_B = (
     "receipt of a valid invoice from the supplier. Late payments accrue interest at one "
     "percent per month until paid in full."
 )
+PARA_C = (
+    "12.2 Assignment. Neither party may assign this agreement, in whole or in part, without "
+    "the prior written consent of the other party. Any purported assignment in violation of "
+    "this section is void and of no effect, and the non-assigning party may terminate."
+)
 
 FABRICATED = "A wholly fabricated sentence that appears in no clause of this agreement at all."
 
@@ -156,6 +161,22 @@ def _tiny_corpus(tmp_path: Path) -> Path:
     corpus.mkdir()
     (corpus / "a.txt").write_text(PARA_A, encoding="utf-8")
     (corpus / "b.txt").write_text(PARA_B, encoding="utf-8")
+    return corpus
+
+
+def _two_unit_document_corpus(tmp_path: Path) -> Path:
+    """A corpus where ONE document holds TWO qualifying units.
+
+    Every other fixture holds a single unit per document, so "pick another unit" and "pick
+    another document" land on the same unit by accident: a picker that preferred the cited
+    unit's own document had nothing to prefer and was never exercised. Here ``a.txt`` holds
+    two units (c000, c001) and ``b.txt`` one (c002), so the two-unit document's units have a
+    same-document sibling that a correct cross-document picker must skip.
+    """
+    corpus = tmp_path / "cuad"
+    corpus.mkdir()
+    (corpus / "a.txt").write_text(PARA_A + "\n\n" + PARA_B, encoding="utf-8")
+    (corpus / "b.txt").write_text(PARA_C, encoding="utf-8")
     return corpus
 
 
@@ -436,6 +457,33 @@ class TestGroundingNegativeKinds:
         assert negatives
         assert all(row["kind"] == "cross_document" for row in negatives)
         assert all(row["source_document"] != cited_document[row["unit_id"]] for row in negatives)
+
+    def test_a_two_unit_document_never_supplies_its_own_cross_document_negative(
+        self, tmp_path: Path
+    ) -> None:
+        # The fixture (not the assertion style) is the point: with one unit per document,
+        # "pick another unit" and "pick another document" coincide, so a picker preferring the
+        # cited unit's own document would still pass. Here a.txt holds c000 AND c001, so the
+        # picker must skip its same-document sibling and reach b.txt.
+        units, _ = SCRIPT._load_corpus_units(_two_unit_document_corpus(tmp_path), limit=3)
+        assert [(unit.id, unit.document) for unit in units] == [
+            ("c000", "a.txt"),
+            ("c001", "a.txt"),
+            ("c002", "b.txt"),
+        ]
+        # Both a.txt units are operanded, so drive the cross-document branch explicitly.
+        with pytest.MonkeyPatch.context() as monkey:
+            monkey.setattr(SCRIPT, "operand_change", lambda _text: None)
+            labels, _drops, _generated, _skips = SCRIPT._build_grounding_labels(units)
+
+        negatives = [row for row in labels if row["generator"] == "unsupported_claim"]
+        cited_document = {unit.id: unit.document for unit in units}
+        # Every unit is scored, so a dropped negative cannot hide a same-document pick.
+        assert {row["unit_id"] for row in negatives} == set(cited_document)
+        assert all(row["kind"] == "cross_document" for row in negatives)
+        assert all(row["source_document"] != cited_document[row["unit_id"]] for row in negatives)
+        # The two-unit document's units draw from the *other* document, never from each other.
+        assert [row["source_document"] for row in negatives] == ["b.txt", "b.txt", "a.txt"]
 
     def test_operand_change_is_preferred_and_recorded(self, tmp_path: Path) -> None:
         units, _ = SCRIPT._load_corpus_units(_tiny_corpus(tmp_path), limit=2)
