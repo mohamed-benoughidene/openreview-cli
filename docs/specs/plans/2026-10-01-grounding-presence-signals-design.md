@@ -1,114 +1,123 @@
-# Design (v2) — presence signals instead of a veto
+# Design (v3) — presence signals instead of a veto
 
 - **Date:** 2026-10-01
-- **Status:** supersedes `2026-10-01-grounding-citation-presence-design.md`, whose veto is **rejected** (§1). Awaiting owner approval of the four items in §2.
-- **Branch:** `feat/grounding-presence-signals` (renamed from `fix/grounding-citation-veto`; nothing was ever committed), based on `feat/slm-measurement` at `5575e8e`.
+- **Status:** v3 folds in two independent reviews (28 findings). It supersedes v2; the veto remains **rejected**.
+- **Branch:** `feat/grounding-presence-signals`, worktree `/home/mohamed/lab/openreview/.worktrees/grounding-presence-signals`, based on `feat/slm-measurement` at `5575e8e`.
 
-Plain words, used with one meaning throughout: a **claim** is the text the review step grounds (in production,
-`assessment.citation` — the extraction step is asked for an "exact quoted text from the clause"); the **clause** is
-the numbered contract section the claim cites; **coverage** is the share of a claim's words found in that clause;
-a **veto** is code that decides a claim without asking the model; the **harness** is
-`scripts/measure_slm_slots.py`, which builds known-good and known-bad labels and scores the fact-checker.
+Words used with one meaning throughout: a **claim** is the text the review step grounds (in production
+`assessment.citation`); the **clause** is the contract section the claim cites; **coverage** is the share of a
+claim's words found in the clause, computed by `presence.coverage`; a **veto** is code that decides a claim without
+the model; the **harness** is `scripts/measure_slm_slots.py`.
 
-## 1. Why the veto is rejected (measured 2026-10-01)
+## 1. Why the veto is rejected — corrected evidence
 
-| claim | coverage | what the veto would do |
-|---|---|---|
-| the repo's live test claim that **must** come back grounded (`tests/integration/test_grounding_live.py:38`) | 0.750 | model decides (safe) |
-| a light paraphrase (2 words changed) | 0.818 | model decides (safe) |
-| a medium paraphrase (half reworded) | 0.455 | **vetoed → ungrounded** |
-| a heavy paraphrase | 0.200 | **vetoed → ungrounded** |
-| a genuine sentence from another clause | 0.154 | vetoed (correct) |
+**The consequence is worse than v2 claimed.** The CLI runs grounding by default: `grounding_mode` defaults to
+`"strict"` (`src/openreview_cli/app.py:1379`). In strict mode an ungrounded claim is **deleted** from the report —
+`report.assessments = [a for i, a in enumerate(report.assessments) if i in keep_set]`, keeping only grounded
+verdicts (`src/openreview_cli/grounding/models.py:117-122`). So a wrong call removes a real finding **by default**,
+and nothing remains to show why. (v2 said "opt-in with a silent deletion"; the CLI default makes it
+default-on.)
 
-A supported claim and a planted bad claim occupy the same coverage range once the wording changes, so any line that
-catches the second rejects some of the first. The consequence is silent: in the `strict` grounding mode the CLI
-describes as "ungrounded excluded" (`src/openreview_cli/app.py:1378-1383`), a vetoed claim leaves the memo with
-nothing to distinguish it from a claim the model rejected. Grounding is opt-in (`review/runner.py:169` runs it only
-when a mode is supplied), which bounds the blast radius but does not remove the risk.
+**And the coverage ranges overlap.** All figures below are reproducible with `presence.coverage` — case-folded,
+whitespace-collapsed, tokenised by `[a-z0-9]+`, multiset, claim-side:
 
-Decisive point: **the false-reject rate cannot be measured today.** No artifact records a claim next to the clause:
-the local model's real review output (`slm-result-granite4-3b`) carries only aggregate counts, and the cloud
-review output has the same shape. The harness cannot bound it either — its known-good labels are verbatim by
-construction. Shipping a rule that can delete a real finding, whose error rate is unmeasured, is not defensible for
-this product.
+| source | coverage |
+|---|---|
+| the harness's 40 planted bad claims (real sentences from other clauses) | **0.000 – 0.689, median 0.260** |
+| the repo's live test claim that must come back grounded (`tests/integration/test_grounding_live.py:38`) | 0.750 |
+| light paraphrase — `"Each party must keep the other party's confidential information secret."` (11 tokens) | 0.818 |
+| medium paraphrase — `"Neither party may reveal confidential details belonging to the other side."` (11 tokens) | 0.455 |
+| heavy paraphrase — `"No party is permitted to reveal private data they receive."` (10 tokens) | 0.200 |
 
-## 2. What ships instead — the four approved items
+The planted claims reach 0.689 and the supported paraphrases start at 0.200, so **any single line either misses
+planted claims or rejects real ones**. A line at 0.65 would reject the medium and heavy paraphrases; a line low
+enough to catch the planted claims at 0.26 would reject most paraphrases.
 
-### Item 1 — record coverage as a number, decide nothing
-- New scalar field `grounding_presence: float | None = None` beside the grounding fields in
-  `ClauseAssessment` (`review/models.py:114-117`).
-- Set in the merge that assigns the other grounding fields (`grounding/models.py:98-100`); the value rides on
-  `GroundingResult`, which gains the same field, computed in `discriminator.py` at both call sites
-  (`ground_claim` and `_process_batch`) where claim and clause text are both in hand.
-- The number reaches the JSON output for free: reports are dumped whole through `dataclasses.asdict`
-  (`review/report.py:308`), and no test asserts an exact assessment key set.
-- Privacy: a number is recorded; no claim text and no clause text is added anywhere.
+**What remains unproven, stated plainly:** these are harness labels, not real citations. No artifact records a claim
+beside its clause — the local model's real review output (`slm-result-granite4-3b`) carries only aggregate counts —
+so the error rate of any line on *real* extraction output is unknown. What would overturn this rejection: real
+citations clustering above ~0.8 while planted claims stay below ~0.3.
 
-### Item 2 — sharpen the question, keep the model as the decider
-- `build_grounding_messages` (`grounding/prompts.py:45-79`) gains an optional set of claim indices whose wording was
-  not found in the cited clause, and appends one clause to **that claim's line**, for example
-  `[the claim's wording is not in the clause; answer grounded only if the clause still entails it]`.
-- The system template is untouched, so the two tests that pin its text (`tests/unit/test_grounding_prompts.py:135-141`)
-  stay green. The verdict remains the model's; nothing is decided by code.
+## 2. What ships — the four approved items
 
-### Item 3 — a report-only line in the memo
-- When `grounding_presence` is below the line, the memo prints a display-only note beside the clause's severity
-  (`review/memo/formats.py:111-112` for Markdown, `:268-271` for DOCX), naming the coverage value.
-- The colour logic reads only `error`, `confidence`, `qa_verdict` and `grounding_verdict`
-  (`review/colors.py:41-53`), so a note cannot change amber or the three-colour output, and its tests are untouched.
+### Item 1 — record coverage, decide nothing
+- `presence.coverage(claim, clause) -> float` and `presence.wording_absent(claim, clause) -> bool` (the bool carries
+  the guards: no clause text, a claim under five tokens, or a claim that is only a reference such as `4.3`, all
+  return `False`). One call returns both in practice — the plan uses a single `presence.measure` returning the pair.
+- Only the batch path builds a `GroundingResult` (`_process_batch`); `ground_claim` returns a
+  `(verdict, provenances, confidence)` tuple whose shape three callers destructure
+  (`scripts/measure_slm_slots.py`, `benchmark/hallu_detect.py`, its own tests), so **its signature does not change**.
+  `GroundingResult` gains `grounding_presence: float | None` and `wording_absent: bool`; `ClauseAssessment` gains the
+  same two beside its other grounding fields (`review/models.py:114-117`), copied by `CGReport.merge_into`
+  (`grounding/models.py:98-100`). The zero-length-claim result (`discriminator.py:153-163`) carries `None` and
+  `False` — the check never ran.
+- Reports are dumped whole through `dataclasses.asdict` (`review/report.py:308`), so the numbers reach the JSON with
+  no further work; no test asserts an exact key set.
+- Privacy: numbers and one boolean only.
 
-### Item 4 — harden the label set
-- No paraphrase machinery exists anywhere in the repo (searched `src/`, `scripts/`, `tests/`, fixtures), so a small
-  deterministic one is written in `grounding/corruption.py`, in the style of the existing hash-seeded helpers.
-- Two new label classes: a **paraphrased positive** (a meaning-preserving rewrite of a clause sentence, verified to
-  be *different* from the clause so it is a real paraphrase) and a **paraphrased negative** (a paraphrase of a
-  sentence from a different clause, so it stays unsupported).
-- The substitution table is small, curated, and each entry is meaning-preserving; a test asserts the rewrite is not a
-  substring of the clause and that it differs only by the table's entries. `GROUNDING_VALID_NEGATIVES`
-  (`corruption.py:48`) gains the new negative class; every place that enumerates generator names must learn about it
-  (`scripts/measure_slm_slots.py:382,386,389,393,519,521,751,753,759`), and the harness's own claims about verbatim
-  positives (`:82-98`, `:754-764`) must be corrected.
+### Item 2 — tell the model when the wording is absent, then let it decide
+- `build_grounding_messages` gains an optional `wording_absent_indices: set[int] | None = None` and appends one
+  clause to **that claim's line** in the single user message: `[the claim's wording does not appear in the cited
+  clause; answer grounded only if the clause still entails it]`.
+- There is **no system message** (`prompts.py:79` returns one `{"role": "user"}` message), so v2's phrase "the system
+  template is untouched" is corrected to "`GROUNDING_PROMPT_TEMPLATE` is untouched". The two tests that pin it
+  (`tests/unit/test_grounding_prompts.py:135-141`) stay green because the hint is per-claim.
+- Why per-claim rather than one global sentence: a global sentence would assert something false about claims whose
+  wording *is* present, which is most of them. The hint is true only where it is printed.
 
-### Item 5 — measure, then publish
-- The harness records coverage per label so the distribution is visible in a receipt, and one real local review runs
-  with grounding enabled so the numbers come from real extraction output rather than from harness labels.
-- Publish: the coverage distribution, the new hardened-set numbers, and — plainly — that the local arm's remaining
-  gap is a model property, not something code can close without the veto that was rejected.
+### Item 3 — a report-only line in the memo, on the risky pattern only
+- The note prints **only when the model accepted the claim and the wording is absent** — the one combination worth a
+  human's attention. It renders as its own line, not beside "Severity" (which is never populated on export, so v2's
+  instruction would have been dead code), in Markdown (`review/memo/formats.py:104-125`) and DOCX (`:236-275`). It
+  reads as a fact, never a verdict: `Citation wording not present in the cited clause (coverage 0.46)`.
+- This needs `grounding_presence` and `wording_absent` on `MemoClause` and its builder
+  (`review/memo/models.py:48-61`, `review/memo/exporter.py:106-118`) — v2 missed both files.
+- The colour logic reads `error`, `confidence`, `qa_verdict`, `grounding_verdict`, `position` and
+  `grounding_confidence` (`review/colors.py:41-68`); none of the new fields is among them, so amber cannot move.
+
+### Item 4 — harden the labels with paraphrases
+- One constant substitution map in `grounding/corruption.py` applied to any sentence: safe, narrow rewrites only
+  (`shall` → `must`, `shall not` → `must not`, `in no event` → `under no circumstances`, `prior to` → `before`,
+  `receiving party` → `recipient`, and similar). No per-clause curation, no `None` branch: `paraphrase(sentence)`
+  always returns a sentence, and the caller drops it when the rewrite changed nothing (counted, never silent).
+- Two classes: a **paraphrased positive** (the clause's own sentence rewritten) and a **paraphrased negative** (a
+  sentence from another clause rewritten, so it stays unsupported). The negative joins
+  `GROUNDING_VALID_NEGATIVES` (`corruption.py:48`); the positive is a positive and must not.
+- Narrow map = honest limit: it under-represents real paraphrases, and the page must say so.
+- Reuse considered and rejected in writing: `benchmark/hallu_detect.py` already computes a per-claim overlap
+  (`:65-77`) but it imports the discriminator, so grounding importing it would close a cycle; a local primitive
+  avoids that. Recorded in §6.
 
 ## 3. Non-goals
-
-- **No veto, and no verdict ever set from the coverage number.** The number may inform the question (item 2) and the
-  memo (item 3); it never decides.
-- No new slot, privacy tier or model default; no cloud run (the cloud row is labelled as measured before this change).
-- No enforcement of verbatim quotations at the extraction step — a candidate long shot, recorded in §6, not built here.
+No veto and no verdict derived from coverage. No new slot, tier or model default. No cloud run (the cloud row is
+labelled pre-change). No verbatim enforcement at the extraction step (recorded in §6, not built).
 
 ## 4. Risks
 
 | risk | mitigation, and what would prove it wrong |
 |---|---|
-| The paraphrase table under-represents real paraphrases, so the hardened set still flatters the model | keep the table curated and small; state the limit in the receipt and the page. It would be wrong to claim the set equals real extraction output |
-| Item 2's hint biases the model rather than helping it | measure with and without; if the local arm's caught count does not move, the hint is not worth keeping |
-| Item 3's line adds noise if the line misfires on legitimate paraphrases | it is display-only, so the cost is a wrong note, never a lost finding |
-| The coverage number is misread as a verdict by a later reader | name it in the schema and the docs as a signal; the memo wording says "wording not found", not "unsupported" |
+| The narrow substitution map flatters the model | state the limit in the receipt and the page; it would be wrong to claim the set equals real extraction output |
+| Item 2's hint biases instead of helping | measure with and without; if the caught count does not move, drop it |
+| Item 3's note fires on a real finding the model accepted | it is display-only, so the cost is a wrong note, never a lost finding — and the note states the coverage number so a human can judge |
+| The number is misread as a verdict by a later reader | the field is named and documented as a signal, and the memo wording says "not present", not "unsupported" |
 
 ## 5. Definition of done
-
-- Items 1–4 implemented with the interfaces above; a test per item, written first and watched to fail.
-- The harness records coverage; one real local review with grounding enabled produces a coverage distribution.
-- The published pages carry the distribution, the hardened-set numbers, and the explicit statement that the gain is
-  not a model improvement; the cloud row is labelled as pre-change.
-- The rejected veto is recorded as rejected, with the measurement that rejected it, so it is not re-proposed.
+Items 1–4 implemented with a failing test first per item; the harness records coverage per label and the labels
+include both paraphrase classes; one real local review with grounding enabled produces a coverage distribution
+(called a pilot, not a benchmark); the published pages carry that distribution, the new numbers, the correction that
+the local arm's "bad claims called grounded" row is 12 not 0, and the explicit statement that nothing here is a model
+improvement; the rejected veto is recorded with the measurement that rejected it.
 
 ## 6. Alternatives considered
 
 | alternative | why not |
 |---|---|
-| The hard veto | §1: silent deletion of real findings, with an unmeasurable error rate |
-| Enforce verbatim citations at the extraction step, then veto safely | plausible long shot; a small model may loop on re-asks, and it is a larger change than this branch. Recorded, not built |
-| Prompt-only improvement, no measurement | cannot be told apart from noise; item 1 exists precisely to make it measurable |
+| The hard veto | §1: overlapping ranges, and a default-on deletion with an unmeasured error rate |
+| One global sentence in the prompt instead of a per-claim hint | it would assert something false about claims whose wording is present |
+| Reusing `benchmark/hallu_detect.py`'s overlap metric | circular import (that module imports the discriminator) |
+| Enforce verbatim citations at extraction, then veto safely | plausible long shot; a small model may loop on re-asks; larger than this branch |
+| Drop the memo note, keep the JSON number only | the risky pattern (accepted despite absent wording) would stay invisible to the reviewer who acts on the memo |
 
 ## 7. Open uncertainties
-
-- Whether real citations sit above the line — the whole point of item 1, unanswered until a real review runs.
-- Whether a curated substitution table is a fair proxy for real paraphrases (Assumption; it would be wrong in the
-  direction of flattering the model).
+- Whether real citations sit above the line: the point of item 1, unanswered until a real review runs.
+- Whether a narrow map is a fair proxy for real paraphrases: labelled an Assumption; it errs toward flattering.
