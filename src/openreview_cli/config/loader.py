@@ -32,7 +32,14 @@ DEFAULT_CONFIG: dict[str, object] = {
                 "primary": "ollama/granite4:3b",
                 "fallback": None,
                 "params": {"temperature": 0.0, "max_tokens": 4000},
-                "extra_params": {"response_format": {"type": "json_object"}},
+                # num_ctx is load-bearing: Ollama's default is 4096 and it truncates silently,
+                # so the slot must reserve the context itself. The headroom has to cover the
+                # checker's prompt (the cited clauses plus the findings) AND the 4000 output
+                # tokens this slot's max_tokens reserves — the two share the one context, and
+                # a prompt that overflows it is cut mid-prompt with no error. Ollama reads
+                # num_ctx from the request options; both keys here are Ollama-only and are
+                # dropped for a non-local grounding provider by gateway/router.py.
+                "extra_params": {"response_format": {"type": "json_object"}, "num_ctx": 16384},
             },
         },
         "fallback": {

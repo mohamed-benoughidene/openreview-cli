@@ -595,6 +595,22 @@ class TestExtraParamsLogging:
 
 
 class TestExtraParamsCrossProvider:
+    def test_the_shipped_default_num_ctx_reaches_the_request(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The shipped grounding slot reserves its own context, over Ollama's 4096 default.
+
+        ``COMMON_CONFIG`` declares no grounding slot, so the merged default
+        (``config/loader.py``) is what builds the grounding request. Ollama reads num_ctx
+        from the request options and truncates silently at its own default, so this pins
+        that the slot's value survives into the litellm kwargs. The floor is well above
+        4096 because the one context has to hold the checker's prompt *and* the 4000-token
+        output the slot reserves.
+        """
+        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
+        kwargs = gw._get_litellm_kwargs("grounding")
+        assert int(kwargs["num_ctx"]) >= 8192
+
     def test_ollama_params_on_openai_does_not_crash(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -1351,6 +1367,30 @@ class TestLocalOnlyExtraParams:
         gw = _gateway(tmp_path, monkeypatch, _config_with("ollama/granite4:3b"))
         assert gw.chat("reasoning", [{"role": "user", "content": "Hi"}]) == "ok"
         assert seen[0]["response_format"] == {"type": "json_object"}
+
+    def test_num_ctx_is_forwarded_to_a_local_provider(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """num_ctx reaches the Ollama request, like response_format.
+
+        The shipped grounding extra_params carry num_ctx; it is an Ollama-only key, so it
+        must survive to the local dispatch seam.
+        """
+        seen = _capture_dispatches(monkeypatch)
+        cfg = _config_with("ollama/granite4:3b", extra_params={"num_ctx": 8192})
+        gw = _gateway(tmp_path, monkeypatch, cfg)
+        assert gw.chat("reasoning", [{"role": "user", "content": "Hi"}]) == "ok"
+        assert seen[0]["num_ctx"] == 8192
+
+    def test_num_ctx_is_dropped_for_a_cloud_provider(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A cloud grounding slot must not inherit the Ollama-only num_ctx."""
+        seen = _capture_dispatches(monkeypatch)
+        cfg = _config_with("openai/gpt-4", extra_params={"num_ctx": 8192})
+        gw = _gateway(tmp_path, monkeypatch, cfg)
+        gw.chat("reasoning", [{"role": "user", "content": "Hi"}])
+        assert "num_ctx" not in seen[0]
 
     def test_dropped_for_a_cloud_provider(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
