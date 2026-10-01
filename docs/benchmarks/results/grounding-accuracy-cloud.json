@@ -1,0 +1,57 @@
+{
+ "benchmark": "grounding-accuracy-cloud",
+ "command": "uv run python scripts/measure_slm_slots.py --grounding-accuracy --arm cloud --limit 20 --corpus-dir data/legalbenchrag/corpus/cuad --out .benchmark-reports/ga-cloud-20.json",
+ "date": "2026-10-01",
+ "git_commit": "964a500",
+ "provenance": [
+  {
+   "path": "scripts/measure_slm_slots.py",
+   "sha256": "cb5fb7a2473d928f42cccce0169dabd4f6744cdbd2b76dee472d7f39bfa52a83"
+  },
+  {
+   "path": "src/openreview_cli/grounding/prompts.py",
+   "sha256": "9055352931c85b7c806127430d01655cd6829bf846dee514320d64e3e5b0bea7"
+  },
+  {
+   "path": "src/openreview_cli/grounding/discriminator.py",
+   "sha256": "3f1573845c6ac2727fad5eaca1638c95be724b36b11ec2d4d6a35f678413e0cb"
+  },
+  {
+   "path": "src/openreview_cli/gateway/router.py",
+   "sha256": "900fabc0bb4d1f0f5b7696442903470c55ffa399737284ac6151769ad806ba7d"
+  },
+  {
+   "path": "src/openreview_cli/config/loader.py",
+   "sha256": "85e20a3a0df42af1008194a58b6ae3b1d372d4cec57bd3e058289d0168b0fd17"
+  }
+ ],
+ "models": "openrouter/anthropic/claude-sonnet-4.6",
+ "benchmark_input": "data/legalbenchrag/corpus/cuad (CUAD, 462 contracts; gitignored, so absent in CI)",
+ "sample": {
+  "units": 20,
+  "positives": 20,
+  "negatives_kept": 40,
+  "negatives_generated": {
+   "unsupported_claim": 20,
+   "hallucination": 20
+  },
+  "negatives_dropped_guard": 0,
+  "model_calls": 60
+ },
+ "metrics": {
+  "bad_caught": 39,
+  "bad_caught_rate": 0.975,
+  "bad_missed": 0,
+  "bad_uncertain": 1,
+  "bad_called_grounded": 0,
+  "good_accepted": 20,
+  "false_reject_rate": 0.0,
+  "good_uncertain": 0,
+  "unreadable_answers": 0,
+  "latency_mean_s": 2.78,
+  "latency_median_s": 2.99,
+  "latency_p95_s": 3.67,
+  "latency_max_s": 4.31
+ },
+ "notes": "Run on this machine with the configured cloud slots; PII stripped locally before every call (43 entities replaced) by the review path's own strip machinery. Positives are verbatim sentences from the cited clause as sent to the model, so they are trivially grounded and the negative arm is the signal. Single-sample smoke measurement: replies vary run to run, and an earlier run on the pre-fix reader measured the same 39 of 40 and 20 of 20, so the cloud arm was unaffected by the local-only JSON gate. Costs money per run (~30 cents for 60 calls)."
+}

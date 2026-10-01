@@ -53,6 +53,8 @@ EXPECTED_RECEIPTS = frozenset(
         "test-collection.json",
         "cuad-retrieval-porter.json",
         "cuad-retrieval-unicode61.json",
+        "grounding-accuracy-local.json",
+        "grounding-accuracy-cloud.json",
     }
 )
 FORBIDDEN_KEYS = frozenset({"citation", "clause_text", "document_text", "text", "original_value"})
@@ -72,6 +74,8 @@ GENERATED_RECEIPTS = frozenset(
         "test-collection.json",
         "cuad-retrieval-porter.json",
         "cuad-retrieval-unicode61.json",
+        "grounding-accuracy-local.json",
+        "grounding-accuracy-cloud.json",
     }
 )
 EXPECTED_MODELS: dict[str, Any] = {
@@ -92,6 +96,8 @@ EXPECTED_MODELS: dict[str, Any] = {
     "test-collection.json": "none (offline pytest collection; no model calls)",
     "cuad-retrieval-porter.json": "none (offline: SQLite FTS5 keyword search; no model calls)",
     "cuad-retrieval-unicode61.json": "none (offline: SQLite FTS5 keyword search; no model calls)",
+    "grounding-accuracy-local.json": "ollama/granite4:3b",
+    "grounding-accuracy-cloud.json": "openrouter/anthropic/claude-sonnet-4.6",
 }
 UNKNOWN_GIT_COMMITS: dict[str, str] = {
     "contractnli-coverage.json": (
@@ -125,6 +131,10 @@ TABLES: dict[str, tuple[str, ...]] = {
     "## Accuracy signals": ("accuracy-suite.json",),
     "## MAUD public benchmark (segmentation and timing)": ("maud-segmentation.json",),
     "## Measured vs. not measured": ("test-collection.json", "accuracy-suite.json"),
+    "## Grounding accuracy (local vs cloud)": (
+        "grounding-accuracy-local.json",
+        "grounding-accuracy-cloud.json",
+    ),
 }
 
 

@@ -272,9 +272,33 @@ Last verified: 2026-09-30 @ 74ce840 (receipt: docs/benchmarks/results/maud-segme
 
 This measures **segmentation**, not query-answering accuracy and not deal-point accuracy. The same corpus hash (`82ef159b87f73a9c68e7143fac88bf47ac212713b56617d7e87d6f1f0a781daf`) is pinned in the receipt. The corpus is gitignored (`data/` in `.gitignore`); MAUD is published by The Atticus Project (CC BY 4.0).
 
+## Grounding accuracy (local vs cloud)
+
+The fact-checker slot decides whether each assessment claim is really supported by the clause it cites. `scripts/measure_slm_slots.py --grounding-accuracy` builds known-good positives and generated known-bad negatives, drops the negatives its guard rejects, and scores a confusion matrix — an ordinary review run cannot show a miss, because `strict` mode removes ungrounded claims and the structural metric returns 1.0 when nothing is grounded. The local arm runs in CI on a corpus assembled from the repository's tracked fixtures; the cloud arm runs on demand over CUAD.
+
+| Metric | local `ollama/granite4:3b` | cloud `openrouter/anthropic/claude-sonnet-4.6` |
+|---|---|---|
+| answers read | 60 / 60 | 60 / 60 |
+| known-good claims accepted | 20 / 20 | 20 / 20 |
+| planted bad claims caught | 27 / 40 (28 / 40 on the preceding run) | 39 / 40 |
+| bad claims called grounded | 0 | 0 |
+| uncertain (good / bad) | 0 / 1 | 0 / 1 |
+| unreadable answers | 0 | 0 |
+| mean latency per call | 18.05 s | 2.78 s |
+
+Sample: 20 units per arm (`--limit 20`), 20 positives and 40 negatives kept, 60 model calls. The arms do not share a corpus: the local arm uses the tracked fixtures because CUAD is gitignored and absent in CI.
+
+Last verified: 2026-10-01 @ 303dd4c (local arm) / 964a500 (cloud arm) (receipts: docs/benchmarks/results/grounding-accuracy-local.json, docs/benchmarks/results/grounding-accuracy-cloud.json).
+
+**Both arms read every answer; the arms differ in quality.** An earlier local figure of **1 of 20** accepted was a reader defect, not model behaviour: answers the reader could not parse were recorded as `uncertain` with confidence 0.0, which made the local model look like it refused to decide. With the reader fixed and local models asked for JSON only, the local arm accepts all 20 known-good claims and catches 27–28 of 40 planted bad ones, while the cloud model catches 39 of 40. The honest reading is that the local 3B model's failure mode is **accepting** planted bad claims, not hesitating over good ones — it is weaker than the cloud model, not merely slower.
+
+**Limits.** Both are single-sample smoke measurements of non-deterministic models. The positives are verbatim sentences from the cited clause as sent to the model, so they are trivially grounded and only the negative arm discriminates — no real-world false-positive rate may be quoted. CI latencies are CPU-bound on a 2-vCPU runner and local latencies are machine-specific. The local arm ran `--no-pii` (CI has no spaCy model), so raw clause text went to a local model only; the cloud arm stripped PII (43 entities) before every call.
+
+**Reproduction:** `uv run python scripts/measure_slm_slots.py --grounding-accuracy --arm local|cloud --limit 20 --corpus-dir <corpus>`. The local arm also runs in CI (`.github/workflows/slm-measurement.yml`, job `grounding-accuracy`); the cloud arm spends on the order of 30 cents per 60 calls.
+
 ## Measured vs. not measured
 
-**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (96.4% recall, span-level predicate), review accuracy on 12 NDA clauses (90.9% F1; provider not recorded), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale, timing, and clause segmentation), CUAD keyword retrieval over 462 contracts on the full 4,042-query set (both tokenizer arms), MAUD public benchmark on 150 M&A documents (scale, timing, and clause segmentation), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,935 tests), accuracy-test suite (21 passed, 0 failed).
+**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (96.4% recall, span-level predicate), review accuracy on 12 NDA clauses (90.9% F1; provider not recorded), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale, timing, and clause segmentation), CUAD keyword retrieval over 462 contracts on the full 4,042-query set (both tokenizer arms), MAUD public benchmark on 150 M&A documents (scale, timing, and clause segmentation), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,935 tests), accuracy-test suite (21 passed, 0 failed), grounding accuracy on both arms (20 units each; local via CI on tracked fixtures, cloud over CUAD).
 
 Last verified: 2026-09-25 @ fdea262 (receipt: docs/benchmarks/results/test-collection.json).
 Last verified: 2026-09-24 @ 882568c (receipt: docs/benchmarks/results/accuracy-suite.json).
