@@ -5,7 +5,12 @@ from __future__ import annotations
 import json
 
 from openreview_cli.grounding.models import GroundingVerdict
-from openreview_cli.grounding.prompts import GROUNDING_PROMPT_TEMPLATE, parse_grounding_response
+from openreview_cli.grounding.prompts import (
+    GROUNDING_PROMPT_TEMPLATE,
+    build_grounding_messages,
+    parse_grounding_response,
+)
+from openreview_cli.parsing.models import Clause
 
 GROUNDED = {
     "claim_index": 0,
@@ -247,3 +252,87 @@ def test_a_bare_array_and_a_bare_object_are_still_read() -> None:
     """Regression guards: unwrapping must not disturb the shapes that already worked."""
     assert _verdicts(json.dumps([GROUNDED])) == [GroundingVerdict.GROUNDED]
     assert _verdicts(json.dumps(GROUNDED)) == [GroundingVerdict.GROUNDED]
+
+
+# ── the per-claim hint: absent wording is named on that claim's own line ──────
+
+# Pinned verbatim: the model reads this exact sentence, so a test that imported it
+# from the implementation would only prove the implementation equals itself.
+_HINT = (
+    "[the claim's wording does not appear in the cited clause; "
+    "answer grounded only if the clause still entails it]"
+)
+
+_CLAUSES = [
+    Clause(
+        id="4.3",
+        title=None,
+        text="The receiving party shall not disclose confidential information.",
+        level=1,
+        parent_id=None,
+        source_page=1,
+        source_paragraph=None,
+        source_span=None,
+    )
+]
+
+# Two claims on one clause: the first is quoted from it, the second is not.
+_CLAIMS = [
+    (0, "The receiving party shall not disclose", "4.3"),
+    (1, "The term is twelve months from the effective date", "4.3"),
+]
+
+
+def _user_content(messages: list[dict[str, str]]) -> str:
+    return next(m["content"] for m in messages if m["role"] == "user")
+
+
+def _claim_line(content: str, index: int) -> str:
+    # Anchored on the opening quote so the template's own numbered list ("1. Is the
+    # claim supported…") is never mistaken for a claim line.
+    return next(line for line in content.splitlines() if line.startswith(f'{index}. "'))
+
+
+def _built(*args: object) -> str:
+    return _user_content(build_grounding_messages(_CLAUSES, _CLAIMS, *args))  # type: ignore[arg-type]
+
+
+def test_a_flagged_claim_line_carries_the_hint_and_an_unflagged_one_does_not() -> None:
+    content = _built({1})
+
+    assert _HINT in _claim_line(content, 1)
+    assert _HINT not in _claim_line(content, 0)
+
+
+def test_the_hint_is_appended_after_the_existing_citation_text() -> None:
+    line = _claim_line(_built({1}), 1)
+
+    assert line.startswith(
+        '1. "The term is twelve months from the effective date" (cites clause 4.3) '
+    )
+    assert line.endswith(_HINT)
+
+
+def test_an_empty_set_adds_no_hint() -> None:
+    assert _HINT not in _built(set())
+
+
+def test_none_is_byte_identical_to_omitting_the_argument() -> None:
+    without = build_grounding_messages(_CLAUSES, _CLAIMS)
+    with_none = build_grounding_messages(_CLAUSES, _CLAIMS, None)
+
+    assert with_none == without
+    assert with_none[0]["content"].encode() == without[0]["content"].encode()
+
+
+def test_an_unflagged_claim_line_is_byte_identical_with_or_without_the_set() -> None:
+    assert _claim_line(_built({1}), 0) == _claim_line(_built(), 0)
+
+
+def test_the_hint_carries_no_claim_or_clause_text_of_its_own() -> None:
+    line = _claim_line(_built({1}), 1)
+
+    # Everything before the hint is the exact line the caller already sent.
+    assert line == f"{line[: -len(_HINT)]}{_HINT}"
+    assert _CLAUSES[0].text not in _HINT
+    assert _CLAIMS[1][1] not in _HINT
