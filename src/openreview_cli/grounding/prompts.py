@@ -133,13 +133,6 @@ def parse_grounding_response(
 
         results.append((claim_index, verdict, provenances, confidence))
 
-    if not results:
-        # TEMPORARY DIAGNOSTIC — REMOVE ONCE THE ANSWER SHAPE IS KNOWN. A CI run
-        # measured every grounding answer as unreadable, and the raw reply can
-        # never be logged (privacy), so the shape alone is recorded here: the
-        # reader returns nothing, and this line is the only way to see why.
-        logger.warning("Unreadable grounding answer: %s", _shape_note(response, data))
-
     return results
 
 
@@ -170,68 +163,6 @@ def _answer_items(value: Any) -> list[Any]:
     if value and all(isinstance(nested, dict) for nested in value.values()):
         return list(value.values())
     return [value]
-
-
-def _shape_note(response: str, value: Any) -> str:
-    """Describe the SHAPE of a value that could not be read — never its content.
-
-    TEMPORARY DIAGNOSTIC, remove with the warning in ``parse_grounding_response``.
-    Only structure is reported: a length, one single character, the decoded type,
-    and key names — one nesting level down as well, so a wrapper can be told
-    apart from a bare answer. Key names and counts are structure, not contract
-    text, so no source document or claim text can leak through this line.
-    """
-    first_char = response.lstrip()[:1] or "(empty)"
-
-    parts = [f"len={len(response)}", f"first={first_char!r}", f"decoded={_decoded_note(value)}"]
-    nested = _nested_note(value)
-    if nested:
-        parts.append(nested)
-
-    return ", ".join(parts)
-
-
-def _decoded_note(value: Any) -> str:
-    """Name the decoded value's type — with a count or key names for containers."""
-    if value is None:
-        decoded = "none"
-    elif isinstance(value, bool):
-        decoded = "bool"
-    elif isinstance(value, str):
-        decoded = "str"
-    elif isinstance(value, int):
-        decoded = "int"
-    elif isinstance(value, float):
-        decoded = "float"
-    elif isinstance(value, list):
-        decoded = f"list(n={len(value)})"
-    elif isinstance(value, dict):
-        decoded = f"dict(keys={sorted(value)})"
-    else:
-        decoded = type(value).__name__
-
-    return decoded
-
-
-def _nested_note(value: Any) -> str:
-    """Describe one level inside a container — counts and key names only."""
-    if isinstance(value, list):
-        if not value:
-            return "first_item=none"
-        if isinstance(value[0], dict):
-            return f"first_item=dict(keys={sorted(value[0])})"
-        return f"first_item={type(value[0]).__name__}"
-
-    if isinstance(value, dict):
-        for nested in value.values():
-            if not (isinstance(nested, list) and all(isinstance(item, dict) for item in nested)):
-                continue
-            note = f"-> list(n={len(nested)})"
-            if nested:
-                note += f" -> dict(keys={sorted(nested[0])})"
-            return note
-
-    return ""
 
 
 def _claim_index(raw: Any, position: int) -> int:
