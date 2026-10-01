@@ -37,8 +37,9 @@ RECEIPT_KEYS = {
 }
 MAX_RECEIPT_BYTES = 20_000
 
-# Decision D9, plus the two CUAD-retrieval tokenizer receipts added with the
-# reproducible keyword-retrieval measurement.
+# Decision D9, plus the CUAD-retrieval tokenizer receipts added with the
+# reproducible keyword-retrieval measurement and the CUAD rerank receipt added
+# with the offline rerank-arm comparison.
 EXPECTED_RECEIPTS = frozenset(
     {
         "pii-throughput.json",
@@ -53,6 +54,7 @@ EXPECTED_RECEIPTS = frozenset(
         "test-collection.json",
         "cuad-retrieval-porter.json",
         "cuad-retrieval-unicode61.json",
+        "cuad-rerank-offline.json",
         "grounding-accuracy-local.json",
         "grounding-accuracy-cloud.json",
     }
@@ -80,6 +82,7 @@ GENERATED_RECEIPTS = frozenset(
         "test-collection.json",
         "cuad-retrieval-porter.json",
         "cuad-retrieval-unicode61.json",
+        "cuad-rerank-offline.json",
         "grounding-accuracy-local.json",
         "grounding-accuracy-cloud.json",
     }
@@ -102,6 +105,10 @@ EXPECTED_MODELS: dict[str, Any] = {
     "test-collection.json": "none (offline pytest collection; no model calls)",
     "cuad-retrieval-porter.json": "none (offline: SQLite FTS5 keyword search; no model calls)",
     "cuad-retrieval-unicode61.json": "none (offline: SQLite FTS5 keyword search; no model calls)",
+    "cuad-rerank-offline.json": (
+        "cross-encoder/ms-marco-MiniLM-L-6-v2 (local transformers, CPU); "
+        "lexical arm = query-term coverage (no model)"
+    ),
     "grounding-accuracy-local.json": "ollama/granite4:3b",
     "grounding-accuracy-cloud.json": "openrouter/anthropic/claude-sonnet-4.6",
 }
@@ -134,6 +141,7 @@ TABLES: dict[str, tuple[str, ...]] = {
         "cuad-retrieval-porter.json",
         "cuad-retrieval-unicode61.json",
     ),
+    "## CUAD rerank arms (offline)": ("cuad-rerank-offline.json",),
     "## Accuracy signals": ("accuracy-suite.json",),
     "## MAUD public benchmark (segmentation and timing)": ("maud-segmentation.json",),
     "## Measured vs. not measured": ("test-collection.json", "accuracy-suite.json"),

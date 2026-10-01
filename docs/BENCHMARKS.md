@@ -255,6 +255,26 @@ Last verified: 2026-09-30 @ 8bd72a3 (receipts: docs/benchmarks/results/cuad-retr
 
 **Reproduction:** `uv run python scripts/measure_retrieval_accuracy.py --tokenizer porter --out .benchmark-reports/retrieval-porter.json`, and the same with `--tokenizer unicode61`. Both arms are offline (SQLite FTS5, no model calls). Two caveats are recorded in the receipts and bound the claim: ground truth is character-span overlap rather than answer correctness (a retrieved chunk that merely touches a labeled span counts as relevant), and the CUAD `.txt` corpus cannot go through the product parser (PDF/DOCX only), so the harness drives the product chunker directly and chunk boundaries approximate a real parse. This measures retrieval, not answering: nothing here checks whether an extracted answer is correct.
 
+## CUAD rerank arms (offline)
+
+The decision to remove the `reranking` socket rested on a comparison that is not in the tree. The tracked record quotes **0.108 / 0.535 / 0.252** for plain BM25 + `porter`, **0.092 / 0.448 / 0.207** for a cheap lexical rerank and **0.085 / 0.427 / 0.199** for a local cross-encoder (`specs/035-post-measurement-cleanup/research.md`, Q7), but those numbers came from a scratch harness that was never committed. `scripts/benchmark_rerank_legalbenchrag.py` — the harness deleted in `b781a1a` — was restored from `b781a1a^` and adapted so the question can be re-derived offline: the deleted dense/RRF pool and the cloud `voyage/rerank-2.5` socket are both gone, so every arm re-orders the **same per-query BM25 candidate pool** (top-20, `porter unicode61`), which is the pool the tracked table describes.
+
+| Arm | hit@1 | hit@5 | MRR@5 | Paired ΔP@5 vs BM25 | 95% CI |
+|---|---|---|---|---|---|
+| BM25 baseline (pool, top-5) | 0.0483 | 0.3438 | 0.1441 | — | — |
+| + lexical rerank (query-term coverage) | 0.0540 | 0.3892 | 0.1759 | +0.0051 | [-0.0051, +0.0154] |
+| + cross-encoder `ms-marco-MiniLM-L-6-v2` | 0.0341 | 0.2330 | 0.1020 | -0.0267 | [-0.0392, -0.0136] |
+
+Sample: 352 queries over the deterministic first 40 sorted CUAD contracts, 5,713 chunks indexed, mean candidate pool 19.6 of 20, top-5 metric, 474 s wall. Every query's ground truth mapped (no unmapped or no-relevant queries), so the three arms are scored on identical pools.
+
+Last verified: 2026-10-01 @ b8fa707 (receipt: docs/benchmarks/results/cuad-rerank-offline.json).
+
+**Half the claim reproduces, half does not.** The **cross-encoder** arm is worse than BM25 on all three metrics and its paired ΔP@5 95% CI lies **entirely below zero**, so the tracked claim that a local cross-encoder made ordering worse is reproduced on this sample. The **lexical** arm is **not** reproduced: here it is *ahead* of BM25 on hit@1, hit@5 and MRR@5, and its paired ΔP@5 CI **straddles zero** — the honest reading is "no measurable top-5 effect", not "worse". The tracked claim's magnitudes (0.108/0.535/0.252 and the rest) are not reproduced by any arm.
+
+**What could not be reproduced.** (1) The cloud `voyage/rerank-2.5` arm — the `reranking` socket and `Gateway.rerank` were deleted in spec 035 and the account is credentialed, so no cloud rerank arm can run here. (2) The deleted harness's own `hybrid` (BM25 + dense RRF) arms — `retrieval/dense.py` and `retrieval/rrf.py` were deleted in the same commit, and the `embedding` socket with them. (3) The tracked claim's exact figures and query set — its producing harness was never committed, so its 424-query sample and 0.108/0.535/0.252 baseline cannot be re-run; only the question can be re-derived, and only on the deterministic 352-query subset above.
+
+**Reproduction:** `uv run python scripts/benchmark_rerank_legalbenchrag.py --contracts 40 --pool-depth 20 --top-k 5 --out .benchmark-reports/rerank-offline.json`, run from a checkout that holds the gitignored `data/legalbenchrag/` corpus. It is fully offline: BM25 is SQLite FTS5, the lexical arm is pure Python, and the cross-encoder runs through `transformers` (an existing dependency — `sentence-transformers` is forbidden) against a local weights cache with `HF_HUB_OFFLINE=1`, degrading to an explicit "unavailable" entry rather than downloading weights. Ground truth is character-span overlap, as in the tokenizer section above, and the harness imports that section's chunker and ground-truth rule so the two CUAD measurements label chunks identically. This measures **ranking**, not answer correctness.
+
 ## MAUD public benchmark (segmentation and timing)
 
 Parsing scale against the [MAUD](https://www.atticusprojectai.org/maud) dataset (CC BY 4.0): 150
@@ -302,7 +322,7 @@ Last verified: 2026-10-01 @ 460c0de5ba73 (local arm) / 484ac0899e6d (cloud arm) 
 
 ## Measured vs. not measured
 
-**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (96.4% recall, span-level predicate), review accuracy on 12 NDA clauses (90.9% F1; provider not recorded), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale, timing, and clause segmentation), CUAD keyword retrieval over 462 contracts on the full 4,042-query set (both tokenizer arms), MAUD public benchmark on 150 M&A documents (scale, timing, and clause segmentation), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,935 tests), accuracy-test suite (21 passed, 0 failed), grounding accuracy on both arms (20 units each; local via CI on tracked fixtures, cloud over CUAD).
+**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (96.4% recall, span-level predicate), review accuracy on 12 NDA clauses (90.9% F1; provider not recorded), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale, timing, and clause segmentation), CUAD keyword retrieval over 462 contracts on the full 4,042-query set (both tokenizer arms), CUAD rerank arms over 40 contracts (BM25 baseline vs a lexical rerank and a local cross-encoder, offline), MAUD public benchmark on 150 M&A documents (scale, timing, and clause segmentation), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,935 tests), accuracy-test suite (21 passed, 0 failed), grounding accuracy on both arms (20 units each; local via CI on tracked fixtures, cloud over CUAD).
 
 Last verified: 2026-09-25 @ fdea262 (receipt: docs/benchmarks/results/test-collection.json).
 Last verified: 2026-09-24 @ 882568c (receipt: docs/benchmarks/results/accuracy-suite.json).
@@ -313,7 +333,7 @@ Last verified: 2026-09-24 @ 882568c (receipt: docs/benchmarks/results/accuracy-s
 |---|---|---|
 | Full LLM review latency + cost per review | needs API keys | `openreview gateway costs` (SQLite `cost_logs`) + `scripts/benchmark_review_accuracy.py` |
 | Graph clustering | needs legal-bert download | `openreview graph` with `--cluster-clauses` |
-| Reranker effect | not applicable — the reranker feature was removed with the `reranking` socket (see `docs/ARCHITECTURE.md`); a 26-query pilot had been inconclusive | — |
+| Reranker effect | the feature was removed with the `reranking` socket; the offline arms were re-derived on a 352-query subset, not the full 4,042, because the cross-encoder is CPU-bound (~2.2 s/query), and the cloud `voyage/rerank-2.5` arm is not reproducible (see [CUAD rerank arms (offline)](#cuad-rerank-arms-offline)) | re-run `scripts/benchmark_rerank_legalbenchrag.py` with `--contracts 0` on a machine holding the gitignored corpus and a local model cache |
 | MAUD deal-point accuracy | no bundled playbook's category taxonomy matches MAUD's deal-point labels: the nearest mode, `buycheck`, scores against the `asset-purchase-v1` playbook (purchase price, included/excluded assets, liabilities, reps and warranties, closing conditions), not MAUD's merger-agreement deal points | map the deal points onto a playbook whose categories match, then run `openreview benchmark baseline --modes=buycheck` (or a new M&A mode) |
 | CUAD query-answering accuracy | the CUAD section measures clause segmentation (span containment and enclosure tightness), not answering the 4,042 expert queries | score predicted answers against the CUAD query labels, e.g. extend `scripts/benchmark_cuad_segmentation.py` with an answer-scoring pass |
 | ContractNLI query-answering accuracy | the ContractNLI section measures span extraction and playbook-category coverage, not the entailment question itself | score entailment (entailment / contradiction / not-mentioned) against the 977 annotated tests |
