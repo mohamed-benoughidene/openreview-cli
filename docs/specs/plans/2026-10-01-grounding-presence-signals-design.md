@@ -41,9 +41,11 @@ citations clustering above ~0.8 while planted claims stay below ~0.3.
 ## 2. What ships — the four approved items
 
 ### Item 1 — record coverage, decide nothing
-- `presence.coverage(claim, clause) -> float` and `presence.wording_absent(claim, clause) -> bool` (the bool carries
-  the guards: no clause text, a claim under five tokens, or a claim that is only a reference such as `4.3`, all
-  return `False`). One call returns both in practice — the plan uses a single `presence.measure` returning the pair.
+- `presence.coverage(claim, clause) -> float` and `presence.measure(claim, clause) -> tuple[float, bool]` returning the
+  number and `wording_absent`. The threshold is **0.5** — a majority of the claim's wording missing — chosen by the
+  implementer because the design named no value, recorded here so the document and the code agree, and deliberately
+  kept private: it drives a note and a hint, never a verdict. The boolean also carries the guards: no clause text, a
+  claim under five tokens, or a claim that is only a reference such as `4.3`, all return `False`.
 - Only the batch path builds a `GroundingResult` (`_process_batch`); `ground_claim` returns a
   `(verdict, provenances, confidence)` tuple whose shape three callers destructure
   (`scripts/measure_slm_slots.py`, `benchmark/hallu_detect.py`, its own tests), so **its signature does not change**.
