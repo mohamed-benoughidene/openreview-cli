@@ -1,6 +1,7 @@
 # Grounding recall — record of the kept fixes and the dropped work
 
-**Date:** 2026-10-01 · **Branch:** `chore/keep-defect-fixes`
+**Date:** 2026-10-01 · **Landed on:** `feat/slm-measurement` · the dropped work is kept on
+`feat/grounding-recall`
 
 A body of grounding-recall work was reverted. Four defect fixes were kept; every behaviour
 change was dropped. This records what ships, what was measured, and why the rest went. The
@@ -46,8 +47,9 @@ construction and only the negative arm discriminates; both arms run the same ass
 - **The second narrow question.** A net loss on both models — local 29 of 44 with 5 of 25
   known-good claims wrongly rejected and 4 second-pass fallbacks; cloud 26 of 44 with 6 of 25
   wrongly rejected. Not shipped.
-- **Three alternative wordings of that second question** lost too (5 of 44 and 31 of 44 caught),
-  so the question was dropped on evidence, not on taste.
+- **Three wordings in total were tried for that second question, and every one lost** — the
+  shipped wording (26 of 44 caught), a contradiction-shaped wording (5 of 44) and a
+  quote-the-unsupported-words wording (31 of 44) — so it was dropped on evidence, not on taste.
 
 ## Open items
 
