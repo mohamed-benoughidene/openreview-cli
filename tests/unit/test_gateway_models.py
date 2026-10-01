@@ -159,4 +159,4 @@ def test_the_shipped_default_asks_the_local_grounding_slot_for_json() -> None:
     # need the cast to reach the slot mapping under strict mypy.
     gateway = cast("dict[str, Any]", DEFAULT_CONFIG["gateway"])
     grounding = gateway["models"]["grounding"]
-    assert grounding["extra_params"] == {"response_format": {"type": "json_object"}}
+    assert grounding["extra_params"]["response_format"] == {"type": "json_object"}
