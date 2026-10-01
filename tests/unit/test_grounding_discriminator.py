@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from openreview_cli.parsing.models import Clause
     from openreview_cli.review.models import ReviewReport
 
+from openreview_cli.grounding import presence
 from openreview_cli.grounding.discriminator import CitationGroundingDiscriminator
 from openreview_cli.grounding.models import (
     CGReport,
@@ -1418,3 +1419,81 @@ class TestWordingAbsentHintReachesTheModel:
 
         assert self._HINT in self._claim_line(content, 1)
         assert self._HINT not in self._claim_line(content, 0)
+
+
+class TestGroundClaimAsksTheProductQuestion:
+    """The single-finding entry point sends the same hint the batch path sends.
+
+    The hint comes from the product's primitive (``presence.measure``), so a high-coverage
+    paraphrase — not a substring of the clause, yet substantially present — must NOT be
+    flagged. A naive ``claim_text not in clause_text`` test would flag it. Every expectation
+    here is the primitive's own verdict on the two texts the entry point was handed, never a
+    threshold written into this file: a hint that used its own threshold, or the two texts the
+    other way round, contradicts at least one of these assertions."""
+
+    _HINT = (
+        "[the claim's wording does not appear in the cited clause; "
+        "answer grounded only if the clause still entails it]"
+    )
+    _ABSENT = "Liquidated damages of five million dollars are payable upon breach"
+    _PARAPHRASE = "The recipient must not disclose confidential information to any third party"
+    # Long enough — twenty-one tokens to the paraphrase's eleven — that the operand order
+    # decides the paraphrase's hint: the paraphrase covers 0.82 of the clause in its own
+    # words, while the clause's own words are only 0.43 covered by the paraphrase.
+    _CLAUSE = (
+        "The receiving party shall not disclose confidential information to any third party "
+        "without the prior written consent of the disclosing party"
+    )
+    # A finding the primitive calls absent — a third of its words are this clause's — even
+    # though more than half of this clause's own words recur in the finding. The two operand
+    # orders disagree on this pair, so the hint's presence is what tells them apart.
+    _ORDER_CLAUSE = "The Confidential Information term excludes public disclosure"
+    _ORDER_FINDING = (
+        "The Supplier shall keep all Confidential Information strictly segregated from public "
+        "release"
+    )
+
+    def _content(self, gateway: MagicMock) -> str:
+        content: str = next(
+            m["content"] for m in gateway.chat.call_args[0][1] if m["role"] == "user"
+        )
+        return content
+
+    def test_an_absent_wording_claim_gets_the_hint(self, mock_gateway: MagicMock) -> None:
+        CitationGroundingDiscriminator(mode="lenient", gateway=mock_gateway).ground_claim(
+            self._ABSENT,
+            "4.3",
+            self._CLAUSE,
+        )
+
+        # The endpoint this fixture stands for, and the hint the primitive asks for.
+        assert presence.measure(self._ABSENT, self._CLAUSE)[1] is True
+        assert (self._HINT in self._content(mock_gateway)) is presence.measure(
+            self._ABSENT, self._CLAUSE
+        )[1]
+
+    def test_a_high_coverage_paraphrase_gets_no_hint(self, mock_gateway: MagicMock) -> None:
+        CitationGroundingDiscriminator(mode="lenient", gateway=mock_gateway).ground_claim(
+            self._PARAPHRASE,
+            "4.3",
+            self._CLAUSE,
+        )
+
+        assert presence.measure(self._PARAPHRASE, self._CLAUSE)[1] is False
+        assert (self._HINT in self._content(mock_gateway)) is presence.measure(
+            self._PARAPHRASE, self._CLAUSE
+        )[1]
+
+    def test_the_hint_follows_the_measure_asked_claim_first(self, mock_gateway: MagicMock) -> None:
+        CitationGroundingDiscriminator(mode="lenient", gateway=mock_gateway).ground_claim(
+            self._ORDER_FINDING,
+            "4.3",
+            self._ORDER_CLAUSE,
+        )
+
+        claim_first = presence.measure(self._ORDER_FINDING, self._ORDER_CLAUSE)[1]
+        clause_first = presence.measure(self._ORDER_CLAUSE, self._ORDER_FINDING)[1]
+        # The premise: this pair's answer flips with the operands, so a hint that does not
+        # follow ``measure(claim, clause)`` surfaces here as the wrong presence.
+        assert claim_first is not clause_first
+        assert (self._HINT in self._content(mock_gateway)) is claim_first
