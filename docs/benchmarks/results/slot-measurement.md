@@ -54,7 +54,7 @@ The harness (`scripts/measure_slm_slots.py --grounding-accuracy`) builds known-g
 
 The earlier local figures — 27 of 40 caught, **1 of 20** accepted, 19 of 20 good claims `uncertain`, mean latency 7.72 s — came from CI run 36757625645 (`38bd61263f3d`) through a **defective reader**, and are history only. That reader discarded an answer it could not parse and returned it as `uncertain` with confidence 0.0, which is why the local model appeared to hesitate; the answers it was discarding were valid JSON that it had wrapped in its own `claims` key, and a single-claim answer that omitted `claim_index`. See the corrected headline below.
 
-**Cloud arm** — `--arm cloud`, run on this machine on 2026-09-30 against `openrouter/anthropic/claude-sonnet-4.6`, over the real CUAD corpus (`data/legalbenchrag/corpus/cuad`, 462 contracts), same sample size, with PII stripped (43 entities replaced) before every call:
+**Cloud arm** — `--arm cloud`, run on this machine on 2026-10-01 at branch tip `964a500` against `openrouter/anthropic/claude-sonnet-4.6`, over the real CUAD corpus (`data/legalbenchrag/corpus/cuad`, 462 contracts), same sample size, with PII stripped (43 entities replaced) before every call:
 
 | quantity | value |
 |---|---|
@@ -67,7 +67,7 @@ The earlier local figures — 27 of 40 caught, **1 of 20** accepted, 19 of 20 go
 | good accepted | 20 / 20 |
 | good wrongly rejected | 0 (`false_reject_rate` 0.0) |
 | uncertain (good / bad) | 0 / 1 |
-| latency (60 calls) | mean 2.96 s, median 3.11 s, p95 4.12 s, max 5.31 s |
+| latency (60 calls) | mean 2.78 s, median 2.99 s, p95 3.67 s, max 4.31 s |
 
 **Headline, honestly (corrected 2026-10-01):** the earlier claim in this file that the local model "defers rather than decides" was an artefact of the reader, not a property of the model. An answer the reader could not parse was recorded as `uncertain`, so 19 of 20 known-good claims *looked* like hesitation. With the reader fixed — and local models now asked for JSON only — the local 3B model reads and decides: it accepted **all 20** known-good claims, called 27 of 40 known-bad claims ungrounded (28 of 40 on the preceding run), left one uncertain, and never called a bad claim grounded. `unreadable_answers` is 0.
 
@@ -101,7 +101,8 @@ The cloud arms are **no longer blocked**: the OpenRouter key works as of 2026-09
 
 The six-slot dump `docs/benchmarks/results/slot-measurement.json` (and the earlier text of this file) is **superseded and historical**: it describes slots that no longer exist, and its provenance pins `scripts/measure_retrieval_slots.py`, which was deleted with the dense path (`b781a1a`), so it cannot be honestly re-registered and the repo's receipt guard (`tests/unit/test_benchmark_receipts.py`) rejects it (tracked in issue #180). The evidence that exists now:
 
-- **grounding (local)** — CI run **36827583980**, job `grounding-accuracy`; receipt artifact `grounding-accuracy-local.json` (`gh run download 36827583980 -n grounding-accuracy-local`), git `303dd4c4df24`. The receipt carries `unreadable_answers`, so a future regression shows up in the numbers instead of hiding inside `uncertain`. Run 36757625645 is superseded.
-- **grounding (cloud) and extraction (cloud)** — run locally on 2026-09-30; the JSON receipts are session artifacts, **not yet committed**. Landing them in this directory requires registering them in the receipt guard (`tests/unit/test_benchmark_receipts.py`) with provenance, metadata and a citation, which is a separate piece of work.
+- **grounding (local)** — CI run **36827583980**, job `grounding-accuracy`; the registered receipt `docs/benchmarks/results/grounding-accuracy-local.json` distils it (full artifact: `gh run download 36827583980 -n grounding-accuracy-local`), git `303dd4c4df24`. It records `unreadable_answers`, so a future reader defect shows up in the numbers instead of hiding inside `uncertain`. Run 36757625645 is superseded.
+- **grounding (cloud)** — the registered receipt `docs/benchmarks/results/grounding-accuracy-cloud.json`, run on this machine on 2026-10-01 at `964a500`. Both grounding receipts now live in the receipt guard with sha256 provenance pins (`tests/unit/test_benchmark_receipts.py`), so a change to the harness, the reader or the dispatch-time gate invalidates them and forces a re-measure; both are published in `docs/BENCHMARKS.md` §Grounding accuracy.
+- **extraction (cloud)** — run locally on 2026-09-30; that JSON receipt was a session artifact and was **not** committed, so the extraction comparison above rests on this description alone.
 - **extraction / slot matrix** — the same run's `measure` jobs; artifacts `slm-result-<slug>`.
 - **retrieval** — the committed receipts `docs/benchmarks/results/cuad-retrieval-porter.json` and `docs/benchmarks/results/cuad-retrieval-unicode61.json`, cited in `docs/BENCHMARKS.md` §[CUAD keyword retrieval](../../BENCHMARKS.md#cuad-keyword-retrieval-tokenizer-comparison).
