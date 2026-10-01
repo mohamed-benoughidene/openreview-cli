@@ -63,9 +63,9 @@ def _wording_note(clause: MemoClause) -> str | None:
 
     A fact with the coverage number, never a verdict.  Returns ``None`` for
     every other clause — the note fires only on the risky pattern, which the
-    builder marks via ``wording_absent``.
+    builder marks via ``accepted_despite_absent_wording``.
     """
-    if not clause.wording_absent:
+    if not clause.accepted_despite_absent_wording:
         return None
     if clause.grounding_presence is None:
         return "Citation wording not present in the cited clause"
