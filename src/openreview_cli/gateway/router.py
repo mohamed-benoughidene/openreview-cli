@@ -117,6 +117,13 @@ def _is_empty_parts(parts: list[dict[str, Any]]) -> bool:
     return True
 
 
+# Request keys only a local (Ollama) provider understands. ``response_format`` becomes
+# Ollama's ``format: json``; ``num_ctx`` sets the context window size. A provider that does
+# not accept one raises in litellm rather than ignoring it, so each key must be present for
+# a local provider and absent for every other one.
+_LOCAL_ONLY_EXTRA_PARAMS: frozenset[str] = frozenset({"response_format", "num_ctx"})
+
+
 def _enforce_local_only_params(
     kwargs: dict[str, Any],
     extra_params: dict[str, Any] | None,
@@ -124,8 +131,8 @@ def _enforce_local_only_params(
 ) -> None:
     """Enforce local-only request parameters for the provider ACTUALLY dispatched.
 
-    ``response_format`` becomes Ollama's ``format: json``. A provider that does
-    not accept it raises in litellm rather than ignoring it, so the key must be
+    ``response_format`` and ``num_ctx`` are Ollama-only. A provider that does not
+    accept one raises in litellm rather than ignoring it, so each key must be
     present for a local provider and absent for every other one.
 
     This runs at dispatch time, against ``provider_prefix`` — not at build time
@@ -148,13 +155,14 @@ def _enforce_local_only_params(
             # No base_url and not flagged local: unclassifiable, so remote.
             is_local = False
     if not is_local:
-        # ponytail: one key today — a set-and-loop earns its keep when a second arrives.
-        if "response_format" in kwargs:
-            kwargs.pop("response_format")
-            logger.debug("Dropped local-only response_format for non-local %r", provider_prefix)
+        for key in _LOCAL_ONLY_EXTRA_PARAMS:
+            if key in kwargs:
+                kwargs.pop(key)
+                logger.debug("Dropped local-only %s for non-local %r", key, provider_prefix)
         return
-    if "response_format" not in kwargs and extra_params and "response_format" in extra_params:
-        kwargs["response_format"] = extra_params["response_format"]
+    for key in _LOCAL_ONLY_EXTRA_PARAMS:
+        if key not in kwargs and extra_params and key in extra_params:
+            kwargs[key] = extra_params[key]
 
 
 class Gateway:
