@@ -304,10 +304,14 @@ key that can spend, so it is not part of CI.
 
 ## 12. Open uncertainties
 
-- **Still unknown: which malformation the local model actually emits.** Nobody has captured an answer's shape
-  (privacy forbids logging it), so the fixes target the four known failure modes plus the JSON request. The
-  new counter is what will tell us whether they were the right four. If unreadable answers persist after this
-  change, the next lever is the local model and its parameters, not the reader.
+- **Resolved 2026-10-01: the malformation was a wrapper.** Nobody had seen an answer's shape (privacy forbids
+  logging content), so a shape-only diagnostic — length, first character, decoded type, key names, since
+  removed — was added for one CI run that had measured nothing. It showed every one of the 60 answers decoding
+  to `dict(keys=['claims'])`: valid JSON, wrapped in the model's own key. The reader now unwraps a wrapper or a
+  dict of answers and falls back to an item's position when the model omits `claim_index` (the prompt only
+  promises order). Two regressions surfaced in measurement that no review had caught, which is the argument for
+  the counter and the CI gate: the reworded prompt invited a bare object that the reader rejected for want of an
+  index, and the JSON request changed the answer shape itself.
 - **The fallback path does not route through the same merge** — verified on 2026-09-30 (see 4.2 and 9). What
   remains unverified is only whether any bundled configuration ships a non-`None` fallback; none was found
   under `src/`, so the exposure is latent for users who configure one.
