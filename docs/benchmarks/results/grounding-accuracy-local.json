@@ -2,15 +2,15 @@
  "benchmark": "grounding-accuracy-local",
  "command": "uv run python scripts/measure_slm_slots.py --grounding-accuracy --arm local --limit 20 --no-pii --corpus-dir corpus --out results/grounding-accuracy-local.json",
  "date": "2026-10-01",
- "git_commit": "460c0de5ba73",
+ "git_commit": "318bb5ee6bf4",
  "provenance": [
   {
    "path": "scripts/measure_slm_slots.py",
-   "sha256": "9c1fc31cdd9b3aed071b6e4ffb9b41d9da5f3ae5b85b6421828a0400758ea77e"
+   "sha256": "82a3e51e453a40fd3bd362b80c878955bf79fa140c111feafd6311c3770bb4ef"
   },
   {
    "path": "src/openreview_cli/grounding/corruption.py",
-   "sha256": "1db91eb2ed141aafe4e914321319ed8042fc2efc12f1dbdc3c48728e3129aa59"
+   "sha256": "5aa83ee640c3949ba253029413d359875c3d81debcb373bcdd8f37edab943b36"
   },
   {
    "path": "src/openreview_cli/grounding/presence.py",
@@ -18,40 +18,40 @@
   },
   {
    "path": "src/openreview_cli/grounding/prompts.py",
-   "sha256": "b11f537adde9877390e0b5b62ed34eb9ab4634436ca2bea8554b36df7eb4c383"
+   "sha256": "3e4cc5e4ca7c7cc91e0f0a9f38274adb12110edc478b13bf50d154d9e2aa2165"
   },
   {
    "path": "src/openreview_cli/grounding/discriminator.py",
-   "sha256": "54703162a514b895cad862eff09b7f2ca4f75735ffc37dba8113f97ae9c78628"
+   "sha256": "c3ec868657adbeab402e01d9d030b066bce35a8eb25c34dc9553424c3f666865"
   }
  ],
  "models": "ollama/granite4:3b",
- "benchmark_input": "corpus assembled inside CI from the repository's tracked fixtures: 96 clause units from 17 documents (tests/fixtures/**/*.txt verbatim plus fixture PDFs/DOCX parsed with openreview_cli.parsing)",
+ "benchmark_input": "corpus assembled inside CI from the repository's tracked fixtures: 96 clause units from 17 tracked fixture documents (tests/fixtures/**/*.txt verbatim plus fixture PDFs/DOCX parsed with openreview_cli.parsing); the run scores the first 20 units",
  "sample": {
   "units": 20,
   "positives": 25,
-  "negatives_kept": 45,
+  "negatives_kept": 44,
   "negatives_generated": {
    "unsupported_claim": 20,
    "hallucination": 20,
-   "paraphrased_unsupported": 5
+   "paraphrased_unsupported": 4
   },
   "negatives_dropped_guard": 0,
-  "model_calls": 70
+  "model_calls": 69
  },
  "metrics": {
   "bad_caught": 32,
-  "bad_caught_rate": 0.7111,
+  "bad_caught_rate": 0.7273,
   "bad_missed": 12,
-  "bad_uncertain": 1,
+  "bad_uncertain": 0,
   "good_accepted": 25,
   "false_reject_rate": 0.0,
   "good_uncertain": 0,
   "unreadable_answers": 0,
-  "latency_mean_s": 17.374292,
-  "latency_median_s": 17.014773,
-  "latency_p95_s": 21.856369,
-  "latency_max_s": 23.151313
+  "latency_mean_s": 21.5326,
+  "latency_median_s": 20.87252,
+  "latency_p95_s": 26.951399,
+  "latency_max_s": 29.488694
  },
- "notes": "CI run 36847090397, job grounding-accuracy; artifact grounding-accuracy-local.json. Positives and negatives now come in classes that include paraphrases: 25 positives (each unit's own qualifying sentence, plus a lightly rewritten copy of that sentence via the constant meaning-preserving substitution map) and 45 negatives (20 unsupported_claim + 20 hallucination + 5 paraphrased_unsupported). paraphrases_skipped counts a rewrite that equalled its source and would duplicate a label already present (30 this run); such rewrites are skipped and counted, not kept. Both positive classes are supported by the clause by construction and the substitution map is narrow, so this positive set is easier than a human-labelled one and no real-world false-positive rate may be quoted from it; the negative arm is the signal. Single-sample smoke measurement, not a benchmark: model replies vary run to run. Ran with --no-pii because CI has no spaCy model, so raw clause text was sent to a local model only. Latencies are CPU-bound on a 2-vCPU GitHub-hosted runner and machine-specific. unreadable_answers counts answers the reader could not parse, which is how a reader defect is separated from model hesitation."
+ "notes": "CI run 36896416652, job grounding-accuracy; artifact grounding-accuracy-local.json. This is the shipped-default run: the discriminator's both-passes-must-agree second question is OFF. Produced from branch feat/grounding-recall as pushed, at commit 318bb5ee6bf4. Positives and negatives come in classes that include paraphrases: 25 positives (each unit's own qualifying sentence, plus a lightly rewritten copy of that sentence via the constant meaning-preserving substitution map) and 44 negatives (20 unsupported_claim + 20 hallucination + 4 paraphrased_unsupported). paraphrases_skipped counts a rewrite that equalled its source and would duplicate a label already present (31 this run); such rewrites are skipped and counted, not kept. Both positive classes are supported by the clause by construction and the substitution map is narrow, so this positive set is easier than a human-labelled one and no real-world false-positive rate may be quoted from it; the negative arm is the signal. Single-sample smoke measurement, not a benchmark: model replies vary run to run. Ran with --no-pii because CI has no spaCy model, so raw clause text was sent to a local model only. Latencies are CPU-bound on a 2-vCPU GitHub-hosted runner and machine-specific. unreadable_answers counts answers the reader could not parse, which is how a reader defect is separated from model hesitation."
 }
