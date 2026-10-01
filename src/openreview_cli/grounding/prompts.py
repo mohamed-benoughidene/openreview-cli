@@ -102,16 +102,13 @@ def parse_grounding_response(
         return results
     items: list[Any] = data if isinstance(data, list) else [data]
 
-    for item in items:
+    for position, item in enumerate(items):
         if not isinstance(item, dict):
             continue
-        claim_index = item.get("claim_index")
+        claim_index = _claim_index(item.get("claim_index"), position)
         verdict_str = item.get("verdict", "")
         confidence = float(item.get("confidence", 0.0))
         raw_provenances: list[dict[str, Any]] = item.get("provenances", [])
-
-        if claim_index is None or not isinstance(claim_index, int):
-            continue
 
         # Parse verdict
         try:
@@ -139,6 +136,25 @@ def parse_grounding_response(
         results.append((claim_index, verdict, provenances, confidence))
 
     return results
+
+
+def _claim_index(raw: Any, position: int) -> int:
+    """Return an item's claim index, falling back to its position in the answer.
+
+    The prompt only promises that a batch comes back "in the same order as the
+    input claims", so the model may well leave the index out — most obviously
+    for a single claim, where the answer is one bare object. An index the model
+    did supply is honoured, a numeric string is coerced, and anything else is
+    ignored in favour of the position rather than discarding the answer.
+    """
+    if isinstance(raw, int):
+        return raw
+    if isinstance(raw, str):
+        try:
+            return int(raw.strip())
+        except ValueError:
+            return position
+    return position
 
 
 def _first_json_value(text: str) -> Any | None:
