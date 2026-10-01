@@ -10,7 +10,7 @@ The `grounding` row was **re-measured on 2026-10-01** after the grounding answer
 |---|---|---|---|
 | `extraction` | measured, both arms | `run_review` on the `indemnitycheck` fixtures (reader) | position accuracy 0.9 local / 0.8 cloud |
 | `reasoning` | has a caller; not scored on its own | the QA step of the same `run_review` (`review/runner.py:97`, `review/qa.py:75`) | runs with the model under test; no separate accuracy |
-| `grounding` | measured, both arms | `--grounding-accuracy` (local via CI, cloud locally on CUAD) | local 32/45 bad caught, **25/25 good accepted** but **12 bad called grounded** (re-measured 2026-10-01, paraphrased labels); **cloud 39/40 caught, 20/20 accepted** |
+| `grounding` | measured, both arms | `--grounding-accuracy` (local via CI, cloud locally on CUAD) | local 32/45 bad caught, **25/25 good accepted** but **12 bad called grounded** (re-measured 2026-10-01, paraphrased labels); **cloud 44/50 caught, 25/30 accepted, 5 good uncertain** |
 
 ## extraction — position accuracy (5 `indemnitycheck` docs)
 
@@ -54,24 +54,25 @@ The harness (`scripts/measure_slm_slots.py --grounding-accuracy`) builds known-g
 
 The earlier local figures — 27 of 40 caught, **1 of 20** accepted, 19 of 20 good claims `uncertain`, mean latency 7.72 s — came from CI run 36757625645 (`38bd61263f3d`) through a **defective reader**, and are history only. That reader discarded an answer it could not parse and returned it as `uncertain` with confidence 0.0, which is why the local model appeared to hesitate; the answers it was discarding were valid JSON that it had wrapped in its own `claims` key, and a single-claim answer that omitted `claim_index`. See the corrected headline below.
 
-**Cloud arm** — `--arm cloud`, run on this machine on 2026-10-01 at branch tip `964a500` against `openrouter/anthropic/claude-sonnet-4.6`, over the real CUAD corpus (`data/legalbenchrag/corpus/cuad`, 462 contracts), same sample size, with PII stripped (43 entities replaced) before every call:
+**Cloud arm** — `--arm cloud`, run on this machine on 2026-10-01 at branch tip `484ac0899e6d` against `openrouter/anthropic/claude-sonnet-4.6`, over the real CUAD corpus (`data/legalbenchrag/corpus/cuad`, 462 contracts), same sample size, with PII stripped (43 entities replaced) before every call. This run is **not clean**: it printed a litellm error/help banner ("Give Feedback / Get Help" and a litellm issues link) before its summary — a transient fault that did not stop the run — and 5 known-good claims came back uncertain, where an earlier run on the pre-change code recorded 1:
 
 | quantity | value |
 |---|---|
 | units (sample) | 20 (`--limit 20`, from the CUAD corpus) |
-| good claims (positives) | 20 |
-| bad claims kept (negatives) | 40 (20 `unsupported_claim` + 20 `hallucination`) |
+| good claims (positives) | 30 (20 clause sentences + 10 paraphrased) |
+| bad claims kept (negatives) | 50 (20 `unsupported_claim` + 20 `hallucination` + 10 `paraphrased_unsupported`) |
 | bad claims dropped by the guard | 0 |
-| bad caught | 39 / 40 (`caught_rate` 0.975) |
+| bad caught | 44 / 50 (`caught_rate` 0.88) |
 | bad called grounded | 0 |
-| good accepted | 20 / 20 |
+| good accepted | 25 / 30 |
 | good wrongly rejected | 0 (`false_reject_rate` 0.0) |
-| uncertain (good / bad) | 0 / 1 |
-| latency (60 calls) | mean 2.78 s, median 2.99 s, p95 3.67 s, max 4.31 s |
+| uncertain (good / bad) | 5 / 6 |
+| unreadable answers | **0** (`unreadable_answers`) |
+| latency (80 calls) | mean 3.08 s, median 3.07 s, p95 4.61 s, max 6.18 s |
 
 **Headline, honestly (corrected 2026-10-01):** the earlier claim in this file that the local model "defers rather than decides" was an artefact of the reader, not a property of the model. An answer the reader could not parse was recorded as `uncertain`, so 19 of 20 known-good claims *looked* like hesitation. With the reader fixed — and local models now asked for JSON only — the local 3B model reads and decides: it accepted **all 25** known-good claims, called 32 of 45 known-bad claims ungrounded, left one uncertain, and called **12 grounded**. `unreadable_answers` is 0. That 12 is not a regression: the labels now include paraphrases, which is what made the acceptance failure mode visible instead of hiding it.
 
-What separates the arms is therefore quality, not style. The cloud model catches 39 of 40 planted bad claims; the local one catches 32 of 45 and calls 12 of them grounded. The local model's failure mode is **accepting** planted bad claims, not hesitating over good ones. Same harness; the local labels now carry paraphrase classes the cloud arm's older run did not, so the arms are compared by failure mode, not by a single count. The positives are supported by the clause by construction, so the negative arm is the discriminating signal.
+What separates the arms is therefore quality, not style. The cloud model catches 44 of 50 planted bad claims; the local one catches 32 of 45 and calls 12 of them grounded. The local model's failure mode is **accepting** planted bad claims, not hesitating over good ones. Same harness; both arms now carry paraphrase classes, so the arms are compared by failure mode, not by a single count. The positives are supported by the clause by construction, so the negative arm is the discriminating signal.
 
 **The coverage number (a signal, not a verdict).** The hardened labels also record how much of each claim's wording appears in the clause it cites: the supported claims score at or above **0.96** (the paraphrased positives bottom out at 0.962) while the planted bad claims now reach **0.94** (closest miss 0.941). The ranges overlap, so wording overlap cannot separate a real citation from a planted one on its own — which is why nothing in the code path decides a claim from the number. **Nothing here is a model improvement:** the gain is a wording check plus a sharper per-claim question to the model, never a verdict.
 
@@ -95,7 +96,7 @@ The cloud arms are **no longer blocked**: the OpenRouter key works as of 2026-09
 ## Method and limits
 - One run per document/query; local and cloud models are non-deterministic → single samples.
 - n = 5 docs × 2 expected categories (extraction) and `--limit 20` units (grounding). **Smoke measurements.**
-- The grounding run used a corpus assembled from the repository's tracked fixture documents (96 clause units from 17 documents: `tests/fixtures/**.txt` verbatim plus fixture PDFs/DOCX parsed with `openreview_cli.parsing`) — **not** the CUAD corpus, which is gitignored and absent in CI. It ran `--arm local` with PII stripping disabled (`--no-pii`, because CI has no spaCy), so raw clause text was sent to the model and the cloud tiers would refuse those calls. It ran on a GitHub-hosted 2-vCPU `ubuntu-latest` runner (`.github/workflows/slm-measurement.yml:348`), so the latencies are CPU-bound and machine-specific. From 2026-10-01 the local arm runs against the fixed reader, and the grounding slot asks a local model for JSON only (`config/loader.py` `DEFAULT_CONFIG`), which roughly doubled per-call latency (7.7 s → 18.0 s) on the same runner class. The cloud arm was re-run on the same branch and is unchanged (39 of 40 caught, 20 of 20 accepted, 0 unreadable).
+- The grounding run used a corpus assembled from the repository's tracked fixture documents (96 clause units from 17 documents: `tests/fixtures/**.txt` verbatim plus fixture PDFs/DOCX parsed with `openreview_cli.parsing`) — **not** the CUAD corpus, which is gitignored and absent in CI. It ran `--arm local` with PII stripping disabled (`--no-pii`, because CI has no spaCy), so raw clause text was sent to the model and the cloud tiers would refuse those calls. It ran on a GitHub-hosted 2-vCPU `ubuntu-latest` runner (`.github/workflows/slm-measurement.yml:348`), so the latencies are CPU-bound and machine-specific. From 2026-10-01 the local arm runs against the fixed reader, and the grounding slot asks a local model for JSON only (`config/loader.py` `DEFAULT_CONFIG`), which roughly doubled per-call latency (7.7 s → 18.0 s) on the same runner class. The cloud arm was re-run on the same branch over CUAD (44 of 50 caught, 25 of 30 accepted, 5 good uncertain, 0 unreadable).
 - Positives are the cited clause's own qualifying sentence, plus a lightly rewritten copy of it, so they are supported by the clause by construction — an easier set than a human-labelled one; the negative arm is the signal, and no real-world false-positive rate may be quoted from this.
 - Extraction ran with grounding off (`grounding_mode: null`) for the model comparison (grounding is measured separately).
 - The cloud runs above used the configured slots on this machine (privacy tier `balanced`, so PII was stripped locally before every cloud call — 43 entities in the grounding sample). They cost **91 cents for 86 cloud calls** that day, read from the cost ledger. The local CI run, by contrast, used `--no-pii` because CI has no spaCy model.
@@ -107,7 +108,7 @@ The six-slot dump `docs/benchmarks/results/slot-measurement.json` (and the earli
 
 - **grounding (local)** — CI run **36847090397**, job `grounding-accuracy`; the registered receipt `docs/benchmarks/results/grounding-accuracy-local.json` distils it (full artifact: `gh run download 36847090397 -n grounding-accuracy-local`), git `460c0de5ba73`. Its labels carry paraphrase classes (`paraphrased_supported` / `paraphrased_unsupported`) and it records `unreadable_answers`, so a future reader defect shows up in the numbers instead of hiding inside `uncertain`. Runs 36827583980 and the reader-defect run 36757625645 before it are superseded.
 - **grounding pilot (local)** — the same CI run's `grounding-pilot` job, artifact `grounding-pilot`: one real lenient local review, **12 assessments, 7 accepted, 3 rejected, 1 uncertain**, 11 with a coverage number. A distribution from one run, not an accuracy figure; it is what makes the low-coverage-accepted pattern visible.
-- **grounding (cloud)** — the registered receipt `docs/benchmarks/results/grounding-accuracy-cloud.json`, run on this machine on 2026-10-01 at `964a500`. Both grounding receipts now live in the receipt guard with sha256 provenance pins (`tests/unit/test_benchmark_receipts.py`), so a change to the harness, the reader or the dispatch-time gate invalidates them and forces a re-measure; both are published in `docs/BENCHMARKS.md` §Grounding accuracy.
+- **grounding (cloud)** — the registered receipt `docs/benchmarks/results/grounding-accuracy-cloud.json`, run on this machine on 2026-10-01 at `484ac0899e6d`. Both grounding receipts now live in the receipt guard with sha256 provenance pins (`tests/unit/test_benchmark_receipts.py`), so a change to the harness, the reader or the dispatch-time gate invalidates them and forces a re-measure; both are published in `docs/BENCHMARKS.md` §Grounding accuracy.
 - **extraction (cloud)** — run locally on 2026-09-30; that JSON receipt was a session artifact and was **not** committed, so the extraction comparison above rests on this description alone.
 - **extraction / slot matrix** — the same run's `measure` jobs; artifacts `slm-result-<slug>`.
 - **retrieval** — the committed receipts `docs/benchmarks/results/cuad-retrieval-porter.json` and `docs/benchmarks/results/cuad-retrieval-unicode61.json`, cited in `docs/BENCHMARKS.md` §[CUAD keyword retrieval](../../BENCHMARKS.md#cuad-keyword-retrieval-tokenizer-comparison).

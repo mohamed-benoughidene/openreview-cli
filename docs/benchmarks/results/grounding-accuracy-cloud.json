@@ -2,56 +2,58 @@
  "benchmark": "grounding-accuracy-cloud",
  "command": "uv run python scripts/measure_slm_slots.py --grounding-accuracy --arm cloud --limit 20 --corpus-dir data/legalbenchrag/corpus/cuad --out .benchmark-reports/ga-cloud-20.json",
  "date": "2026-10-01",
- "git_commit": "964a500",
+ "git_commit": "484ac0899e6d",
  "provenance": [
   {
    "path": "scripts/measure_slm_slots.py",
-   "sha256": "cb5fb7a2473d928f42cccce0169dabd4f6744cdbd2b76dee472d7f39bfa52a83"
+   "sha256": "9c1fc31cdd9b3aed071b6e4ffb9b41d9da5f3ae5b85b6421828a0400758ea77e"
+  },
+  {
+   "path": "src/openreview_cli/grounding/corruption.py",
+   "sha256": "1db91eb2ed141aafe4e914321319ed8042fc2efc12f1dbdc3c48728e3129aa59"
+  },
+  {
+   "path": "src/openreview_cli/grounding/presence.py",
+   "sha256": "34c8ee560ad13247dc88c9bd45ea74190eeb8ba4bf04c887b03d9e24badb74a4"
   },
   {
    "path": "src/openreview_cli/grounding/prompts.py",
-   "sha256": "9055352931c85b7c806127430d01655cd6829bf846dee514320d64e3e5b0bea7"
+   "sha256": "b11f537adde9877390e0b5b62ed34eb9ab4634436ca2bea8554b36df7eb4c383"
   },
   {
    "path": "src/openreview_cli/grounding/discriminator.py",
-   "sha256": "3f1573845c6ac2727fad5eaca1638c95be724b36b11ec2d4d6a35f678413e0cb"
-  },
-  {
-   "path": "src/openreview_cli/gateway/router.py",
-   "sha256": "900fabc0bb4d1f0f5b7696442903470c55ffa399737284ac6151769ad806ba7d"
-  },
-  {
-   "path": "src/openreview_cli/config/loader.py",
-   "sha256": "85e20a3a0df42af1008194a58b6ae3b1d372d4cec57bd3e058289d0168b0fd17"
+   "sha256": "54703162a514b895cad862eff09b7f2ca4f75735ffc37dba8113f97ae9c78628"
   }
  ],
  "models": "openrouter/anthropic/claude-sonnet-4.6",
- "benchmark_input": "data/legalbenchrag/corpus/cuad (CUAD, 462 contracts; gitignored, so absent in CI)",
+ "benchmark_input": "data/legalbenchrag/corpus/cuad (CUAD; gitignored, so absent in CI)",
  "sample": {
   "units": 20,
-  "positives": 20,
-  "negatives_kept": 40,
+  "positives": 30,
+  "negatives_kept": 50,
   "negatives_generated": {
    "unsupported_claim": 20,
-   "hallucination": 20
+   "hallucination": 20,
+   "paraphrased_unsupported": 10
   },
   "negatives_dropped_guard": 0,
-  "model_calls": 60
+  "model_calls": 80
  },
  "metrics": {
-  "bad_caught": 39,
-  "bad_caught_rate": 0.975,
+  "bad_caught": 44,
+  "bad_caught_rate": 0.88,
   "bad_missed": 0,
-  "bad_uncertain": 1,
+  "bad_uncertain": 6,
   "bad_called_grounded": 0,
-  "good_accepted": 20,
+  "good_accepted": 25,
+  "good_rejected": 0,
   "false_reject_rate": 0.0,
-  "good_uncertain": 0,
+  "good_uncertain": 5,
   "unreadable_answers": 0,
-  "latency_mean_s": 2.78,
-  "latency_median_s": 2.99,
-  "latency_p95_s": 3.67,
-  "latency_max_s": 4.31
+  "latency_mean_s": 3.081884,
+  "latency_median_s": 3.065271,
+  "latency_p95_s": 4.607075,
+  "latency_max_s": 6.176731
  },
- "notes": "Run on this machine with the configured cloud slots; PII stripped locally before every call (43 entities replaced) by the review path's own strip machinery. Positives are verbatim sentences from the cited clause as sent to the model, so they are trivially grounded and the negative arm is the signal. Single-sample smoke measurement: replies vary run to run, and an earlier run on the pre-fix reader measured the same 39 of 40 and 20 of 20, so the cloud arm was unaffected by the local-only JSON gate. Costs money per run (~30 cents for 60 calls)."
+ "notes": "Run on this machine with the configured cloud slots, cloud model openrouter/anthropic/claude-sonnet-4.6. This was a local (non-CI) run, so the harness recorded git_sha \"unknown\" (it reads only GITHUB_SHA); the commit recorded here is the branch tip the run was made at. PII was stripped before every model call (43 entities replaced) with the review path's own strip_pii_clauses machinery, so the clause text and positives are the stripped text sent for cloud egress. Positives and negatives now come in classes that include paraphrases: 30 positives (20 clause qualifying sentences plus 10 lightly rewritten copies) and 50 negatives (20 unsupported_claim + 20 hallucination + 10 paraphrased_unsupported). The labeller's rewrite hit-rate differs from the local arm because this arm runs over CUAD rather than the tracked fixtures: 10 rewrites were kept and 20 skipped here (a rewrite that equalled its source), against 5 kept and 30 skipped on the local fixtures. All three generators' negatives cleared the is_genuine_negative guard (0 dropped). This run is NOT clean: it printed a litellm error/help banner (\"Give Feedback / Get Help\" and a litellm issues link) before its summary, a transient fault that did not stop the run, and 5 known-good claims came back uncertain where an earlier run on the pre-change code recorded 1. Single-sample smoke measurement, not a benchmark: model replies vary run to run and the arms do not share a corpus. Costs money per run (80 calls this run)."
 }
