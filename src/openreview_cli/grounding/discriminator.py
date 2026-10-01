@@ -100,9 +100,12 @@ class CitationGroundingDiscriminator:
             source_span=None,
         )
 
+        # The same hint the batch path sends, from the same primitive. Text only.
+        _score, wording_absent = presence.measure(claim_text, clause_text)
         messages = build_grounding_messages(
             source_clauses=[source_clause],
             claims=[(0, claim_text, cited_clause_id)],
+            wording_absent_indices={0} if wording_absent else None,
         )
 
         try:
