@@ -538,6 +538,19 @@ class TestNewGroundingFields:
         assert review.assessments == []
         assert (review.grounding_excluded_unsupported, review.grounding_excluded_unsure) == (1, 0)
 
+    def test_lenient_merge_records_no_exclusions(self) -> None:
+        """Only the strict merge removes claims, so only it may count exclusions.
+
+        The lenient merge keeps the unsupported claim. A merge that recorded the counts
+        outside its strict branch would write (1, 0) here, and the memo would report an
+        exclusion that never happened.
+        """
+        review, cg = self._report_and_cg("lenient", GroundingVerdict.UNGROUNDED)
+        cg.merge_into(review)
+
+        assert len(review.assessments) == 1
+        assert (review.grounding_excluded_unsupported, review.grounding_excluded_unsure) == (0, 0)
+
     def test_from_dict_reads_the_two_memo_counts(self) -> None:
         """The counts the strict merge recorded survive a JSON round-trip (Task 8 reads them)."""
         review, _cg = self._report_and_cg("strict", GroundingVerdict.GROUNDED)
