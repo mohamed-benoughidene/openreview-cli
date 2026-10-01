@@ -1723,3 +1723,44 @@ class TestBothPassesMustAgree:
         assert cg.verdicts[0].verdict is GroundingVerdict.UNGROUNDED
         assert cg.verdicts[0].pass_disagreement is True
         assert cg.verdicts[0].not_sure is False
+
+
+class TestConfidenceIsNeverTheVerdict:
+    """Item 5 (FIX 3): the checker's confidence is recorded and shown; no verdict path reads
+    it. The five real misses came with the checker 0.9-0.95 sure and the correct answers with
+    1.0, so the number does not separate wrong from right. No threshold, no warning field."""
+
+    _fixtures = TestGroundingPresenceRecorded()
+
+    def _grounded_at(
+        self, confidence: float, gateway: MagicMock, document: MagicMock
+    ) -> GroundingVerdict:
+        gateway.chat.return_value = json.dumps(
+            [
+                {
+                    "claim_index": 0,
+                    "verdict": "grounded",
+                    "provenances": [],
+                    "confidence": confidence,
+                    "reason": None,
+                }
+            ]
+        )
+        d = CitationGroundingDiscriminator(mode="lenient", gateway=gateway)
+        cg = d.ground_report(
+            self._fixtures._report(self._fixtures._CLAIM),
+            document,
+            self._fixtures._source_clauses(),
+        )
+        return cg.verdicts[0].verdict
+
+    def test_the_verdict_is_identical_at_both_confidence_extremes(
+        self, mock_gateway: MagicMock, sample_document: MagicMock
+    ) -> None:
+        # One assertion covers the whole requirement: if no verdict path read the number, the
+        # verdict is the same at 0.0 and 1.0 (and is what the pass answered).
+        assert (
+            self._grounded_at(0.0, mock_gateway, sample_document)
+            is self._grounded_at(1.0, mock_gateway, sample_document)
+            is GroundingVerdict.GROUNDED
+        )
