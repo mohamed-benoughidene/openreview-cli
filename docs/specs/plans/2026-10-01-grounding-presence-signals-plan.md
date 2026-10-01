@@ -43,7 +43,7 @@
 
 ### Task 2: Record the number and the boolean on the batch path (item 1)
 
-**Files:** modify `src/openreview_cli/grounding/discriminator.py` (`GroundingResult` constructions at `:191-198`, `:269-277`, `:330-337`, the zero-length case at `:153-163`, `_process_batch`), `src/openreview_cli/grounding/models.py` (`:76`, `:98-100`), `src/openreview_cli/review/models.py` (`:114-117`); tests in `tests/unit/test_grounding_discriminator.py`, `tests/unit/test_grounding_models.py`, `tests/unit/test_review_report.py`.
+**Files:** modify `src/openreview_cli/grounding/discriminator.py` (`GroundingResult` is built in the zero-length block `:190-200` (construction `:193-198`), the gateway-error fallback `:280-281` and the batch mapping `:367-368`; confirm them, because Task 2 shifted these lines and the earlier draft cited the empty-report early return by mistake), `src/openreview_cli/grounding/models.py` (`:76`, `:98-100`), `src/openreview_cli/review/models.py` (`:114-117`); tests in `tests/unit/test_grounding_discriminator.py`, `tests/unit/test_grounding_models.py`, `tests/unit/test_review_report.py`.
 
 **Interfaces:** `GroundingResult.grounding_presence: float | None = None`, `GroundingResult.wording_absent: bool = False`, and the same two fields on `ClauseAssessment`; the merge copies them. The zero-length-claim result carries `None`/`False` — the measure never ran.
 
