@@ -51,7 +51,8 @@ citations clustering above ~0.8 while planted claims stay below ~0.3.
   (`scripts/measure_slm_slots.py`, `benchmark/hallu_detect.py`, its own tests), so **its signature does not change**.
   `GroundingResult` gains `grounding_presence: float | None` and `wording_absent: bool`; `ClauseAssessment` gains the
   same two beside its other grounding fields (`review/models.py:114-117`), copied by `CGReport.merge_into`
-  (`grounding/models.py:98-100`). The zero-length-claim result (`discriminator.py:153-163`) carries `None` and
+  (`grounding/models.py:98-100`). The zero-length-claim result (the block at `discriminator.py:190-200`, the construction at
+  `:193-198`) carries `None` and
   `False` — the check never ran.
 - Reports are dumped whole through `dataclasses.asdict` (`review/report.py:308`), so the numbers reach the JSON with
   no further work; no test asserts an exact key set.
