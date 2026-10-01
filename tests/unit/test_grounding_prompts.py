@@ -199,3 +199,51 @@ def test_an_unknown_verdict_is_still_skipped_with_or_without_an_index() -> None:
     )
 
     assert _indices(response) == [2]
+
+
+# ── answers the model wrapped in a key: the shape a CI run measured ───────────
+
+
+def test_one_answer_wrapped_in_claims_parses() -> None:
+    response = json.dumps({"claims": [_obj(0)]})
+
+    assert _indices(response) == [0]
+    assert _verdicts(response) == [GroundingVerdict.GROUNDED]
+
+
+def test_three_answers_wrapped_in_claims_parse_in_order() -> None:
+    response = json.dumps({"claims": [_obj(0), _obj(1, "ungrounded"), _obj(2, "uncertain")]})
+
+    assert _indices(response) == [0, 1, 2]
+    assert _verdicts(response) == [
+        GroundingVerdict.GROUNDED,
+        GroundingVerdict.UNGROUNDED,
+        GroundingVerdict.UNCERTAIN,
+    ]
+
+
+def test_a_wrapped_answer_without_claim_index_falls_back_to_position_zero() -> None:
+    rows = parse_grounding_response(json.dumps({"claims": [_unindexed()]}))
+
+    assert len(rows) == 1
+    assert rows[0][0] == 0
+    assert rows[0][1] is GroundingVerdict.GROUNDED
+
+
+def test_a_dict_of_answers_keyed_by_index_parses_in_insertion_order() -> None:
+    response = json.dumps({"0": _obj(0), "1": _obj(1, "ungrounded")})
+
+    assert _indices(response) == [0, 1]
+    assert _verdicts(response) == [GroundingVerdict.GROUNDED, GroundingVerdict.UNGROUNDED]
+
+
+def test_claims_is_preferred_when_several_wrapper_keys_hold_answer_lists() -> None:
+    response = json.dumps({"notes": [_obj(9)], "claims": [_obj(0)]})
+
+    assert _indices(response) == [0]
+
+
+def test_a_bare_array_and_a_bare_object_are_still_read() -> None:
+    """Regression guards: unwrapping must not disturb the shapes that already worked."""
+    assert _verdicts(json.dumps([GROUNDED])) == [GroundingVerdict.GROUNDED]
+    assert _verdicts(json.dumps(GROUNDED)) == [GroundingVerdict.GROUNDED]
