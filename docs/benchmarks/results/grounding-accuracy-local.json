@@ -2,56 +2,56 @@
  "benchmark": "grounding-accuracy-local",
  "command": "uv run python scripts/measure_slm_slots.py --grounding-accuracy --arm local --limit 20 --no-pii --corpus-dir corpus --out results/grounding-accuracy-local.json",
  "date": "2026-10-01",
- "git_commit": "303dd4c",
+ "git_commit": "460c0de5ba73",
  "provenance": [
   {
    "path": "scripts/measure_slm_slots.py",
-   "sha256": "cb5fb7a2473d928f42cccce0169dabd4f6744cdbd2b76dee472d7f39bfa52a83"
+   "sha256": "9c1fc31cdd9b3aed071b6e4ffb9b41d9da5f3ae5b85b6421828a0400758ea77e"
+  },
+  {
+   "path": "src/openreview_cli/grounding/corruption.py",
+   "sha256": "1db91eb2ed141aafe4e914321319ed8042fc2efc12f1dbdc3c48728e3129aa59"
+  },
+  {
+   "path": "src/openreview_cli/grounding/presence.py",
+   "sha256": "34c8ee560ad13247dc88c9bd45ea74190eeb8ba4bf04c887b03d9e24badb74a4"
   },
   {
    "path": "src/openreview_cli/grounding/prompts.py",
-   "sha256": "9055352931c85b7c806127430d01655cd6829bf846dee514320d64e3e5b0bea7"
+   "sha256": "b11f537adde9877390e0b5b62ed34eb9ab4634436ca2bea8554b36df7eb4c383"
   },
   {
    "path": "src/openreview_cli/grounding/discriminator.py",
-   "sha256": "3f1573845c6ac2727fad5eaca1638c95be724b36b11ec2d4d6a35f678413e0cb"
-  },
-  {
-   "path": "src/openreview_cli/gateway/router.py",
-   "sha256": "900fabc0bb4d1f0f5b7696442903470c55ffa399737284ac6151769ad806ba7d"
-  },
-  {
-   "path": "src/openreview_cli/config/loader.py",
-   "sha256": "85e20a3a0df42af1008194a58b6ae3b1d372d4cec57bd3e058289d0168b0fd17"
+   "sha256": "54703162a514b895cad862eff09b7f2ca4f75735ffc37dba8113f97ae9c78628"
   }
  ],
  "models": "ollama/granite4:3b",
  "benchmark_input": "corpus assembled inside CI from the repository's tracked fixtures: 96 clause units from 17 documents (tests/fixtures/**/*.txt verbatim plus fixture PDFs/DOCX parsed with openreview_cli.parsing)",
  "sample": {
   "units": 20,
-  "positives": 20,
-  "negatives_kept": 40,
+  "positives": 25,
+  "negatives_kept": 45,
   "negatives_generated": {
    "unsupported_claim": 20,
-   "hallucination": 20
+   "hallucination": 20,
+   "paraphrased_unsupported": 5
   },
   "negatives_dropped_guard": 0,
-  "model_calls": 60
+  "model_calls": 70
  },
  "metrics": {
-  "bad_caught": 27,
-  "bad_caught_rate": 0.675,
+  "bad_caught": 32,
+  "bad_caught_rate": 0.7111,
   "bad_missed": 12,
   "bad_uncertain": 1,
-  "bad_called_grounded": 0,
-  "good_accepted": 20,
+  "good_accepted": 25,
   "false_reject_rate": 0.0,
   "good_uncertain": 0,
   "unreadable_answers": 0,
-  "latency_mean_s": 18.05,
-  "latency_median_s": 17.68,
-  "latency_p95_s": 22.73,
-  "latency_max_s": 23.88
+  "latency_mean_s": 17.374292,
+  "latency_median_s": 17.014773,
+  "latency_p95_s": 21.856369,
+  "latency_max_s": 23.151313
  },
- "notes": "CI run 36827583980, job grounding-accuracy; artifact grounding-accuracy-local.json. The immediately preceding run of the same code (b0f691b) caught 28 of 40, so treat the caught count as 27-28 of 40 at this sample size. Positives are verbatim sentences from the cited clause as sent to the model, so they are trivially grounded and the negative arm is the signal; no real-world false-positive rate may be quoted. Ran with --no-pii because CI has no spaCy model: raw clause text was sent to a local model only. Single-sample smoke measurement on a 2-vCPU GitHub-hosted runner, so latencies are CPU-bound and machine-specific. unreadable_answers counts answers the reader could not parse, which is how a reader defect was separated from model hesitation."
+ "notes": "CI run 36847090397, job grounding-accuracy; artifact grounding-accuracy-local.json. Positives and negatives now come in classes that include paraphrases: 25 positives (each unit's own qualifying sentence, plus a lightly rewritten copy of that sentence via the constant meaning-preserving substitution map) and 45 negatives (20 unsupported_claim + 20 hallucination + 5 paraphrased_unsupported). paraphrases_skipped counts a rewrite that equalled its source and would duplicate a label already present (30 this run); such rewrites are skipped and counted, not kept. Both positive classes are supported by the clause by construction and the substitution map is narrow, so this positive set is easier than a human-labelled one and no real-world false-positive rate may be quoted from it; the negative arm is the signal. Single-sample smoke measurement, not a benchmark: model replies vary run to run. Ran with --no-pii because CI has no spaCy model, so raw clause text was sent to a local model only. Latencies are CPU-bound on a 2-vCPU GitHub-hosted runner and machine-specific. unreadable_answers counts answers the reader could not parse, which is how a reader defect is separated from model hesitation."
 }

@@ -278,21 +278,25 @@ The fact-checker slot decides whether each assessment claim is really supported 
 
 | Metric | local `ollama/granite4:3b` | cloud `openrouter/anthropic/claude-sonnet-4.6` |
 |---|---|---|
-| answers read | 60 / 60 | 60 / 60 |
-| known-good claims accepted | 20 / 20 | 20 / 20 |
-| planted bad claims caught | 27 / 40 (28 / 40 on the preceding run) | 39 / 40 |
-| bad claims called grounded | 0 | 0 |
+| answers read | 70 / 70 | 60 / 60 |
+| known-good claims accepted | 25 / 25 | 20 / 20 |
+| planted bad claims caught | 32 / 45 | 39 / 40 |
+| bad claims called grounded | 12 | 0 |
 | uncertain (good / bad) | 0 / 1 | 0 / 1 |
 | unreadable answers | 0 | 0 |
-| mean latency per call | 18.05 s | 2.78 s |
+| mean latency per call | 17.37 s | 2.78 s |
 
-Sample: 20 units per arm (`--limit 20`), 20 positives and 40 negatives kept, 60 model calls. The arms do not share a corpus: the local arm uses the tracked fixtures because CUAD is gitignored and absent in CI.
+Sample: 20 units per arm (`--limit 20`). The local arm keeps 25 positives (20 verbatim sentences + 5 paraphrased) and 45 negatives (20 `unsupported_claim` + 20 `hallucination` + 5 `paraphrased_unsupported`) over 70 calls; the cloud arm keeps 20 positives and 40 negatives over 60 calls. The arms do not share a corpus: the local arm uses the tracked fixtures because CUAD is gitignored and absent in CI, and the cloud row was measured before this branch changed the labels, so it is not directly comparable to the local row.
 
-Last verified: 2026-10-01 @ 303dd4c (local arm) / 964a500 (cloud arm) (receipts: docs/benchmarks/results/grounding-accuracy-local.json, docs/benchmarks/results/grounding-accuracy-cloud.json).
+Last verified: 2026-10-01 @ 460c0de5ba73 (local arm) / 964a500 (cloud arm) (receipts: docs/benchmarks/results/grounding-accuracy-local.json, docs/benchmarks/results/grounding-accuracy-cloud.json).
 
-**Both arms read every answer; the arms differ in quality.** An earlier local figure of **1 of 20** accepted was a reader defect, not model behaviour: answers the reader could not parse were recorded as `uncertain` with confidence 0.0, which made the local model look like it refused to decide. With the reader fixed and local models asked for JSON only, the local arm accepts all 20 known-good claims and catches 27–28 of 40 planted bad ones, while the cloud model catches 39 of 40. The honest reading is that the local 3B model's failure mode is **accepting** planted bad claims, not hesitating over good ones — it is weaker than the cloud model, not merely slower.
+**Both arms read every answer; the arms differ in quality.** An earlier local figure of **1 of 20** accepted was a reader defect, not model behaviour: answers the reader could not parse were recorded as `uncertain` with confidence 0.0, which made the local model look like it refused to decide. With the reader fixed and local models asked for JSON only, the local arm accepts all 25 known-good claims and catches 32 of 45 planted bad ones — but calls 12 of them grounded — while the cloud model catches 39 of 40. The honest reading is that the local 3B model's failure mode is **accepting** planted bad claims, not hesitating over good ones — it is weaker than the cloud model, not merely slower.
 
-**Limits.** Both are single-sample smoke measurements of non-deterministic models. The positives are verbatim sentences from the cited clause as sent to the model, so they are trivially grounded and only the negative arm discriminates — no real-world false-positive rate may be quoted. CI latencies are CPU-bound on a 2-vCPU runner and local latencies are machine-specific. The local arm ran `--no-pii` (CI has no spaCy model), so raw clause text went to a local model only; the cloud arm stripped PII (43 entities) before every call.
+**Coverage is a signal, not a verdict.** The hardened labels make the harness record how much of each claim's wording appears in the clause it cites. The supported claims score at or above **0.96** (the paraphrased positives bottom out at 0.962), while the planted bad claims now reach **0.94** (the closest miss, an `unsupported_claim`, scores 0.941). The two ranges overlap, so wording overlap on its own cannot separate a real citation from a planted one — which is why no code path makes a verdict from the number. What the branch adds is a wording check plus a sharper per-claim question to the model; the decision stays with the model and the reviewer, never a threshold.
+
+**A real review, as a pilot.** One real local review (`grounding_mode="lenient"`, so rejected claims are kept for inspection) assessed 12 claims and wrote a coverage number for 11 of them: **7 accepted, 3 rejected, 1 uncertain**, with coverage values 0.0, 0.0, 0.286, 0.313, 0.636 and six at 1.0. Most real citations are **exact** (six of eleven scored 1.0), but about a third fall below half coverage (four of eleven), and some of those were **accepted** by the model — exactly the risky pattern the memo's new "accepted despite absent wording" note now surfaces. This is one pilot run, not a benchmark.
+
+**Limits.** Both are single-sample smoke measurements of non-deterministic models. The positives now come in two classes — the cited clause's own qualifying sentence, and a lightly rewritten copy of it — and both are supported by the clause by construction, so they are an easier set than a human-labelled one and only the negative arm discriminates; the substitution map is narrow, so no real-world false-positive rate may be quoted. CI latencies are CPU-bound on a 2-vCPU runner and local latencies are machine-specific. The local arm ran `--no-pii` (CI has no spaCy model), so raw clause text went to a local model only; the cloud arm stripped PII (43 entities) before every call.
 
 **Reproduction:** `uv run python scripts/measure_slm_slots.py --grounding-accuracy --arm local|cloud --limit 20 --corpus-dir <corpus>`. The local arm also runs in CI (`.github/workflows/slm-measurement.yml`, job `grounding-accuracy`); the cloud arm spends on the order of 30 cents per 60 calls.
 
