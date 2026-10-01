@@ -59,8 +59,9 @@ from openreview_cli.grounding.corruption import (
     first_qualifying_sentence,
     hallucination,
     is_genuine_negative,
+    operand_change,
+    paraphrase,
     paraphrased_supported,
-    paraphrased_unsupported,
     unsupported_claim,
 )
 
@@ -98,6 +99,10 @@ GROUNDING_ACCURACY_CAVEATS: tuple[str, ...] = (
     "negatives_dropped_guard counts generated negatives whose claim text appears verbatim in "
     "the cited clause (mislabels). They are dropped, never scored, and the count is reported "
     "per generator even when it is zero.",
+    "The negative kinds are operand_change (the cited clause's own sentence with one operand "
+    "changed, so the clause cannot support it) and cross_document (a sentence taken from a "
+    "different contract); the guard is still a lexical substring test and cannot prove "
+    "non-entailment for either kind.",
     "paraphrases_skipped counts a rewritten positive or negative whose rewrite equalled its "
     "source — no new wording, so the label would duplicate one already present. Such rewrites "
     "are skipped, and the count is reported even when it is zero.",
@@ -272,7 +277,7 @@ def _load_corpus_units(corpus_dir: Path, limit: int) -> tuple[list[ClauseUnit], 
         for paragraph in _paragraphs(text):
             if not _unit_qualifies(paragraph):
                 continue
-            units.append(ClauseUnit(id=f"c{len(units):03d}", text=paragraph))
+            units.append(ClauseUnit(id=f"c{len(units):03d}", text=paragraph, document=path.name))
             if len(units) >= limit:
                 return units, files_scanned
     return units, files_scanned
@@ -336,7 +341,13 @@ def _strip_grounding_units(
     # so there is no filename/author metadata to redact (and document is None here).
     stripped, pii_result = strip_pii_clauses(clauses, None, strip_metadata=False)
     mark_pii_available()
-    stripped_units = [ClauseUnit(id=clause.id, text=clause.text) for clause in stripped]
+    # Keep each unit's source document: the cross-clause negative is drawn from a *different*
+    # document, and stripping must not erase that provenance.
+    document_by_id = {unit.id: unit.document for unit in units}
+    stripped_units = [
+        ClauseUnit(id=clause.id, text=clause.text, document=document_by_id.get(clause.id))
+        for clause in stripped
+    ]
     return stripped_units, {
         "stripped": True,
         "no_pii": False,
@@ -350,14 +361,46 @@ def _strip_grounding_units(
     }
 
 
-def _label(claim_text: str, unit: ClauseUnit, expected: str, generator: str) -> dict[str, Any]:
+def _label(
+    claim_text: str,
+    unit: ClauseUnit,
+    expected: str,
+    generator: str,
+    *,
+    kind: str = "positive",
+    source_document: str | None = None,
+) -> dict[str, Any]:
+    """One label row. ``kind`` records which negative construction produced it (a positive
+    keeps the default); ``source_document`` names the contract the claim text came from."""
     return {
         "claim_text": claim_text,
         "unit_id": unit.id,
         "clause_text": unit.text,
         "expected": expected,
         "generator": generator,
+        "kind": kind,
+        "source_document": source_document,
     }
+
+
+def _negative_source(unit: ClauseUnit, units: list[ClauseUnit], index: int) -> ClauseUnit | None:
+    """The unit a cross-document negative is drawn from: a *different-document* unit when one
+    exists, else any other unit. Deterministic — ``pool[index % len(pool)]``, no RNG.
+
+    A sentence from a different document cannot be supported by the cited clause. The
+    fallback (no other document is known) is weaker, which is why the guard is still run and
+    the receipt still says the guard cannot prove non-entailment.
+    """
+    others = [candidate for candidate in units if candidate.id != unit.id]
+    if not others:
+        return None
+    different_document = [
+        candidate
+        for candidate in others
+        if unit.document and candidate.document and candidate.document != unit.document
+    ]
+    pool = different_document or others
+    return pool[index % len(pool)]
 
 
 def _build_grounding_labels(
@@ -367,11 +410,13 @@ def _build_grounding_labels(
 
     Positives come in two classes so the labels measure *wording*, not quoting: the clause's
     own qualifying sentence (``first_qualifying_sentence``) and that sentence lightly rewritten
-    (``paraphrased_supported``) — both supported by the clause by construction. Negatives:
-    ``unsupported_claim`` over the next distinct unit and its rewrite
-    (``paraphrased_unsupported``), plus ``hallucination``. Every negative passes
-    ``is_genuine_negative`` before use; a rejected negative is dropped and counted per generator
-    (never silently kept).
+    (``paraphrased_supported``) — both supported by the clause by construction. Negatives come
+    in two sound constructions, each recorded in the row's ``kind``: ``operand_change`` (the
+    cited clause's own sentence with one operand changed) is preferred, and ``cross_document``
+    (a sentence from a *different* document, ``_negative_source``) is the fallback. Each yields
+    an ``unsupported_claim`` row and its ``paraphrased_unsupported`` rewrite, plus
+    ``hallucination``. Every negative passes ``is_genuine_negative`` before use; a rejected
+    negative is dropped and counted per generator (never silently kept).
 
     A paraphrase whose rewrite equalled its source is not a label — it would duplicate one
     already present — so it is skipped and counted in the returned ``paraphrase_skips`` (never
@@ -403,29 +448,43 @@ def _build_grounding_labels(
                 )
 
         if count > 1:
-            other = units[(index + 1) % count]
-            if other.id != unit.id:
-                cross = unsupported_claim(unit, other)
+            other = _negative_source(unit, units, index)
+            if other is not None:
+                changed = operand_change(unit.text)
+                if changed is not None:
+                    cross, kind, source_document = changed, "operand_change", unit.document
+                else:
+                    cross = unsupported_claim(unit, other)
+                    kind, source_document = "cross_document", other.document
                 if cross is not None:  # None = degenerate pair, nothing to score
                     generated["unsupported_claim"] += 1
                     if is_genuine_negative(cross, unit.text):
-                        labels.append(_label(cross, unit, "unsupported", "unsupported_claim"))
+                        labels.append(
+                            _label(
+                                cross,
+                                unit,
+                                "unsupported",
+                                "unsupported_claim",
+                                kind=kind,
+                                source_document=source_document,
+                            )
+                        )
                     else:
                         drops["unsupported_claim"] += 1
-
-                paraphrased_cross = paraphrased_unsupported(unit, other)
-                if paraphrased_cross is not None:
-                    if paraphrased_cross == cross:
+                    rewritten = paraphrase(cross)
+                    if rewritten == cross:
                         paraphrase_skips += 1
                     else:
                         generated["paraphrased_unsupported"] += 1
-                        if is_genuine_negative(paraphrased_cross, unit.text):
+                        if is_genuine_negative(rewritten, unit.text):
                             labels.append(
                                 _label(
-                                    paraphrased_cross,
+                                    rewritten,
                                     unit,
                                     "unsupported",
                                     "paraphrased_unsupported",
+                                    kind=kind,
+                                    source_document=source_document,
                                 )
                             )
                         else:
@@ -434,7 +493,9 @@ def _build_grounding_labels(
         fabricated = hallucination(positive)
         generated["hallucination"] += 1
         if is_genuine_negative(fabricated, unit.text):
-            labels.append(_label(fabricated, unit, "unsupported", "hallucination"))
+            labels.append(
+                _label(fabricated, unit, "unsupported", "hallucination", kind="hallucination")
+            )
         else:
             drops["hallucination"] += 1
     return labels, drops, generated, paraphrase_skips

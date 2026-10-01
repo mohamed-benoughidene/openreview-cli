@@ -19,6 +19,7 @@ from openreview_cli.grounding.corruption import (
     first_qualifying_sentence,
     hallucination,
     is_genuine_negative,
+    operand_change,
     paraphrase,
     paraphrased_supported,
     paraphrased_unsupported,
@@ -348,6 +349,34 @@ class TestParaphrasedWriters:
         tiny = ClauseUnit(id="c002", text="Tiny clause. Too short to qualify.")
         assert paraphrased_supported(tiny) is None
         assert paraphrased_unsupported(UNIT_A, tiny) is None
+
+
+class TestOperandChange:
+    """A sound negative: the cited clause's own sentence with one operand changed."""
+
+    def test_changes_an_operand_and_is_not_the_clause_sentence(self) -> None:
+        unit = ClauseUnit(
+            id="c000",
+            text=(
+                "4.4 Term. The receiving party shall keep the Confidential Information "
+                "confidential for five years from the effective date."
+            ),
+        )
+        changed = operand_change(unit.text)
+        assert changed is not None
+        assert changed != first_qualifying_sentence(unit.text)
+        assert is_genuine_negative(changed, unit.text) is True
+
+    def test_returns_none_when_no_operand_occurs(self) -> None:
+        # The caller must fall back to the cross-document negative rather than keep an
+        # unchanged sentence labelled unsupported.
+        assert (
+            operand_change(
+                "4.9 Governing Law. The parties agree that this agreement is governed by the "
+                "laws of the state named above."
+            )
+            is None
+        )
 
 
 class TestGenuineNegativeGuard:
