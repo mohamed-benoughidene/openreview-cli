@@ -118,7 +118,7 @@ class MemoExporter:
                     citation=citation,
                     # Display-only: the memo notes the risky pattern only — the
                     # model accepted the claim (GROUNDED) yet its wording is absent.
-                    wording_absent=bool(ca.wording_absent)
+                    accepted_despite_absent_wording=bool(ca.wording_absent)
                     and ca.grounding_verdict == GroundingVerdict.GROUNDED,
                     grounding_presence=ca.grounding_presence,
                 )

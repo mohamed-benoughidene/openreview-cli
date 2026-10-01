@@ -336,7 +336,6 @@ class TestPresenceFieldsDoNotMoveColor:
 
         assert a.color == AssessmentColor.green
         assert a.amber_reasons == []
-        assert AmberReason.low_confidence not in (a.amber_reasons or [])
 
     def test_presence_fields_leave_color_output_identical(self) -> None:
         plain = _make_assessment(confidence=0.85, position=Position.PREFERRED)

@@ -62,7 +62,8 @@ class MemoClause:
     # Claim-wording presence — display-only: it drives one memo note (below),
     # never a verdict, a colour, or which clauses are kept.
     grounding_presence: float | None = None
-    wording_absent: bool = False
+    # True only for a GROUNDED claim whose wording is absent from the cited clause.
+    accepted_despite_absent_wording: bool = False
 
 
 @dataclass
@@ -124,7 +125,9 @@ class MemoReport:
                         if c.get("grounding_presence") is not None
                         else None
                     ),
-                    wording_absent=bool(c.get("wording_absent", False)),
+                    accepted_despite_absent_wording=bool(
+                        c.get("accepted_despite_absent_wording", False)
+                    ),
                 )
             )
 

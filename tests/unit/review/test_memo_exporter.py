@@ -207,7 +207,7 @@ class TestWordingNoteBuilder:
 
         memo = self._memo_for(ca)
 
-        assert memo.clauses[0].wording_absent is True
+        assert memo.clauses[0].accepted_despite_absent_wording is True
         assert memo.clauses[0].grounding_presence == 0.46
 
     def test_grounded_present_wording_no_note(self) -> None:
@@ -218,7 +218,7 @@ class TestWordingNoteBuilder:
 
         memo = self._memo_for(ca)
 
-        assert memo.clauses[0].wording_absent is False
+        assert memo.clauses[0].accepted_despite_absent_wording is False
 
     def test_ungrounded_absent_wording_no_note(self) -> None:
         ca = _make_assessment("c1", Position.PREFERRED, 0.92, "green")
@@ -228,7 +228,7 @@ class TestWordingNoteBuilder:
 
         memo = self._memo_for(ca)
 
-        assert memo.clauses[0].wording_absent is False
+        assert memo.clauses[0].accepted_despite_absent_wording is False
         # the number is still carried faithfully — it just never drives a note
         assert memo.clauses[0].grounding_presence == 0.20
 
@@ -237,7 +237,7 @@ class TestWordingNoteBuilder:
 
         memo = self._memo_for(ca)
 
-        assert memo.clauses[0].wording_absent is False
+        assert memo.clauses[0].accepted_despite_absent_wording is False
         assert memo.clauses[0].grounding_presence is None
 
 
@@ -350,5 +350,6 @@ class TestExport:
             result = exporter.export()
             content = result[MemoFormat.MARKDOWN].read_text()
 
+        assert "Clause c2" in content
         assert "Citation wording not present in the cited clause (coverage 0.46)" in content
         assert "(coverage 0.20)" not in content
