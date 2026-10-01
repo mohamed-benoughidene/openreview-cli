@@ -32,7 +32,13 @@ DEFAULT_CONFIG: dict[str, object] = {
                 "primary": "ollama/granite4:3b",
                 "fallback": None,
                 "params": {"temperature": 0.0, "max_tokens": 4000},
-                "extra_params": {"response_format": {"type": "json_object"}},
+                # num_ctx 8192 is load-bearing: the grounding prompt now carries up to 8
+                # ~2000-character sections, which overflow Ollama's default 4096 context and
+                # were silently truncated. Ollama reads num_ctx from the request options; a
+                # future prompt widening must be checked against this value (see
+                # tests/unit/test_grounding_prompts.py). Both keys are Ollama-only and are
+                # dropped for a non-local grounding provider by gateway/router.py.
+                "extra_params": {"response_format": {"type": "json_object"}, "num_ctx": 8192},
             },
         },
         "fallback": {

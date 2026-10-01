@@ -83,12 +83,17 @@ _TRUNCATION_MARKER = " …[clause text truncated]"
 # Item 3: the prompt shows the finding's own clause plus sibling clauses, so the checker can
 # name a section that supports a finding the cited clause does not. The list is bounded — a
 # hard cap on how many clauses are shown — so the built prompt cannot grow without limit.
-_MAX_PROMPT_CLAUSES = 20
+# The cap is 8, not 20: 8 sections at the ~2000-character window plus the fixed instruction
+# text is ~17k characters, which fits the grounding model's 8192-token context (config
+# ``DEFAULT_CONFIG``) with headroom. At 20 sections the prompt was ~44k characters and Ollama
+# silently truncated it at its 4096 default, dropping the sibling sections and second question.
+_MAX_PROMPT_CLAUSES = 8
 
 
-def _clause_window(text: str, limit: int = _CLAUSE_WINDOW_CHARS) -> str:
-    """At most ``limit`` characters of ``text``, cut on a sentence boundary when one fits.
-    A single first sentence longer than ``limit`` is hard-clipped at ``limit``."""
+def _clause_window(text: str) -> str:
+    """At most ``_CLAUSE_WINDOW_CHARS`` characters of ``text``, cut on a sentence boundary
+    when one fits. A single first sentence longer than the window is hard-clipped at it."""
+    limit = _CLAUSE_WINDOW_CHARS
     if len(text) <= limit:
         return text
     from openreview_cli.parsing.clause_detector import nupunkt_detect_boundaries

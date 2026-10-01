@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+from openreview_cli.config.loader import DEFAULT_CONFIG
+from openreview_cli.grounding.discriminator import _BATCH_SIZE
 from openreview_cli.grounding.models import GroundingVerdict
 from openreview_cli.grounding.prompts import (
     _CLAUSE_WINDOW_CHARS,
@@ -413,6 +415,66 @@ def test_the_prompt_shows_at_most_the_cap_of_clauses() -> None:
     assert len(clause_lines) == _MAX_PROMPT_CLAUSES
     assert all(
         len(line) <= _CLAUSE_WINDOW_CHARS + len(_TRUNCATION_MARKER) + 8 for line in clause_lines
+    )
+
+
+def _configured_grounding_num_ctx() -> int:
+    """The context the shipped grounding slot reserves, read from the config the gateway
+    builds its request from (``config/loader.py`` ``DEFAULT_CONFIG``)."""
+    from typing import Any, cast
+
+    gateway = cast("dict[str, Any]", DEFAULT_CONFIG["gateway"])
+    grounding = gateway["models"]["grounding"]
+    return int(grounding["extra_params"]["num_ctx"])
+
+
+def test_the_worst_case_prompt_stays_inside_the_configured_context() -> None:
+    """The built prompt must fit the context the grounding model actually runs with.
+
+    Ollama truncates silently at its default 4096, so a prompt that overflows does not
+    error — the model just never sees the tail. This pins the worst case: the clause cap
+    of sections each windowed to the full bound, one full batch of the longest claim lines
+    (each carrying the wording-absent hint), and the fixed instruction text between them.
+    The numbers below are stated so a future widening of the cap or the window fails here
+    instead of silently truncating in production.
+    """
+    # Longer than the window, so every section is windowed to (at most) the bound plus the marker.
+    sentence = (
+        "The receiving party shall not disclose Confidential Information to any third party. "
+    )
+    oversized = sentence * 40
+    clauses = [
+        Clause(
+            id=f"c{i}",
+            title=None,
+            text=oversized,
+            level=1,
+            parent_id=None,
+            source_page=1,
+            source_paragraph=None,
+            source_span=None,
+        )
+        for i in range(_MAX_PROMPT_CLAUSES)
+    ]
+    # A full batch of the longest possible claim lines, every one hinted.
+    claims = [(i, "x" * 300, f"c{i}") for i in range(_BATCH_SIZE)]
+    content = _user_content(build_grounding_messages(clauses, claims, set(range(_BATCH_SIZE))))
+
+    num_ctx = _configured_grounding_num_ctx()
+    # English runs about 3.5 characters per token; 3.5 is the conservative end of the usual
+    # 3-4 range, i.e. it over-counts tokens rather than under-counting them. Measured here:
+    #   sections: 8 x (1956-char window + marker + id prefix) = 15,710 chars
+    #   fixed instruction text (GROUNDING_PROMPT_TEMPLATE)    =  1,389 chars
+    #   10 max-length claim lines + the wording-absent hint   =  4,320 chars
+    #   total                                                 = 21,419 chars ~ 6,120 tokens
+    chars_per_token = 3.5
+    estimated_tokens = len(content) / chars_per_token
+
+    assert _MAX_PROMPT_CLAUSES == 8 and _CLAUSE_WINDOW_CHARS == 2000
+    assert num_ctx >= 8192  # the review's floor for the grounding model
+    # At least 15% headroom: ~6,120 tokens against a context of 8,192.
+    assert estimated_tokens <= num_ctx * 0.85, (
+        f"worst-case prompt ~{estimated_tokens:.0f} tokens against num_ctx {num_ctx}"
     )
 
 
