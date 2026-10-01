@@ -150,10 +150,13 @@ class TestFormatJson:
         assert "is_amber" in first
 
     def test_grounding_presence_signals_reach_json_without_wording(self) -> None:
-        """The two presence signals serialise as a number and a boolean only.
+        """The two new presence fields add no text to the report.
 
-        They must not smuggle claim or clause text into the report: the receipt is
-        the scalar value and the flag, nothing more.
+        The report is *supposed* to carry the claim and clause wording: it already
+        does, through pre-existing keys such as ``citation`` and ``clause_text``
+        (asserted below, so the canary really is in the report). The narrower claim
+        tested here is that the two fields added for presence contribute no text of
+        their own — a scalar and a flag, nothing more.
         """
         claim_canary = "CANARYCLAIM the receiving party shall not disclose"
         clause_canary = (
@@ -165,21 +168,25 @@ class TestFormatJson:
         ca.grounding_presence = 0.37
         ca.wording_absent = True
 
-        data = json.loads(format_json(_make_report([ca])))
-        entry = data["assessments"][0]
+        report_json = format_json(_make_report([ca]))
+        entry = json.loads(report_json)["assessments"][0]
 
-        assert entry["grounding_presence"] == 0.37
-        assert entry["wording_absent"] is True
-        # A number and a boolean — never a string carrying claim or clause wording.
-        assert not isinstance(entry["grounding_presence"], str)
-        assert not isinstance(entry["wording_absent"], str)
-        receipt = json.dumps(
-            {
-                "grounding_presence": entry["grounding_presence"],
-                "wording_absent": entry["wording_absent"],
-            }
-        )
+        # Positive control: the wording does reach the report, via the older keys.
+        assert claim_canary in report_json
+        assert clause_canary in report_json
+
+        presence = entry["grounding_presence"]
+        wording_absent = entry["wording_absent"]
+        assert presence == 0.37
+        assert wording_absent is True
+        # A number and a boolean — never a string (or anything else) carrying wording.
+        assert isinstance(presence, (int, float))
+        assert type(wording_absent) is bool
+        # Serialised on their own, those two values carry no claim or clause text.
+        receipt = json.dumps([presence, wording_absent])
         assert "CANARY" not in receipt
+        assert claim_canary not in receipt
+        assert clause_canary not in receipt
 
     def test_summary_counts_are_consistent(self) -> None:
         report = _make_report()

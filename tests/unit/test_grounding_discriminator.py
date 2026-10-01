@@ -1270,7 +1270,8 @@ class TestGroundingPresenceRecorded:
         result = cg_report.verdicts[0]
         assert result.verdict is GroundingVerdict.GROUNDED
         assert result.grounding_presence is not None
-        assert 0.0 <= result.grounding_presence <= 1.0
+        # The claim is verbatim in the clause, so coverage is total.
+        assert result.grounding_presence == 1.0
         # The claim is verbatim in the clause, so the hint does not fire.
         assert result.wording_absent is False
 
@@ -1287,7 +1288,8 @@ class TestGroundingPresenceRecorded:
         result = cg_report.verdicts[0]
         assert result.verdict is GroundingVerdict.UNGROUNDED
         assert result.grounding_presence is not None
-        assert 0.0 <= result.grounding_presence <= 1.0
+        # None of the claim's wording is in the clause, so coverage is zero.
+        assert result.grounding_presence == 0.0
         # The claim's wording is not in the clause: the hint fires, the verdict is untouched.
         assert result.wording_absent is True
 
