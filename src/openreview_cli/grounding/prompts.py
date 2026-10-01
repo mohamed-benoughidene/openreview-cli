@@ -38,6 +38,7 @@ For each claim, respond with a JSON object containing:
 - provenances: list of {{"clause_id": str, "paragraph_index": int, "confidence": float}} — clause(s) that support the claim, or empty list
 - confidence: float (0.0-1.0) — overall confidence in this verdict
 - reason: str | None — explanation if ungrounded or uncertain
+- miscited_to_clause_id: str | None — set this only when the claim is genuinely true but the clause it cites does not support it while a different clause in the list does; name that clause's id. Leave it null in every other case. Keep verdict "grounded" when you set it.
 
 For each claim, respond with one JSON object. If there is a single claim, you may return that object on its own; if there are several, return a JSON array of the objects, one per claim, in the same order as the input claims. Return the JSON only — no text before or after it."""
 
@@ -57,6 +58,11 @@ _WORDING_ABSENT_HINT = (
 _CLAUSE_WINDOW_CHARS = 2000
 _TRUNCATION_MARKER = " …[clause text truncated]"
 
+# Item 3: the prompt shows the finding's own clause plus sibling clauses, so the checker can
+# name a section that supports a finding the cited clause does not. The list is bounded — a
+# hard cap on how many clauses are shown — so the built prompt cannot grow without limit.
+_MAX_PROMPT_CLAUSES = 20
+
 
 def _clause_window(text: str, limit: int = _CLAUSE_WINDOW_CHARS) -> str:
     """At most ``limit`` characters of ``text``, cut on a sentence boundary when one fits.
@@ -72,6 +78,20 @@ def _clause_window(text: str, limit: int = _CLAUSE_WINDOW_CHARS) -> str:
     if end == 0:  # the first sentence alone exceeds the window: hard-clip it
         end = limit
     return text[:end].rstrip() + _TRUNCATION_MARKER
+
+
+def _format_clauses(source_clauses: list[Clause]) -> str:
+    """The clause list the model is shown, bounded.
+
+    At most ``_MAX_PROMPT_CLAUSES`` clauses, each windowed to whole sentences inside
+    ``_CLAUSE_WINDOW_CHARS``. The list carries only clause ids and windowed text — no
+    finding text — so the prompt gains surrounding sections without growing past the cap.
+    """
+    lines = [
+        f"[{clause.id}]: {_clause_window(clause.text)}"
+        for clause in source_clauses[:_MAX_PROMPT_CLAUSES]
+    ]
+    return "\n\n".join(lines) if lines else "(no clauses provided)"
 
 
 def build_grounding_messages(
@@ -91,13 +111,8 @@ def build_grounding_messages(
     Returns:
         List of message dicts for Gateway.chat().
     """
-    # Format clauses for the prompt
-    clauses_lines: list[str] = []
-    for clause in source_clauses:
-        text = _clause_window(clause.text)
-        clauses_lines.append(f"[{clause.id}]: {text}")
-
-    clauses_text = "\n\n".join(clauses_lines) if clauses_lines else "(no clauses provided)"
+    # Format clauses for the prompt: bounded, each windowed to whole sentences.
+    clauses_text = _format_clauses(source_clauses)
 
     # Format claims for the prompt
     claims_lines: list[str] = []
@@ -173,6 +188,22 @@ def parse_grounding_response(
         results.append((claim_index, verdict, provenances, confidence))
 
     return results
+
+
+def parse_miscited_ids(response: str) -> dict[int, str]:
+    """The fourth answer, per claim: the clause id the checker named, if any.
+
+    Tolerant by construction: an answer with no pointer, an empty or non-string value, or
+    an unreadable reply all yield an empty (or partial) mapping and nothing else. Only the
+    named clause id is returned — no claim or clause text is read out or recorded.
+    """
+    ids: dict[int, str] = {}
+    for position, item in enumerate(_answer_items(_first_json_value(response))):
+        if isinstance(item, dict):
+            named = item.get("miscited_to_clause_id")
+            if isinstance(named, str) and named.strip():
+                ids[_claim_index(item.get("claim_index"), position)] = named.strip()
+    return ids
 
 
 def _answer_items(value: Any) -> list[Any]:

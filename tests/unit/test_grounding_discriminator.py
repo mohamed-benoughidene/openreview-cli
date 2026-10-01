@@ -17,6 +17,7 @@ from openreview_cli.grounding import presence
 from openreview_cli.grounding.discriminator import CitationGroundingDiscriminator
 from openreview_cli.grounding.models import (
     CGReport,
+    GroundingResult,
     GroundingVerdict,
 )
 
@@ -1497,3 +1498,124 @@ class TestGroundClaimAsksTheProductQuestion:
         # follow ``measure(claim, clause)`` surfaces here as the wrong presence.
         assert claim_first is not clause_first
         assert (self._HINT in self._content(mock_gateway)) is claim_first
+
+
+class TestMiscitedIsAFieldWithAGuard:
+    """Item 3, FIX 1: a real-but-miscited finding is kept with a field, and the field is
+    believed only when the finding's wording is substantially present in the named clause.
+    A failed guard changes only the pointer — the verdict is never re-judged."""
+
+    _CLAIM = (
+        "The receiving party shall keep the Confidential Information confidential for five years"
+    )
+    _CITED = (
+        "4.4 The term of the confidentiality obligation is three years from the date of disclosure."
+    )
+    # FIX 8: real text whose wording IS substantially present in the claim. Measured:
+    # presence.measure(_CLAIM, _SIBLING_SUPPORTS) == (1.0, False), so the guard accepts it.
+    _SIBLING_SUPPORTS = (
+        "4.7 The receiving party shall keep the Confidential Information "
+        "confidential for five years after disclosure."
+    )
+    # Measured (0.083, True): the claim's wording is absent, so the guard drops the pointer.
+    _SIBLING_UNRELATED = (
+        "9.2 Neither party may assign this agreement without prior written consent."
+    )
+
+    def _clauses(self) -> list[Clause]:
+        from openreview_cli.parsing.models import Clause
+
+        return [
+            Clause(
+                id=cid,
+                title=None,
+                text=text,
+                level=1,
+                parent_id=None,
+                source_page=1,
+                source_paragraph=None,
+                source_span=None,
+            )
+            for cid, text in (
+                ("4.4", self._CITED),
+                ("4.7", self._SIBLING_SUPPORTS),
+                ("9.2", self._SIBLING_UNRELATED),
+            )
+        ]
+
+    def _report(self) -> ReviewReport:
+        from datetime import datetime
+
+        from openreview_cli.review.models import (
+            ClauseAssessment,
+            DocMeta,
+            Position,
+            QAVerdict,
+            ReviewReport,
+            ReviewSummary,
+        )
+
+        return ReviewReport(
+            document=DocMeta(filename="t.pdf", page_count=1, clause_count=3, pii_stripped=False),
+            assessments=[
+                ClauseAssessment(
+                    clause_id="4.4",
+                    clause_text=self._CITED,
+                    playbook_category="confidentiality-term",
+                    position=Position.PREFERRED,
+                    confidence=0.9,
+                    citation=self._CLAIM,
+                    qa_verdict=QAVerdict.agree,
+                    extraction_model="test",
+                    qa_model="test",
+                )
+            ],
+            summary=ReviewSummary(),
+            playbook_id="test",
+            generated_at=datetime.now(),
+        )
+
+    def _answer(self, miscited: str) -> str:
+        return json.dumps(
+            [
+                {
+                    "claim_index": 0,
+                    "verdict": "grounded",
+                    "provenances": [],
+                    "confidence": 0.9,
+                    "reason": None,
+                    "miscited_to_clause_id": miscited,
+                }
+            ]
+        )
+
+    def _ground(
+        self, miscited: str, mock_gateway: MagicMock, sample_document: MagicMock
+    ) -> GroundingResult:
+        mock_gateway.chat.return_value = self._answer(miscited)
+        return (
+            CitationGroundingDiscriminator(mode="lenient", gateway=mock_gateway)
+            .ground_report(self._report(), sample_document, self._clauses())
+            .verdicts[0]
+        )
+
+    def test_a_supported_recitation_is_kept_and_named(
+        self, mock_gateway: MagicMock, sample_document: MagicMock
+    ) -> None:
+        result = self._ground("4.7", mock_gateway, sample_document)
+        assert result.verdict is GroundingVerdict.GROUNDED
+        assert result.miscited_to_clause_id == "4.7"
+
+    def test_a_hallucinated_recitation_keeps_the_verdict_and_drops_the_pointer(
+        self, mock_gateway: MagicMock, sample_document: MagicMock
+    ) -> None:
+        result = self._ground("9.2", mock_gateway, sample_document)
+        assert result.verdict is GroundingVerdict.GROUNDED
+        assert result.miscited_to_clause_id is None
+
+    def test_an_unknown_named_clause_keeps_the_verdict_and_drops_the_pointer(
+        self, mock_gateway: MagicMock, sample_document: MagicMock
+    ) -> None:
+        result = self._ground("77.7", mock_gateway, sample_document)
+        assert result.verdict is GroundingVerdict.GROUNDED
+        assert result.miscited_to_clause_id is None

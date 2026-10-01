@@ -7,6 +7,7 @@ import json
 from openreview_cli.grounding.models import GroundingVerdict
 from openreview_cli.grounding.prompts import (
     _CLAUSE_WINDOW_CHARS,
+    _MAX_PROMPT_CLAUSES,
     _TRUNCATION_MARKER,
     GROUNDING_PROMPT_TEMPLATE,
     _clause_window,
@@ -387,3 +388,38 @@ class TestClauseWindow:
         assert len(clause.text) > _CLAUSE_WINDOW_CHARS  # the clause really is cut
         assert _TRUNCATION_MARKER in content
         assert "SENTINEL past the window" not in content
+
+
+# ── item 3: sibling clauses, bounded; the fourth answer is a field ────────────
+
+
+def test_the_prompt_shows_at_most_the_cap_of_clauses() -> None:
+    clauses = [
+        Clause(
+            id=f"c{i}",
+            title=None,
+            text="Sentence one is here. " * 20,
+            level=1,
+            parent_id=None,
+            source_page=1,
+            source_paragraph=None,
+            source_span=None,
+        )
+        for i in range(_MAX_PROMPT_CLAUSES + 5)
+    ]
+    content = _user_content(build_grounding_messages(clauses, [(0, "a claim", "c0")]))
+    clause_lines = [line for line in content.splitlines() if line.startswith("[")]
+    assert len(clause_lines) == _MAX_PROMPT_CLAUSES
+    assert all(
+        len(line) <= _CLAUSE_WINDOW_CHARS + len(_TRUNCATION_MARKER) + 8 for line in clause_lines
+    )
+
+
+def test_the_prompt_offers_the_fourth_answer_as_a_field() -> None:
+    assert "miscited_to_clause_id" in GROUNDING_PROMPT_TEMPLATE
+    # The three verdicts are unchanged: the fourth answer is a field, never a verdict.
+    assert '"grounded" | "ungrounded" | "uncertain"' in GROUNDING_PROMPT_TEMPLATE
+
+
+def test_the_verdict_enum_has_no_fourth_member() -> None:
+    assert set(GroundingVerdict.__members__) == {"GROUNDED", "UNGROUNDED", "UNCERTAIN"}

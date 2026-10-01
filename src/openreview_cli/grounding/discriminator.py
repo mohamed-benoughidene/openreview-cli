@@ -26,6 +26,7 @@ from openreview_cli.grounding.models import (
 from openreview_cli.grounding.prompts import (
     build_grounding_messages,
     parse_grounding_response,
+    parse_miscited_ids,
 )
 
 logger = logging.getLogger(__name__)
@@ -268,7 +269,15 @@ class CitationGroundingDiscriminator:
             idx for idx, (_number, absent) in presence_by_index.items() if absent
         }
 
-        messages = build_grounding_messages(matched_clauses, batch, wording_absent_indices)
+        # Show the cited clauses first, then the document's other sections, so the checker
+        # can name a sibling that actually supports a real but wrongly-cited finding. Only
+        # the prompt gets the wider list; the hint below still measures the cited clauses.
+        cited_ids = {clause.id for clause in matched_clauses}
+        prompt_clauses = matched_clauses + [
+            clause for clause in (source_clauses or []) if clause.id not in cited_ids
+        ]
+
+        messages = build_grounding_messages(prompt_clauses, batch, wording_absent_indices)
 
         try:
             chat_kwargs: dict[str, Any] = {
@@ -295,6 +304,11 @@ class CitationGroundingDiscriminator:
 
         parsed = parse_grounding_response(response)
 
+        # The fourth answer, and the text of every clause the checker could have named.
+        # The guard below reads only ids and text; nothing here is logged or recorded.
+        miscited_ids = parse_miscited_ids(response)
+        all_clause_text_by_id = {c.id: c.text for c in (source_clauses or [])}
+
         # Build lookup from parsed results
         parsed_by_index: dict[int, tuple[GroundingVerdict, list[CitationProvenance], float]] = {}
         for claim_index, verdict, provenances, confidence in parsed:
@@ -312,6 +326,16 @@ class CitationGroundingDiscriminator:
             # Determine reason
             reason: str | None = None
             presence_number, absent = presence_by_index[idx]
+
+            # The fourth answer is a pointer field, never a verdict (FIX 1): it is believed
+            # only when the finding's wording is substantially present in the named clause.
+            # A failed check clears the pointer and leaves the verdict exactly as the passes
+            # produced it — this never writes, downgrades or deletes a verdict.
+            named = miscited_ids.get(idx)
+            named_text = all_clause_text_by_id.get(named) if named is not None else None
+            miscited_to_clause_id = (
+                named if (named_text and not presence.measure(claim_text, named_text)[1]) else None
+            )
 
             if idx in parsed_by_index:
                 verdict, provenances, confidence = parsed_by_index[idx]
@@ -353,6 +377,7 @@ class CitationGroundingDiscriminator:
                     reason=reason,
                     grounding_presence=presence_number,
                     wording_absent=absent,
+                    miscited_to_clause_id=miscited_to_clause_id,
                 )
             )
 
