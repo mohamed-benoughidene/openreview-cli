@@ -199,7 +199,9 @@ class TestGroundingAccuracyEndToEnd:
         # Force the *verbatim* cross-clause negative to be the cited clause itself, so the
         # guard drops it. The paraphrased cross-clause negative is a real rewrite of a
         # sentence from the other unit; it is genuinely unsupported and survives the guard.
-        # The hallucination override is fabricated and survives too.
+        # The hallucination override is fabricated and survives too. ``operand_change`` is
+        # disabled so the negative is drawn from the other unit (the cross-document branch).
+        monkeypatch.setattr(SCRIPT, "operand_change", lambda _text: None)
         monkeypatch.setattr(SCRIPT, "unsupported_claim", lambda a, b: a.text)
         monkeypatch.setattr(SCRIPT, "hallucination", lambda claim: FABRICATED)
 
@@ -363,9 +365,12 @@ class TestGroundingParaphraseLabels:
             "paraphrased_supported",
             lambda unit: SCRIPT.first_qualifying_sentence(unit.text),
         )
-        # `unsupported_claim` itself is the un-rewritten writer, so pointing the paraphrase
-        # writer at it makes every negative rewrite a no-op.
-        monkeypatch.setattr(SCRIPT, "paraphrased_unsupported", SCRIPT.unsupported_claim)
+        # An identity paraphrase map makes every rewrite equal its source, so the rewritten
+        # positive and the rewritten negative both duplicate a label already present.
+        monkeypatch.setattr(SCRIPT, "paraphrase", lambda sentence: sentence)
+        # Drive the cross-document branch: the operand-change construction is preferred, and
+        # its sentences would otherwise rewrite under the identity map alone.
+        monkeypatch.setattr(SCRIPT, "operand_change", lambda _text: None)
 
         labels, _drops, generated, skips = SCRIPT._build_grounding_labels(self.UNITS)
 
@@ -403,12 +408,70 @@ class TestGroundingParaphraseLabels:
             row["generator"] == "paraphrased_supported" and row["unit_id"] == "c000"
             for row in labels
         )
-        # ... and so is the other unit's cross-clause paraphrase, which draws on it.
-        assert not any(
+        # ... but the other unit's cross-clause negative is operanded (thirty -> ninety) and
+        # its rewrite changes the wording, so the paraphrase label survives.
+        assert any(
             row["generator"] == "paraphrased_unsupported" and row["unit_id"] == "c001"
             for row in labels
         )
-        assert skips == 2
+        assert skips == 1
+
+
+class TestGroundingNegativeKinds:
+    """Item 2: the cross-clause negative comes from a different document, and the operand
+    change is preferred when the cited clause has an operand. Each row records its own kind."""
+
+    def test_units_carry_their_source_document(self, tmp_path: Path) -> None:
+        units, _ = SCRIPT._load_corpus_units(_tiny_corpus(tmp_path), limit=2)
+        assert [u.document for u in units] == ["a.txt", "b.txt"]
+
+    def test_cross_document_kind_names_a_different_document(self, tmp_path: Path) -> None:
+        # Both fixture units are operanded, so drive the cross-document branch explicitly.
+        units, _ = SCRIPT._load_corpus_units(_tiny_corpus(tmp_path), limit=2)
+        with pytest.MonkeyPatch.context() as monkey:
+            monkey.setattr(SCRIPT, "operand_change", lambda _text: None)
+            labels, _drops, _generated, _skips = SCRIPT._build_grounding_labels(units)
+        negatives = [row for row in labels if row["generator"] == "unsupported_claim"]
+        cited_document = {"c000": "a.txt", "c001": "b.txt"}
+        assert negatives
+        assert all(row["kind"] == "cross_document" for row in negatives)
+        assert all(row["source_document"] != cited_document[row["unit_id"]] for row in negatives)
+
+    def test_operand_change_is_preferred_and_recorded(self, tmp_path: Path) -> None:
+        units, _ = SCRIPT._load_corpus_units(_tiny_corpus(tmp_path), limit=2)
+        labels, _drops, _generated, _skips = SCRIPT._build_grounding_labels(units)
+        # Both fixture units carry a mapped operand, so every cross-family negative row (the
+        # ``unsupported_claim`` and its ``paraphrased_unsupported`` rewrite) records the
+        # operand_change construction; no row falls back to cross_document. The
+        # ``hallucination`` rows are a separate kind and are excluded by the generator filter.
+        kinds = {
+            row["kind"]
+            for row in labels
+            if row["generator"] in {"unsupported_claim", "paraphrased_unsupported"}
+        }
+        assert kinds == {"operand_change"}
+
+    def test_a_clause_without_an_operand_still_gets_a_sound_negative(self) -> None:
+        no_operand = ClauseUnit(
+            id="c000",
+            document="a.txt",
+            text=(
+                "4.9 Governing Law. The parties agree that this agreement is governed by the "
+                "laws of the state named above. Nothing in this section survives termination."
+            ),
+        )
+        other = ClauseUnit(
+            id="c001",
+            document="b.txt",
+            text=(
+                "9.3 Payment Terms. The customer shall pay all undisputed invoices within "
+                "thirty days of receipt. Late payments accrue interest until paid in full."
+            ),
+        )
+        labels, _drops, _generated, _skips = SCRIPT._build_grounding_labels([no_operand, other])
+        neg = [row for row in labels if row["generator"] == "unsupported_claim"]
+        assert neg and neg[0]["kind"] == "cross_document"
+        assert neg[0]["source_document"] == "b.txt"
 
 
 class TestGroundingAccuracyPiiStrip:
@@ -572,6 +635,9 @@ def _stub_reachable_slots(monkeypatch: pytest.MonkeyPatch) -> None:
         "_configured_slots",
         lambda: {"extraction": "x", "reasoning": "x", "grounding": "stub/grounding"},
     )
+    # Disable the preferred operand-change construction so the cross-document branch (the
+    # patched verbatim negative below) is the one exercised, keeping the label counts stable.
+    monkeypatch.setattr(SCRIPT, "operand_change", lambda _text: None)
     monkeypatch.setattr(SCRIPT, "unsupported_claim", lambda a, b: a.text)
     monkeypatch.setattr(SCRIPT, "hallucination", lambda claim: FABRICATED)
 

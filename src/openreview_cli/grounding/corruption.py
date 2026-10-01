@@ -10,8 +10,10 @@ Adapts P-6's four corruption strategies from court citations to contract clauses
 ``paraphrased_unsupported`` and ``hallucination`` (``GROUNDING_VALID_NEGATIVES``) can produce
 a claim that is genuinely unsupported by the clause it is asserted against.
 ``paraphrased_unsupported`` is ``unsupported_claim`` rewritten by the narrow ``paraphrase`` map
-below, so it stays foreign to the cited clause. The other three cannot, and must not be scored
-as grounding negatives:
+below, so it stays foreign to the cited clause. ``unsupported_claim`` draws its claim from
+either a *different document* or the cited clause's own sentence with one operand changed
+(``operand_change``); both are foreign to the cited clause by construction. The other three
+cannot, and must not be scored as grounding negatives:
 
   - ``category_swap`` is a *classification* case: it rewrites a playbook category label and
     never receives the clause text, so the claim stays supported by its clause.
@@ -102,10 +104,15 @@ class ClauseUnit(NamedTuple):
     the corpus, and ``CitationGroundingDiscriminator.ground_claim`` builds its own ``Clause``
     from the arguments. Construct one at the call site — ``ClauseUnit(id=..., text=...)`` —
     so a harness unit type never has to leak into this module.
+
+    ``document`` names the contract the paragraph came from, so the harness can draw its
+    cross-clause negative from a *different* document (a sentence that cannot be supported by
+    the cited clause). It is ``None`` when the caller does not track provenance.
     """
 
     id: str
     text: str
+    document: str | None = None
 
 
 def _normalize_for_guard(text: str) -> str:
@@ -282,6 +289,35 @@ def paraphrased_unsupported(clause_a: ClauseUnit, clause_b: ClauseUnit) -> str |
     if sentence is None:
         return None
     return paraphrase(sentence)
+
+
+# FIX 9 — the reviewed operand map, limited to the operands this corpus carries: a
+# prior-written-consent phrase, the two party labels, a survival period and a payment period.
+# Anything else is dead weight the corpus never reaches. The first matching pair wins.
+_OPERAND_MAP: tuple[tuple[str, str], ...] = (
+    ("prior written consent", "prior oral consent"),
+    ("receiving party", "disclosing party"),
+    ("five years", "nine years"),
+    ("thirty", "ninety"),
+)
+_OPERAND_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = tuple(
+    (re.compile(rf"\b{re.escape(source)}\b", re.IGNORECASE), replacement)
+    for source, replacement in _OPERAND_MAP
+)
+
+
+def operand_change(clause_text: str) -> str | None:
+    """The clause's own qualifying sentence with one operand changed, or ``None`` when it has
+    no qualifying sentence or no mapped operand — the caller then uses the cross-document
+    negative rather than keep an unchanged sentence."""
+    sentence = first_qualifying_sentence(clause_text)
+    if sentence is None:
+        return None
+    for pattern, replacement in _OPERAND_PATTERNS:
+        changed = pattern.sub(replacement, sentence)
+        if changed != sentence:
+            return changed
+    return None
 
 
 def clause_swap(claim: str, clauses: list[Clause], original_clause_id: str) -> str:
