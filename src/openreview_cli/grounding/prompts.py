@@ -91,9 +91,10 @@ _TRUNCATION_MARKER = " …[clause text truncated]"
 # name a section that supports a finding the cited clause does not. The list is bounded — a
 # hard cap on how many clauses are shown — so the built prompt cannot grow without limit.
 # The cap is 8, not 20: 8 sections at the ~2000-character window plus the fixed instruction
-# text is ~17k characters, which fits the grounding model's 8192-token context (config
-# ``DEFAULT_CONFIG``) with headroom. At 20 sections the prompt was ~44k characters and Ollama
-# silently truncated it at its 4096 default, dropping the sibling sections and second question.
+# text is ~17k characters (~6,100 tokens), which together with the 4,000-token output
+# reservation fits the grounding model's 16384-token context (config ``DEFAULT_CONFIG``) with
+# headroom. At 20 sections the prompt was ~44k characters and Ollama silently truncated it at
+# its 4096 default, dropping the sibling sections and second question.
 _MAX_PROMPT_CLAUSES = 8
 
 

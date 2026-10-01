@@ -160,19 +160,3 @@ def test_the_shipped_default_asks_the_local_grounding_slot_for_json() -> None:
     gateway = cast("dict[str, Any]", DEFAULT_CONFIG["gateway"])
     grounding = gateway["models"]["grounding"]
     assert grounding["extra_params"]["response_format"] == {"type": "json_object"}
-
-
-def test_the_shipped_grounding_slot_reserves_room_for_the_bounded_prompt() -> None:
-    """The grounding slot's Ollama context must fit the worst-case prompt (FIX 1).
-
-    Ollama's default is 4096 and it truncates silently, so the slot must set ``num_ctx``
-    itself. The exact size the built prompt needs is pinned in
-    ``tests/unit/test_grounding_prompts.py``; this test only pins the floor.
-    """
-    from typing import Any, cast
-
-    from openreview_cli.config.loader import DEFAULT_CONFIG
-
-    gateway = cast("dict[str, Any]", DEFAULT_CONFIG["gateway"])
-    grounding = gateway["models"]["grounding"]
-    assert int(grounding["extra_params"]["num_ctx"]) >= 8192

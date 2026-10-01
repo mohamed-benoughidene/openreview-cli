@@ -439,14 +439,17 @@ def test_the_prompt_shows_at_most_the_cap_of_clauses() -> None:
     )
 
 
-def _configured_grounding_num_ctx() -> int:
-    """The context the shipped grounding slot reserves, read from the config the gateway
-    builds its request from (``config/loader.py`` ``DEFAULT_CONFIG``)."""
+def _configured_grounding_budget() -> tuple[int, int]:
+    """The grounding slot's ``(num_ctx, max_tokens)`` as the gateway builds its request.
+
+    Both come from the config the gateway reads (``config/loader.py`` ``DEFAULT_CONFIG``):
+    the context the model runs with, and the output the request reserves inside it.
+    """
     from typing import Any, cast
 
     gateway = cast("dict[str, Any]", DEFAULT_CONFIG["gateway"])
     grounding = gateway["models"]["grounding"]
-    return int(grounding["extra_params"]["num_ctx"])
+    return int(grounding["extra_params"]["num_ctx"]), int(grounding["params"]["max_tokens"])
 
 
 def test_the_worst_case_prompt_stays_inside_the_configured_context() -> None:
@@ -481,7 +484,7 @@ def test_the_worst_case_prompt_stays_inside_the_configured_context() -> None:
     claims = [(i, "x" * 300, f"c{i}") for i in range(_BATCH_SIZE)]
     content = _user_content(build_grounding_messages(clauses, claims, set(range(_BATCH_SIZE))))
 
-    num_ctx = _configured_grounding_num_ctx()
+    num_ctx, output_reservation = _configured_grounding_budget()
     # English runs about 3.5 characters per token; 3.5 is the conservative end of the usual
     # 3-4 range, i.e. it over-counts tokens rather than under-counting them. Measured here:
     #   sections: 8 x (1956-char window + marker + id prefix) = 15,710 chars
@@ -492,10 +495,12 @@ def test_the_worst_case_prompt_stays_inside_the_configured_context() -> None:
     estimated_tokens = len(content) / chars_per_token
 
     assert _MAX_PROMPT_CLAUSES == 8 and _CLAUSE_WINDOW_CHARS == 2000
-    assert num_ctx >= 8192  # the review's floor for the grounding model
-    # At least 15% headroom: ~6,120 tokens against a context of 8,192.
-    assert estimated_tokens <= num_ctx * 0.85, (
-        f"worst-case prompt ~{estimated_tokens:.0f} tokens against num_ctx {num_ctx}"
+    # The bound must cover the input AND the output the request reserves: the slot's context
+    # has to hold the worst-case prompt plus ``max_tokens``, with margin, or Ollama truncates
+    # the tail silently — the exact failure the context size was added to prevent.
+    assert estimated_tokens + output_reservation <= num_ctx * 0.85, (
+        f"worst-case prompt ~{estimated_tokens:.0f} tokens plus a {output_reservation}-token "
+        f"output reservation exceeds num_ctx {num_ctx}"
     )
 
 
