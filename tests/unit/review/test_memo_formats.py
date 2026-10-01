@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 from openreview_cli.review.memo.formats import (
+    _risky_note,
     render_docx,
     render_json,
     render_markdown,
@@ -423,14 +424,20 @@ EXCLUSIONS_TEXT = "Excluded by grounding (strict): 2 unsupported, 1 not sure"
 
 
 class TestMarkdownRiskyPatterns:
-    def test_an_ordinary_clause_renders_exactly_as_today(self) -> None:
+    def test_an_ordinary_clause_has_no_note(self) -> None:
+        """An ordinary clause earns no note — asserted directly.
+
+        Comparing an ordinary clause's rendering with a second ordinary one's is a tautology:
+        an implementation that printed a note on *every* clause gives both sides the same note
+        and passes. Pinning the note itself to ``None`` fails against that implementation.
+        """
         ordinary = _make_wording_note_memo(
             accepted_despite_absent_wording=False, grounding_presence=1.0
+        ).clauses[0]
+        assert _risky_note(ordinary) is None
+        assert WORDING_NOTE_TEXT not in render_markdown(
+            _make_wording_note_memo(accepted_despite_absent_wording=False, grounding_presence=1.0)
         )
-        baseline = _make_wording_note_memo(
-            accepted_despite_absent_wording=False, grounding_presence=None
-        )
-        assert render_markdown(ordinary) == render_markdown(baseline)
 
     def test_each_risky_case_gets_its_own_line(self) -> None:
         absent = _make_wording_note_memo(
@@ -456,16 +463,16 @@ class TestMarkdownRiskyPatterns:
 
 
 class TestDocxRiskyPatterns:
-    def test_an_ordinary_clause_renders_exactly_as_today(self) -> None:
+    def test_an_ordinary_clause_gets_no_note_line(self) -> None:
+        # Same tautology as the Markdown case: two ordinary clauses render identically even
+        # when every clause gets a note. Assert the note text is absent instead.
         ordinary = _make_wording_note_memo(
             accepted_despite_absent_wording=False, grounding_presence=1.0
         )
-        baseline = _make_wording_note_memo(
-            accepted_despite_absent_wording=False, grounding_presence=None
-        )
-        assert [p.text for p in render_docx(ordinary).paragraphs] == [
-            p.text for p in render_docx(baseline).paragraphs
-        ]
+        texts = [p.text for p in render_docx(ordinary).paragraphs]
+        assert not any(WORDING_NOTE_TEXT in t for t in texts)
+        assert not any(NOT_SURE_TEXT in t for t in texts)
+        assert not any(DISAGREED_TEXT in t for t in texts)
 
     def test_each_risky_case_gets_its_own_line(self) -> None:
         absent = _make_wording_note_memo(
