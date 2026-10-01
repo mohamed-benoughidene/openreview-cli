@@ -14,7 +14,10 @@ if TYPE_CHECKING:
     from openreview_cli.review.models import ReviewReport
 
 from openreview_cli.grounding import presence
-from openreview_cli.grounding.discriminator import CitationGroundingDiscriminator
+from openreview_cli.grounding.discriminator import (
+    CitationGroundingDiscriminator,
+    combine_grounding_passes,
+)
 from openreview_cli.grounding.models import (
     CGReport,
     GroundingResult,
@@ -1070,11 +1073,13 @@ def test_model_override_passed_to_gateway(
     """Regression: CitationGroundingDiscriminator(model=...) must override the
     config default and reach Gateway.chat as the `model` kwarg. Without this,
     run_grounding(model=...) / the CLI --model flag silently did nothing and
-    the config slot's primary was always used."""
+    the config slot's primary was always used. FIX 8: with the agreement rule on the
+    second pass must forward the same override, so assert it on EVERY call."""
     d = CitationGroundingDiscriminator(
         mode="lenient",
         gateway=mock_gateway,
         model="openrouter/deepseek/deepseek-r1",
+        require_pass_agreement=True,
     )
     d.ground_claim(
         claim_text="The term is twelve months.",
@@ -1082,8 +1087,11 @@ def test_model_override_passed_to_gateway(
         clause_text="Clause 2. Term. Twelve months.",
     )
     assert mock_gateway.chat.called
-    _, kwargs = mock_gateway.chat.call_args
-    assert kwargs.get("model") == "openrouter/deepseek/deepseek-r1"
+    assert len(mock_gateway.chat.call_args_list) == 2  # first pass + narrow question
+    assert all(
+        call.kwargs.get("model") == "openrouter/deepseek/deepseek-r1"
+        for call in mock_gateway.chat.call_args_list
+    )
 
 
 def test_no_model_override_omits_model_kwarg(mock_gateway: MagicMock) -> None:
@@ -1415,7 +1423,7 @@ class TestWordingAbsentHintReachesTheModel:
 
         d.ground_report(self._report(), sample_document, self._source_clauses())
 
-        messages = mock_gateway.chat.call_args[0][1]
+        messages = mock_gateway.chat.call_args_list[0][0][1]
         content = next(m["content"] for m in messages if m["role"] == "user")
 
         assert self._HINT in self._claim_line(content, 1)
@@ -1619,3 +1627,99 @@ class TestMiscitedIsAFieldWithAGuard:
         result = self._ground("77.7", mock_gateway, sample_document)
         assert result.verdict is GroundingVerdict.GROUNDED
         assert result.miscited_to_clause_id is None
+
+
+class TestBothPassesMustAgree:
+    """Item 4: one extra call per batch when the flag is on; either unsupported rejects; both
+    must accept; a failed second pass keeps the first pass's verdict."""
+
+    _fixtures = TestGroundingPresenceRecorded()
+
+    def _answer(self, verdict: str) -> str:
+        return json.dumps(
+            [
+                {
+                    "claim_index": 0,
+                    "verdict": verdict,
+                    "provenances": [],
+                    "confidence": 0.9,
+                    "reason": None,
+                }
+            ]
+        )
+
+    def test_the_combine_rule(self) -> None:
+        G, U, C = GroundingVerdict, GroundingVerdict.UNGROUNDED, GroundingVerdict.UNCERTAIN
+        assert combine_grounding_passes(G.GROUNDED, G.GROUNDED) is G.GROUNDED
+        assert combine_grounding_passes(G.GROUNDED, U) is U
+        assert combine_grounding_passes(U, G.GROUNDED) is U
+        assert combine_grounding_passes(G.GROUNDED, C) is C
+        assert combine_grounding_passes(C, U) is C
+        # An unavailable second pass keeps the first verdict — never a downgrade.
+        assert combine_grounding_passes(G.GROUNDED, None, second_available=False) is G.GROUNDED
+
+    def test_the_rule_is_off_by_default(self, mock_gateway: MagicMock) -> None:
+        CitationGroundingDiscriminator(mode="lenient", gateway=mock_gateway).ground_claim(
+            "a claim", "4.3", "the clause text"
+        )
+        assert mock_gateway.chat.call_count == 1
+
+    def test_ground_claim_calls_the_gateway_twice_and_applies_the_rule(
+        self, mock_gateway: MagicMock
+    ) -> None:
+        mock_gateway.chat.side_effect = [self._answer("grounded"), self._answer("ungrounded")]
+        d = CitationGroundingDiscriminator(
+            mode="lenient", gateway=mock_gateway, require_pass_agreement=True
+        )
+        verdict, _p, _c = d.ground_claim("a claim", "4.3", "the clause text")
+        assert mock_gateway.chat.call_count == 2
+        assert verdict is GroundingVerdict.UNGROUNDED
+
+    def test_a_failed_second_call_keeps_the_first_verdict_and_counts_it(
+        self, mock_gateway: MagicMock
+    ) -> None:
+        mock_gateway.chat.side_effect = [self._answer("grounded"), RuntimeError("boom")]
+        d = CitationGroundingDiscriminator(
+            mode="lenient", gateway=mock_gateway, require_pass_agreement=True
+        )
+        verdict, _p, _c = d.ground_claim("a claim", "4.3", "the clause text")
+        assert verdict is GroundingVerdict.GROUNDED
+        assert d.second_pass_fallbacks == 1
+
+    def test_ground_report_makes_one_second_call_per_batch(
+        self, mock_gateway: MagicMock, sample_report: MagicMock, sample_document: MagicMock
+    ) -> None:
+        sample_report.assessments = sample_report.assessments[:3]
+        mock_gateway.chat.return_value = json.dumps(
+            [
+                {
+                    "claim_index": i,
+                    "verdict": "grounded",
+                    "provenances": [],
+                    "confidence": 0.9,
+                    "reason": None,
+                }
+                for i in range(3)
+            ]
+        )
+        d = CitationGroundingDiscriminator(
+            mode="lenient", gateway=mock_gateway, require_pass_agreement=True
+        )
+        d.ground_report(sample_report, sample_document)
+        assert mock_gateway.chat.call_count == 2  # one first pass + one narrow question
+
+    def test_a_disagreement_is_recorded_on_the_result(
+        self, mock_gateway: MagicMock, sample_document: MagicMock
+    ) -> None:
+        mock_gateway.chat.side_effect = [self._answer("grounded"), self._answer("ungrounded")]
+        d = CitationGroundingDiscriminator(
+            mode="lenient", gateway=mock_gateway, require_pass_agreement=True
+        )
+        cg = d.ground_report(
+            self._fixtures._report(self._fixtures._CLAIM),
+            sample_document,
+            self._fixtures._source_clauses(),
+        )
+        assert cg.verdicts[0].verdict is GroundingVerdict.UNGROUNDED
+        assert cg.verdicts[0].pass_disagreement is True
+        assert cg.verdicts[0].not_sure is False

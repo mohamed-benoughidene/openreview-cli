@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-GROUNDING_PROMPT_TEMPLATE = """You are a citation grounding discriminator for contract analysis. Your task is to determine whether each assessment claim is actually supported by the source document clause it cites.
+_GROUNDING_PROMPT_HEAD = """You are a citation grounding discriminator for contract analysis. Your task is to determine whether each assessment claim is actually supported by the source document clause it cites.
 
 For each claim, determine:
 1. Is the claim supported by the cited clause text? (GROUNDED)
@@ -40,7 +40,29 @@ For each claim, respond with a JSON object containing:
 - reason: str | None — explanation if ungrounded or uncertain
 - miscited_to_clause_id: str | None — set this only when the claim is genuinely true but the clause it cites does not support it while a different clause in the list does; name that clause's id. Leave it null in every other case. Keep verdict "grounded" when you set it.
 
-For each claim, respond with one JSON object. If there is a single claim, you may return that object on its own; if there are several, return a JSON array of the objects, one per claim, in the same order as the input claims. Return the JSON only — no text before or after it."""
+"""
+
+# FIX 5: the JSON-only instruction tail lives once and is appended to both templates by
+# concatenation, so the two passes cannot drift and the raw first-pass template still
+# contains the exact tail the pinned tests read.
+_JSON_ONLY_TAIL = (
+    "For each claim, respond with one JSON object. If there is a single claim, you may return that "
+    "object on its own; if there are several, return a JSON array of the objects, one per claim, in the "
+    "same order as the input claims. Return the JSON only — no text before or after it."
+)
+
+GROUNDING_PROMPT_TEMPLATE = _GROUNDING_PROMPT_HEAD + _JSON_ONLY_TAIL
+
+# Item 4: the second narrow question. It asks only whether the cited clause imposes a
+# condition, a limit, a number or a party the finding leaves out — a closed question with a
+# JSON answer, never an instruction to reason in prose.
+SECOND_PASS_PROMPT_TEMPLATE = (
+    "You are checking one narrow question about a contract finding and the clause it cites.\n\n"
+    "Question: does the cited clause impose a condition, a limit, a number or a party that the "
+    "finding leaves out?\n\nAnswer about the clause's content only. Do not restate the finding and "
+    "do not explain your answer.\n\nSource clauses:\n{clauses_text}\n\nFindings to check:"
+    "\n{claims_text}\n\n"
+) + _JSON_ONLY_TAIL
 
 
 # Appended, on that claim's own line, when the claim's wording was measured absent from
@@ -114,12 +136,12 @@ def build_grounding_messages(
     # Format clauses for the prompt: bounded, each windowed to whole sentences.
     clauses_text = _format_clauses(source_clauses)
 
-    # Format claims for the prompt
+    # Format claims for the prompt through the one shared formatter, so both passes send the
+    # finding's wording identically.
     claims_lines: list[str] = []
-    for idx, claim_text, cited_clause_id in claims:
-        truncated = claim_text[:300] if len(claim_text) > 300 else claim_text
-        line = f'{idx}. "{truncated}" (cites clause {cited_clause_id})'
-        if wording_absent_indices and idx in wording_absent_indices:
+    for claim in claims:
+        line = _format_claim(claim)
+        if wording_absent_indices and claim[0] in wording_absent_indices:
             line = f"{line} {_WORDING_ABSENT_HINT}"
         claims_lines.append(line)
 
@@ -131,6 +153,33 @@ def build_grounding_messages(
     )
 
     return [{"role": "user", "content": user_content}]
+
+
+def _format_claim(claim: tuple[int, str, str]) -> str:
+    """One claim line, shared by both passes so the finding's wording is sent identically."""
+    idx, claim_text, cited_clause_id = claim
+    truncated = claim_text[:300] if len(claim_text) > 300 else claim_text
+    return f'{idx}. "{truncated}" (cites clause {cited_clause_id})'
+
+
+def build_second_pass_messages(
+    source_clauses: list[Clause],
+    claims: list[tuple[int, str, str]],
+) -> list[dict[str, str]]:
+    """Messages for the one narrow second question. No hint: the question is different.
+
+    Shares ``_format_clauses`` and ``_format_claim`` with the first pass, so the clause list
+    and the finding lines the model sees are identical and the two prompts cannot drift.
+    """
+    return [
+        {
+            "role": "user",
+            "content": SECOND_PASS_PROMPT_TEMPLATE.format(
+                clauses_text=_format_clauses(source_clauses),
+                claims_text="\n".join(_format_claim(c) for c in claims),
+            ),
+        }
+    ]
 
 
 def parse_grounding_response(

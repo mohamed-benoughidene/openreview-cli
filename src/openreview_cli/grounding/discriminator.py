@@ -25,6 +25,7 @@ from openreview_cli.grounding.models import (
 )
 from openreview_cli.grounding.prompts import (
     build_grounding_messages,
+    build_second_pass_messages,
     parse_grounding_response,
     parse_miscited_ids,
 )
@@ -32,6 +33,25 @@ from openreview_cli.grounding.prompts import (
 logger = logging.getLogger(__name__)
 
 _BATCH_SIZE = 10  # Max claims per gateway call
+
+
+def combine_grounding_passes(
+    first: GroundingVerdict,
+    second: GroundingVerdict | None,
+    *,
+    second_available: bool = True,
+) -> GroundingVerdict:
+    """Both supported accepts; an abstention from either pass is 'not sure'; otherwise the
+    disagreement rejects. An unavailable second pass keeps the first verdict — never a
+    downgrade, so a broken second call cannot turn an accepted finding into 'not sure' (which
+    strict mode would delete)."""
+    if not second_available or second is None:
+        return first
+    if GroundingVerdict.UNCERTAIN in (first, second):
+        return GroundingVerdict.UNCERTAIN
+    if first is GroundingVerdict.GROUNDED and second is GroundingVerdict.GROUNDED:
+        return GroundingVerdict.GROUNDED
+    return GroundingVerdict.UNGROUNDED
 
 
 class CitationGroundingDiscriminator:
@@ -48,14 +68,22 @@ class CitationGroundingDiscriminator:
         model: str | None = None,
         output_dir: str | None = None,
         session_id: str | None = None,
+        require_pass_agreement: bool = False,
     ) -> None:
         self.mode: Literal["strict", "lenient"] = mode
         self._model = model
         self._output_dir = output_dir
         self._session_id = session_id
+        # Item 4: the both-passes-must-agree rule is off by default, so the shipped product's
+        # behaviour is unchanged until the measurement supports turning it on.
+        self.require_pass_agreement = require_pass_agreement
         # Answers the reader could not parse: distinct from a model that said
         # "uncertain", which also returns UNCERTAIN at confidence 0.0.
         self.unreadable_answers = 0
+        # Second passes that failed or were unreadable: the first pass's verdict was kept.
+        # Distinct from ``unreadable_answers`` so a broken second call is visible and is never
+        # mistaken for a model that abstained.
+        self.second_pass_fallbacks = 0
 
         from openreview_cli.gateway.router import Gateway as _Gateway
 
@@ -129,7 +157,66 @@ class CitationGroundingDiscriminator:
             return (GroundingVerdict.UNCERTAIN, [], 0.0)
 
         _, verdict, provenances, confidence = results[0]
+
+        if self.require_pass_agreement:
+            # The single-finding entry point is not batched (the measurement runs through it),
+            # so its one narrow question is one call for its one finding.
+            second = self._second_pass([source_clause], [(0, claim_text, cited_clause_id)])
+            verdict, _disagreement, _not_sure = self._apply_pass_agreement(0, verdict, second)
+
         return (verdict, provenances, confidence)
+
+    def _apply_pass_agreement(
+        self,
+        idx: int,
+        verdict: GroundingVerdict,
+        second_verdicts: dict[int, GroundingVerdict] | None,
+    ) -> tuple[GroundingVerdict, bool, bool]:
+        """Combine one claim's first-pass verdict with the second pass's answer (item 4).
+
+        Returns ``(verdict, pass_disagreement, not_sure)``. The rule is applied only when it is
+        on — then ``second_verdicts`` is the batch's map, ``None`` when the second call failed or
+        nothing parsed; a missing index is treated the same way. In every other case the first
+        verdict is returned unchanged, so the default (off) path cannot move a verdict. A missing
+        second verdict keeps the first verdict and counts the fallback — never a downgrade, which
+        would let strict mode delete a finding the first pass accepted. The two flags are
+        display-only: neither is read by any verdict decision.
+        """
+        if not self.require_pass_agreement:
+            return verdict, False, False
+        second = second_verdicts.get(idx) if second_verdicts is not None else None
+        if second is None:
+            self.second_pass_fallbacks += 1
+            return verdict, False, False
+        combined = combine_grounding_passes(verdict, second)
+        disagreed = {verdict, second} == {
+            GroundingVerdict.GROUNDED,
+            GroundingVerdict.UNGROUNDED,
+        }
+        return combined, disagreed, combined is GroundingVerdict.UNCERTAIN
+
+    def _second_pass(
+        self,
+        prompt_clauses: list[Clause],
+        batch: list[tuple[int, str, str]],
+    ) -> dict[int, GroundingVerdict] | None:
+        """The narrow question, one call per batch, forwarding the same model override and
+        session id as the first pass. ``None`` when the call failed or nothing parsed: the
+        caller then keeps the first pass's verdict, so a broken second pass can never turn an
+        accepted finding into 'not sure' (which strict mode deletes)."""
+        messages = build_second_pass_messages(prompt_clauses, batch)
+        chat_kwargs: dict[str, Any] = {"requirement": CapabilityRequirement(capability="reasoning")}
+        if self._model:
+            chat_kwargs["model"] = self._model
+        if self._session_id is not None:
+            chat_kwargs["session_id"] = self._session_id
+        try:
+            response = self._gateway.chat("grounding", messages, **chat_kwargs)
+        except Exception as e:
+            logger.warning("Second grounding pass failed: %s", e)
+            return None
+        parsed = parse_grounding_response(response)
+        return {index: verdict for index, verdict, _p, _c in parsed} if parsed else None
 
     def ground_report(
         self,
@@ -320,6 +407,12 @@ class CitationGroundingDiscriminator:
         # therefore counts the whole batch.
         self.unreadable_answers += sum(1 for index, _, _ in batch if index not in parsed_by_index)
 
+        # Item 4: ONE extra call for the whole batch (≤10 findings), never one per finding.
+        # ``None`` when the call failed, nothing parsed, or the rule is off (the default).
+        second_verdicts = (
+            self._second_pass(prompt_clauses, batch) if self.require_pass_agreement else None
+        )
+
         # Map results back to batch items
         results: list[GroundingResult] = []
         for idx, claim_text, cited_clause_id in batch:
@@ -359,6 +452,14 @@ class CitationGroundingDiscriminator:
                 provenances = []
                 confidence = min(confidence, 0.5)
 
+            # Item 4: combine the two passes for this claim. Only when the flag turned the
+            # second pass on and it really answered for this index. A missing or failed second
+            # verdict keeps the first pass's verdict (counted, never a downgrade). The two
+            # flags are display-only; neither is read by any verdict decision.
+            verdict, pass_disagreement, not_sure = self._apply_pass_agreement(
+                idx, verdict, second_verdicts
+            )
+
             # Record audit entry
             audit_entry = DiscriminationAuditEntry(
                 claim_hash=DiscriminationAuditEntry._hash_claim(claim_text),
@@ -378,6 +479,8 @@ class CitationGroundingDiscriminator:
                     grounding_presence=presence_number,
                     wording_absent=absent,
                     miscited_to_clause_id=miscited_to_clause_id,
+                    pass_disagreement=pass_disagreement,
+                    not_sure=not_sure,
                 )
             )
 

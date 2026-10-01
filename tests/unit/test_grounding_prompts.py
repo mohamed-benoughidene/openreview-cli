@@ -12,6 +12,7 @@ from openreview_cli.grounding.prompts import (
     GROUNDING_PROMPT_TEMPLATE,
     _clause_window,
     build_grounding_messages,
+    build_second_pass_messages,
     parse_grounding_response,
 )
 from openreview_cli.parsing.models import Clause
@@ -423,3 +424,30 @@ def test_the_prompt_offers_the_fourth_answer_as_a_field() -> None:
 
 def test_the_verdict_enum_has_no_fourth_member() -> None:
     assert set(GroundingVerdict.__members__) == {"GROUNDED", "UNGROUNDED", "UNCERTAIN"}
+
+
+# ── item 4: the second narrow question, closed, sharing the same machinery ────
+
+
+def test_the_second_pass_question_is_closed_and_never_asks_for_reasoning() -> None:
+    content = _user_content(build_second_pass_messages(_CLAUSES, _CLAIMS))
+    assert "leaves out" in content
+    for banned in ("step by step", "chain of thought", "think through", "explain your reasoning"):
+        assert banned not in content.lower()
+
+
+def test_the_second_pass_uses_the_same_clause_window() -> None:
+    # FIX 8: 100 sentences (~2200 chars) actually exceeds the 2000-char window, so it truncates.
+    long_clause = Clause(
+        id="4.3",
+        title=None,
+        text="Sentence one is here. " * 100,
+        level=1,
+        parent_id=None,
+        source_page=1,
+        source_paragraph=None,
+        source_span=None,
+    )
+    assert _TRUNCATION_MARKER in _user_content(
+        build_second_pass_messages([long_clause], [(0, "a claim", "4.3")])
+    )
