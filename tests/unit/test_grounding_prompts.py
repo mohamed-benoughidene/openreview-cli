@@ -357,3 +357,33 @@ class TestClauseWindow:
         # sentence longer than the window is clamped at the window, not kept whole.
         text = "x" * (_CLAUSE_WINDOW_CHARS + 500)
         assert _clause_window(text) == text[:_CLAUSE_WINDOW_CHARS] + _TRUNCATION_MARKER
+
+    def test_the_built_message_carries_the_window_and_not_the_text_beyond_it(self) -> None:
+        """The call site, not the helper: assert on the message the model receives.
+
+        Every test above exercises ``_clause_window`` directly, so a call site that went
+        back to slicing the raw clause text would still pass them. This builds the real
+        messages and pins what the model is sent: the window's truncation marker is
+        present and the clause text past the window never reaches it.
+        """
+        filler = (
+            "The receiving party shall not disclose Confidential Information to any third "
+            "party without prior written consent. "
+        )
+        beyond = "SENTINEL past the window shall indemnify the other party for all losses."
+        clause = Clause(
+            id="4.3",
+            title=None,
+            text=filler * 60 + beyond,
+            level=1,
+            parent_id=None,
+            source_page=1,
+            source_paragraph=None,
+            source_span=None,
+        )
+
+        content = _user_content(build_grounding_messages([clause], [(0, "a claim", "4.3")]))
+
+        assert len(clause.text) > _CLAUSE_WINDOW_CHARS  # the clause really is cut
+        assert _TRUNCATION_MARKER in content
+        assert "SENTINEL past the window" not in content
