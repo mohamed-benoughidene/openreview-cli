@@ -123,6 +123,9 @@ class MemoExporter:
                     grounding_presence=ca.grounding_presence,
                     not_sure=bool(ca.not_sure),
                     pass_disagreement=bool(ca.pass_disagreement),
+                    # FIX 1: the "real but wrongly cited" pointer is carried onto the memo's
+                    # clause record so the display-only note can name the supporting section.
+                    miscited_to_clause_id=ca.miscited_to_clause_id,
                 )
             )
 

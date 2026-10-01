@@ -245,6 +245,16 @@ class TestWordingNoteBuilder:
 
         assert memo.clauses[0].accepted_despite_absent_wording is False
         assert memo.clauses[0].grounding_presence is None
+        assert memo.clauses[0].miscited_to_clause_id is None
+
+    def test_miscited_pointer_is_carried_onto_the_clause(self) -> None:
+        """FIX 1: the "real but wrongly cited" pointer reaches the memo's clause record."""
+        ca = _make_assessment("c1", Position.PREFERRED, 0.92, "green")
+        ca.miscited_to_clause_id = "4.7"
+
+        memo = self._memo_for(ca)
+
+        assert memo.clauses[0].miscited_to_clause_id == "4.7"
 
 
 class TestExport:

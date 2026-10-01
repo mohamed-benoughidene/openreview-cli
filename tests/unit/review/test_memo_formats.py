@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 from openreview_cli.review.memo.formats import (
+    _miscited_note,
     _risky_note,
     render_docx,
     render_json,
@@ -315,6 +316,7 @@ def _make_wording_note_memo(
     grounding_presence: float | None,
     not_sure: bool = False,
     pass_disagreement: bool = False,
+    miscited_to_clause_id: str | None = None,
 ) -> MemoReport:
     summary = MemoSummary(
         recommendation="approve",
@@ -336,6 +338,7 @@ def _make_wording_note_memo(
         accepted_despite_absent_wording=accepted_despite_absent_wording,
         not_sure=not_sure,
         pass_disagreement=pass_disagreement,
+        miscited_to_clause_id=miscited_to_clause_id,
     )
     return MemoReport(
         memo_version="1.0",
@@ -461,6 +464,25 @@ class TestMarkdownRiskyPatterns:
         memo.overall.grounding_excluded_unsure = 1
         assert EXCLUSIONS_TEXT in render_markdown(memo)
 
+    def test_no_exclusion_line_when_nothing_was_excluded(self) -> None:
+        """FIX 10(c): the "no exclusions means no line" branch is pinned.
+
+        Deleting the ``if not unsupported and not unsure: return None`` guard prints
+        "Excluded by grounding (strict): 0 unsupported, 0 not sure" on every memo; the
+        positive test above still passes against it, so the absence is asserted here.
+        """
+        memo = _make_wording_note_memo(
+            accepted_despite_absent_wording=False, grounding_presence=None
+        )
+        assert (
+            memo.overall.grounding_excluded_unsupported,
+            memo.overall.grounding_excluded_unsure,
+        ) == (
+            0,
+            0,
+        )
+        assert "Excluded by grounding" not in render_markdown(memo)
+
 
 class TestDocxRiskyPatterns:
     def test_an_ordinary_clause_gets_no_note_line(self) -> None:
@@ -495,3 +517,51 @@ class TestDocxRiskyPatterns:
         memo.overall.grounding_excluded_unsupported = 2
         memo.overall.grounding_excluded_unsure = 1
         assert any(EXCLUSIONS_TEXT in p.text for p in render_docx(memo).paragraphs)
+
+    def test_no_exclusion_line_when_nothing_was_excluded(self) -> None:
+        memo = _make_wording_note_memo(
+            accepted_despite_absent_wording=False, grounding_presence=None
+        )
+        assert not any("Excluded by grounding" in p.text for p in render_docx(memo).paragraphs)
+
+
+# ── Display-only miscited pointer note (FIX 1): name the supporting section ──
+
+MISCITED_NOTE_PREFIX = "Grounding: supported by clause"
+MISCITED_NOTE_TEXT = f"{MISCITED_NOTE_PREFIX} 4.7, not the clause cited"
+
+
+class TestMarkdownMiscitedNote:
+    def test_a_pointer_renders_a_note_naming_the_supporting_section(self) -> None:
+        memo = _make_wording_note_memo(
+            accepted_despite_absent_wording=False,
+            grounding_presence=1.0,
+            miscited_to_clause_id="4.7",
+        )
+        assert MISCITED_NOTE_TEXT in render_markdown(memo)
+
+    def test_an_ordinary_clause_renders_exactly_as_today(self) -> None:
+        # The wrong implementation caught here: a note that fires whenever a clause is
+        # rendered, pointer or not. An ordinary clause has no pointer and earns no note.
+        ordinary = _make_wording_note_memo(
+            accepted_despite_absent_wording=False, grounding_presence=1.0
+        )
+        assert _miscited_note(ordinary.clauses[0]) is None
+        assert ordinary.clauses[0].miscited_to_clause_id is None
+        assert MISCITED_NOTE_PREFIX not in render_markdown(ordinary)
+
+
+class TestDocxMiscitedNote:
+    def test_a_pointer_renders_a_note_naming_the_supporting_section(self) -> None:
+        memo = _make_wording_note_memo(
+            accepted_despite_absent_wording=False,
+            grounding_presence=1.0,
+            miscited_to_clause_id="4.7",
+        )
+        assert any(MISCITED_NOTE_TEXT in p.text for p in render_docx(memo).paragraphs)
+
+    def test_an_ordinary_clause_renders_exactly_as_today(self) -> None:
+        ordinary = _make_wording_note_memo(
+            accepted_despite_absent_wording=False, grounding_presence=1.0
+        )
+        assert not any(MISCITED_NOTE_PREFIX in p.text for p in render_docx(ordinary).paragraphs)

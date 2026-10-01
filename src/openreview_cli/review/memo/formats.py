@@ -78,6 +78,18 @@ def _risky_note(clause: MemoClause) -> str | None:
     return None
 
 
+def _miscited_note(clause: MemoClause) -> str | None:
+    """The display-only pointer for a real-but-wrongly-cited finding, or ``None``.
+
+    The owner's decision is to keep the finding and name the section that supports it, never
+    to edit the document; this note only names that section. Display only — it never changes a
+    verdict, a colour, or which clauses are kept.
+    """
+    if clause.miscited_to_clause_id is None:
+        return None
+    return f"Grounding: supported by clause {clause.miscited_to_clause_id}, not the clause cited"
+
+
 def _exclusions_note(memo: MemoReport) -> str | None:
     """(b) Strict mode's one summary line, or ``None`` when nothing was excluded.
 
@@ -150,6 +162,9 @@ def render_markdown(memo: MemoReport) -> str:
         note = _risky_note(clause)
         if note is not None:
             lines.append(f"- {note}")
+        miscited_note = _miscited_note(clause)
+        if miscited_note is not None:
+            lines.append(f"- {miscited_note}")
         if clause.severity:
             lines.append(f"- **Severity**: {clause.severity}")
         lines.append("")
@@ -316,6 +331,11 @@ def render_docx(memo: MemoReport) -> Any:
             if note is not None:
                 note_para = doc.add_paragraph(note)
                 note_para.style = doc.styles["Normal"]
+
+            miscited_note = _miscited_note(clause)
+            if miscited_note is not None:
+                miscited_para = doc.add_paragraph(miscited_note)
+                miscited_para.style = doc.styles["Normal"]
 
             if clause.severity:
                 sev_p = doc.add_paragraph()

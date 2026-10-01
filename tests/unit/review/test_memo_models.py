@@ -383,6 +383,7 @@ class TestMemoReport:
                     confidence=0.9,
                     grounding_presence=0.46,
                     accepted_despite_absent_wording=True,
+                    miscited_to_clause_id="4.7",
                 ),
                 MemoClause(
                     id="c2",
@@ -399,5 +400,7 @@ class TestMemoReport:
         restored = MemoReport.from_dict(json.loads(render_json(memo)))
         assert restored.clauses[0].grounding_presence == 0.46
         assert restored.clauses[0].accepted_despite_absent_wording is True
+        assert restored.clauses[0].miscited_to_clause_id == "4.7"
         assert restored.clauses[1].grounding_presence is None
         assert restored.clauses[1].accepted_despite_absent_wording is False
+        assert restored.clauses[1].miscited_to_clause_id is None

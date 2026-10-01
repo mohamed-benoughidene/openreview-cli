@@ -73,6 +73,10 @@ class MemoClause:
     # findings that carry them before the memo is built.
     not_sure: bool = False
     pass_disagreement: bool = False
+    # The "real but wrongly cited" pointer: the clause id the checker named as the section
+    # that supports the finding. Display-only — it names that section (the document is never
+    # edited) and is never read by a verdict, a colour, or the strict/lenient filtering.
+    miscited_to_clause_id: str | None = None
 
 
 @dataclass
@@ -143,6 +147,11 @@ class MemoReport:
                     ),
                     not_sure=bool(c.get("not_sure", False)),
                     pass_disagreement=bool(c.get("pass_disagreement", False)),
+                    miscited_to_clause_id=(
+                        str(c["miscited_to_clause_id"])
+                        if c.get("miscited_to_clause_id") is not None
+                        else None
+                    ),
                 )
             )
 
