@@ -177,11 +177,22 @@ def _shape_note(response: str, value: Any) -> str:
 
     TEMPORARY DIAGNOSTIC, remove with the warning in ``parse_grounding_response``.
     Only structure is reported: a length, one single character, the decoded type,
-    and key names. Key names and counts are structure, not contract text, so no
-    source document or claim text can leak through this line.
+    and key names — one nesting level down as well, so a wrapper can be told
+    apart from a bare answer. Key names and counts are structure, not contract
+    text, so no source document or claim text can leak through this line.
     """
     first_char = response.lstrip()[:1] or "(empty)"
 
+    parts = [f"len={len(response)}", f"first={first_char!r}", f"decoded={_decoded_note(value)}"]
+    nested = _nested_note(value)
+    if nested:
+        parts.append(nested)
+
+    return ", ".join(parts)
+
+
+def _decoded_note(value: Any) -> str:
+    """Name the decoded value's type — with a count or key names for containers."""
     if value is None:
         decoded = "none"
     elif isinstance(value, bool):
@@ -199,17 +210,28 @@ def _shape_note(response: str, value: Any) -> str:
     else:
         decoded = type(value).__name__
 
-    parts = [f"len={len(response)}", f"first={first_char!r}", f"decoded={decoded}"]
+    return decoded
 
+
+def _nested_note(value: Any) -> str:
+    """Describe one level inside a container — counts and key names only."""
     if isinstance(value, list):
         if not value:
-            parts.append("first_item=none")
-        elif isinstance(value[0], dict):
-            parts.append(f"first_item=dict(keys={sorted(value[0])})")
-        else:
-            parts.append(f"first_item={type(value[0]).__name__}")
+            return "first_item=none"
+        if isinstance(value[0], dict):
+            return f"first_item=dict(keys={sorted(value[0])})"
+        return f"first_item={type(value[0]).__name__}"
 
-    return ", ".join(parts)
+    if isinstance(value, dict):
+        for nested in value.values():
+            if not (isinstance(nested, list) and all(isinstance(item, dict) for item in nested)):
+                continue
+            note = f"-> list(n={len(nested)})"
+            if nested:
+                note += f" -> dict(keys={sorted(nested[0])})"
+            return note
+
+    return ""
 
 
 def _claim_index(raw: Any, position: int) -> int:
