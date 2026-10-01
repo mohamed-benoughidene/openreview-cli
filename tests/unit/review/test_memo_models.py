@@ -354,3 +354,50 @@ class TestMemoReport:
         tier_info = restored.tier_info
         assert tier_info is not None
         assert tier_info.privacy_tier == "balanced"
+
+    def test_wording_fields_roundtrip(self) -> None:
+        from openreview_cli.review.memo.formats import render_json
+
+        memo = MemoReport(
+            memo_version="1.0",
+            mode="precheck",
+            document_name="nda.pdf",
+            playbook_name="precheck-nda-v1",
+            playbook_version="1",
+            review_date="2026-08-03T12:00:00+00:00",
+            overall=MemoSummary(
+                recommendation="revise",
+                clauses_checked=2,
+                matches=1,
+                differences=1,
+                confidence_avg=0.5,
+            ),
+            clauses=[
+                MemoClause(
+                    id="c1",
+                    title="confidentiality",
+                    playbook_requirement="preferred",
+                    contract_text="text",
+                    assessment="match",
+                    color="green",
+                    confidence=0.9,
+                    grounding_presence=0.46,
+                    wording_absent=True,
+                ),
+                MemoClause(
+                    id="c2",
+                    title="governing law",
+                    playbook_requirement="preferred",
+                    contract_text="text",
+                    assessment="difference",
+                    color="amber",
+                    confidence=0.5,
+                ),
+            ],
+            disclaimer="test",
+        )
+        restored = MemoReport.from_dict(json.loads(render_json(memo)))
+        assert restored.clauses[0].grounding_presence == 0.46
+        assert restored.clauses[0].wording_absent is True
+        assert restored.clauses[1].grounding_presence is None
+        assert restored.clauses[1].wording_absent is False

@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from openreview_cli.grounding.models import GroundingVerdict
 from openreview_cli.review.memo.filename import (
     deduplicate,
     generate_filename,
@@ -115,6 +116,11 @@ class MemoExporter:
                     color=str(ca.color) if ca.color else "amber",
                     confidence=ca.effective_confidence or ca.confidence,
                     citation=citation,
+                    # Display-only: the memo notes the risky pattern only — the
+                    # model accepted the claim (GROUNDED) yet its wording is absent.
+                    wording_absent=bool(ca.wording_absent)
+                    and ca.grounding_verdict == GroundingVerdict.GROUNDED,
+                    grounding_presence=ca.grounding_presence,
                 )
             )
 

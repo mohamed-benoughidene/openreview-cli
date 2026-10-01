@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from openreview_cli.grounding.models import GroundingVerdict
 from openreview_cli.review.memo.exporter import MemoExporter
 from openreview_cli.review.memo.models import MemoFormat, MemoReport
 from openreview_cli.review.models import (
@@ -192,6 +193,54 @@ class TestBuildMemoReport:
         assert memo.overall.citation_locality is None
 
 
+class TestWordingNoteBuilder:
+    """The builder folds the risky pattern into the memo clause (display-only)."""
+
+    def _memo_for(self, ca: ClauseAssessment) -> MemoReport:
+        return MemoExporter(report=_make_report([ca]), mode="precheck")._build_memo_report()
+
+    def test_grounded_absent_wording_sets_the_note(self) -> None:
+        ca = _make_assessment("c1", Position.PREFERRED, 0.92, "green")
+        ca.grounding_verdict = GroundingVerdict.GROUNDED
+        ca.grounding_presence = 0.46
+        ca.wording_absent = True
+
+        memo = self._memo_for(ca)
+
+        assert memo.clauses[0].wording_absent is True
+        assert memo.clauses[0].grounding_presence == 0.46
+
+    def test_grounded_present_wording_no_note(self) -> None:
+        ca = _make_assessment("c1", Position.PREFERRED, 0.92, "green")
+        ca.grounding_verdict = GroundingVerdict.GROUNDED
+        ca.grounding_presence = 1.0
+        ca.wording_absent = False
+
+        memo = self._memo_for(ca)
+
+        assert memo.clauses[0].wording_absent is False
+
+    def test_ungrounded_absent_wording_no_note(self) -> None:
+        ca = _make_assessment("c1", Position.PREFERRED, 0.92, "green")
+        ca.grounding_verdict = GroundingVerdict.UNGROUNDED
+        ca.grounding_presence = 0.20
+        ca.wording_absent = True
+
+        memo = self._memo_for(ca)
+
+        assert memo.clauses[0].wording_absent is False
+        # the number is still carried faithfully — it just never drives a note
+        assert memo.clauses[0].grounding_presence == 0.20
+
+    def test_default_fields_no_note(self) -> None:
+        ca = _make_assessment("c1", Position.PREFERRED, 0.92, "green")
+
+        memo = self._memo_for(ca)
+
+        assert memo.clauses[0].wording_absent is False
+        assert memo.clauses[0].grounding_presence is None
+
+
 class TestExport:
     def test_export_raises_on_empty(self) -> None:
         report = _make_report(assessments=[])
@@ -278,3 +327,28 @@ class TestExport:
             result = exporter.export()
             assert len(result) == 1
             assert MemoFormat.MARKDOWN in result
+
+    def test_export_markdown_notes_only_the_grounded_absent_case(self) -> None:
+        grounded = _make_assessment("c1", Position.PREFERRED, 0.92, "green")
+        grounded.grounding_verdict = GroundingVerdict.GROUNDED
+        grounded.grounding_presence = 0.46
+        grounded.wording_absent = True
+
+        ungrounded = _make_assessment("c2", Position.PREFERRED, 0.92, "green")
+        ungrounded.grounding_verdict = GroundingVerdict.UNGROUNDED
+        ungrounded.grounding_presence = 0.20
+        ungrounded.wording_absent = True
+
+        report = _make_report([grounded, ungrounded])
+        with tempfile.TemporaryDirectory() as tmp:
+            exporter = MemoExporter(
+                report=report,
+                mode="precheck",
+                output_dir=Path(tmp),
+                formats={MemoFormat.MARKDOWN},
+            )
+            result = exporter.export()
+            content = result[MemoFormat.MARKDOWN].read_text()
+
+        assert "Citation wording not present in the cited clause (coverage 0.46)" in content
+        assert "(coverage 0.20)" not in content

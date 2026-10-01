@@ -320,6 +320,38 @@ class TestIsAmberBackwardCompat:
         assert a.is_amber is False
 
 
+class TestPresenceFieldsDoNotMoveColor:
+    """The claim-wording fields are display-only: they must never move a colour."""
+
+    def test_absent_wording_grounded_is_not_amber(self) -> None:
+        a = _make_assessment(
+            confidence=0.85,
+            position=Position.PREFERRED,
+            grounding_verdict=GroundingVerdict.GROUNDED,
+        )
+        a.grounding_presence = 0.10
+        a.wording_absent = True
+
+        assign_colors([a])
+
+        assert a.color == AssessmentColor.green
+        assert a.amber_reasons == []
+        assert AmberReason.low_confidence not in (a.amber_reasons or [])
+
+    def test_presence_fields_leave_color_output_identical(self) -> None:
+        plain = _make_assessment(confidence=0.85, position=Position.PREFERRED)
+        flagged = _make_assessment(confidence=0.85, position=Position.PREFERRED)
+        flagged.grounding_presence = 0.10
+        flagged.wording_absent = True
+
+        assign_colors([plain, flagged])
+
+        assert flagged.color == plain.color == AssessmentColor.green
+        assert flagged.amber_reasons == plain.amber_reasons == []
+        assert flagged.effective_confidence == plain.effective_confidence
+        assert flagged.is_amber == plain.is_amber is False
+
+
 class TestReviewSummaryExtensions:
     def test_defaults(self) -> None:
         s = ReviewSummary()

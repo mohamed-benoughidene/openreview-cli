@@ -304,3 +304,62 @@ class TestFormatJsonThreeColor:
         output = format_json(report)
         data = json.loads(output)
         assert isinstance(data, dict)
+
+
+def _with_presence(assessments: list[ClauseAssessment]) -> list[ClauseAssessment]:
+    """Return the same assessments with the display-only presence fields set."""
+    assessments[0].grounding_presence = 0.10
+    assessments[0].wording_absent = True
+    assessments[1].grounding_presence = 0.20
+    assessments[1].wording_absent = True
+    return assessments
+
+
+class TestPresenceFieldsDoNotChangeThreeColorOutput:
+    """The wording note is display-only; three-colour output is byte-identical."""
+
+    def test_terminal_output_identical_with_and_without_the_note(self) -> None:
+        frozen = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
+
+        base = [
+            _make_assessment("c1", Position.PREFERRED, 0.92),
+            _make_assessment("c2", Position.PREFERRED, 0.45),
+        ]
+        assign_colors(base)
+        base_report = _make_report(base)
+        base_report.generated_at = frozen
+        out_base = format_terminal(base_report)
+
+        flagged = [
+            _make_assessment("c1", Position.PREFERRED, 0.92),
+            _make_assessment("c2", Position.PREFERRED, 0.45),
+        ]
+        assign_colors(_with_presence(flagged))
+        flagged_report = _make_report(flagged)
+        flagged_report.generated_at = frozen
+        out_flagged = format_terminal(flagged_report)
+
+        assert out_base == out_flagged
+
+    def test_json_color_fields_identical_with_and_without_the_note(self) -> None:
+        base = [
+            _make_assessment("c1", Position.PREFERRED, 0.92),
+            _make_assessment("c2", Position.PREFERRED, 0.45),
+        ]
+        assign_colors(base)
+        data_base = json.loads(format_json(_make_report(base)))
+
+        flagged = [
+            _make_assessment("c1", Position.PREFERRED, 0.92),
+            _make_assessment("c2", Position.PREFERRED, 0.45),
+        ]
+        assign_colors(_with_presence(flagged))
+        data_flagged = json.loads(format_json(_make_report(flagged)))
+
+        for b, f in zip(data_base["assessments"], data_flagged["assessments"], strict=True):
+            assert b["color"] == f["color"]
+            assert b["amber_reasons"] == f["amber_reasons"]
+            assert b["effective_confidence"] == f["effective_confidence"]
+            assert b["is_amber"] == f["is_amber"]
+        for key in ("green_count", "amber_count", "red_count"):
+            assert data_base["summary"][key] == data_flagged["summary"][key]
