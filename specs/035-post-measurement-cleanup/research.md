@@ -111,13 +111,14 @@ the change would re-measure the surface being deleted.
 
 **Decision:** Remove the `reranking` slot; do not swap in a local reranker.
 
-**Rationale:** Measured on 424 labelled CUAD queries at the product's candidate depth: the
-plain BM25+`porter` order scored 0.108 / 0.535 / 0.252; a cheap lexical rerank scored
-0.092 / 0.448 / 0.207; a local cross-encoder scored 0.085 / 0.427 / 0.199. Both rerankers
-made ordering **worse than doing nothing** (the cross-encoder −10.8 points hit@5). The
-best measured configuration is simply keyword search with `porter` (Q2). The reranking slot
-is also unreachable in the retrieval path under both remaining tiers (*VS: PrivacyTier members
-and tier rules*).
+**Rationale:** Measured on 424 labelled CUAD queries at the product's candidate depth (the
+original run, recorded in the gitignored decision record; its figures are **not reproducible**,
+see below): the plain BM25+`porter` order scored 0.108 / 0.535 / 0.252; a cheap lexical rerank
+scored 0.092 / 0.448 / 0.207; a local cross-encoder scored 0.085 / 0.427 / 0.199. Both
+rerankers were read as making ordering **worse than doing nothing** (the cross-encoder −10.8
+points hit@5). The best measured configuration is simply keyword search with `porter` (Q2).
+The reranking slot is also unreachable in the retrieval path under both remaining tiers
+(*VS: PrivacyTier members and tier rules*).
 
 **Alternatives:** bundle a local cross-encoder (worse); cloud rerank (privacy); keep it
 opt-in and disabled (dead weight). *Why* the local rerankers lose is **Inference**
@@ -286,7 +287,7 @@ tokenizer site*, *VS: Retrieval engine dispatch*). The harness reuses the produc
 ingest path but not the product parser (PDF/DOCX only), so chunk boundaries approximate a real
 parse (**stated in the receipts**).
 
-### Reranking — 424 labelled CUAD queries at candidate depth 20
+### Reranking — original run: 424 labelled CUAD queries at candidate depth 20 (not reproducible)
 
 | arm | hit@1 | hit@5 | MRR@5 |
 |---|---|---|---|
@@ -297,6 +298,21 @@ parse (**stated in the receipts**).
 Both rerankers made ordering worse than leaving the keyword order alone (−10.8 points hit@5
 for the cross-encoder). Source: *VS: Measurement decision record (gitignored companion)*,
 §1.5. *Why* is **Inference**/unproven.
+
+**Reproducibility (updated 2026-10-01): half the claim reproduces.** The harness that produced
+the table above (`scripts/benchmark_rerank_legalbenchrag.py`) was restored from `b781a1a^` and
+adapted to run offline, and the question was re-derived on the committed corpus:
+`docs/benchmarks/results/cuad-rerank-offline.json` — 352 CUAD queries over 40 contracts,
+candidate depth 20, top-5, every arm re-ordering the identical BM25 pool. It **reproduces the
+cross-encoder half**: hit@5 0.2330 against BM25's 0.3438, paired ΔP@5 −0.0267 with a 95% CI
+[−0.0392, −0.0136] entirely below zero. It **does not reproduce the lexical half**: the cheap
+lexical rerank scores hit@5 0.3892 and its paired ΔP@5 CI [−0.0051, +0.0154] straddles zero,
+i.e. no measurable top-5 effect rather than a loss. The magnitudes above are **not
+reproducible** — the original harness was never committed — and neither the cloud
+`voyage/rerank-2.5` arm nor the deleted hybrid (BM25 + dense RRF) arms can run here (the
+`reranking`/`embedding` sockets and `retrieval/dense.py`+`rrf.py` are gone). The removal
+decision therefore stands on the cross-encoder result plus the slot being unreachable, and
+should be read as "no local reranker clearly helped", not "both were measurably worse".
 
 ### Grounding — verdicts
 
@@ -385,10 +401,14 @@ size split. The size question remains a **measurement** question for our own har
 - The **CUAD tokenizer** numbers (Q2) are now **reproducible**: the committed harness
   `scripts/measure_retrieval_accuracy.py` and its two receipts
   (`docs/benchmarks/results/cuad-retrieval-{porter,unicode61}.json`) are the anchors, and the
-  same comparison is summarised in `docs/BENCHMARKS.md`. The **dense/hybrid** rows (Q3, Q13) and
-  the **reranker** numbers (Q7) still come only from the gitignored decision record and a
-  session-scratch harness that no longer exists, so they remain **UNVERIFIED in repo / not
-  citable**; the tracked code facts they depend on are anchored (provenance above).
+  same comparison is summarised in `docs/BENCHMARKS.md`. The **dense/hybrid** rows (Q3, Q13) still
+  come only from the gitignored decision record and a session-scratch harness that no longer
+  exists, so they remain **UNVERIFIED in repo / not citable**. The **reranker** numbers (Q7) are
+  **partly reproducible**: `docs/benchmarks/results/cuad-rerank-offline.json` (restored
+  `scripts/benchmark_rerank_legalbenchrag.py`, offline, 352 CUAD queries / 40 contracts)
+  reproduces the cross-encoder loss but not the lexical loss, and the originally quoted
+  magnitudes and the cloud arm remain **not reproducible** (harness never committed; socket
+  deleted). The tracked code facts they depend on are anchored (provenance above).
 - **Why** the local rerankers lose is **Inference** (small model / truncation / the task).
 - The **reader ranking** (granite 0.9 vs others 0.7) is **Inference** at n = 5 documents.
 - The claim that the TUI retrieve screen needs no edit is **UNVERIFIED until checked** at
