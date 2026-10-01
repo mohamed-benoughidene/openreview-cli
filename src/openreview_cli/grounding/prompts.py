@@ -99,8 +99,11 @@ def parse_grounding_response(
 
     data = _first_json_value(response)
     if data is None:
-        return results
-    items: list[Any] = data if isinstance(data, list) else [data]
+        items: list[Any] = []
+    elif isinstance(data, list):
+        items = data
+    else:
+        items = [data]
 
     for position, item in enumerate(items):
         if not isinstance(item, dict):
@@ -135,7 +138,54 @@ def parse_grounding_response(
 
         results.append((claim_index, verdict, provenances, confidence))
 
+    if not results:
+        # TEMPORARY DIAGNOSTIC — REMOVE ONCE THE ANSWER SHAPE IS KNOWN. A CI run
+        # measured every grounding answer as unreadable, and the raw reply can
+        # never be logged (privacy), so the shape alone is recorded here: the
+        # reader returns nothing, and this line is the only way to see why.
+        logger.warning("Unreadable grounding answer: %s", _shape_note(response, data))
+
     return results
+
+
+def _shape_note(response: str, value: Any) -> str:
+    """Describe the SHAPE of a value that could not be read — never its content.
+
+    TEMPORARY DIAGNOSTIC, remove with the warning in ``parse_grounding_response``.
+    Only structure is reported: a length, one single character, the decoded type,
+    and key names. Key names and counts are structure, not contract text, so no
+    source document or claim text can leak through this line.
+    """
+    first_char = response.lstrip()[:1] or "(empty)"
+
+    if value is None:
+        decoded = "none"
+    elif isinstance(value, bool):
+        decoded = "bool"
+    elif isinstance(value, str):
+        decoded = "str"
+    elif isinstance(value, int):
+        decoded = "int"
+    elif isinstance(value, float):
+        decoded = "float"
+    elif isinstance(value, list):
+        decoded = f"list(n={len(value)})"
+    elif isinstance(value, dict):
+        decoded = f"dict(keys={sorted(value)})"
+    else:
+        decoded = type(value).__name__
+
+    parts = [f"len={len(response)}", f"first={first_char!r}", f"decoded={decoded}"]
+
+    if isinstance(value, list):
+        if not value:
+            parts.append("first_item=none")
+        elif isinstance(value[0], dict):
+            parts.append(f"first_item=dict(keys={sorted(value[0])})")
+        else:
+            parts.append(f"first_item={type(value[0]).__name__}")
+
+    return ", ".join(parts)
 
 
 def _claim_index(raw: Any, position: int) -> int:
