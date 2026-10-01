@@ -55,6 +55,11 @@ PARA_B = (
     "receipt of a valid invoice from the supplier. Late payments accrue interest at one "
     "percent per month until paid in full."
 )
+PARA_C = (
+    "12.2 Assignment. Neither party may assign this agreement, in whole or in part, without "
+    "the prior written consent of the other party. Any purported assignment in violation of "
+    "this section is void and of no effect, and the non-assigning party may terminate."
+)
 
 FABRICATED = "A wholly fabricated sentence that appears in no clause of this agreement at all."
 
@@ -159,6 +164,22 @@ def _tiny_corpus(tmp_path: Path) -> Path:
     return corpus
 
 
+def _two_unit_document_corpus(tmp_path: Path) -> Path:
+    """A corpus where ONE document holds TWO qualifying units.
+
+    Every other fixture holds a single unit per document, so "pick another unit" and "pick
+    another document" land on the same unit by accident: a picker that preferred the cited
+    unit's own document had nothing to prefer and was never exercised. Here ``a.txt`` holds
+    two units (c000, c001) and ``b.txt`` one (c002), so the two-unit document's units have a
+    same-document sibling that a correct cross-document picker must skip.
+    """
+    corpus = tmp_path / "cuad"
+    corpus.mkdir()
+    (corpus / "a.txt").write_text(PARA_A + "\n\n" + PARA_B, encoding="utf-8")
+    (corpus / "b.txt").write_text(PARA_C, encoding="utf-8")
+    return corpus
+
+
 class _StubDiscriminator:
     """Stands in for ``CitationGroundingDiscriminator``: rejects every claim."""
 
@@ -199,7 +220,9 @@ class TestGroundingAccuracyEndToEnd:
         # Force the *verbatim* cross-clause negative to be the cited clause itself, so the
         # guard drops it. The paraphrased cross-clause negative is a real rewrite of a
         # sentence from the other unit; it is genuinely unsupported and survives the guard.
-        # The hallucination override is fabricated and survives too.
+        # The hallucination override is fabricated and survives too. ``operand_change`` is
+        # disabled so the negative is drawn from the other unit (the cross-document branch).
+        monkeypatch.setattr(SCRIPT, "operand_change", lambda _text: None)
         monkeypatch.setattr(SCRIPT, "unsupported_claim", lambda a, b: a.text)
         monkeypatch.setattr(SCRIPT, "hallucination", lambda claim: FABRICATED)
 
@@ -363,9 +386,12 @@ class TestGroundingParaphraseLabels:
             "paraphrased_supported",
             lambda unit: SCRIPT.first_qualifying_sentence(unit.text),
         )
-        # `unsupported_claim` itself is the un-rewritten writer, so pointing the paraphrase
-        # writer at it makes every negative rewrite a no-op.
-        monkeypatch.setattr(SCRIPT, "paraphrased_unsupported", SCRIPT.unsupported_claim)
+        # An identity paraphrase map makes every rewrite equal its source, so the rewritten
+        # positive and the rewritten negative both duplicate a label already present.
+        monkeypatch.setattr(SCRIPT, "paraphrase", lambda sentence: sentence)
+        # Drive the cross-document branch: the operand-change construction is preferred, and
+        # its sentences would otherwise rewrite under the identity map alone.
+        monkeypatch.setattr(SCRIPT, "operand_change", lambda _text: None)
 
         labels, _drops, generated, skips = SCRIPT._build_grounding_labels(self.UNITS)
 
@@ -403,12 +429,97 @@ class TestGroundingParaphraseLabels:
             row["generator"] == "paraphrased_supported" and row["unit_id"] == "c000"
             for row in labels
         )
-        # ... and so is the other unit's cross-clause paraphrase, which draws on it.
-        assert not any(
+        # ... but the other unit's cross-clause negative is operanded (thirty -> ninety) and
+        # its rewrite changes the wording, so the paraphrase label survives.
+        assert any(
             row["generator"] == "paraphrased_unsupported" and row["unit_id"] == "c001"
             for row in labels
         )
-        assert skips == 2
+        assert skips == 1
+
+
+class TestGroundingNegativeKinds:
+    """The cross-clause negative comes from a different document, and the operand change is
+    preferred when the cited clause has an operand. Each row records its own kind."""
+
+    def test_units_carry_their_source_document(self, tmp_path: Path) -> None:
+        units, _ = SCRIPT._load_corpus_units(_tiny_corpus(tmp_path), limit=2)
+        assert [u.document for u in units] == ["a.txt", "b.txt"]
+
+    def test_cross_document_kind_names_a_different_document(self, tmp_path: Path) -> None:
+        # Both fixture units are operanded, so drive the cross-document branch explicitly.
+        units, _ = SCRIPT._load_corpus_units(_tiny_corpus(tmp_path), limit=2)
+        with pytest.MonkeyPatch.context() as monkey:
+            monkey.setattr(SCRIPT, "operand_change", lambda _text: None)
+            labels, _drops, _generated, _skips = SCRIPT._build_grounding_labels(units)
+        negatives = [row for row in labels if row["generator"] == "unsupported_claim"]
+        cited_document = {"c000": "a.txt", "c001": "b.txt"}
+        assert negatives
+        assert all(row["kind"] == "cross_document" for row in negatives)
+        assert all(row["source_document"] != cited_document[row["unit_id"]] for row in negatives)
+
+    def test_a_two_unit_document_never_supplies_its_own_cross_document_negative(
+        self, tmp_path: Path
+    ) -> None:
+        # The fixture (not the assertion style) is the point: with one unit per document,
+        # "pick another unit" and "pick another document" coincide, so a picker preferring the
+        # cited unit's own document would still pass. Here a.txt holds c000 AND c001, so the
+        # picker must skip its same-document sibling and reach b.txt.
+        units, _ = SCRIPT._load_corpus_units(_two_unit_document_corpus(tmp_path), limit=3)
+        assert [(unit.id, unit.document) for unit in units] == [
+            ("c000", "a.txt"),
+            ("c001", "a.txt"),
+            ("c002", "b.txt"),
+        ]
+        # Both a.txt units are operanded, so drive the cross-document branch explicitly.
+        with pytest.MonkeyPatch.context() as monkey:
+            monkey.setattr(SCRIPT, "operand_change", lambda _text: None)
+            labels, _drops, _generated, _skips = SCRIPT._build_grounding_labels(units)
+
+        negatives = [row for row in labels if row["generator"] == "unsupported_claim"]
+        cited_document = {unit.id: unit.document for unit in units}
+        # Every unit is scored, so a dropped negative cannot hide a same-document pick.
+        assert {row["unit_id"] for row in negatives} == set(cited_document)
+        assert all(row["kind"] == "cross_document" for row in negatives)
+        assert all(row["source_document"] != cited_document[row["unit_id"]] for row in negatives)
+        # The two-unit document's units draw from the *other* document, never from each other.
+        assert [row["source_document"] for row in negatives] == ["b.txt", "b.txt", "a.txt"]
+
+    def test_operand_change_is_preferred_and_recorded(self, tmp_path: Path) -> None:
+        units, _ = SCRIPT._load_corpus_units(_tiny_corpus(tmp_path), limit=2)
+        labels, _drops, _generated, _skips = SCRIPT._build_grounding_labels(units)
+        # Both fixture units carry a mapped operand, so every cross-family negative row (the
+        # ``unsupported_claim`` and its ``paraphrased_unsupported`` rewrite) records the
+        # operand_change construction; no row falls back to cross_document. The
+        # ``hallucination`` rows are a separate kind and are excluded by the generator filter.
+        kinds = {
+            row["kind"]
+            for row in labels
+            if row["generator"] in {"unsupported_claim", "paraphrased_unsupported"}
+        }
+        assert kinds == {"operand_change"}
+
+    def test_a_clause_without_an_operand_still_gets_a_sound_negative(self) -> None:
+        no_operand = ClauseUnit(
+            id="c000",
+            document="a.txt",
+            text=(
+                "4.9 Governing Law. The parties agree that this agreement is governed by the "
+                "laws of the state named above. Nothing in this section survives termination."
+            ),
+        )
+        other = ClauseUnit(
+            id="c001",
+            document="b.txt",
+            text=(
+                "9.3 Payment Terms. The customer shall pay all undisputed invoices within "
+                "thirty days of receipt. Late payments accrue interest until paid in full."
+            ),
+        )
+        labels, _drops, _generated, _skips = SCRIPT._build_grounding_labels([no_operand, other])
+        neg = [row for row in labels if row["generator"] == "unsupported_claim"]
+        assert neg and neg[0]["kind"] == "cross_document"
+        assert neg[0]["source_document"] == "b.txt"
 
 
 class TestGroundingAccuracyPiiStrip:
@@ -572,6 +683,9 @@ def _stub_reachable_slots(monkeypatch: pytest.MonkeyPatch) -> None:
         "_configured_slots",
         lambda: {"extraction": "x", "reasoning": "x", "grounding": "stub/grounding"},
     )
+    # Disable the preferred operand-change construction so the cross-document branch (the
+    # patched verbatim negative below) is the one exercised, keeping the label counts stable.
+    monkeypatch.setattr(SCRIPT, "operand_change", lambda _text: None)
     monkeypatch.setattr(SCRIPT, "unsupported_claim", lambda a, b: a.text)
     monkeypatch.setattr(SCRIPT, "hallucination", lambda claim: FABRICATED)
 
