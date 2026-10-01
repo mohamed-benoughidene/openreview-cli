@@ -51,6 +51,29 @@ _WORDING_ABSENT_HINT = (
 )
 
 
+# Item 7: 59% of CUAD clauses exceed 500 characters and 99.6% of those were cut mid-word; a
+# sentence-aware window of about 2000 characters covers 9 in 10. Whole sentences while they
+# fit; a single sentence longer than the window is hard-clipped.
+_CLAUSE_WINDOW_CHARS = 2000
+_TRUNCATION_MARKER = " …[clause text truncated]"
+
+
+def _clause_window(text: str, limit: int = _CLAUSE_WINDOW_CHARS) -> str:
+    """At most ``limit`` characters of ``text``, cut on a sentence boundary when one fits.
+    A single first sentence longer than ``limit`` is hard-clipped at ``limit``."""
+    if len(text) <= limit:
+        return text
+    from openreview_cli.parsing.clause_detector import nupunkt_detect_boundaries
+
+    end = 0
+    for _start, stop in nupunkt_detect_boundaries(text):
+        if stop <= limit and text[end:stop].strip():
+            end = stop
+    if end == 0:  # the first sentence alone exceeds the window: hard-clip it
+        end = limit
+    return text[:end].rstrip() + _TRUNCATION_MARKER
+
+
 def build_grounding_messages(
     source_clauses: list[Clause],
     claims: list[tuple[int, str, str]],
@@ -71,7 +94,7 @@ def build_grounding_messages(
     # Format clauses for the prompt
     clauses_lines: list[str] = []
     for clause in source_clauses:
-        text = clause.text[:500]
+        text = _clause_window(clause.text)
         clauses_lines.append(f"[{clause.id}]: {text}")
 
     clauses_text = "\n\n".join(clauses_lines) if clauses_lines else "(no clauses provided)"

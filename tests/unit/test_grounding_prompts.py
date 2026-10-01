@@ -6,7 +6,10 @@ import json
 
 from openreview_cli.grounding.models import GroundingVerdict
 from openreview_cli.grounding.prompts import (
+    _CLAUSE_WINDOW_CHARS,
+    _TRUNCATION_MARKER,
     GROUNDING_PROMPT_TEMPLATE,
+    _clause_window,
     build_grounding_messages,
     parse_grounding_response,
 )
@@ -333,3 +336,24 @@ def test_the_hint_carries_no_claim_or_clause_text_of_its_own() -> None:
     # The line's shape — the hint appended last — is pinned by the test above.
     assert _CLAUSES[0].text not in _HINT
     assert _CLAIMS[1][1] not in _HINT
+
+
+# ── item 7: the clause window is measured in sentences, not characters ────────
+
+
+class TestClauseWindow:
+    """Item 7: ~2000 characters, whole sentences while they fit, a marker when text was left out."""
+
+    def test_a_long_clause_is_cut_on_a_sentence_boundary_and_marked(self) -> None:
+        text = "The receiving party shall not disclose Confidential Information to anyone. " * 80
+        window = _clause_window(text)
+        assert len(window) <= _CLAUSE_WINDOW_CHARS + len(_TRUNCATION_MARKER)
+        assert window.endswith(_TRUNCATION_MARKER)
+        body = window[: -len(_TRUNCATION_MARKER)]
+        assert text.startswith(body) and body.rstrip().endswith(".")
+
+    def test_a_single_oversized_first_sentence_is_hard_clipped(self) -> None:
+        # The bound in the sentence-boundary test must hold for every input, so a first
+        # sentence longer than the window is clamped at the window, not kept whole.
+        text = "x" * (_CLAUSE_WINDOW_CHARS + 500)
+        assert _clause_window(text) == text[:_CLAUSE_WINDOW_CHARS] + _TRUNCATION_MARKER
