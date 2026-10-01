@@ -6,10 +6,12 @@ Adapts P-6's four corruption strategies from court citations to contract clauses
   - hallucination:  Generate claim text with no support in any clause
   - anachronism:    Cite a non-existent clause ID
 
-**Which helpers may produce a grounding negative.** Only ``unsupported_claim`` and
-``hallucination`` (``GROUNDING_VALID_NEGATIVES``) can produce a claim that is genuinely
-unsupported by the clause it is asserted against. The other three cannot, and must not be
-scored as grounding negatives:
+**Which helpers may produce a grounding negative.** Only ``unsupported_claim``,
+``paraphrased_unsupported`` and ``hallucination`` (``GROUNDING_VALID_NEGATIVES``) can produce
+a claim that is genuinely unsupported by the clause it is asserted against.
+``paraphrased_unsupported`` is ``unsupported_claim`` rewritten by the narrow ``paraphrase`` map
+below, so it stays foreign to the cited clause. The other three cannot, and must not be scored
+as grounding negatives:
 
   - ``category_swap`` is a *classification* case: it rewrites a playbook category label and
     never receives the clause text, so the claim stays supported by its clause.
@@ -21,7 +23,7 @@ scored as grounding negatives:
     unsupported. It is superseded by ``unsupported_claim``, which asserts a real sentence
     from *another* clause against the cited clause instead of editing the claim string.
 
-**The mandatory guard.** Every generated negative — from either valid generator — MUST be
+**The mandatory guard.** Every generated negative — from any valid generator — MUST be
 checked with ``is_genuine_negative`` before it enters a label set, and the harness MUST count
 and report how many negatives each generator lost to the guard. A negative whose claim text
 appears verbatim in the cited clause is *supported* and its label would be a lie; such a
@@ -30,6 +32,7 @@ negative is dropped, never kept silently.
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, NamedTuple
 
 from openreview_cli.grounding.presence import normalise
@@ -45,8 +48,43 @@ MIN_SENTENCE_CHARS = 40
 
 # The only corruption helpers that may produce a *grounding* negative. The others are
 # classification (`category_swap`), citation-validity (`anachronism`) or claim-text no-ops
-# on prose (`clause_swap`); see the module docstring.
-GROUNDING_VALID_NEGATIVES: tuple[str, ...] = ("unsupported_claim", "hallucination")
+# on prose (`clause_swap`); see the module docstring. `paraphrased_unsupported` is the
+# rewritten cross-clause claim; `paraphrased_supported` is a *positive* and is deliberately
+# absent from this tuple.
+GROUNDING_VALID_NEGATIVES: tuple[str, ...] = (
+    "unsupported_claim",
+    "hallucination",
+    "paraphrased_unsupported",
+)
+
+# The one constant, reviewed substitution map behind every paraphrase label. Applied to any
+# sentence by ``paraphrase`` (which never returns ``None``); the caller drops a rewrite that
+# changed nothing. Each pair is meaning-preserving, so a rewritten clause sentence is still the
+# clause's own assertion and a rewritten cross-clause sentence is still foreign to the cited
+# clause:
+#   - "receiving party" -> "recipient": the same defined role under its plain name;
+#   - "in no event" -> "under no circumstances": the same exclusion, an equivalent idiom;
+#   - "shall not" -> "must not" and "shall" -> "must": the same prohibition/obligation under a
+#     different modal verb ("shall not" is listed before "shall" so the prohibition reads as a
+#     unit, not as a modal plus a stray "not");
+#   - "prior to" -> "before": the same temporal order.
+# Longest source first, so no shorter term rewrites part of a longer one's match or of an
+# earlier replacement.
+_PARAPHRASE_MAP: tuple[tuple[str, str], ...] = (
+    ("receiving party", "recipient"),
+    ("in no event", "under no circumstances"),
+    ("shall not", "must not"),
+    ("prior to", "before"),
+    ("shall", "must"),
+)
+
+# Word-bounded at both ends so a term never rewrites part of a longer word ("shall" inside
+# "marshall"). Case-sensitive on purpose: the map is narrow, and a sentence it does not match
+# is left unchanged rather than half-rewritten.
+_PARAPHRASE_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = tuple(
+    (re.compile(rf"\b{re.escape(source)}\b"), replacement)
+    for source, replacement in _PARAPHRASE_MAP
+)
 
 
 class ClauseUnit(NamedTuple):
@@ -94,6 +132,29 @@ def first_qualifying_sentence(text: str) -> str | None:
         if _qualifies(sentence):
             return sentence
     return None
+
+
+def paraphrase(sentence: str) -> str:
+    """Rewrite ``sentence`` with the constant, narrow substitution map (``_PARAPHRASE_MAP``).
+
+    The map is deliberately small and meaning-preserving, so a rewritten clause sentence is
+    still supported by its clause and a rewritten cross-clause sentence is still unsupported by
+    the clause it is asserted against. It under-represents real human paraphrases, and the
+    receipt says so.
+
+    Always returns a ``str`` — never ``None`` — including ``sentence`` unchanged when no map
+    term occurs. The caller drops an unchanged rewrite and counts the drop: such a label would
+    duplicate one already present, not add a harder one.
+
+    Args:
+        sentence: The sentence to rewrite.
+
+    Returns:
+        The rewritten sentence, or the input unchanged when nothing matched.
+    """
+    for pattern, replacement in _PARAPHRASE_PATTERNS:
+        sentence = pattern.sub(replacement, sentence)
+    return sentence
 
 
 def unsupported_claim(clause_a: ClauseUnit, clause_b: ClauseUnit) -> str | None:
@@ -160,6 +221,52 @@ def is_genuine_negative(claim_text: str, clause_text: str) -> bool:
     if not normalized_claim:
         return False
     return normalized_claim not in _normalize_for_guard(clause_text)
+
+
+def paraphrased_supported(unit: ClauseUnit) -> str | None:
+    """Rewrite the clause's own qualifying sentence — a genuine positive.
+
+    Composition of ``first_qualifying_sentence`` with ``paraphrase``: the rewrite is the
+    clause's own assertion in different words, so it is supported by the clause **by
+    construction**. It is labelled supported directly, never routed through
+    ``is_genuine_negative``: that guard is a substring test and cannot certify support, so a
+    paraphrase would slip past it (see the module docstring and the harness notes).
+
+    Args:
+        unit: The clause whose sentence is rewritten.
+
+    Returns:
+        The rewritten sentence, or ``None`` when ``unit`` has no qualifying sentence. The
+        caller keeps it only when it differs from the original sentence; an unchanged rewrite
+        is a skip, not a label.
+    """
+    sentence = first_qualifying_sentence(unit.text)
+    if sentence is None:
+        return None
+    return paraphrase(sentence)
+
+
+def paraphrased_unsupported(clause_a: ClauseUnit, clause_b: ClauseUnit) -> str | None:
+    """Rewrite a sentence from ``clause_b`` and assert it against ``clause_a``.
+
+    Composition of ``unsupported_claim`` (the honest cross-clause negative) with
+    ``paraphrase``: the sentence is taken from a *different* clause and the meaning-preserving
+    rewrite keeps it foreign to ``clause_a``, so it stays a genuine negative.
+
+    Args:
+        clause_a: The ``(id, text)`` unit the claim will be cited against.
+        clause_b: The ``(id, text)`` unit the sentence is taken from.
+
+    Returns:
+        The rewritten sentence, or ``None`` in the same degenerate cases as
+        ``unsupported_claim`` (same clause twice, or no qualifying sentence). The caller keeps
+        it only when it differs from the un-rewritten sentence, and still runs
+        ``is_genuine_negative`` before scoring it.
+    """
+    sentence = unsupported_claim(clause_a, clause_b)
+    if sentence is None:
+        return None
+    return paraphrase(sentence)
 
 
 def clause_swap(claim: str, clauses: list[Clause], original_clause_id: str) -> str:
