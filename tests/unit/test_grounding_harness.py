@@ -214,7 +214,7 @@ class TestGroundingAccuracyEndToEnd:
                 "grounding": "stub/grounding",
             },
         )
-        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda: stub)
+        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda **_kw: stub)
         # The arm reachability pre-flight is a real gateway call; stub it as reachable so this
         # offline test exercises the measurement, not the network.
         monkeypatch.setattr(SCRIPT, "_preflight_arm_reachability", lambda: (True, None))
@@ -296,7 +296,7 @@ class TestGroundingAccuracyEndToEnd:
             "_configured_slots",
             lambda: {"extraction": "s", "reasoning": "s", "grounding": "stub/grounding"},
         )
-        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda: stub)
+        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda **_kw: stub)
         monkeypatch.setattr(SCRIPT, "_preflight_arm_reachability", lambda: (True, None))
         monkeypatch.setattr(SCRIPT, "unsupported_claim", lambda a, b: a.text)
         monkeypatch.setattr(SCRIPT, "hallucination", lambda claim: FABRICATED)
@@ -332,7 +332,7 @@ class TestGroundingAccuracyEndToEnd:
             "_configured_slots",
             lambda: {"extraction": "ollama/x", "reasoning": "ollama/x", "grounding": "ollama/x"},
         )
-        monkeypatch.setattr(SCRIPT, "_make_discriminator", _StubDiscriminator)
+        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda **_kw: _StubDiscriminator())
 
         receipt = SCRIPT.run_grounding_accuracy(corpus_dir=corpus, limit=2, arm="cloud", out=out)
 
@@ -381,7 +381,7 @@ class TestGroundingSecondPassFallbacksReported:
         stub = _FallingBackDiscriminator()
         _stub_reachable_slots(monkeypatch)
         monkeypatch.setattr(SCRIPT, "_preflight_arm_reachability", lambda: (True, None))
-        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda: stub)
+        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda **_kw: stub)
 
         receipt = SCRIPT.run_grounding_accuracy(
             corpus_dir=corpus, limit=2, arm="configured", out=out, no_pii=True
@@ -396,6 +396,95 @@ class TestGroundingSecondPassFallbacksReported:
         # The field is present on a skip receipt too, so it is never merely absent.
         skip = SCRIPT._grounding_skip_receipt(corpus, 2, "configured", "corpus absent")
         assert skip["second_pass_fallbacks"] == 0
+
+
+class TestGroundingPassAgreementSwitch:
+    """The switch that turns the both-passes-must-agree rule on (off by default).
+
+    The product ships the rule off, and the harness defaults to the same so the one-pass run is
+    the default; ``--require-pass-agreement`` turns it on. Either way the receipt records the
+    setting, so a two-pass run cannot be read as the one-pass default.
+    """
+
+    def test_default_is_off_and_recorded(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        corpus = _tiny_corpus(tmp_path)
+        out = tmp_path / "ga.json"
+        stub = _StubDiscriminator()
+        seen: list[bool] = []
+        _stub_reachable_slots(monkeypatch)
+        monkeypatch.setattr(SCRIPT, "_preflight_arm_reachability", lambda: (True, None))
+
+        def factory(*, require_pass_agreement: bool) -> _StubDiscriminator:
+            seen.append(require_pass_agreement)
+            return stub
+
+        monkeypatch.setattr(SCRIPT, "_make_discriminator", factory)
+
+        receipt = SCRIPT.run_grounding_accuracy(
+            corpus_dir=corpus, limit=2, arm="configured", out=out, no_pii=True
+        )
+
+        assert seen == [False]
+        assert receipt["require_pass_agreement"] is False
+        assert json.loads(out.read_text())["require_pass_agreement"] is False
+        assert "require_pass_agreement=False" in capsys.readouterr().out
+
+    def test_cli_switch_turns_it_on_and_the_receipt_says_so(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        corpus = _tiny_corpus(tmp_path)
+        out = tmp_path / "ga.json"
+        stub = _StubDiscriminator()
+        seen: list[bool] = []
+        _stub_reachable_slots(monkeypatch)
+        monkeypatch.setattr(SCRIPT, "_preflight_arm_reachability", lambda: (True, None))
+
+        def factory(*, require_pass_agreement: bool) -> _StubDiscriminator:
+            seen.append(require_pass_agreement)
+            return stub
+
+        monkeypatch.setattr(SCRIPT, "_make_discriminator", factory)
+
+        SCRIPT.main(
+            [
+                "--grounding-accuracy",
+                "--corpus-dir",
+                str(corpus),
+                "--limit",
+                "2",
+                "--arm",
+                "configured",
+                "--no-pii",
+                "--require-pass-agreement",
+                "--out",
+                str(out),
+            ]
+        )
+
+        assert seen == [True]
+        receipt = json.loads(out.read_text())
+        assert receipt["require_pass_agreement"] is True
+        assert "require_pass_agreement=True" in capsys.readouterr().out
+
+    def test_factory_forwards_the_flag_to_the_real_discriminator(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import openreview_cli.grounding.discriminator as discriminator_module
+
+        captured: dict[str, Any] = {}
+
+        class _Spy:
+            def __init__(self, **kwargs: Any) -> None:
+                captured.update(kwargs)
+
+        monkeypatch.setattr(discriminator_module, "CitationGroundingDiscriminator", _Spy)
+
+        SCRIPT._make_discriminator(require_pass_agreement=True)
+
+        assert captured["mode"] == "strict"
+        assert captured["require_pass_agreement"] is True
 
 
 class TestGroundingParaphraseLabels:
@@ -640,7 +729,7 @@ class TestGroundingAccuracyPiiStrip:
             "_configured_slots",
             lambda: {"extraction": "x", "reasoning": "x", "grounding": "stub/grounding"},
         )
-        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda: stub)
+        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda **_kw: stub)
         monkeypatch.setattr(SCRIPT, "hallucination", lambda claim: FABRICATED)
         monkeypatch.setattr(SCRIPT, "_preflight_arm_reachability", lambda: (True, None))
         monkeypatch.setattr(pii_pkg, "strip_pii_clauses", fake_strip)
@@ -771,7 +860,7 @@ class TestGroundingArmPreflight:
             lambda: (False, "ConnectionError: Connection refused"),
         )
 
-        def _record_build() -> _StubDiscriminator:
+        def _record_build(**_kw: object) -> _StubDiscriminator:
             built["discriminator"] = True
             return _StubDiscriminator()
 
@@ -820,7 +909,7 @@ class TestGroundingArmPreflight:
         stub = _StubDiscriminator()
         _stub_reachable_slots(monkeypatch)
         monkeypatch.setattr(SCRIPT, "_preflight_arm_reachability", lambda: (True, None))
-        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda: stub)
+        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda **_kw: stub)
 
         receipt = SCRIPT.run_grounding_accuracy(
             corpus_dir=corpus, limit=2, arm="configured", out=out, no_pii=True
@@ -841,7 +930,7 @@ class TestGroundingArmPreflight:
         stub = _AlwaysUncertainDiscriminator()
         _stub_reachable_slots(monkeypatch)
         monkeypatch.setattr(SCRIPT, "_preflight_arm_reachability", lambda: (True, None))
-        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda: stub)
+        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda **_kw: stub)
 
         receipt = SCRIPT.run_grounding_accuracy(
             corpus_dir=corpus, limit=2, arm="configured", out=out, no_pii=True

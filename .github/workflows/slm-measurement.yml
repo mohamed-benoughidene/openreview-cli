@@ -6,6 +6,13 @@ name: SLM slot measurement
 
 on:
   workflow_dispatch:
+    inputs:
+      require_pass_agreement:
+        description: >-
+          Grounding-accuracy job only: run its arm with the discriminator's
+          both-passes-must-agree rule ON. Default off, matching the shipped product.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -369,6 +376,14 @@ jobs:
         # Plain invocation on purpose: the harness exits 1 when an arm is unreachable,
         # so the step (and the job) fail and the broken run is visible. A legitimate
         # skip exits 0 and stays green.
+        #
+        # The `require_pass_agreement` dispatch input turns the discriminator's
+        # both-passes-must-agree rule on for this arm; it is off by default (the shipped
+        # product's setting), so the same job can be dispatched either way. The harness
+        # records the setting in the receipt.
+        env:
+          REQUIRE_PASS_AGREEMENT: >-
+            ${{ inputs.require_pass_agreement && '--require-pass-agreement' || '' }}
         run: |
           uv run python scripts/measure_slm_slots.py \
             --grounding-accuracy \
@@ -376,7 +391,8 @@ jobs:
             --limit 20 \
             --no-pii \
             --corpus-dir corpus \
-            --out results/grounding-accuracy-local.json
+            --out results/grounding-accuracy-local.json \
+            $REQUIRE_PASS_AGREEMENT
 
       - name: Report what the receipt measured
         if: always()
@@ -394,7 +410,8 @@ jobs:
           receipt = json.loads(path.read_text())
           print(
               f"[receipt] mode={receipt['mode']} arm={receipt['arm']} "
-              f"grounding_model={receipt['slots']['grounding']} git_sha={receipt['git_sha']}"
+              f"grounding_model={receipt['slots']['grounding']} git_sha={receipt['git_sha']} "
+              f"require_pass_agreement={receipt['require_pass_agreement']}"
           )
           if receipt.get("skipped"):
               print(
@@ -411,7 +428,8 @@ jobs:
                   f"[receipt] positives={receipt['positives']} "
                   f"negatives_kept={receipt['negatives_kept']} "
                   f"negatives_dropped_guard={receipt['negatives_dropped_guard']} "
-                  f"paraphrases_skipped={receipt['paraphrases_skipped']}"
+                  f"paraphrases_skipped={receipt['paraphrases_skipped']} "
+                  f"second_pass_fallbacks={receipt['second_pass_fallbacks']}"
               )
               print(
                   f"[receipt] bad_caught={receipt['bad_caught']}/{receipt['negatives_kept']} "
@@ -442,6 +460,8 @@ jobs:
                       f"{receipt['limit']})\n"
                       f"- positives: {receipt['positives']}; negatives kept: "
                       f"{receipt['negatives_kept']}\n"
+                      f"- both-passes-agree rule: {receipt['require_pass_agreement']} "
+                      f"(second-pass fallbacks: {receipt['second_pass_fallbacks']})\n"
                   )
           PY
 

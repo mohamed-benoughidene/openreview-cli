@@ -24,6 +24,13 @@ absent, and it deliberately does **not** use ``compute_cg_metrics`` as a signal
 the exact failure mode this mode exists to expose). See
 ``docs/specs/plans/2026-09-30-grounding-accuracy-harness-design.md``.
 
+``--require-pass-agreement`` is the grounding-accuracy mode's switch for the discriminator's
+both-passes-must-agree rule: the shipped product leaves it off, and the harness defaults to
+the same, so the same arm can be measured one-pass and two-pass. The receipt records which
+way the run ran (``require_pass_agreement``) and how many second passes fell back
+(``second_pass_fallbacks``), so a both-passes run whose second pass never answered cannot be
+read as a run where the rule worked.
+
 This mode strips PII before any model call, with the same
 ``openreview_cli.pii.strip_pii_clauses`` machinery the review path runs: the
 balanced tier's PII-before-egress gate otherwise refuses every cloud call
@@ -576,8 +583,13 @@ def _ensure_cost_ledger_database() -> None:
     init_database(get_data_dir() / "openreview.db")
 
 
-def _make_discriminator() -> Any:
-    """Build the discriminator under test: real Gateway, throwaway audit dir."""
+def _make_discriminator(*, require_pass_agreement: bool = False) -> Any:
+    """Build the discriminator under test: real Gateway, throwaway audit dir.
+
+    ``require_pass_agreement`` is the discriminator's both-passes-must-agree rule (item 4). It
+    is off in the shipped product; the grounding arm turns it on with
+    ``--require-pass-agreement`` and records which way the run ran.
+    """
     import tempfile
 
     from openreview_cli.grounding.discriminator import CitationGroundingDiscriminator
@@ -586,7 +598,9 @@ def _make_discriminator() -> Any:
     # migrations) first (the `no such table: cost_logs` bug).
     _ensure_cost_ledger_database()
     audit_dir = tempfile.mkdtemp(prefix="grounding_accuracy_audit_")
-    return CitationGroundingDiscriminator(mode="strict", output_dir=audit_dir)
+    return CitationGroundingDiscriminator(
+        mode="strict", output_dir=audit_dir, require_pass_agreement=require_pass_agreement
+    )
 
 
 def _grounding_skip_receipt(
@@ -596,6 +610,7 @@ def _grounding_skip_receipt(
     reason: str,
     slots: dict[str, str] | None = None,
     skip_kind: str | None = None,
+    require_pass_agreement: bool = False,
 ) -> dict[str, Any]:
     models = dict(slots or {})
     return {
@@ -635,6 +650,8 @@ def _grounding_skip_receipt(
         "unreadable_answers": 0,
         # No call ran, so the second pass neither ran nor fell back.
         "second_pass_fallbacks": 0,
+        # Which way the both-passes-agree rule was set for this run (recorded even on a skip).
+        "require_pass_agreement": require_pass_agreement,
         "latency": {"calls": 0, "mean": None, "median": None, "p95": None, "max": None},
         "caveats": list(GROUNDING_ACCURACY_CAVEATS),
         "per_label": [],
@@ -646,6 +663,7 @@ def _print_grounding_summary(receipt: dict[str, Any], out: Path) -> None:
     drops = receipt["negatives_dropped_guard_by_generator"]
     print(
         f"[grounding-accuracy] arm={receipt['arm']} model={receipt['slots']['grounding']} "
+        f"require_pass_agreement={receipt['require_pass_agreement']} "
         f"units={receipt['units']} positives={receipt['positives']} "
         f"negatives_kept={receipt['negatives_kept']} "
         f"negatives_dropped_guard={receipt['negatives_dropped_guard']}"
@@ -697,7 +715,13 @@ def _print_grounding_summary(receipt: dict[str, Any], out: Path) -> None:
 
 
 def run_grounding_accuracy(
-    *, corpus_dir: Path, limit: int, arm: str, out: Path, no_pii: bool = False
+    *,
+    corpus_dir: Path,
+    limit: int,
+    arm: str,
+    out: Path,
+    no_pii: bool = False,
+    require_pass_agreement: bool = False,
 ) -> dict[str, Any]:
     """Run the grounding-accuracy mode; write the JSON receipt; return it.
 
@@ -708,13 +732,24 @@ def run_grounding_accuracy(
     PII is stripped (the review path's machinery) before the labels are built and before
     the discriminator runs, so the balanced tier's egress gate is satisfied and the clauses
     the model sees are the stripped ones. ``no_pii`` is the explicit opt-out.
+
+    ``require_pass_agreement`` turns the discriminator's both-passes-must-agree rule on (off
+    in the shipped product); the receipt records it either way, so a run with the rule on is
+    never mistaken for the one-pass default.
     """
     corpus_dir = Path(corpus_dir)
     out = Path(out)
 
     if not corpus_dir.is_dir() or not any(corpus_dir.glob("*.txt")):
         reason = f"corpus absent at {corpus_dir}"
-        receipt = _grounding_skip_receipt(corpus_dir, limit, arm, reason, skip_kind="corpus_absent")
+        receipt = _grounding_skip_receipt(
+            corpus_dir,
+            limit,
+            arm,
+            reason,
+            skip_kind="corpus_absent",
+            require_pass_agreement=require_pass_agreement,
+        )
         _write_receipt(out, receipt)
         print(f"[grounding-accuracy] {reason} — skipping. Receipt: {out}")
         return receipt
@@ -727,7 +762,13 @@ def run_grounding_accuracy(
             f"'{grounding_model or '(unset)'}'"
         )
         receipt = _grounding_skip_receipt(
-            corpus_dir, limit, arm, reason, slots=slots, skip_kind="arm_misconfigured"
+            corpus_dir,
+            limit,
+            arm,
+            reason,
+            slots=slots,
+            skip_kind="arm_misconfigured",
+            require_pass_agreement=require_pass_agreement,
         )
         _write_receipt(out, receipt)
         print(f"[grounding-accuracy] {reason} — skipping. Receipt: {out}")
@@ -744,7 +785,13 @@ def run_grounding_accuracy(
         _write_receipt(
             out,
             _grounding_skip_receipt(
-                corpus_dir, limit, arm, reason, slots=slots, skip_kind="pii_unavailable"
+                corpus_dir,
+                limit,
+                arm,
+                reason,
+                slots=slots,
+                skip_kind="pii_unavailable",
+                require_pass_agreement=require_pass_agreement,
             ),
         )
         print(f"[grounding-accuracy] {reason}")
@@ -767,7 +814,13 @@ def run_grounding_accuracy(
             f"({preflight_error}); no measurement was run"
         )
         receipt = _grounding_skip_receipt(
-            corpus_dir, limit, arm, reason, slots=slots, skip_kind="arm_unreachable"
+            corpus_dir,
+            limit,
+            arm,
+            reason,
+            slots=slots,
+            skip_kind="arm_unreachable",
+            require_pass_agreement=require_pass_agreement,
         )
         receipt["preflight"] = {
             "ok": False,
@@ -786,13 +839,19 @@ def run_grounding_accuracy(
     labels, drops, generated, paraphrase_skips = _build_grounding_labels(units)
 
     try:
-        discriminator = _make_discriminator()
+        discriminator = _make_discriminator(require_pass_agreement=require_pass_agreement)
     except Exception as exc:  # an unbuildable gateway is an environment error, not a number
         reason = f"cannot start the grounding run: {type(exc).__name__}: {exc}"
         _write_receipt(
             out,
             _grounding_skip_receipt(
-                corpus_dir, limit, arm, reason, slots=slots, skip_kind="gateway_unavailable"
+                corpus_dir,
+                limit,
+                arm,
+                reason,
+                slots=slots,
+                skip_kind="gateway_unavailable",
+                require_pass_agreement=require_pass_agreement,
             ),
         )
         print(f"[grounding-accuracy] {reason}")
@@ -867,6 +926,9 @@ def run_grounding_accuracy(
         "all_uncertain": all_uncertain,
         "all_uncertain_note": all_uncertain_note,
         "unreadable_answers": discriminator.unreadable_answers,
+        # Which way the both-passes-agree rule was set for this run: a both-passes run must
+        # not be readable as the one-pass default.
+        "require_pass_agreement": require_pass_agreement,
         # Second passes that failed or were unreadable, so a run whose second pass never
         # answered is visible in the receipt instead of looking like an enabled rule.
         "second_pass_fallbacks": discriminator.second_pass_fallbacks,
@@ -927,6 +989,14 @@ def main(argv: list[str] | None = None) -> None:
         help="Run the grounding-accuracy mode instead of the review mode.",
     )
     parser.add_argument(
+        "--require-pass-agreement",
+        action="store_true",
+        help=(
+            "Grounding-accuracy mode: turn on the discriminator's both-passes-must-agree rule "
+            "(off by default, matching the shipped product)."
+        ),
+    )
+    parser.add_argument(
         "--arm",
         choices=["local", "cloud", "configured"],
         default="configured",
@@ -955,6 +1025,7 @@ def main(argv: list[str] | None = None) -> None:
             arm=args.arm,
             out=args.out,
             no_pii=args.no_pii,
+            require_pass_agreement=args.require_pass_agreement,
         )
         return
 
