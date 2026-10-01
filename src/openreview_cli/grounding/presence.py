@@ -10,8 +10,8 @@ entire output.
 the harness's planted bad claims reach 0.689 while supported paraphrases fall to 0.200, so
 any single line either misses mislabels or rejects real findings (design §1). The boolean is
 a conservative hint, not a gate: it is ``False`` whenever the measurement would be
-meaningless — no clause text, a claim under five tokens, or a claim that is only a reference
-such as ``4.3``.
+meaningless — no clause words, a claim that is only a reference such as ``4.3``, or a claim
+under five tokens.
 """
 
 from __future__ import annotations
@@ -58,10 +58,11 @@ def coverage(claim_text: str, clause_text: str) -> float:
     claim_tokens = _tokens(normalise(claim_text))
     if not claim_tokens:
         return 0.0
+    # The multiset intersection counts a token once per occurrence on each side, capped at the
+    # smaller count; a set-based match would call one clause occurrence enough for any number
+    # of claim repetitions.
     clause_counts = Counter(_tokens(normalise(clause_text)))
-    matched = sum(
-        min(count, clause_counts[token]) for token, count in Counter(claim_tokens).items()
-    )
+    matched = sum((Counter(claim_tokens) & clause_counts).values())
     return matched / len(claim_tokens)
 
 
@@ -71,9 +72,9 @@ def measure(claim_text: str, clause_text: str) -> tuple[float, bool]:
     The number always equals ``coverage(claim_text, clause_text)``; the boolean is ``False``
     — never "absent" — when the measurement would be meaningless:
 
-    - the clause text is empty or whitespace-only;
-    - the claim has fewer than five tokens;
-    - the claim is only a reference such as ``4.3`` (``v?\\d+(?:\\.\\d+)*``).
+    - the clause has no usable words (empty, whitespace-only or punctuation-only);
+    - the claim is only a reference such as ``4.3`` (``v?\\d+(?:\\.\\d+)*``);
+    - the claim has fewer than five tokens.
 
     Otherwise it is ``coverage(...) < _WORDING_ABSENT_THRESHOLD``. The hint only tells the
     model the claim's wording does not appear in the clause; the model still decides.
@@ -86,11 +87,11 @@ def measure(claim_text: str, clause_text: str) -> tuple[float, bool]:
         The coverage score and the ``wording_absent`` flag, in that order.
     """
     score = coverage(claim_text, clause_text)
-    if not clause_text.strip():
+    if not _tokens(normalise(clause_text)):
         return score, False
     normalised_claim = normalise(claim_text)
-    if len(_tokens(normalised_claim)) < _MIN_CLAIM_TOKENS:
-        return score, False
     if _REFERENCE_RE.fullmatch(normalised_claim):
+        return score, False
+    if len(_tokens(normalised_claim)) < _MIN_CLAIM_TOKENS:
         return score, False
     return score, score < _WORDING_ABSENT_THRESHOLD
