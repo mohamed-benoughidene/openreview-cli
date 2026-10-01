@@ -17,7 +17,9 @@ deliberately NOT the signal (it is structural, covers only grounded verdicts, an
 
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -601,8 +603,83 @@ class TestGroundingAccuracyPiiStrip:
         assert stub.calls
         assert all(clause_text.endswith("[PARTY_A]") for _c, _i, clause_text in stub.calls)
         assert any(
-            row["generator"] == "positive" and row["claim_text"] for row in receipt["per_label"]
+            row["generator"] == "positive" and row["claim_sha256"] for row in receipt["per_label"]
         )
+
+
+class _RaisingDiscriminator:
+    """Stands in for a per-call gateway failure: every ``ground_claim`` raises."""
+
+    def __init__(self) -> None:
+        self.unreadable_answers = 0
+
+    def ground_claim(
+        self, claim_text: str, cited_clause_id: str, clause_text: str
+    ) -> tuple[GroundingVerdict, list[Any], float]:
+        raise RuntimeError("kaboom")
+
+
+class TestGroundingReceiptCarriesNoFindingText:
+    """A per-finding row must not publish the finding's own text.
+
+    The receipts are regenerated and committed, so the exposure is closed at the source: a
+    row carries the sha256 of its claim (``claim_sha256``), and of a per-call error
+    (``error_sha256``), instead of the raw claim or error text. The receipt stays able to
+    identify a row, but it can no longer leak a clause sentence or a provider message.
+    """
+
+    def _receipt(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stub: Any
+    ) -> tuple[dict[str, Any], Path]:
+        corpus = _tiny_corpus(tmp_path)
+        out = tmp_path / "ga.json"
+        monkeypatch.setattr(
+            SCRIPT,
+            "_configured_slots",
+            lambda: {"extraction": "s", "reasoning": "s", "grounding": "stub/grounding"},
+        )
+        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda: stub)
+        monkeypatch.setattr(SCRIPT, "_preflight_arm_reachability", lambda: (True, None))
+        monkeypatch.setattr(SCRIPT, "operand_change", lambda _text: None)
+        monkeypatch.setattr(SCRIPT, "unsupported_claim", lambda a, b: a.text)
+        monkeypatch.setattr(SCRIPT, "hallucination", lambda claim: FABRICATED)
+        receipt = SCRIPT.run_grounding_accuracy(
+            corpus_dir=corpus, limit=2, arm="configured", out=out, no_pii=True
+        )
+        return receipt, out
+
+    def test_rows_hash_the_claim_instead_of_writing_it(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        receipt, out = self._receipt(tmp_path, monkeypatch, _StubDiscriminator())
+
+        rows = receipt["per_label"]
+        assert rows
+        # The raw finding-text key is gone everywhere.
+        assert all("claim_text" not in row for row in rows)
+        # A sha256 identifies each row instead of its text.
+        assert all(re.fullmatch(r"[0-9a-f]{64}", row["claim_sha256"]) for row in rows)
+        positive = next(
+            row for row in rows if row["generator"] == "positive" and row["unit_id"] == "c000"
+        )
+        raw_positive = SCRIPT.first_qualifying_sentence(PARA_A)
+        assert raw_positive
+        assert positive["claim_sha256"] == hashlib.sha256(raw_positive.encode("utf-8")).hexdigest()
+        # ... and the finding's own text never reaches the serialized receipt.
+        assert raw_positive not in out.read_text()
+
+    def test_a_per_call_error_is_hashed_not_written_raw(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        receipt, out = self._receipt(tmp_path, monkeypatch, _RaisingDiscriminator())
+
+        rows = receipt["per_label"]
+        assert rows
+        assert all("error" not in row for row in rows)
+        expected = hashlib.sha256(b"RuntimeError: kaboom").hexdigest()
+        assert all(row["error_sha256"] == expected for row in rows)
+        # The provider message is not in the receipt either.
+        assert "kaboom" not in out.read_text()
 
 
 class TestGroundingAccuracyGracefulSkip:

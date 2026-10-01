@@ -43,6 +43,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -359,6 +360,16 @@ def _strip_grounding_units(
             "claims are the stripped text (PII placeholders), as sent for cloud egress."
         ),
     }
+
+
+def _sha256(text: str) -> str:
+    """Hex SHA-256 of ``text``.
+
+    The receipt stores this in place of a finding's own text or a raw error message: the
+    exposure is closed (no clause sentence or provider message is published) while a row can
+    still be identified. A short prefix was the alternative; a hash leaves nothing to leak.
+    """
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def _label(
@@ -818,14 +829,17 @@ def run_grounding_accuracy(
         per_label.append(
             {
                 "unit_id": label["unit_id"],
-                "claim_text": label["claim_text"],
+                # The finding's own text and any raw error message are hashed, never
+                # published: the receipt must not leak a clause sentence or a provider error
+                # string now that it is regenerated and committed.
+                "claim_sha256": _sha256(label["claim_text"]),
                 "expected": label["expected"],
                 "generator": label["generator"],
                 "verdict": verdict_value,
                 "confidence": confidence,
                 "coverage": round(coverage_value, 6),
                 "seconds": round(time.perf_counter() - started, 6),
-                "error": error,
+                "error_sha256": _sha256(error) if error is not None else None,
             }
         )
 
