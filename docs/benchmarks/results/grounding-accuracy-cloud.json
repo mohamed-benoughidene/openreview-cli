@@ -1,16 +1,16 @@
 {
  "benchmark": "grounding-accuracy-cloud",
- "command": "uv run python scripts/measure_slm_slots.py --grounding-accuracy --arm cloud --limit 20 --corpus-dir data/legalbenchrag/corpus/cuad --out .benchmark-reports/ga-cloud-20.json",
+ "command": "uv run python scripts/measure_slm_slots.py --grounding-accuracy --arm cloud --limit 20 --corpus-dir corpus --out .benchmark-reports/ga-cloud-kept.json",
  "date": "2026-10-01",
- "git_commit": "484ac0899e6d",
+ "git_commit": "b8fa7077bcd7",
  "provenance": [
   {
    "path": "scripts/measure_slm_slots.py",
-   "sha256": "9c1fc31cdd9b3aed071b6e4ffb9b41d9da5f3ae5b85b6421828a0400758ea77e"
+   "sha256": "3bfd03c8eae2453050119f6f1d6c556afeeb24a53581acce325a689a1766fbf1"
   },
   {
    "path": "src/openreview_cli/grounding/corruption.py",
-   "sha256": "1db91eb2ed141aafe4e914321319ed8042fc2efc12f1dbdc3c48728e3129aa59"
+   "sha256": "5aa83ee640c3949ba253029413d359875c3d81debcb373bcdd8f37edab943b36"
   },
   {
    "path": "src/openreview_cli/grounding/presence.py",
@@ -22,38 +22,38 @@
   },
   {
    "path": "src/openreview_cli/grounding/discriminator.py",
-   "sha256": "54703162a514b895cad862eff09b7f2ca4f75735ffc37dba8113f97ae9c78628"
+   "sha256": "7ee8ed3534ed8d251193fd05283c4b7f77ae8f8c9f3bcac41a9a92d5525f1291"
   }
  ],
  "models": "openrouter/anthropic/claude-sonnet-4.6",
- "benchmark_input": "data/legalbenchrag/corpus/cuad (CUAD; gitignored, so absent in CI)",
+ "benchmark_input": "the same assembled corpus the CI local arm builds, from the repository's tracked fixtures: 96 clause units from 17 documents (tests/fixtures/**/*.txt verbatim plus fixture PDFs/DOCX parsed with openreview_cli.parsing). The CUAD corpus under data/legalbenchrag/ is not used for this run.",
  "sample": {
   "units": 20,
-  "positives": 30,
-  "negatives_kept": 50,
+  "positives": 25,
+  "negatives_kept": 44,
   "negatives_generated": {
    "unsupported_claim": 20,
    "hallucination": 20,
-   "paraphrased_unsupported": 10
+   "paraphrased_unsupported": 4
   },
   "negatives_dropped_guard": 0,
-  "model_calls": 80
+  "model_calls": 69
  },
  "metrics": {
-  "bad_caught": 44,
-  "bad_caught_rate": 0.88,
+  "bad_caught": 38,
+  "bad_caught_rate": 0.8636,
   "bad_missed": 0,
   "bad_uncertain": 6,
   "bad_called_grounded": 0,
-  "good_accepted": 25,
+  "good_accepted": 24,
   "good_rejected": 0,
   "false_reject_rate": 0.0,
-  "good_uncertain": 5,
+  "good_uncertain": 1,
   "unreadable_answers": 0,
-  "latency_mean_s": 3.081884,
-  "latency_median_s": 3.065271,
-  "latency_p95_s": 4.607075,
-  "latency_max_s": 6.176731
+  "latency_mean_s": 3.332352,
+  "latency_median_s": 3.209984,
+  "latency_p95_s": 5.305227,
+  "latency_max_s": 6.405617
  },
- "notes": "Run on this machine with the configured cloud slots, cloud model openrouter/anthropic/claude-sonnet-4.6. This was a local (non-CI) run, so the harness recorded git_sha \"unknown\" (it reads only GITHUB_SHA); the commit recorded here is the branch tip the run was made at. PII was stripped before every model call (43 entities replaced) with the review path's own strip_pii_clauses machinery, so the clause text and positives are the stripped text sent for cloud egress. Positives and negatives now come in classes that include paraphrases: 30 positives (20 clause qualifying sentences plus 10 lightly rewritten copies) and 50 negatives (20 unsupported_claim + 20 hallucination + 10 paraphrased_unsupported). The labeller's rewrite hit-rate differs from the local arm because this arm runs over CUAD rather than the tracked fixtures: 10 rewrites were kept and 20 skipped here (a rewrite that equalled its source), against 5 kept and 30 skipped on the local fixtures. All three generators' negatives cleared the is_genuine_negative guard (0 dropped). This run is NOT clean: it printed a litellm error/help banner (\"Give Feedback / Get Help\" and a litellm issues link) before its summary, a transient fault that did not stop the run, and 5 known-good claims came back uncertain where an earlier run on the pre-change code recorded 1. Single-sample smoke measurement, not a benchmark: model replies vary run to run and the arms do not share a corpus. Costs money per run (80 calls this run)."
+ "notes": "Run on this machine with the configured cloud slots, cloud model openrouter/anthropic/claude-sonnet-4.6. This was a local (non-CI) run made on the same assembled corpus and items as the local arm, not on CUAD, so both arms share one corpus and the comparison is of arms. The harness recorded git_sha \"unknown\" (it reads only GITHUB_SHA); the commit recorded here is the branch tip the run was made at. PII was stripped before every model call (51 entities replaced) with the review path's own strip_pii_clauses machinery, so the clause text and positives are the stripped text sent for cloud egress. Positives and negatives come in classes that include paraphrases: 25 positives (20 clause sentences plus 5 lightly rewritten copies) and 44 negatives (20 unsupported_claim + 20 hallucination + 4 paraphrased_unsupported). All three generators' negatives cleared the is_genuine_negative guard (0 dropped). This run is from this branch's state: the four kept defect fixes (honest measurement labels, the single-finding measurement path asking the product's question, the grounding model's configured context, and a receipt that hashes a finding's text and any raw provider error instead of publishing them), with no behaviour changes. Both positive classes are supported by the clause by construction and the substitution map is narrow, so this positive set is easier than a human-labelled one and no real-world false-positive rate may be quoted from it; the negative arm is the signal. Single-sample smoke measurement, not a benchmark: model replies vary run to run and the cloud arm costs money per run (69 calls this run)."
 }
