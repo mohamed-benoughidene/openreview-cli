@@ -417,7 +417,7 @@ class CitationGroundingDiscriminator:
             reason: str | None = None
             presence_number, absent = presence_by_index[idx]
 
-            # The fourth answer is a pointer field, never a verdict (FIX 1): it is believed
+            # The fourth answer is a pointer field, never a verdict: it is believed
             # only when the finding's wording is substantially present in the named clause.
             # A failed check clears the pointer and leaves the verdict exactly as the passes
             # produced it — this never writes, downgrades or deletes a verdict.

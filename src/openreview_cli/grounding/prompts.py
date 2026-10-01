@@ -42,7 +42,7 @@ For each claim, respond with a JSON object containing:
 
 """
 
-# FIX 5: the JSON-only instruction tail lives once and is appended to both templates by
+# The JSON-only instruction tail lives once and is appended to both templates by
 # concatenation, so the two passes cannot drift and the raw first-pass template still
 # contains the exact tail the pinned tests read.
 _JSON_ONLY_TAIL = (

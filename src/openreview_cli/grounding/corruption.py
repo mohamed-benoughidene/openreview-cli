@@ -291,7 +291,7 @@ def paraphrased_unsupported(clause_a: ClauseUnit, clause_b: ClauseUnit) -> str |
     return paraphrase(sentence)
 
 
-# FIX 9 — the reviewed operand map, limited to the operands this corpus carries: a
+# The reviewed operand map, limited to the operands this corpus carries: a
 # prior-written-consent phrase, the two party labels, a survival period and a payment period.
 # Anything else is dead weight the corpus never reaches. The first matching pair wins.
 _OPERAND_MAP: tuple[tuple[str, str], ...] = (
