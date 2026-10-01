@@ -101,17 +101,16 @@ _MAX_PROMPT_CLAUSES = 8
 def _clause_window(text: str) -> str:
     """At most ``_CLAUSE_WINDOW_CHARS`` characters of ``text``, cut on a sentence boundary
     when one fits. A single first sentence longer than the window is hard-clipped at it."""
-    limit = _CLAUSE_WINDOW_CHARS
-    if len(text) <= limit:
+    if len(text) <= _CLAUSE_WINDOW_CHARS:
         return text
     from openreview_cli.parsing.clause_detector import nupunkt_detect_boundaries
 
     end = 0
     for _start, stop in nupunkt_detect_boundaries(text):
-        if stop <= limit and text[end:stop].strip():
+        if stop <= _CLAUSE_WINDOW_CHARS and text[end:stop].strip():
             end = stop
     if end == 0:  # the first sentence alone exceeds the window: hard-clip it
-        end = limit
+        end = _CLAUSE_WINDOW_CHARS
     return text[:end].rstrip() + _TRUNCATION_MARKER
 
 
