@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import asdict
 from datetime import datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 
@@ -16,6 +17,14 @@ from openreview_cli.grounding.models import (
     DiscriminationAuditEntry,
     GroundingResult,
     GroundingVerdict,
+)
+from openreview_cli.review.models import (
+    ClauseAssessment,
+    DocMeta,
+    Position,
+    QAVerdict,
+    ReviewReport,
+    ReviewSummary,
 )
 
 
@@ -454,6 +463,91 @@ class TestCGReport:
         assert report.ungrounded_count == 0
         assert report.uncertain_count == 0
         assert report.verdicts == []
+
+
+class TestNewGroundingFields:
+    """FIX 6: the three fields and the memo counts land in ONE migration."""
+
+    def _report_and_cg(
+        self,
+        mode: Literal["strict", "lenient"],
+        verdict: GroundingVerdict,
+        **result_fields: Any,
+    ) -> tuple[ReviewReport, CGReport]:
+        review = ReviewReport(
+            document=DocMeta(filename="test.pdf", page_count=1, clause_count=1, pii_stripped=False),
+            assessments=[
+                ClauseAssessment(
+                    clause_id="4.3",
+                    clause_text="Test clause",
+                    playbook_category="confidentiality",
+                    position=Position.PREFERRED,
+                    confidence=0.9,
+                    citation="4.3",
+                    qa_verdict=QAVerdict.agree,
+                    extraction_model="test",
+                    qa_model="test",
+                )
+            ],
+            summary=ReviewSummary(),
+            playbook_id="test",
+            generated_at=datetime.now(),
+        )
+        cg = CGReport(
+            verdicts=[
+                GroundingResult(claim_index=0, verdict=verdict, provenances=[], **result_fields)
+            ],
+            mode=mode,
+            metrics=CGMetrics(
+                citation_precision=1.0, citation_relevance=1.0, citation_locality=1.0
+            ),
+            total_claims=1,
+            grounded_count=1 if verdict is GroundingVerdict.GROUNDED else 0,
+            ungrounded_count=1 if verdict is GroundingVerdict.UNGROUNDED else 0,
+            uncertain_count=1 if verdict is GroundingVerdict.UNCERTAIN else 0,
+        )
+        return review, cg
+
+    def test_defaults_keep_every_existing_construction_working(self) -> None:
+        result = GroundingResult(claim_index=0, verdict=GroundingVerdict.GROUNDED, provenances=[])
+        assert (result.miscited_to_clause_id, result.pass_disagreement, result.not_sure) == (
+            None,
+            False,
+            False,
+        )
+
+    def test_merge_copies_the_three_new_fields(self) -> None:
+        review, cg = self._report_and_cg(
+            "lenient",
+            GroundingVerdict.GROUNDED,
+            miscited_to_clause_id="4.7",
+            pass_disagreement=True,
+            not_sure=True,
+        )
+        cg.merge_into(review)
+        merged = review.assessments[0]
+        assert (merged.miscited_to_clause_id, merged.pass_disagreement, merged.not_sure) == (
+            "4.7",
+            True,
+            True,
+        )
+
+    def test_strict_merge_records_the_exclusion_counts_for_the_memo(self) -> None:
+        review, cg = self._report_and_cg("strict", GroundingVerdict.UNGROUNDED)
+        cg.merge_into(review)
+        assert review.assessments == []
+        assert (review.grounding_excluded_unsupported, review.grounding_excluded_unsure) == (1, 0)
+
+    def test_from_dict_reads_the_two_memo_counts(self) -> None:
+        """The counts the strict merge recorded survive a JSON round-trip (Task 8 reads them)."""
+        review, _cg = self._report_and_cg("strict", GroundingVerdict.GROUNDED)
+        review.grounding_excluded_unsupported = 2
+        review.grounding_excluded_unsure = 1
+        reloaded = ReviewReport.from_dict(asdict(review))
+        assert (reloaded.grounding_excluded_unsupported, reloaded.grounding_excluded_unsure) == (
+            2,
+            1,
+        )
 
 
 class TestDiscriminationAuditEntry:

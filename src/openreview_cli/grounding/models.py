@@ -44,6 +44,9 @@ class GroundingResult:
     # measure never ran (no clause text in hand). Neither value is a verdict.
     grounding_presence: float | None = None
     wording_absent: bool = False
+    miscited_to_clause_id: str | None = None  # the fourth answer; never changes ``verdict``
+    pass_disagreement: bool = False  # the two passes split GROUNDED/UNGROUNDED
+    not_sure: bool = False  # the final verdict is UNCERTAIN
 
 
 @dataclass(slots=True)
@@ -104,6 +107,9 @@ class CGReport:
             assessment.grounding_confidence = confidence
             assessment.grounding_presence = result.grounding_presence
             assessment.wording_absent = result.wording_absent
+            assessment.miscited_to_clause_id = result.miscited_to_clause_id
+            assessment.pass_disagreement = result.pass_disagreement
+            assessment.not_sure = result.not_sure
 
             if self.mode == "strict" and result.verdict in (
                 GroundingVerdict.UNGROUNDED,
@@ -121,6 +127,8 @@ class CGReport:
                 indices_to_keep.append(idx)
 
         if self.mode == "strict":
+            report.grounding_excluded_unsupported = self.ungrounded_count
+            report.grounding_excluded_unsure = self.uncertain_count
             # Keep only grounded claims (not in the removal set)
             keep_set = {
                 r.claim_index for r in self.verdicts if r.verdict == GroundingVerdict.GROUNDED

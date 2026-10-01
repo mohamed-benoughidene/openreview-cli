@@ -118,6 +118,9 @@ class ClauseAssessment:
     # Claim-wording presence: a number and a hint only, never a verdict.
     grounding_presence: float | None = None
     wording_absent: bool = False
+    miscited_to_clause_id: str | None = None
+    pass_disagreement: bool = False
+    not_sure: bool = False
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.confidence <= 1.0:
@@ -187,6 +190,8 @@ class ReviewReport:
     playbook_version: int | None = None
     cg_metrics: CGMetrics | None = None
     mode: str = "precheck"
+    grounding_excluded_unsupported: int = 0
+    grounding_excluded_unsure: int = 0
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ReviewReport:
@@ -298,4 +303,6 @@ class ReviewReport:
             if data.get("playbook_version") is not None
             else None,
             mode=str(data.get("mode", "precheck")),
+            grounding_excluded_unsupported=int(data.get("grounding_excluded_unsupported", 0)),
+            grounding_excluded_unsure=int(data.get("grounding_excluded_unsure", 0)),
         )
