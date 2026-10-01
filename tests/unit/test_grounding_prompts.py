@@ -139,3 +139,63 @@ def test_prompt_permits_a_single_object_and_keeps_the_array_for_batches() -> Non
 
 def test_prompt_no_longer_demands_an_array_unconditionally() -> None:
     assert "Respond with a JSON array of these objects" not in GROUNDING_PROMPT_TEMPLATE
+
+
+# ── answers that omit the index: the prompt only promises an order ────────────
+
+
+def _unindexed(verdict: str = "grounded") -> dict[str, object]:
+    """The same answer minus ``claim_index`` — legal when the call has one claim."""
+    answer = {**GROUNDED, "verdict": verdict}
+    del answer["claim_index"]
+    return answer
+
+
+def test_object_without_claim_index_is_read_as_the_answer_for_position_zero() -> None:
+    rows = parse_grounding_response(json.dumps(_unindexed()))
+
+    assert len(rows) == 1
+    claim_index, verdict, provenances, confidence = rows[0]
+    assert claim_index == 0
+    assert verdict is GroundingVerdict.GROUNDED
+    assert [(p.clause_id, p.paragraph_index, p.confidence) for p in provenances] == [
+        ("4.3", 2, 0.95)
+    ]
+    assert confidence == 0.95
+
+
+def test_array_without_claim_indices_is_read_in_input_order() -> None:
+    response = json.dumps([_unindexed(), _unindexed("ungrounded"), _unindexed("uncertain")])
+
+    assert _indices(response) == [0, 1, 2]
+    assert _verdicts(response) == [
+        GroundingVerdict.GROUNDED,
+        GroundingVerdict.UNGROUNDED,
+        GroundingVerdict.UNCERTAIN,
+    ]
+
+
+def test_numeric_string_claim_index_is_coerced_to_an_int() -> None:
+    response = json.dumps([{**_unindexed(), "claim_index": "0"}])
+
+    assert _indices(response) == [0]
+
+
+def test_non_numeric_string_claim_index_falls_back_to_the_position() -> None:
+    response = json.dumps([{**_unindexed(), "claim_index": "n/a"}, _unindexed("ungrounded")])
+
+    assert _indices(response) == [0, 1]
+
+
+def test_an_integer_claim_index_still_wins_over_the_position() -> None:
+    response = json.dumps([_obj(5), _unindexed("ungrounded")])
+
+    assert _indices(response) == [5, 1]
+
+
+def test_an_unknown_verdict_is_still_skipped_with_or_without_an_index() -> None:
+    response = json.dumps(
+        [_unindexed("nope"), {**_unindexed("nope"), "claim_index": 1}, _unindexed("grounded")]
+    )
+
+    assert _indices(response) == [2]
