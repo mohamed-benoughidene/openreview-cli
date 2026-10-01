@@ -149,6 +149,38 @@ class TestFormatJson:
         assert "citation" in first
         assert "is_amber" in first
 
+    def test_grounding_presence_signals_reach_json_without_wording(self) -> None:
+        """The two presence signals serialise as a number and a boolean only.
+
+        They must not smuggle claim or clause text into the report: the receipt is
+        the scalar value and the flag, nothing more.
+        """
+        claim_canary = "CANARYCLAIM the receiving party shall not disclose"
+        clause_canary = (
+            "CANARYCLAUSE the receiving party shall not disclose confidential information"
+        )
+        ca = _make_assessment("c1", Position.PREFERRED, 0.92)
+        ca.citation = claim_canary
+        ca.clause_text = clause_canary
+        ca.grounding_presence = 0.37
+        ca.wording_absent = True
+
+        data = json.loads(format_json(_make_report([ca])))
+        entry = data["assessments"][0]
+
+        assert entry["grounding_presence"] == 0.37
+        assert entry["wording_absent"] is True
+        # A number and a boolean — never a string carrying claim or clause wording.
+        assert not isinstance(entry["grounding_presence"], str)
+        assert not isinstance(entry["wording_absent"], str)
+        receipt = json.dumps(
+            {
+                "grounding_presence": entry["grounding_presence"],
+                "wording_absent": entry["wording_absent"],
+            }
+        )
+        assert "CANARY" not in receipt
+
     def test_summary_counts_are_consistent(self) -> None:
         report = _make_report()
         data = json.loads(format_json(report))

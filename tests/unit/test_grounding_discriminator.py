@@ -4,9 +4,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
+
+if TYPE_CHECKING:
+    from openreview_cli.parsing.models import Clause
+    from openreview_cli.review.models import ReviewReport
 
 from openreview_cli.grounding.discriminator import CitationGroundingDiscriminator
 from openreview_cli.grounding.models import (
@@ -1180,3 +1185,140 @@ def test_an_unreadable_batch_counts_every_claim_in_it(
 
     # Nothing in the batch parsed, so every claim in it counts as unreadable.
     assert d.unreadable_answers == len(sample_report.assessments)
+
+
+class TestGroundingPresenceRecorded:
+    """Item 1: the batch path records, on every GroundingResult, the share of the
+    claim's wording that appears in the clause it cites, and whether that wording is
+    absent. Neither value may influence a verdict; these tests pin only the recording.
+    """
+
+    _CLAIM = "The receiving party shall not disclose confidential information"
+    _CLAUSE = "The receiving party shall not disclose confidential information to any third party"
+    _FABRICATED = "Liquidated damages of five million dollars are payable upon breach"
+
+    def _report(self, citation: str, clause_id: str = "4.3") -> ReviewReport:
+        from datetime import datetime
+
+        from openreview_cli.review.models import (
+            ClauseAssessment,
+            DocMeta,
+            Position,
+            QAVerdict,
+            ReviewReport,
+            ReviewSummary,
+        )
+
+        assessment = ClauseAssessment(
+            clause_id=clause_id,
+            clause_text="Some clause text",
+            playbook_category="confidentiality",
+            position=Position.PREFERRED,
+            confidence=0.9,
+            citation=citation,
+            qa_verdict=QAVerdict.agree,
+            extraction_model="test",
+            qa_model="test",
+        )
+        return ReviewReport(
+            document=DocMeta(filename="test.pdf", page_count=1, clause_count=1, pii_stripped=False),
+            assessments=[assessment],
+            summary=ReviewSummary(),
+            playbook_id="test",
+            generated_at=datetime.now(),
+        )
+
+    def _source_clauses(self, clause_id: str = "4.3") -> list[Clause]:
+        from openreview_cli.parsing.models import Clause
+
+        return [
+            Clause(
+                id=clause_id,
+                title=None,
+                text=self._CLAUSE,
+                level=1,
+                parent_id=None,
+                source_page=1,
+                source_paragraph=None,
+                source_span=None,
+            )
+        ]
+
+    def _answer(self, verdict: str) -> str:
+        return json.dumps(
+            [
+                {
+                    "claim_index": 0,
+                    "verdict": verdict,
+                    "provenances": [{"clause_id": "4.3", "paragraph_index": 0, "confidence": 0.9}],
+                    "confidence": 0.9,
+                    "reason": None,
+                }
+            ]
+        )
+
+    def test_a_grounded_claim_carries_a_number_between_zero_and_one(
+        self, mock_gateway: MagicMock, sample_document: MagicMock
+    ) -> None:
+        mock_gateway.chat.return_value = self._answer("grounded")
+        d = CitationGroundingDiscriminator(mode="lenient", gateway=mock_gateway)
+
+        cg_report = d.ground_report(
+            self._report(self._CLAIM), sample_document, self._source_clauses()
+        )
+
+        result = cg_report.verdicts[0]
+        assert result.verdict is GroundingVerdict.GROUNDED
+        assert result.grounding_presence is not None
+        assert 0.0 <= result.grounding_presence <= 1.0
+        # The claim is verbatim in the clause, so the hint does not fire.
+        assert result.wording_absent is False
+
+    def test_an_ungrounded_claim_also_carries_a_number(
+        self, mock_gateway: MagicMock, sample_document: MagicMock
+    ) -> None:
+        mock_gateway.chat.return_value = self._answer("ungrounded")
+        d = CitationGroundingDiscriminator(mode="lenient", gateway=mock_gateway)
+
+        cg_report = d.ground_report(
+            self._report(self._FABRICATED), sample_document, self._source_clauses()
+        )
+
+        result = cg_report.verdicts[0]
+        assert result.verdict is GroundingVerdict.UNGROUNDED
+        assert result.grounding_presence is not None
+        assert 0.0 <= result.grounding_presence <= 1.0
+        # The claim's wording is not in the clause: the hint fires, the verdict is untouched.
+        assert result.wording_absent is True
+
+    def test_a_claim_whose_clause_text_is_unavailable_carries_none_and_false(
+        self, mock_gateway: MagicMock, sample_document: MagicMock
+    ) -> None:
+        mock_gateway.chat.return_value = self._answer("grounded")
+        d = CitationGroundingDiscriminator(mode="lenient", gateway=mock_gateway)
+
+        # The claim cites 9.9, but the only clause text in hand is for 4.3.
+        cg_report = d.ground_report(
+            self._report(self._CLAIM, clause_id="9.9"),
+            sample_document,
+            self._source_clauses("4.3"),
+        )
+
+        result = cg_report.verdicts[0]
+        assert result.grounding_presence is None
+        assert result.wording_absent is False
+
+    def test_a_zero_length_claim_carries_none_and_false(
+        self, mock_gateway: MagicMock, sample_document: MagicMock
+    ) -> None:
+        d = CitationGroundingDiscriminator(mode="lenient", gateway=mock_gateway)
+
+        # A whitespace-only citation is truthy (so it is not skipped) but has no claim.
+        cg_report = d.ground_report(self._report("   "), sample_document, self._source_clauses())
+
+        result = cg_report.verdicts[0]
+        assert result.verdict is GroundingVerdict.UNGROUNDED
+        assert result.reason == "Zero-length claim text"
+        assert result.grounding_presence is None
+        assert result.wording_absent is False
+        assert not mock_gateway.chat.called

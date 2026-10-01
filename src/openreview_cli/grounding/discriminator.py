@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from openreview_cli.review.models import ReviewReport
 
 from openreview_cli.gateway.models import CapabilityRequirement
+from openreview_cli.grounding import presence
 from openreview_cli.grounding.audit import GroundingAuditLog
 from openreview_cli.grounding.metrics import compute_cg_metrics
 from openreview_cli.grounding.models import (
@@ -253,6 +254,10 @@ class CitationGroundingDiscriminator:
 
         matched_clauses = self._get_clauses_for_batch(batch, document, source_clauses)
 
+        # Recorded for every result this batch produces, including the gateway-error
+        # fallbacks below. Neither value is read by any verdict decision.
+        presence_by_index = self._measure_presence(batch, matched_clauses)
+
         messages = build_grounding_messages(matched_clauses, batch)
 
         try:
@@ -272,6 +277,8 @@ class CitationGroundingDiscriminator:
                     verdict=GroundingVerdict.UNCERTAIN,
                     provenances=[],
                     reason=f"Gateway error: {e}",
+                    grounding_presence=presence_by_index[idx][0],
+                    wording_absent=presence_by_index[idx][1],
                 )
                 for idx, _, _ in batch
             ]
@@ -294,6 +301,7 @@ class CitationGroundingDiscriminator:
         for idx, claim_text, cited_clause_id in batch:
             # Determine reason
             reason: str | None = None
+            presence_number, absent = presence_by_index[idx]
 
             if idx in parsed_by_index:
                 verdict, provenances, confidence = parsed_by_index[idx]
@@ -333,10 +341,34 @@ class CitationGroundingDiscriminator:
                     verdict=verdict,
                     provenances=provenances,
                     reason=reason,
+                    grounding_presence=presence_number,
+                    wording_absent=absent,
                 )
             )
 
         return results
+
+    def _measure_presence(
+        self,
+        batch: list[tuple[int, str, str]],
+        matched_clauses: list[Clause],
+    ) -> dict[int, tuple[float | None, bool]]:
+        """Measure each claim against the clause text it was sent with.
+
+        One computation per claim, so the coverage number and the wording-absent hint
+        cannot disagree. A claim whose cited clause text is not in hand carries
+        ``(None, False)`` — the measure never ran for it. The result is a pure function
+        of the two texts; it is never read by a verdict decision.
+        """
+        clause_text_by_id = {clause.id: clause.text for clause in matched_clauses}
+        presence_by_index: dict[int, tuple[float | None, bool]] = {}
+        for idx, claim_text, cited_clause_id in batch:
+            clause_text = clause_text_by_id.get(cited_clause_id)
+            if clause_text is None:
+                presence_by_index[idx] = (None, False)
+            else:
+                presence_by_index[idx] = presence.measure(claim_text, clause_text)
+        return presence_by_index
 
     def _get_clauses_for_batch(
         self,
