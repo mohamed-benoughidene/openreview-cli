@@ -32,6 +32,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, NamedTuple
 
+from openreview_cli.grounding.presence import normalise
 from openreview_cli.parsing.clause_detector import nupunkt_detect_boundaries
 
 if TYPE_CHECKING:
@@ -63,7 +64,7 @@ class ClauseUnit(NamedTuple):
 
 def _normalize_for_guard(text: str) -> str:
     """Case-fold and collapse whitespace, so the guard compares claim to clause fairly."""
-    return " ".join(text.split()).casefold()
+    return normalise(text)
 
 
 def _sentences(text: str) -> list[str]:
