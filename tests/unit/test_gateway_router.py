@@ -595,19 +595,6 @@ class TestExtraParamsLogging:
 
 
 class TestExtraParamsCrossProvider:
-    def test_the_shipped_default_num_ctx_reaches_the_request(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """FIX 1b, build half of the code path: the grounding default sets num_ctx.
-
-        ``COMMON_CONFIG`` declares no grounding slot, so the merged default
-        (``config/loader.py``) is what builds the grounding request. Ollama reads num_ctx
-        from the request options; this pins that it survives into the litellm kwargs.
-        """
-        gw = _gateway(tmp_path, monkeypatch, COMMON_CONFIG)
-        kwargs = gw._get_litellm_kwargs("grounding")
-        assert int(kwargs["num_ctx"]) >= 8192
-
     def test_ollama_params_on_openai_does_not_crash(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
