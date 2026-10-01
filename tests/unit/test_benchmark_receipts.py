@@ -57,7 +57,13 @@ EXPECTED_RECEIPTS = frozenset(
         "grounding-accuracy-cloud.json",
     }
 )
-FORBIDDEN_KEYS = frozenset({"citation", "clause_text", "document_text", "text", "original_value"})
+# FIX 6: the grounding-accuracy receipt carries a per-finding row, so the finding's own
+# text ("claim_text") and any raw provider error message ("error") are text-bearing keys
+# too. The harness now stores a sha256 under "claim_sha256"/"error_sha256"; a regenerated
+# receipt that writes either raw key back must fail here.
+FORBIDDEN_KEYS = frozenset(
+    {"citation", "clause_text", "document_text", "text", "original_value", "claim_text", "error"}
+)
 
 # Revision 3, R9: pin the honesty-critical metadata per receipt. The generated
 # receipts carry a real hex commit; the projected receipts must keep their
@@ -300,10 +306,33 @@ def test_every_cited_receipt_exists_and_is_well_formed() -> None:
 
 
 def test_no_receipt_contains_text_bearing_keys() -> None:
-    for path in sorted(RESULTS_DIR.glob("*.json")):
+    """Every registered receipt must be free of text-bearing keys.
+
+    Scoped to ``EXPECTED_RECEIPTS`` (the receipts the page publishes) rather than every
+    ``*.json`` in the directory: ``slot-measurement.json`` is a deliberately unregistered,
+    superseded dump the repo keeps as history (issue #180), so it is not a receipt and the
+    exact-set test above already governs the directory's membership.
+    """
+    for name in sorted(EXPECTED_RECEIPTS):
+        path = RESULTS_DIR / name
         payload = json.loads(path.read_text(encoding="utf-8"))
         bad = FORBIDDEN_KEYS & set(_iter_keys(payload))
-        assert not bad, f"{path.name} contains text-bearing keys: {sorted(bad)}"
+        assert not bad, f"{name} contains text-bearing keys: {sorted(bad)}"
+
+
+def test_forbidden_keys_cover_the_finding_and_error_text() -> None:
+    """FIX 6: the guard must name the grounding receipt's finding and error text.
+
+    The grounding-accuracy receipt now stores a sha256 in place of a finding's own text and
+    a raw provider error message; with those keys in the set, a regenerated receipt that
+    writes either back fails ``test_no_receipt_contains_text_bearing_keys``. Without them
+    the guard is blind to exactly the exposure the receipts were regenerated to close.
+    """
+    assert {"claim_text", "error"} <= FORBIDDEN_KEYS
+    payload = {
+        "per_label": [{"unit_id": "c000", "claim_text": "a clause sentence", "error": "boom"}]
+    }
+    assert FORBIDDEN_KEYS & set(_iter_keys(payload)) == {"claim_text", "error"}
 
 
 def test_receipt_metadata_is_honest() -> None:
