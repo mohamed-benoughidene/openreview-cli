@@ -172,8 +172,10 @@ jobs:
   # Exit 0 is not enough, so the job also re-reads the receipt and fails when it shows no
   # usable measurement: `all_uncertain` is true (the discriminator swallows a failed gateway
   # call as 'uncertain', so a run that died mid-arm still exits 0), either arm is empty
-  # (`positives == 0` or `negatives_kept == 0`), or `units` is below the --limit the job asked
-  # for (that limit is a maximum, not an assertion). Counting is not a measurement.
+  # (`positives == 0` or `negatives_kept == 0`), no paraphrased label reached `per_label` (the
+  # substitution map matched nothing, so the run measured the verbatim-only arm), or `units` is
+  # below the --limit the job asked for (that limit is a maximum, not an assertion). Counting is
+  # not a measurement.
   grounding-accuracy:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -408,7 +410,8 @@ jobs:
               print(
                   f"[receipt] positives={receipt['positives']} "
                   f"negatives_kept={receipt['negatives_kept']} "
-                  f"negatives_dropped_guard={receipt['negatives_dropped_guard']}"
+                  f"negatives_dropped_guard={receipt['negatives_dropped_guard']} "
+                  f"paraphrases_skipped={receipt['paraphrases_skipped']}"
               )
               print(
                   f"[receipt] bad_caught={receipt['bad_caught']}/{receipt['negatives_kept']} "
@@ -505,6 +508,20 @@ jobs:
           if not receipt.get("skipped") and receipt.get("negatives_kept", 0) == 0:
               problems.append(
                   "negatives_kept == 0: the negative arm is empty, so the matrix measures nothing"
+              )
+          # The paraphrase classes are what make these labels about wording rather than
+          # quoting. If neither class reaches per_label, every rewrite was a no-op (the
+          # substitution map matched nothing in the assembled corpus) and the run silently
+          # measured the old verbatim-only arm. Fail on the labels actually scored, not on a
+          # skip count that a future writer could inflate.
+          paraphrase_generators = {"paraphrased_supported", "paraphrased_unsupported"}
+          scored_generators = {row.get("generator") for row in receipt.get("per_label", [])}
+          if not receipt.get("skipped") and not (paraphrase_generators & scored_generators):
+              problems.append(
+                  "no paraphrased labels: neither 'paraphrased_supported' nor "
+                  "'paraphrased_unsupported' appears in per_label "
+                  f"(paraphrases_skipped={receipt.get('paraphrases_skipped')}), so every "
+                  "rewrite was a no-op and the run measured the verbatim-only arm"
               )
           units = receipt.get("units", 0)
           if not receipt.get("skipped") and units < REQUIRED_UNITS:
