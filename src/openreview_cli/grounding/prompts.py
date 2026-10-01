@@ -42,15 +42,28 @@ For each claim, respond with a JSON object containing:
 For each claim, respond with one JSON object. If there is a single claim, you may return that object on its own; if there are several, return a JSON array of the objects, one per claim, in the same order as the input claims. Return the JSON only — no text before or after it."""
 
 
+# Appended, on that claim's own line, when the claim's wording was measured absent from
+# the clause it cites. It names no claim or clause text and states no verdict: it tells
+# the model what was measured and leaves the grounded/ungrounded call to the model.
+_WORDING_ABSENT_HINT = (
+    "[the claim's wording does not appear in the cited clause; "
+    "answer grounded only if the clause still entails it]"
+)
+
+
 def build_grounding_messages(
     source_clauses: list[Clause],
     claims: list[tuple[int, str, str]],
+    wording_absent_indices: set[int] | None = None,
 ) -> list[dict[str, str]]:
     """Build system+user messages for the grounding gateway call.
 
     Args:
         source_clauses: List of Clause objects from the parsed document.
         claims: List of (claim_index, claim_text, cited_clause_id) tuples.
+        wording_absent_indices: Claim indices whose wording was measured absent from the
+            clause they cite (Task 2's ``presence.measure``). Each such claim's line gains
+            one bracketed hint. ``None`` — the default — adds no hint.
 
     Returns:
         List of message dicts for Gateway.chat().
@@ -67,7 +80,10 @@ def build_grounding_messages(
     claims_lines: list[str] = []
     for idx, claim_text, cited_clause_id in claims:
         truncated = claim_text[:300] if len(claim_text) > 300 else claim_text
-        claims_lines.append(f'{idx}. "{truncated}" (cites clause {cited_clause_id})')
+        line = f'{idx}. "{truncated}" (cites clause {cited_clause_id})'
+        if wording_absent_indices and idx in wording_absent_indices:
+            line = f"{line} {_WORDING_ABSENT_HINT}"
+        claims_lines.append(line)
 
     claims_text = "\n".join(claims_lines)
 

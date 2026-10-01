@@ -258,7 +258,14 @@ class CitationGroundingDiscriminator:
         # fallbacks below. Neither value is read by any verdict decision.
         presence_by_index = self._measure_presence(batch, matched_clauses)
 
-        messages = build_grounding_messages(matched_clauses, batch)
+        # The flagged indices come straight out of that one measurement pass — the measure
+        # is never recomputed, so the hint and the recorded flag cannot disagree. The hint
+        # only names the measurement; the model still decides the verdict.
+        wording_absent_indices = {
+            idx for idx, (_number, absent) in presence_by_index.items() if absent
+        }
+
+        messages = build_grounding_messages(matched_clauses, batch, wording_absent_indices)
 
         try:
             chat_kwargs: dict[str, Any] = {

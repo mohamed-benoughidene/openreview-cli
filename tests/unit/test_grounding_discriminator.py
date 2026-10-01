@@ -1324,3 +1324,97 @@ class TestGroundingPresenceRecorded:
         assert result.grounding_presence is None
         assert result.wording_absent is False
         assert not mock_gateway.chat.called
+
+
+class TestWordingAbsentHintReachesTheModel:
+    """Item 2: a claim whose wording is absent from the clause it cites is named on
+    its own line of the prompt, and only that claim. The hint never decides a
+    verdict; these tests pin only the text that reaches the gateway.
+    """
+
+    _PRESENT = "The receiving party shall not disclose confidential information"
+    _ABSENT = "Liquidated damages of five million dollars are payable upon breach"
+    _CLAUSE = "The receiving party shall not disclose confidential information to any third party"
+    _HINT = (
+        "[the claim's wording does not appear in the cited clause; "
+        "answer grounded only if the clause still entails it]"
+    )
+
+    def _report(self) -> ReviewReport:
+        from datetime import datetime
+
+        from openreview_cli.review.models import (
+            ClauseAssessment,
+            DocMeta,
+            Position,
+            QAVerdict,
+            ReviewReport,
+            ReviewSummary,
+        )
+
+        def assessment(claim: str) -> ClauseAssessment:
+            return ClauseAssessment(
+                clause_id="4.3",
+                clause_text="Some clause text",
+                playbook_category="confidentiality",
+                position=Position.PREFERRED,
+                confidence=0.9,
+                citation=claim,
+                qa_verdict=QAVerdict.agree,
+                extraction_model="test",
+                qa_model="test",
+            )
+
+        return ReviewReport(
+            document=DocMeta(filename="test.pdf", page_count=1, clause_count=1, pii_stripped=False),
+            assessments=[assessment(self._PRESENT), assessment(self._ABSENT)],
+            summary=ReviewSummary(),
+            playbook_id="test",
+            generated_at=datetime.now(),
+        )
+
+    def _source_clauses(self) -> list[Clause]:
+        from openreview_cli.parsing.models import Clause
+
+        return [
+            Clause(
+                id="4.3",
+                title=None,
+                text=self._CLAUSE,
+                level=1,
+                parent_id=None,
+                source_page=1,
+                source_paragraph=None,
+                source_span=None,
+            )
+        ]
+
+    def _claim_line(self, content: str, index: int) -> str:
+        # Anchored on the opening quote so the template's own numbered list ("1. Is the
+        # claim supported…") is never mistaken for a claim line.
+        return next(line for line in content.splitlines() if line.startswith(f'{index}. "'))
+
+    def test_only_the_absent_claims_line_carries_the_hint(
+        self, mock_gateway: MagicMock, sample_document: MagicMock
+    ) -> None:
+        mock_gateway.chat.return_value = json.dumps(
+            [
+                {
+                    "claim_index": index,
+                    "verdict": "grounded",
+                    "provenances": [],
+                    "confidence": 0.9,
+                    "reason": None,
+                }
+                for index in (0, 1)
+            ]
+        )
+        d = CitationGroundingDiscriminator(mode="lenient", gateway=mock_gateway)
+
+        d.ground_report(self._report(), sample_document, self._source_clauses())
+
+        messages = mock_gateway.chat.call_args[0][1]
+        content = next(m["content"] for m in messages if m["role"] == "user")
+
+        assert self._HINT in self._claim_line(content, 1)
+        assert self._HINT not in self._claim_line(content, 0)
