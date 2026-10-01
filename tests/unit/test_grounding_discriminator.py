@@ -1418,3 +1418,39 @@ class TestWordingAbsentHintReachesTheModel:
 
         assert self._HINT in self._claim_line(content, 1)
         assert self._HINT not in self._claim_line(content, 0)
+
+
+class TestGroundClaimAsksTheProductQuestion:
+    """Item 1: the single-finding entry point sends the same hint the batch path sends.
+
+    The hint comes from the product's primitive (``presence.measure``), so a high-coverage
+    paraphrase — not a substring of the clause, yet substantially present — must NOT be
+    flagged. A naive ``claim_text not in clause_text`` test would flag it."""
+
+    _HINT = (
+        "[the claim's wording does not appear in the cited clause; "
+        "answer grounded only if the clause still entails it]"
+    )
+    _CLAUSE = "The receiving party shall not disclose confidential information to any third party"
+
+    def _content(self, gateway: MagicMock) -> str:
+        content: str = next(
+            m["content"] for m in gateway.chat.call_args[0][1] if m["role"] == "user"
+        )
+        return content
+
+    def test_an_absent_wording_claim_gets_the_hint(self, mock_gateway: MagicMock) -> None:
+        CitationGroundingDiscriminator(mode="lenient", gateway=mock_gateway).ground_claim(
+            "Liquidated damages of five million dollars are payable upon breach",
+            "4.3",
+            self._CLAUSE,
+        )
+        assert self._HINT in self._content(mock_gateway)
+
+    def test_a_high_coverage_paraphrase_gets_no_hint(self, mock_gateway: MagicMock) -> None:
+        CitationGroundingDiscriminator(mode="lenient", gateway=mock_gateway).ground_claim(
+            "The recipient must not disclose confidential information to any third party",
+            "4.3",
+            self._CLAUSE,
+        )
+        assert self._HINT not in self._content(mock_gateway)
