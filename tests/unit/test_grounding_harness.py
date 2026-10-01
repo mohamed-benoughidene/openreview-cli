@@ -23,6 +23,7 @@ from typing import Any
 
 import pytest
 
+from openreview_cli.grounding.corruption import ClauseUnit
 from openreview_cli.grounding.models import GroundingVerdict
 from tests.helpers.benchmark_scripts import load_benchmark_script
 
@@ -195,8 +196,10 @@ class TestGroundingAccuracyEndToEnd:
         # The arm reachability pre-flight is a real gateway call; stub it as reachable so this
         # offline test exercises the measurement, not the network.
         monkeypatch.setattr(SCRIPT, "_preflight_arm_reachability", lambda: (True, None))
-        # Force every cross-clause negative to be the cited clause itself, so the guard
-        # drops it; the hallucination override is genuinely unsupported and survives.
+        # Force the *verbatim* cross-clause negative to be the cited clause itself, so the
+        # guard drops it. The paraphrased cross-clause negative is a real rewrite of a
+        # sentence from the other unit; it is genuinely unsupported and survives the guard.
+        # The hallucination override is fabricated and survives too.
         monkeypatch.setattr(SCRIPT, "unsupported_claim", lambda a, b: a.text)
         monkeypatch.setattr(SCRIPT, "hallucination", lambda claim: FABRICATED)
 
@@ -212,25 +215,37 @@ class TestGroundingAccuracyEndToEnd:
         assert receipt["pii_stripped"] is False
         assert receipt["pii"]["no_pii"] is True
         assert receipt["pii"]["stripped"] is False
-        assert receipt["positives"] == 2
-        assert receipt["negatives_kept"] == 2  # hallucination only; cross-clause dropped
+        # Positives: the clause sentence and its rewrite, per unit -> 4.
+        assert receipt["positives"] == 4
+        # Negatives kept: the paraphrased cross-clause sentence and the fabrication, per unit.
+        assert receipt["negatives_kept"] == 4
+        # Only the verbatim cross-clause negative hits the guard (its claim is the clause).
         assert receipt["negatives_dropped_guard"] == 2
         assert receipt["negatives_dropped_guard_by_generator"] == {
             "unsupported_claim": 2,
             "hallucination": 0,
+            "paraphrased_unsupported": 0,
         }
+        assert receipt["paraphrases_skipped"] == 0
         # Reject-everything: all negatives caught and all positives wrongly rejected.
-        assert receipt["bad_caught"] == 2
+        assert receipt["bad_caught"] == 4
         assert receipt["caught_rate"] == 1.0
-        assert receipt["good_rejected"] == 2
+        assert receipt["good_rejected"] == 4
         assert receipt["false_reject_rate"] == 1.0
         assert receipt["model_ids"]["grounding"] == "stub/grounding"
-        assert len(receipt["per_label"]) == 4
-        assert len(stub.calls) == 4
+        assert len(receipt["per_label"]) == 8
+        assert len(stub.calls) == 8
         # Every negative row carries its generator; the zero-drop generator is recorded too.
         generators = {row["generator"] for row in receipt["per_label"]}
-        assert generators == {"positive", "hallucination"}
-        assert any("verbatim" in c for c in receipt["caveats"])
+        assert generators == {
+            "positive",
+            "paraphrased_supported",
+            "paraphrased_unsupported",
+            "hallucination",
+        }
+        # The caveat no longer promises that every positive is a verbatim clause sentence.
+        assert not any("Positives are verbatim" in c for c in receipt["caveats"])
+        assert any("two classes" in c for c in receipt["caveats"])
 
         # The same receipt is on disk, in one output format.
         assert json.loads(out.read_text())["negatives_dropped_guard"] == 2
@@ -253,6 +268,56 @@ class TestGroundingAccuracyEndToEnd:
         assert "cloud" in receipt["skip_reason"]
         assert json.loads(out.read_text())["skipped"] is True
         assert "skipping" in capsys.readouterr().out
+
+
+class TestGroundingParaphraseLabels:
+    """The label builder adds two paraphrase classes (plan T5 / design §2.4).
+
+    Before this, a positive was a verbatim clause sentence and the cross-clause negative was a
+    verbatim sentence from another clause, so the labels measured quoting. A meaning-preserving
+    rewrite of each keeps the support relation intact while making the label about wording.
+    """
+
+    UNITS = [ClauseUnit(id="c000", text=PARA_A), ClauseUnit(id="c001", text=PARA_B)]
+
+    def test_builds_both_paraphrase_classes(self) -> None:
+        labels, drops, generated, skips = SCRIPT._build_grounding_labels(self.UNITS)
+
+        supported = [row for row in labels if row["expected"] == "supported"]
+        assert {row["generator"] for row in supported} == {"positive", "paraphrased_supported"}
+        assert len(supported) == 4  # one of each positive class per unit
+        assert any(
+            row["generator"] == "paraphrased_unsupported" and row["expected"] == "unsupported"
+            for row in labels
+        )
+        # The paraphrased negative joins the negative counters; no positive counter exists.
+        assert set(generated) == set(SCRIPT.GROUNDING_VALID_NEGATIVES)
+        assert generated["paraphrased_unsupported"] == 2
+        assert set(drops) == set(SCRIPT.GROUNDING_VALID_NEGATIVES)
+        assert skips == 0
+
+    def test_unchanged_rewrites_are_skipped_and_counted_not_labelled(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Force every rewrite to a no-op: a label whose wording equals a label already present
+        # is a duplicate, so it is skipped and counted rather than kept silently.
+        monkeypatch.setattr(
+            SCRIPT,
+            "paraphrased_supported",
+            lambda unit: SCRIPT.first_qualifying_sentence(unit.text),
+        )
+        # `unsupported_claim` itself is the un-rewritten writer, so pointing the paraphrase
+        # writer at it makes every negative rewrite a no-op.
+        monkeypatch.setattr(SCRIPT, "paraphrased_unsupported", SCRIPT.unsupported_claim)
+
+        labels, _drops, generated, skips = SCRIPT._build_grounding_labels(self.UNITS)
+
+        assert skips == 4  # 2 units x (positive + negative) no-op rewrites
+        assert not any(
+            row["generator"] in {"paraphrased_supported", "paraphrased_unsupported"}
+            for row in labels
+        )
+        assert generated["paraphrased_unsupported"] == 0
 
 
 class TestGroundingAccuracyPiiStrip:
@@ -499,8 +564,8 @@ class TestGroundingArmPreflight:
 
         assert receipt["skipped"] is False
         assert receipt["all_uncertain"] is False
-        assert len(receipt["per_label"]) == 4
-        assert len(stub.calls) == 4
+        assert len(receipt["per_label"]) == 8
+        assert len(stub.calls) == 8
         assert json.loads(out.read_text())["skipped"] is False
         assert "pre-flight OK" in capsys.readouterr().out
 

@@ -58,6 +58,8 @@ from openreview_cli.grounding.corruption import (
     first_qualifying_sentence,
     hallucination,
     is_genuine_negative,
+    paraphrased_supported,
+    paraphrased_unsupported,
     unsupported_claim,
 )
 
@@ -80,11 +82,11 @@ _MIN_UNIT_SENTENCES = 2
 
 # Stated with every receipt; the report repeats them in prose.
 GROUNDING_ACCURACY_CAVEATS: tuple[str, ...] = (
-    "Positives are verbatim sentences taken from the cited clause as sent to the model "
-    "(PII-stripped clause text by default; raw clause text under --no-pii), so they are "
-    "trivially grounded: this positive set is easier than a human-labelled one. No "
-    "real-world false-positive rate may be quoted from this harness — the negative arm is "
-    "the signal.",
+    "Positives come in two classes: the cited clause's own qualifying sentence, and that "
+    "sentence lightly rewritten by a constant, meaning-preserving substitution map. Both are "
+    "supported by the clause by construction, so this positive set is easier than a "
+    "human-labelled one; the narrow map also under-represents real paraphrases. No real-world "
+    "false-positive rate may be quoted from this harness — the negative arm is the signal.",
     "Single-sample smoke measurement, not a benchmark: model replies vary run to run.",
     "Clause ids here are harness-local units (c<index>), not the product's clause numbering.",
     "The CUAD corpus under data/ is gitignored, so CI cannot use it. CI instead assembles a "
@@ -95,6 +97,9 @@ GROUNDING_ACCURACY_CAVEATS: tuple[str, ...] = (
     "negatives_dropped_guard counts generated negatives whose claim text appears verbatim in "
     "the cited clause (mislabels). They are dropped, never scored, and the count is reported "
     "per generator even when it is zero.",
+    "paraphrases_skipped counts a rewritten positive or negative whose rewrite equalled its "
+    "source — no new wording, so the label would duplicate one already present. Such rewrites "
+    "are skipped, and the count is reported even when it is zero.",
 )
 
 
@@ -356,23 +361,45 @@ def _label(claim_text: str, unit: ClauseUnit, expected: str, generator: str) -> 
 
 def _build_grounding_labels(
     units: list[ClauseUnit],
-) -> tuple[list[dict[str, Any]], dict[str, int], dict[str, int]]:
+) -> tuple[list[dict[str, Any]], dict[str, int], dict[str, int], int]:
     """Build the label set and the per-generator guard accounting.
 
-    Positives: a verbatim sentence from the clause (``first_qualifying_sentence``) —
-    trivially supported. Negatives: ``unsupported_claim`` over the next distinct unit,
-    plus ``hallucination``. Every negative passes ``is_genuine_negative`` before use;
-    a rejected negative is dropped and counted per generator (never silently kept).
+    Positives come in two classes so the labels measure *wording*, not quoting: the clause's
+    own qualifying sentence (``first_qualifying_sentence``) and that sentence lightly rewritten
+    (``paraphrased_supported``) — both supported by the clause by construction. Negatives:
+    ``unsupported_claim`` over the next distinct unit and its rewrite
+    (``paraphrased_unsupported``), plus ``hallucination``. Every negative passes
+    ``is_genuine_negative`` before use; a rejected negative is dropped and counted per generator
+    (never silently kept).
+
+    A paraphrase whose rewrite equalled its source is not a label — it would duplicate one
+    already present — so it is skipped and counted in the returned ``paraphrase_skips`` (never
+    silently dropped).
+
+    Returns:
+        ``(labels, drops, generated, paraphrase_skips)``: the labels, the guard-drop counts and
+        generation counts keyed by the negative generators, and the number of no-op rewrites
+        skipped.
     """
     drops = dict.fromkeys(GROUNDING_VALID_NEGATIVES, 0)
     generated = dict.fromkeys(GROUNDING_VALID_NEGATIVES, 0)
     labels: list[dict[str, Any]] = []
+    paraphrase_skips = 0
     count = len(units)
     for index, unit in enumerate(units):
         positive = first_qualifying_sentence(unit.text)
         if positive is None:
             continue
         labels.append(_label(positive, unit, "supported", "positive"))
+
+        paraphrased_positive = paraphrased_supported(unit)
+        if paraphrased_positive is not None:
+            if paraphrased_positive == positive:
+                paraphrase_skips += 1
+            else:
+                labels.append(
+                    _label(paraphrased_positive, unit, "supported", "paraphrased_supported")
+                )
 
         if count > 1:
             other = units[(index + 1) % count]
@@ -385,13 +412,31 @@ def _build_grounding_labels(
                     else:
                         drops["unsupported_claim"] += 1
 
+                paraphrased_cross = paraphrased_unsupported(unit, other)
+                if paraphrased_cross is not None:
+                    if paraphrased_cross == cross:
+                        paraphrase_skips += 1
+                    else:
+                        generated["paraphrased_unsupported"] += 1
+                        if is_genuine_negative(paraphrased_cross, unit.text):
+                            labels.append(
+                                _label(
+                                    paraphrased_cross,
+                                    unit,
+                                    "unsupported",
+                                    "paraphrased_unsupported",
+                                )
+                            )
+                        else:
+                            drops["paraphrased_unsupported"] += 1
+
         fabricated = hallucination(positive)
         generated["hallucination"] += 1
         if is_genuine_negative(fabricated, unit.text):
             labels.append(_label(fabricated, unit, "unsupported", "hallucination"))
         else:
             drops["hallucination"] += 1
-    return labels, drops, generated
+    return labels, drops, generated, paraphrase_skips
 
 
 def _resolve_grounding_slots(arm: str) -> dict[str, str]:
@@ -519,6 +564,7 @@ def _grounding_skip_receipt(
         "negatives_generated": dict.fromkeys(GROUNDING_VALID_NEGATIVES, 0),
         "negatives_dropped_guard": 0,
         "negatives_dropped_guard_by_generator": dict.fromkeys(GROUNDING_VALID_NEGATIVES, 0),
+        "paraphrases_skipped": 0,
         "caught_rate": None,
         "false_reject_rate": None,
         # No matrix ran, so nothing can be all-uncertain.
@@ -574,8 +620,9 @@ def _print_grounding_summary(receipt: dict[str, Any], out: Path) -> None:
             "sent to the model; the cloud tiers refuse these calls."
         )
     print(
-        "[grounding-accuracy] caveat: positives are verbatim clause sentences (weaker than "
-        "human-labelled data); the negative arm is the signal."
+        "[grounding-accuracy] caveat: positives are the clause's own sentence and a narrow, "
+        "meaning-preserving rewrite of it (weaker than human-labelled data); the negative arm "
+        "is the signal."
     )
     print(
         f"[grounding-accuracy] latency calls={latency['calls']} mean={latency['mean']} "
@@ -671,7 +718,7 @@ def run_grounding_accuracy(
         f"'{grounding_model}' answered the reachability check."
     )
 
-    labels, drops, generated = _build_grounding_labels(units)
+    labels, drops, generated, paraphrase_skips = _build_grounding_labels(units)
 
     try:
         discriminator = _make_discriminator()
@@ -751,13 +798,19 @@ def run_grounding_accuracy(
         "negatives_generated": generated,
         "negatives_dropped_guard": sum(drops.values()),
         "negatives_dropped_guard_by_generator": drops,
+        "paraphrases_skipped": paraphrase_skips,
         "harness_notes": {
             "positive_set": (
-                "verbatim sentence from the (PII-stripped by default) cited clause text as "
-                "sent to the model; trivially supported"
+                "two classes — the cited clause's own qualifying sentence and that sentence "
+                "lightly rewritten by a constant, meaning-preserving substitution map; both "
+                "supported by the clause by construction, so the label measures wording"
             ),
             "negative_generators": list(GROUNDING_VALID_NEGATIVES),
             "guard": "is_genuine_negative; rejected negatives dropped and counted per generator",
+            "paraphrase": (
+                "a narrow constant substitution map; under-represents real paraphrases, and a "
+                "rewrite that changed nothing is skipped and counted, not kept"
+            ),
             "unit_ids": "harness-local c<index>, not the product's clause numbering",
             "signal": "confusion matrix only; compute_cg_metrics is deliberately not used",
             "pii": "clause text stripped with the review path's strip_pii_clauses before any call",

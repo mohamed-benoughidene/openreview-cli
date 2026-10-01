@@ -19,6 +19,9 @@ from openreview_cli.grounding.corruption import (
     first_qualifying_sentence,
     hallucination,
     is_genuine_negative,
+    paraphrase,
+    paraphrased_supported,
+    paraphrased_unsupported,
     unsupported_claim,
 )
 from openreview_cli.parsing.models import Clause
@@ -226,6 +229,88 @@ class TestUnsupportedClaim:
         assert unsupported_claim(UNIT_A, UNIT_B) == unsupported_claim(UNIT_A, UNIT_B)
 
 
+class TestParaphraseMap:
+    """The one constant substitution map behind the paraphrase labels (plan T5 / design §2.4)."""
+
+    def test_rewrites_each_documented_term_meaning_preserving(self) -> None:
+        source = (
+            "The receiving party shall not disclose Confidential Information in no event "
+            "prior to the effective date."
+        )
+        rewritten = paraphrase(source)
+        assert rewritten != source
+        # Only the wording moves: every rewrite is a documented, meaning-preserving swap.
+        assert rewritten == (
+            "The recipient must not disclose Confidential Information under no circumstances "
+            "before the effective date."
+        )
+
+    def test_rewrites_a_bare_shall_to_must(self) -> None:
+        source = "The customer shall pay all invoices within thirty days."
+        assert paraphrase(source) == "The customer must pay all invoices within thirty days."
+
+    def test_returns_the_sentence_unchanged_when_no_term_occurs(self) -> None:
+        source = "The parties govern this agreement by its terms."
+        assert paraphrase(source) == source
+
+    def test_never_returns_none(self) -> None:
+        assert paraphrase("") == ""
+        assert isinstance(paraphrase("Any sentence."), str)
+
+    def test_deterministic_for_the_same_input(self) -> None:
+        source = "The receiving party shall not disclose it prior to notice."
+        assert paraphrase(source) == paraphrase(source)
+
+    def test_word_boundaries_protect_longer_words(self) -> None:
+        # "shall" inside "marshall" must not be rewritten.
+        assert paraphrase("The marshall company shall comply.") == (
+            "The marshall company must comply."
+        )
+
+
+class TestParaphrasedWriters:
+    """The two paraphrase label writers: a genuine positive and a genuine negative."""
+
+    def test_supported_variant_rewrites_the_clause_sentence_off_the_clause(self) -> None:
+        pinned = first_qualifying_sentence(CLAUSE_A_TEXT)
+        assert pinned is not None
+        rewritten = paraphrased_supported(UNIT_A)
+        assert rewritten is not None
+        # The rewrite differs from the clause's own sentence *and* is not a substring of the
+        # clause, so it is not a verbatim quote: the label measures wording, not quoting.
+        assert rewritten != pinned
+        assert rewritten not in CLAUSE_A_TEXT
+
+    def test_unsupported_variant_is_genuinely_negative(self) -> None:
+        rewritten = paraphrased_unsupported(UNIT_A, UNIT_B)
+        assert rewritten is not None
+        assert is_genuine_negative(rewritten, CLAUSE_A_TEXT) is True
+
+    def test_guard_passes_the_unsupported_variant_and_fails_the_supported_sentence(self) -> None:
+        negative = paraphrased_unsupported(UNIT_A, UNIT_B)
+        supported = first_qualifying_sentence(CLAUSE_A_TEXT)
+        assert negative is not None
+        assert supported is not None
+        assert is_genuine_negative(negative, CLAUSE_A_TEXT) is True
+        assert is_genuine_negative(supported, CLAUSE_A_TEXT) is False
+
+    def test_the_lexical_guard_cannot_see_through_a_paraphrase(self) -> None:
+        # Recorded limit, not a defect: the guard is a substring test, so a meaning-preserving
+        # rewrite slips past it. That is exactly why the paraphrased positive is labelled
+        # supported *by construction* and never routed through the guard.
+        rewritten = paraphrased_supported(UNIT_A)
+        assert rewritten is not None
+        assert is_genuine_negative(rewritten, CLAUSE_A_TEXT) is True
+
+    def test_same_clause_twice_returns_none(self) -> None:
+        assert paraphrased_unsupported(UNIT_A, UNIT_A) is None
+
+    def test_clause_without_a_qualifying_sentence_returns_none(self) -> None:
+        tiny = ClauseUnit(id="c002", text="Tiny clause. Too short to qualify.")
+        assert paraphrased_supported(tiny) is None
+        assert paraphrased_unsupported(UNIT_A, tiny) is None
+
+
 class TestGenuineNegativeGuard:
     """The mandatory guard: a negative whose claim appears verbatim in the cited
     clause is a mislabel and must be dropped (and counted) by the harness."""
@@ -292,8 +377,16 @@ class TestGenuineNegativeGuard:
 class TestDocumentedScope:
     """Which helpers may produce grounding negatives, and why the others may not."""
 
-    def test_only_unsupported_claim_and_hallucination_are_grounding_negatives(self) -> None:
-        assert GROUNDING_VALID_NEGATIVES == ("unsupported_claim", "hallucination")
+    def test_only_unsupported_claim_hallucination_and_paraphrase_are_grounding_negatives(
+        self,
+    ) -> None:
+        assert GROUNDING_VALID_NEGATIVES == (
+            "unsupported_claim",
+            "hallucination",
+            "paraphrased_unsupported",
+        )
+        # The paraphrased *positive* is a positive: it must not join the negative tuple.
+        assert "paraphrased_supported" not in GROUNDING_VALID_NEGATIVES
         assert "category_swap" not in GROUNDING_VALID_NEGATIVES
         assert "anachronism" not in GROUNDING_VALID_NEGATIVES
         assert "clause_swap" not in GROUNDING_VALID_NEGATIVES
