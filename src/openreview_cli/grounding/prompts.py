@@ -98,12 +98,7 @@ def parse_grounding_response(
     results: list[tuple[int, GroundingVerdict, list[CitationProvenance], float]] = []
 
     data = _first_json_value(response)
-    if data is None:
-        items: list[Any] = []
-    elif isinstance(data, list):
-        items = data
-    else:
-        items = [data]
+    items = _answer_items(data)
 
     for position, item in enumerate(items):
         if not isinstance(item, dict):
@@ -146,6 +141,35 @@ def parse_grounding_response(
         logger.warning("Unreadable grounding answer: %s", _shape_note(response, data))
 
     return results
+
+
+def _answer_items(value: Any) -> list[Any]:
+    """Return the candidate answer items inside a decoded grounding answer.
+
+    The prompt promises a bare object for one claim and a JSON array for a
+    batch, but a model may still wrap the batch in a key of its own — a CI run
+    measured ``{"claims": [...]}`` on every answer. Such a wrapper is unwrapped
+    here so the per-item validation below can decide, rather than the whole
+    reply being discarded for lacking a ``verdict`` of its own.
+    """
+    if isinstance(value, list):
+        return value
+    if not isinstance(value, dict):
+        return [value]
+    if "verdict" in value:
+        return [value]
+
+    wrapper_keys = [
+        key
+        for key, nested in value.items()
+        if isinstance(nested, list) and all(isinstance(item, dict) for item in nested)
+    ]
+    if wrapper_keys:
+        key = "claims" if "claims" in wrapper_keys else wrapper_keys[0]
+        return list(value[key])
+    if value and all(isinstance(nested, dict) for nested in value.values()):
+        return list(value.values())
+    return [value]
 
 
 def _shape_note(response: str, value: Any) -> str:
