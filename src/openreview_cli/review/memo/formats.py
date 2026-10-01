@@ -58,21 +58,37 @@ def _truncate(text: str, limit: int = 10000) -> str:
     return text
 
 
-def _wording_note(clause: MemoClause) -> str | None:
-    """Display-only note: the model accepted a claim whose wording is absent.
+def _risky_note(clause: MemoClause) -> str | None:
+    """The one risky-pattern line this clause earns, or ``None`` for an ordinary clause.
 
-    A fact with the coverage number, never a verdict.  Returns ``None`` for
-    every other clause — the note fires only on the risky pattern, which the
-    builder marks via ``accepted_despite_absent_wording``.
+    (a) accepted although the wording is absent (reachable in strict); (c) "not sure" or the
+    two passes disagreed (reachable in lenient only). Display only, never a verdict.
     """
-    if not clause.accepted_despite_absent_wording:
+    if clause.accepted_despite_absent_wording:
+        if clause.grounding_presence is None:
+            return "Citation wording not present in the cited clause"
+        return (
+            "Citation wording not present in the cited clause "
+            f"(coverage {clause.grounding_presence:.2f})"
+        )
+    if clause.not_sure:
+        return "Grounding: not sure (the checker did not accept this citation)"
+    if clause.pass_disagreement:
+        return "Grounding: the two passes disagreed"
+    return None
+
+
+def _exclusions_note(memo: MemoReport) -> str | None:
+    """(b) Strict mode's one summary line, or ``None`` when nothing was excluded.
+
+    Strict removes UNGROUNDED/UNCERTAIN findings before the memo is built, so the report's
+    counts stand in for the per-finding lines ``_risky_note`` can no longer print.
+    """
+    unsupported = memo.overall.grounding_excluded_unsupported
+    unsure = memo.overall.grounding_excluded_unsure
+    if not unsupported and not unsure:
         return None
-    if clause.grounding_presence is None:
-        return "Citation wording not present in the cited clause"
-    return (
-        "Citation wording not present in the cited clause "
-        f"(coverage {clause.grounding_presence:.2f})"
-    )
+    return f"Excluded by grounding (strict): {unsupported} unsupported, {unsure} not sure"
 
 
 # ── Markdown Renderer ──
@@ -107,6 +123,12 @@ def render_markdown(memo: MemoReport) -> str:
         lines.append(f"| Citation Locality | {memo.overall.citation_locality:.2f} |")
     lines.append("")
 
+    # Strict mode's exclusions happen before this report exists, so it summarises them here.
+    exclusions_note = _exclusions_note(memo)
+    if exclusions_note is not None:
+        lines.append(f"- {exclusions_note}")
+        lines.append("")
+
     # Per-clause assessments
     lines.append("## Clause Assessments")
     lines.append("")
@@ -125,7 +147,7 @@ def render_markdown(memo: MemoReport) -> str:
         lines.append(f"- **Playbook Requirement**: {clause.playbook_requirement}")
         lines.append(f"- **Contract Text**: {_truncate(clause.contract_text)}")
         lines.append(f"- {_citation_str(clause.citation)}")
-        note = _wording_note(clause)
+        note = _risky_note(clause)
         if note is not None:
             lines.append(f"- {note}")
         if clause.severity:
@@ -244,6 +266,11 @@ def render_docx(memo: MemoReport) -> Any:
     _add_citation_row("Citation Relevance", memo.overall.citation_relevance)
     _add_citation_row("Citation Locality", memo.overall.citation_locality)
 
+    # Strict mode's exclusions happen before this report exists, so it summarises them here.
+    exclusions_note = _exclusions_note(memo)
+    if exclusions_note is not None:
+        doc.add_paragraph(exclusions_note)
+
     doc.add_paragraph()  # spacer
 
     # ── Per-clause assessments ──
@@ -285,7 +312,7 @@ def render_docx(memo: MemoReport) -> Any:
             cite_para = doc.add_paragraph(_citation_str(clause.citation))
             cite_para.style = doc.styles["Normal"]
 
-            note = _wording_note(clause)
+            note = _risky_note(clause)
             if note is not None:
                 note_para = doc.add_paragraph(note)
                 note_para.style = doc.styles["Normal"]

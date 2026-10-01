@@ -43,6 +43,10 @@ class MemoSummary:
     confidence_avg: float
     citation_relevance: float | None = None
     citation_locality: float | None = None
+    # What strict-mode grounding removed before the memo was built (display-only): the
+    # per-finding lines are unreachable in strict mode, so these two counts stand in for them.
+    grounding_excluded_unsupported: int = 0
+    grounding_excluded_unsure: int = 0
 
 
 @dataclass
@@ -64,6 +68,11 @@ class MemoClause:
     grounding_presence: float | None = None
     # True only for a GROUNDED claim whose wording is absent from the cited clause.
     accepted_despite_absent_wording: bool = False
+    # Display-only per-finding risky patterns: the checker was not sure, or the two grounding
+    # passes disagreed. Neither is read by any verdict decision, and strict mode removes the
+    # findings that carry them before the memo is built.
+    not_sure: bool = False
+    pass_disagreement: bool = False
 
 
 @dataclass
@@ -96,6 +105,10 @@ class MemoReport:
             confidence_avg=float(overall_raw.get("confidence_avg") or 0.0),
             citation_relevance=overall_raw.get("citation_relevance"),
             citation_locality=overall_raw.get("citation_locality"),
+            grounding_excluded_unsupported=int(
+                overall_raw.get("grounding_excluded_unsupported", 0)
+            ),
+            grounding_excluded_unsure=int(overall_raw.get("grounding_excluded_unsure", 0)),
         )
 
         clauses: list[MemoClause] = []
@@ -128,6 +141,8 @@ class MemoReport:
                     accepted_despite_absent_wording=bool(
                         c.get("accepted_despite_absent_wording", False)
                     ),
+                    not_sure=bool(c.get("not_sure", False)),
+                    pass_disagreement=bool(c.get("pass_disagreement", False)),
                 )
             )
 

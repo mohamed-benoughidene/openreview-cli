@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+import json
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
+from openreview_cli.grounding.discriminator import CitationGroundingDiscriminator
 from openreview_cli.grounding.models import GroundingVerdict
+from openreview_cli.parsing.models import Clause
 from openreview_cli.review.memo.exporter import MemoExporter
+from openreview_cli.review.memo.formats import render_markdown
 from openreview_cli.review.memo.models import MemoFormat, MemoReport
 from openreview_cli.review.models import (
     ClauseAssessment,
@@ -19,6 +24,7 @@ from openreview_cli.review.models import (
     ReviewReport,
     ReviewSummary,
 )
+from tests.unit.review.test_memo_formats import DISAGREED_TEXT, NOT_SURE_TEXT
 
 
 def _make_assessment(
@@ -353,3 +359,84 @@ class TestExport:
         assert "Clause c2" in content
         assert "Citation wording not present in the cited clause (coverage 0.46)" in content
         assert "(coverage 0.20)" not in content
+
+
+class TestRiskyLinesAreReachableInLenientMode:
+    """(c) The per-finding 'not sure' and 'disagreed' lines exist only in lenient mode.
+
+    The default grounding mode is strict, and strict removes UNGROUNDED and UNCERTAIN
+    findings before the memo is built, so these two lines are unreachable there. This drives
+    the real grounding path in lenient mode with the agreement rule on, then renders the memo.
+    """
+
+    def test_both_lines_render_end_to_end(self) -> None:
+        def assessment() -> ClauseAssessment:
+            return ClauseAssessment(
+                clause_id="4.3",
+                clause_text="The receiving party shall not disclose.",
+                playbook_category="confidentiality",
+                position=Position.PREFERRED,
+                confidence=0.9,
+                citation="The receiving party shall not disclose confidential information",
+                qa_verdict=QAVerdict.agree,
+                extraction_model="test",
+                qa_model="test",
+            )
+
+        report = ReviewReport(
+            document=DocMeta(filename="t.pdf", page_count=1, clause_count=1, pii_stripped=False),
+            assessments=[assessment(), assessment()],
+            summary=ReviewSummary(),
+            playbook_id="test",
+            generated_at=datetime.now(),
+        )
+        clauses = [
+            Clause(
+                id="4.3",
+                title=None,
+                level=1,
+                parent_id=None,
+                source_page=1,
+                source_paragraph=None,
+                source_span=None,
+                text="The receiving party shall not disclose confidential information "
+                "to any third party.",
+            )
+        ]
+        gateway = MagicMock()
+        gateway.chat.side_effect = [
+            json.dumps(
+                [
+                    {
+                        "claim_index": i,
+                        "verdict": v,
+                        "provenances": [],
+                        "confidence": 0.9,
+                        "reason": None,
+                    }
+                    for i, v in ((0, "uncertain"), (1, "grounded"))
+                ]
+            ),
+            json.dumps(
+                [
+                    {
+                        "claim_index": i,
+                        "verdict": v,
+                        "provenances": [],
+                        "confidence": 0.9,
+                        "reason": None,
+                    }
+                    for i, v in ((0, "uncertain"), (1, "ungrounded"))
+                ]
+            ),
+        ]
+        discriminator = CitationGroundingDiscriminator(
+            mode="lenient", gateway=gateway, require_pass_agreement=True
+        )
+        discriminator.ground_report(report, MagicMock(), clauses).merge_into(report)
+
+        markdown = render_markdown(
+            MemoExporter(report=report, mode="precheck")._build_memo_report()
+        )
+        assert NOT_SURE_TEXT in markdown
+        assert DISAGREED_TEXT in markdown

@@ -121,6 +121,8 @@ class MemoExporter:
                     accepted_despite_absent_wording=bool(ca.wording_absent)
                     and ca.grounding_verdict == GroundingVerdict.GROUNDED,
                     grounding_presence=ca.grounding_presence,
+                    not_sure=bool(ca.not_sure),
+                    pass_disagreement=bool(ca.pass_disagreement),
                 )
             )
 
@@ -146,6 +148,10 @@ class MemoExporter:
             citation_locality=self.report.cg_metrics.citation_locality
             if self.report.cg_metrics
             else None,
+            # Strict mode removes the findings that carry (c), so the memo reports what
+            # grounding excluded instead (display-only).
+            grounding_excluded_unsupported=self.report.grounding_excluded_unsupported,
+            grounding_excluded_unsure=self.report.grounding_excluded_unsure,
         )
 
         return MemoReport(

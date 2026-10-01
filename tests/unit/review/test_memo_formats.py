@@ -309,7 +309,11 @@ WORDING_NOTE_TEXT = "Citation wording not present in the cited clause"
 
 
 def _make_wording_note_memo(
-    *, accepted_despite_absent_wording: bool, grounding_presence: float | None
+    *,
+    accepted_despite_absent_wording: bool,
+    grounding_presence: float | None,
+    not_sure: bool = False,
+    pass_disagreement: bool = False,
 ) -> MemoReport:
     summary = MemoSummary(
         recommendation="approve",
@@ -329,6 +333,8 @@ def _make_wording_note_memo(
         citation=MemoCitation(clause_id="§3.1", paragraph_index=0),
         grounding_presence=grounding_presence,
         accepted_despite_absent_wording=accepted_despite_absent_wording,
+        not_sure=not_sure,
+        pass_disagreement=pass_disagreement,
     )
     return MemoReport(
         memo_version="1.0",
@@ -407,3 +413,78 @@ class TestDocxWordingNote:
         doc = render_docx(memo)
         texts = [p.text for p in doc.paragraphs]
         assert not any(WORDING_NOTE_TEXT in t for t in texts)
+
+
+# ── Risky grounding patterns: the three cases (a), (b), (c) ──
+
+NOT_SURE_TEXT = "Grounding: not sure (the checker did not accept this citation)"
+DISAGREED_TEXT = "Grounding: the two passes disagreed"
+EXCLUSIONS_TEXT = "Excluded by grounding (strict): 2 unsupported, 1 not sure"
+
+
+class TestMarkdownRiskyPatterns:
+    def test_an_ordinary_clause_renders_exactly_as_today(self) -> None:
+        ordinary = _make_wording_note_memo(
+            accepted_despite_absent_wording=False, grounding_presence=1.0
+        )
+        baseline = _make_wording_note_memo(
+            accepted_despite_absent_wording=False, grounding_presence=None
+        )
+        assert render_markdown(ordinary) == render_markdown(baseline)
+
+    def test_each_risky_case_gets_its_own_line(self) -> None:
+        absent = _make_wording_note_memo(
+            accepted_despite_absent_wording=True, grounding_presence=0.46
+        )
+        not_sure = _make_wording_note_memo(
+            accepted_despite_absent_wording=False, grounding_presence=1.0, not_sure=True
+        )
+        disagreed = _make_wording_note_memo(
+            accepted_despite_absent_wording=False, grounding_presence=1.0, pass_disagreement=True
+        )
+        assert WORDING_NOTE_TEXT in render_markdown(absent)
+        assert NOT_SURE_TEXT in render_markdown(not_sure)
+        assert DISAGREED_TEXT in render_markdown(disagreed)
+
+    def test_the_strict_exclusion_summary_line(self) -> None:
+        memo = _make_wording_note_memo(
+            accepted_despite_absent_wording=False, grounding_presence=None
+        )
+        memo.overall.grounding_excluded_unsupported = 2
+        memo.overall.grounding_excluded_unsure = 1
+        assert EXCLUSIONS_TEXT in render_markdown(memo)
+
+
+class TestDocxRiskyPatterns:
+    def test_an_ordinary_clause_renders_exactly_as_today(self) -> None:
+        ordinary = _make_wording_note_memo(
+            accepted_despite_absent_wording=False, grounding_presence=1.0
+        )
+        baseline = _make_wording_note_memo(
+            accepted_despite_absent_wording=False, grounding_presence=None
+        )
+        assert [p.text for p in render_docx(ordinary).paragraphs] == [
+            p.text for p in render_docx(baseline).paragraphs
+        ]
+
+    def test_each_risky_case_gets_its_own_line(self) -> None:
+        absent = _make_wording_note_memo(
+            accepted_despite_absent_wording=True, grounding_presence=0.46
+        )
+        not_sure = _make_wording_note_memo(
+            accepted_despite_absent_wording=False, grounding_presence=1.0, not_sure=True
+        )
+        disagreed = _make_wording_note_memo(
+            accepted_despite_absent_wording=False, grounding_presence=1.0, pass_disagreement=True
+        )
+        assert any(WORDING_NOTE_TEXT in p.text for p in render_docx(absent).paragraphs)
+        assert any(NOT_SURE_TEXT in p.text for p in render_docx(not_sure).paragraphs)
+        assert any(DISAGREED_TEXT in p.text for p in render_docx(disagreed).paragraphs)
+
+    def test_the_strict_exclusion_summary_line(self) -> None:
+        memo = _make_wording_note_memo(
+            accepted_despite_absent_wording=False, grounding_presence=None
+        )
+        memo.overall.grounding_excluded_unsupported = 2
+        memo.overall.grounding_excluded_unsure = 1
+        assert any(EXCLUSIONS_TEXT in p.text for p in render_docx(memo).paragraphs)
