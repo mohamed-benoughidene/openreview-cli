@@ -330,9 +330,6 @@ def test_an_unflagged_claim_line_is_byte_identical_with_or_without_the_set() -> 
 
 
 def test_the_hint_carries_no_claim_or_clause_text_of_its_own() -> None:
-    line = _claim_line(_built({1}), 1)
-
-    # Everything before the hint is the exact line the caller already sent.
-    assert line == f"{line[: -len(_HINT)]}{_HINT}"
+    # The line's shape — the hint appended last — is pinned by the test above.
     assert _CLAUSES[0].text not in _HINT
     assert _CLAIMS[1][1] not in _HINT

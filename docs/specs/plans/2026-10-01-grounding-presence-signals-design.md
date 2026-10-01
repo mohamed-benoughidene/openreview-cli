@@ -14,7 +14,7 @@ the model; the **harness** is `scripts/measure_slm_slots.py`.
 **The consequence is worse than v2 claimed.** The CLI runs grounding by default: `grounding_mode` defaults to
 `"strict"` (`src/openreview_cli/app.py:1379`). In strict mode an ungrounded claim is **deleted** from the report —
 `report.assessments = [a for i, a in enumerate(report.assessments) if i in keep_set]`, keeping only grounded
-verdicts (`src/openreview_cli/grounding/models.py:117-122`). So a wrong call removes a real finding **by default**,
+verdicts (`src/openreview_cli/grounding/models.py:123-128`). So a wrong call removes a real finding **by default**,
 and nothing remains to show why. (v2 said "opt-in with a silent deletion"; the CLI default makes it
 default-on.)
 
@@ -50,8 +50,8 @@ citations clustering above ~0.8 while planted claims stay below ~0.3.
   `(verdict, provenances, confidence)` tuple whose shape three callers destructure
   (`scripts/measure_slm_slots.py`, `benchmark/hallu_detect.py`, its own tests), so **its signature does not change**.
   `GroundingResult` gains `grounding_presence: float | None` and `wording_absent: bool`; `ClauseAssessment` gains the
-  same two beside its other grounding fields (`review/models.py:114-117`), copied by `CGReport.merge_into`
-  (`grounding/models.py:98-100`). The zero-length-claim result (the block at `discriminator.py:190-200`, the construction at
+  same two beside its other grounding fields (`review/models.py:114-120`), copied by `CGReport.merge_into`
+  (`grounding/models.py:105-106`). The zero-length-claim result (the block at `discriminator.py:190-200`, the construction at
   `:193-198`) carries `None` and
   `False` — the check never ran.
 - Reports are dumped whole through `dataclasses.asdict` (`review/report.py:308`), so the numbers reach the JSON with
@@ -62,19 +62,21 @@ citations clustering above ~0.8 while planted claims stay below ~0.3.
 - `build_grounding_messages` gains an optional `wording_absent_indices: set[int] | None = None` and appends one
   clause to **that claim's line** in the single user message: `[the claim's wording does not appear in the cited
   clause; answer grounded only if the clause still entails it]`.
-- There is **no system message** (`prompts.py:79` returns one `{"role": "user"}` message), so v2's phrase "the system
+- There is **no system message** (`prompts.py:95` returns one `{"role": "user"}` message), so v2's phrase "the system
   template is untouched" is corrected to "`GROUNDING_PROMPT_TEMPLATE` is untouched". The two tests that pin it
-  (`tests/unit/test_grounding_prompts.py:135-141`) stay green because the hint is per-claim.
+  (`tests/unit/test_grounding_prompts.py:140-146`) stay green because the hint is per-claim.
 - Why per-claim rather than one global sentence: a global sentence would assert something false about claims whose
   wording *is* present, which is most of them. The hint is true only where it is printed.
 
 ### Item 3 — a report-only line in the memo, on the risky pattern only
 - The note prints **only when the model accepted the claim and the wording is absent** — the one combination worth a
   human's attention. It renders as its own line, not beside "Severity" (which is never populated on export, so v2's
-  instruction would have been dead code), in Markdown (`review/memo/formats.py:104-125`) and DOCX (`:236-275`). It
+  instruction would have been dead code), in Markdown (`review/memo/formats.py:118-133`, the note at `:128-130`) and DOCX
+  (`:255-297`, the DOCX note at `:288-291`). It
   reads as a fact, never a verdict: `Citation wording not present in the cited clause (coverage 0.46)`.
-- This needs `grounding_presence` and `wording_absent` on `MemoClause` and its builder
-  (`review/memo/models.py:48-61`, `review/memo/exporter.py:106-118`) — v2 missed both files.
+- This needs `grounding_presence` and `accepted_despite_absent_wording` on `MemoClause` and its builder
+  (`review/memo/models.py:48-66`, `review/memo/exporter.py:107-125`) — v2 missed both files. The field is true only
+  for a grounded claim whose wording is absent, so the name carries the whole condition the note reads.
 - The colour logic reads `error`, `confidence`, `qa_verdict`, `grounding_verdict`, `position` and
   `grounding_confidence` (`review/colors.py:41-68`); none of the new fields is among them, so amber cannot move.
 
@@ -85,11 +87,11 @@ citations clustering above ~0.8 while planted claims stay below ~0.3.
   always returns a sentence, and the caller drops it when the rewrite changed nothing (counted, never silent).
 - Two classes: a **paraphrased positive** (the clause's own sentence rewritten) and a **paraphrased negative** (a
   sentence from another clause rewritten, so it stays unsupported). The negative joins
-  `GROUNDING_VALID_NEGATIVES` (`corruption.py:48`); the positive is a positive and must not.
+  `GROUNDING_VALID_NEGATIVES` (`corruption.py:54-58`); the positive is a positive and must not.
 - Narrow map = honest limit: it under-represents real paraphrases, and the page must say so.
-- Reuse considered and rejected in writing: `benchmark/hallu_detect.py` already computes a per-claim overlap
-  (`:65-77`) but it imports the discriminator, so grounding importing it would close a cycle; a local primitive
-  avoids that. Recorded in §6.
+- Reuse considered and rejected in writing: `src/openreview_cli/benchmark/hallu_detect.py:65-78` already computes a
+  per-claim overlap but it imports the discriminator, so grounding importing it would close a cycle; a local
+  primitive avoids that. Recorded in §6.
 
 ## 3. Non-goals
 No veto and no verdict derived from coverage. No new slot, tier or model default. No cloud run (the cloud row is
@@ -105,11 +107,13 @@ labelled pre-change). No verbatim enforcement at the extraction step (recorded i
 | The number is misread as a verdict by a later reader | the field is named and documented as a signal, and the memo wording says "not present", not "unsupported" |
 
 ## 5. Definition of done
-Items 1–4 implemented with a failing test first per item; the harness records coverage per label and the labels
-include both paraphrase classes; one real local review with grounding enabled produces a coverage distribution
-(called a pilot, not a benchmark); the published pages carry that distribution, the new numbers, the correction that
-the local arm's "bad claims called grounded" row is 12 not 0, and the explicit statement that nothing here is a model
-improvement; the rejected veto is recorded with the measurement that rejected it.
+Items 1–4 shipped, each behind its test; the harness records coverage on every `per_label` row and the labels carry
+both paraphrase classes; the `grounding-pilot` job runs one real local review **lenient** and prints the coverage
+distribution (a pilot, not a benchmark). What the branch actually publishes is the coverage distribution from the
+harness, the pilot's distribution, and the statement that nothing here is a model improvement — **not** the corrected
+local "bad claims called grounded = 12" row or the re-pinned receipts, which are the publish step (Task 6 Steps 4–5)
+and need a fresh CI run; the committed receipt still reads `bad_called_grounded: 0`. The rejected veto is recorded
+with the measurement that rejected it in §1.
 
 ## 6. Alternatives considered
 
@@ -122,5 +126,13 @@ improvement; the rejected veto is recorded with the measurement that rejected it
 | Drop the memo note, keep the JSON number only | the risky pattern (accepted despite absent wording) would stay invisible to the reviewer who acts on the memo |
 
 ## 7. Open uncertainties
-- Whether real citations sit above the line: the point of item 1, unanswered until a real review runs.
+- Whether real citations sit above the line: the point of item 1, unanswered until a real review runs. The pilot
+  answers it by running **lenient**, not strict: strict deletes every rejected claim, and those rejected claims are
+  exactly the low-coverage population the pilot needs to see.
 - Whether a narrow map is a fair proxy for real paraphrases: labelled an Assumption; it errs toward flattering.
+- Whether the pilot's distribution tells us anything: it reports a coverage distribution but never asserts the
+  distribution **varies** — a run where every citation scored 0.0 would pass while answering nothing.
+- Deferred: collapsing the bare-modal substitution together with its negation guard — the guard is tested and
+  preserves paraphrase coverage.
+- Deferred: reducing the new memo/colour tests as duplicative — the tests are cheap.
+- Deferred: inlining the small presence helper — it is documented as never read by a verdict.

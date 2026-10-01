@@ -36,14 +36,14 @@
 - [ ] **Step 3: Write the module** (normalise, `[a-z0-9]+` tokens, multiset intersection over claim tokens, `measure` with the three guards).
 - [ ] **Step 4: Run them again** → all pass.
 - [ ] **Step 5: Let `corruption.py` reuse `normalise`** (and nothing else); its `is_genuine_negative` substring test is untouched.
-- [ ] **Step 6: Prove the guard is unchanged** — `uv run pytest tests/unit/test_grounding_corruption.py tests/unit/test_grounding_presence.py -q` → all pass, including the exact-tuple test at `:296`.
+- [ ] **Step 6: Prove the guard is unchanged** — `uv run pytest tests/unit/test_grounding_corruption.py tests/unit/test_grounding_presence.py -q` → all pass, including the exact-tuple test at `:419-431`.
 - [ ] **Step 7: Commit** — `feat(grounding): add a coverage measure with a wording-absent guard`.
 
 ---
 
 ### Task 2: Record the number and the boolean on the batch path (item 1)
 
-**Files:** modify `src/openreview_cli/grounding/discriminator.py` (`GroundingResult` is built in the zero-length block `:190-200` (construction `:193-198`), the gateway-error fallback `:280-281` and the batch mapping `:367-368`; confirm them, because Task 2 shifted these lines and the earlier draft cited the empty-report early return by mistake), `src/openreview_cli/grounding/models.py` (`:76`, `:98-100`), `src/openreview_cli/review/models.py` (`:114-117`); tests in `tests/unit/test_grounding_discriminator.py`, `tests/unit/test_grounding_models.py`, `tests/unit/test_review_report.py`.
+**Files:** modify `src/openreview_cli/grounding/discriminator.py` (`GroundingResult` is built in the zero-length block `:190-200` (construction `:193-198`), the gateway-error fallback `:281-291` and the batch mapping `:345-353`; confirm them, because Task 2 shifted these lines and the earlier draft cited the empty-report early return by mistake), `src/openreview_cli/grounding/models.py` (`GroundingResult` `:37-46`, the merge copy `:105-106`), `src/openreview_cli/review/models.py` (`:114-120`); tests in `tests/unit/test_grounding_discriminator.py`, `tests/unit/test_grounding_models.py`, `tests/unit/test_review_report.py`.
 
 **Interfaces:** `GroundingResult.grounding_presence: float | None = None`, `GroundingResult.wording_absent: bool = False`, and the same two fields on `ClauseAssessment`; the merge copies them. The zero-length-claim result carries `None`/`False` — the measure never ran.
 
@@ -57,11 +57,11 @@
 
 ### Task 3: The per-claim hint (item 2)
 
-**Files:** modify `src/openreview_cli/grounding/prompts.py` (`build_grounding_messages`, `:45-79`), `src/openreview_cli/grounding/discriminator.py` (pass the flag set); tests in `tests/unit/test_grounding_prompts.py`, `tests/unit/test_grounding_discriminator.py`.
+**Files:** modify `src/openreview_cli/grounding/prompts.py` (`build_grounding_messages`, `:54-95`), `src/openreview_cli/grounding/discriminator.py` (pass the flag set); tests in `tests/unit/test_grounding_prompts.py`, `tests/unit/test_grounding_discriminator.py`.
 
 **Interfaces:** `build_grounding_messages(source_clauses, claims, wording_absent_indices: set[int] | None = None)`. Default `None` leaves every existing caller unchanged. The hint is one bracketed clause appended to that claim's line in the single user message; `GROUNDING_PROMPT_TEMPLATE` is untouched.
 
-- [ ] **Step 1: Write the failing tests** — a flagged claim's line carries the hint, an unflagged one does not, an empty set adds nothing, and the two template-pinning tests at `tests/unit/test_grounding_prompts.py:135-141` still pass.
+- [ ] **Step 1: Write the failing tests** — a flagged claim's line carries the hint, an unflagged one does not, an empty set adds nothing, and the two template-pinning tests at `tests/unit/test_grounding_prompts.py:140-146` still pass.
 - [ ] **Step 2: Run them** → hint absent.
 - [ ] **Step 3: Implement** the parameter and the call-site pass-through.
 - [ ] **Step 4: Run** `uv run pytest tests/unit/test_grounding_prompts.py tests/unit/test_grounding_discriminator.py -q` → all pass.
@@ -71,9 +71,9 @@
 
 ### Task 4: The memo note, on the risky pattern only (item 3)
 
-**Files:** modify `src/openreview_cli/review/memo/models.py` (`MemoClause`, `:48-61`, and its `from_dict`), `src/openreview_cli/review/memo/exporter.py` (`:106-118`), `src/openreview_cli/review/memo/formats.py` (Markdown near `:104-125`, DOCX near `:236-275`); tests: the memo Markdown tests, the memo DOCX tests (**name them explicitly**), plus `tests/unit/test_three_color_models.py` and `tests/unit/test_three_color_report.py`.
+**Files:** modify `src/openreview_cli/review/memo/models.py` (`MemoClause`, `:48-66`, and its `from_dict`), `src/openreview_cli/review/memo/exporter.py` (`:107-125`), `src/openreview_cli/review/memo/formats.py` (Markdown near `:118-133`, DOCX near `:255-297`); tests: the memo Markdown tests, the memo DOCX tests (**name them explicitly**), plus `tests/unit/test_three_color_models.py` and `tests/unit/test_three_color_report.py`.
 
-**Interfaces:** `MemoClause.grounding_presence: float | None` and `MemoClause.wording_absent: bool`, set in the builder. The note renders as its own line, only when `wording_absent` **and** the assessment's `grounding_verdict` is `GROUNDED`.
+**Interfaces:** `MemoClause.grounding_presence: float | None` and `MemoClause.accepted_despite_absent_wording: bool`, set in the builder. The field is true only for a grounded claim whose wording is absent; the note renders as its own line, only when it is set **and** the assessment's `grounding_verdict` is `GROUNDED`.
 
 - [ ] **Step 1: Write the failing tests** — the note appears for a grounded claim with absent wording; it does **not** appear for a grounded claim with present wording, for an ungrounded claim, or when the fields are `None`/`False`; the DOCX renderer emits the same text; the three-colour output is unchanged with and without the note.
 - [ ] **Step 2: Run them** → the note is absent (and the DOCX test fails for the same reason).
@@ -85,11 +85,11 @@
 
 ### Task 5: Paraphrased labels (item 4)
 
-**Files:** modify `src/openreview_cli/grounding/corruption.py` (one constant substitution map plus `paraphrase(sentence)`), `scripts/measure_slm_slots.py` (`GROUNDING_VALID_NEGATIVES`, `_build_grounding_labels` at `:357-394`, the caveats at `:82-98` and `:754-764`); tests in `tests/unit/test_grounding_corruption.py`, `tests/unit/test_grounding_harness.py`.
+**Files:** modify `src/openreview_cli/grounding/corruption.py` (one constant substitution map plus `paraphrase(sentence)`), `scripts/measure_slm_slots.py` (`GROUNDING_VALID_NEGATIVES`, `_build_grounding_labels` at `:363-441`, the caveats at `:85-104` and `:810-825`); tests in `tests/unit/test_grounding_corruption.py`, `tests/unit/test_grounding_harness.py`.
 
 **Interfaces:** `paraphrase(sentence) -> str` (never `None`; a narrow, reviewed map — `shall`→`must`, `shall not`→`must not`, `in no event`→`under no circumstances`, `prior to`→`before`, `receiving party`→`recipient`); `paraphrased_supported(unit)` uses the clause's own qualifying sentence; `paraphrased_unsupported(a, b)` paraphrases a sentence from another clause. The new negative name joins `GROUNDING_VALID_NEGATIVES`; the positive does not. Only labels whose rewrite actually differs are kept, and the ones dropped are counted.
 
-- [ ] **Step 1: Write the failing tests** — the rewrite differs from the clause sentence and is not a substring of it; `is_genuine_negative` passes for the unsupported variant and fails for the supported one; an unchanged rewrite yields no label and increments a drop counter; the harness builds and counts both classes. **This task must also update the tests that pin today's exact numbers**: `tests/unit/test_grounding_harness.py` asserts `positives == 2`, `negatives_kept == 2`, `negatives_dropped_guard == 2`, the generator dict, `len(per_label) == 4`, the generator set, the stub call count, and at `:233` that a caveat contains "verbatim" — all of these change, so recompute each expected value from the new label set and report the new numbers; and `tests/unit/test_grounding_corruption.py:296` pins the negative tuple exactly.
+- [ ] **Step 1: Write the failing tests** — the rewrite differs from the clause sentence and is not a substring of it; `is_genuine_negative` passes for the unsupported variant and fails for the supported one; an unchanged rewrite yields no label and increments a drop counter; the harness builds and counts both classes. **This task must also update the tests that pin today's exact numbers**: `tests/unit/test_grounding_harness.py` asserts `positives == 2`, `negatives_kept == 2`, `negatives_dropped_guard == 2`, the generator dict, `len(per_label) == 4`, the generator set, the stub call count, and at `:247` that a caveat contains "verbatim" — all of these change, so recompute each expected value from the new label set and report the new numbers; and `tests/unit/test_grounding_corruption.py:419-431` pins the negative tuple exactly.
 - [ ] **Step 2: Run them** → new classes missing, and the pinned counts fail.
 - [ ] **Step 3: Implement** the map, the writers, the label wiring, the caveat correction, and the test updates.
 - [ ] **Step 4: Run** `uv run pytest tests/unit/test_grounding_corruption.py tests/unit/test_grounding_harness.py -q` → all pass.
@@ -105,7 +105,7 @@
 
 - [ ] **Step 1: Offline suite and gate** — `uv run pytest -m "fast" -q`, `uv run pre-commit run --all-files`. Expected: only the known issue #180 receipt failure.
 - [ ] **Step 2: Record coverage in the harness output** — add the number to each `per_label` row (the harness computes it with `presence.measure`; the harness may import the product). Run the local arm and report the coverage distribution by label class.
-- [ ] **Step 3: The pilot** — one real local review with grounding left at its CLI default, recording the coverage distribution (a sample, not a benchmark). This is the only thing that can answer design §7.
+- [ ] **Step 3: The pilot** — one real local review with `grounding_mode="lenient"`, not the CLI's strict default: strict deletes every claim the model rejected, and those rejected claims are exactly the low-coverage population the pilot needs to see. Record the coverage distribution (a sample, not a benchmark). This is the only thing that can answer design §7.
 - [ ] **Step 4: Regenerate the registered receipt** — rebuild `grounding-accuracy-local.json` with the new class counts, the corrected `git_commit`, re-pinned sha256 provenance, and no duplicate `bad_called_grounded` field (it contradicts `bad_missed`). Then `uv run pytest tests/unit/test_benchmark_receipts.py -q` → only the known #180 failure.
 - [ ] **Step 5: Publish** — the local arm's "bad claims called grounded" row is **12**, not 0; replace the local numbers; label the cloud row as measured before this change; print the coverage distribution and the pilot's numbers; state that nothing here is a model improvement.
 - [ ] **Step 6: Commit and push.**
