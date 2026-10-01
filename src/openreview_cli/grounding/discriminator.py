@@ -38,14 +38,12 @@ _BATCH_SIZE = 10  # Max claims per gateway call
 def combine_grounding_passes(
     first: GroundingVerdict,
     second: GroundingVerdict | None,
-    *,
-    second_available: bool = True,
 ) -> GroundingVerdict:
     """Both supported accepts; an abstention from either pass is 'not sure'; otherwise the
     disagreement rejects. An unavailable second pass keeps the first verdict — never a
     downgrade, so a broken second call cannot turn an accepted finding into 'not sure' (which
     strict mode would delete)."""
-    if not second_available or second is None:
+    if second is None:
         return first
     if GroundingVerdict.UNCERTAIN in (first, second):
         return GroundingVerdict.UNCERTAIN
@@ -425,7 +423,9 @@ class CitationGroundingDiscriminator:
             # A failed check clears the pointer and leaves the verdict exactly as the passes
             # produced it — this never writes, downgrades or deletes a verdict.
             named = miscited_ids.get(idx)
-            named_text = all_clause_text_by_id.get(named) if named is not None else None
+            # No ternary: ``named`` is None when the checker named nothing, and short-circuiting
+            # on it yields the same empty lookup instead of a separate ``None`` branch.
+            named_text = named and all_clause_text_by_id.get(named)
             miscited_to_clause_id = (
                 named if (named_text and not presence.measure(claim_text, named_text)[1]) else None
             )

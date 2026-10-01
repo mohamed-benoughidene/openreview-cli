@@ -552,3 +552,29 @@ def test_the_second_pass_uses_the_same_clause_window() -> None:
     assert _TRUNCATION_MARKER in _user_content(
         build_second_pass_messages([long_clause], [(0, "a claim", "4.3")])
     )
+
+
+def test_the_second_pass_names_the_keys_it_expects() -> None:
+    """The shared reader drops any item without a ``verdict`` key, so a prompt that names no
+    keys lets a well-behaved model answer ``{"supported": "yes"}`` — which parses to nothing —
+    and the whole second pass becomes a silent no-op while looking enabled."""
+    content = _user_content(build_second_pass_messages(_CLAUSES, _CLAIMS))
+
+    assert "claim_index" in content
+    for verdict in ('"grounded"', '"ungrounded"', '"uncertain"'):
+        assert verdict in content
+
+
+def test_a_key_named_second_pass_answer_parses() -> None:
+    """The shape the second-pass template now names must be readable by the shared reader."""
+    answer = json.dumps(
+        [
+            {"claim_index": 3, "verdict": "ungrounded"},
+            {"claim_index": 7, "verdict": "grounded"},
+        ]
+    )
+
+    assert [(index, verdict) for index, verdict, _p, _c in parse_grounding_response(answer)] == [
+        (3, GroundingVerdict.UNGROUNDED),
+        (7, GroundingVerdict.GROUNDED),
+    ]

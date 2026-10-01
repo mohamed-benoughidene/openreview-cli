@@ -1656,7 +1656,7 @@ class TestBothPassesMustAgree:
         assert combine_grounding_passes(G.GROUNDED, C) is C
         assert combine_grounding_passes(C, U) is C
         # An unavailable second pass keeps the first verdict — never a downgrade.
-        assert combine_grounding_passes(G.GROUNDED, None, second_available=False) is G.GROUNDED
+        assert combine_grounding_passes(G.GROUNDED, None) is G.GROUNDED
 
     def test_the_rule_is_off_by_default(self, mock_gateway: MagicMock) -> None:
         CitationGroundingDiscriminator(mode="lenient", gateway=mock_gateway).ground_claim(
@@ -1683,6 +1683,25 @@ class TestBothPassesMustAgree:
             mode="lenient", gateway=mock_gateway, require_pass_agreement=True
         )
         verdict, _p, _c = d.ground_claim("a claim", "4.3", "the clause text")
+        assert verdict is GroundingVerdict.GROUNDED
+        assert d.second_pass_fallbacks == 1
+
+    def test_a_wrongly_shaped_second_answer_keeps_the_first_verdict(
+        self, mock_gateway: MagicMock
+    ) -> None:
+        """A second pass whose answer omits the keys the reader needs (FIX 6) is not a
+        rejection: it falls back to the first verdict and is counted, exactly as a failed call
+        is. Reading ``{"supported": "yes"}`` as "unsupported" would silently delete findings."""
+        mock_gateway.chat.side_effect = [
+            self._answer("grounded"),
+            json.dumps({"supported": "yes"}),
+        ]
+        d = CitationGroundingDiscriminator(
+            mode="lenient", gateway=mock_gateway, require_pass_agreement=True
+        )
+
+        verdict, _p, _c = d.ground_claim("a claim", "4.3", "the clause text")
+
         assert verdict is GroundingVerdict.GROUNDED
         assert d.second_pass_fallbacks == 1
 

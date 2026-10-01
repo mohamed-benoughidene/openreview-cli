@@ -55,13 +55,20 @@ GROUNDING_PROMPT_TEMPLATE = _GROUNDING_PROMPT_HEAD + _JSON_ONLY_TAIL
 
 # Item 4: the second narrow question. It asks only whether the cited clause imposes a
 # condition, a limit, a number or a party the finding leaves out — a closed question with a
-# JSON answer, never an instruction to reason in prose.
+# JSON answer, never an instruction to reason in prose. The answer keys are named, because
+# the shared reader drops any item without a ``verdict`` key: a prompt that named none let a
+# well-behaved model answer ``{"supported": "yes"}``, which parses to nothing, so the whole
+# two-pass rule ran as a silent no-op while appearing enabled.
 SECOND_PASS_PROMPT_TEMPLATE = (
     "You are checking one narrow question about a contract finding and the clause it cites.\n\n"
     "Question: does the cited clause impose a condition, a limit, a number or a party that the "
     "finding leaves out?\n\nAnswer about the clause's content only. Do not restate the finding and "
     "do not explain your answer.\n\nSource clauses:\n{clauses_text}\n\nFindings to check:"
     "\n{claims_text}\n\n"
+    "For each finding, respond with a JSON object containing:\n"
+    "- claim_index: int — the number at the start of the finding's line\n"
+    '- verdict: "grounded" if the clause leaves out no condition, limit, number or party; '
+    '"ungrounded" if it leaves one out; "uncertain" if the clause does not say\n\n'
 ) + _JSON_ONLY_TAIL
 
 
