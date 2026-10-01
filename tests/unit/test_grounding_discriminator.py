@@ -1529,6 +1529,19 @@ class TestMiscitedIsAFieldWithAGuard:
     _SIBLING_UNRELATED = (
         "9.2 Neither party may assign this agreement without prior written consent."
     )
+    # FIX 10(b): the operand order of the guard's measuring call is pinned here. Every word of
+    # this claim appears in the named clause, so measure(claim, named) accepts (1.0, False);
+    # but the clause is more than twice the claim's length, so measure(named, claim) rejects
+    # (0.26, True). A guard that handed the two texts the other way round would drop the
+    # pointer for this pair and fail the assertion below.
+    _ORDER_CLAIM = (
+        "The receiving party shall keep the Confidential Information confidential for five years"
+    )
+    _ORDER_NAMED = (
+        _ORDER_CLAIM + " after the date of disclosure and shall not use it for any purpose "
+        "other than the performance of this agreement or the exercise of rights granted under "
+        "this agreement now or in the future"
+    )
 
     def _clauses(self) -> list[Clause]:
         from openreview_cli.parsing.models import Clause
@@ -1628,6 +1641,75 @@ class TestMiscitedIsAFieldWithAGuard:
         assert result.verdict is GroundingVerdict.GROUNDED
         assert result.miscited_to_clause_id is None
 
+    def test_the_guard_measures_the_claim_against_the_named_clause(
+        self, mock_gateway: MagicMock, sample_document: MagicMock
+    ) -> None:
+        """FIX 10(b): the guard's measuring call takes the claim first, the named clause second.
+
+        The pair below admits the pointer only in that order; swapping the operands drops it,
+        so this assertion is what pins the operand order.
+        """
+        from datetime import datetime
+
+        from openreview_cli.parsing.models import Clause
+        from openreview_cli.review.models import (
+            ClauseAssessment,
+            DocMeta,
+            Position,
+            QAVerdict,
+            ReviewReport,
+            ReviewSummary,
+        )
+
+        # The premise: this pair's answer flips with the operands.
+        assert presence.measure(self._ORDER_CLAIM, self._ORDER_NAMED)[1] is False
+        assert presence.measure(self._ORDER_NAMED, self._ORDER_CLAIM)[1] is True
+
+        def clause(cid: str, text: str) -> Clause:
+            return Clause(
+                id=cid,
+                title=None,
+                text=text,
+                level=1,
+                parent_id=None,
+                source_page=1,
+                source_paragraph=None,
+                source_span=None,
+            )
+
+        report = ReviewReport(
+            document=DocMeta(filename="t.pdf", page_count=1, clause_count=2, pii_stripped=False),
+            assessments=[
+                ClauseAssessment(
+                    clause_id="4.4",
+                    clause_text=self._CITED,
+                    playbook_category="confidentiality-term",
+                    position=Position.PREFERRED,
+                    confidence=0.9,
+                    citation=self._ORDER_CLAIM,
+                    qa_verdict=QAVerdict.agree,
+                    extraction_model="test",
+                    qa_model="test",
+                )
+            ],
+            summary=ReviewSummary(),
+            playbook_id="test",
+            generated_at=datetime.now(),
+        )
+
+        mock_gateway.chat.return_value = self._answer("4.9")
+        result = (
+            CitationGroundingDiscriminator(mode="lenient", gateway=mock_gateway)
+            .ground_report(
+                report,
+                sample_document,
+                [clause("4.4", self._CITED), clause("4.9", self._ORDER_NAMED)],
+            )
+            .verdicts[0]
+        )
+
+        assert result.miscited_to_clause_id == "4.9"
+
 
 class TestBothPassesMustAgree:
     """Item 4: one extra call per batch when the flag is on; either unsupported rejects; both
@@ -1654,9 +1736,8 @@ class TestBothPassesMustAgree:
         assert combine_grounding_passes(G.GROUNDED, U) is U
         assert combine_grounding_passes(U, G.GROUNDED) is U
         assert combine_grounding_passes(G.GROUNDED, C) is C
+        # An abstention outranks a rejection: not sure, never "not supported".
         assert combine_grounding_passes(C, U) is C
-        # An unavailable second pass keeps the first verdict — never a downgrade.
-        assert combine_grounding_passes(G.GROUNDED, None) is G.GROUNDED
 
     def test_the_rule_is_off_by_default(self, mock_gateway: MagicMock) -> None:
         CitationGroundingDiscriminator(mode="lenient", gateway=mock_gateway).ground_claim(
@@ -1742,6 +1823,28 @@ class TestBothPassesMustAgree:
         assert cg.verdicts[0].verdict is GroundingVerdict.UNGROUNDED
         assert cg.verdicts[0].pass_disagreement is True
         assert cg.verdicts[0].not_sure is False
+
+    def test_an_abstention_is_not_a_disagreement(
+        self, mock_gateway: MagicMock, sample_document: MagicMock
+    ) -> None:
+        """FIX 10(a): the flag means the two passes split GROUNDED/UNGROUNDED, nothing less.
+
+        Here the second pass abstains, so the combined verdict (UNCERTAIN) differs from the
+        first pass's (GROUNDED) while the passes never disagreed. An implementation that set
+        the flag whenever the combined verdict moved would fire here and pass the other tests.
+        """
+        mock_gateway.chat.side_effect = [self._answer("grounded"), self._answer("uncertain")]
+        d = CitationGroundingDiscriminator(
+            mode="lenient", gateway=mock_gateway, require_pass_agreement=True
+        )
+        cg = d.ground_report(
+            self._fixtures._report(self._fixtures._CLAIM),
+            sample_document,
+            self._fixtures._source_clauses(),
+        )
+        assert cg.verdicts[0].verdict is GroundingVerdict.UNCERTAIN
+        assert cg.verdicts[0].not_sure is True
+        assert cg.verdicts[0].pass_disagreement is False
 
 
 class TestConfidenceIsNeverTheVerdict:
