@@ -557,3 +557,245 @@ jobs:
           name: grounding-accuracy-local
           path: results/grounding-accuracy-local.json
           if-no-files-found: warn
+
+  # Grounding pilot: the one place CI runs a REAL product review with citation grounding ON
+  # (the `measure` matrix deliberately leaves grounding off, `grounding_mode: null`, so it can
+  # compare extraction quality across models). Nothing else in CI enables grounding, so nothing
+  # else can show whether a real citation's wording sits above the coverage line -- the open
+  # question the whole presence-signals design rests on.
+  #
+  # It runs exactly ONE product review over the repository's tracked fixtures with the shipped
+  # local grounding model (`ollama/granite4:3b`, the same one `--arm local` uses), records how
+  # much of each cited claim's wording is in the clause it cites, and prints the coverage
+  # distribution. This is a sample (a pilot), not a benchmark: the number is recorded, never
+  # scored, and no verdict is derived from it.
+  #
+  # Why lenient and not strict: strict grounding DELETES every claim the model rejected
+  # (`grounding/models.py` keeps only grounded assessments), and those rejected claims are
+  # exactly the low-coverage population this pilot exists to see. Running strict would leave
+  # only the survivors and answer nothing.
+  #
+  # Failure policy: same fail-loud spirit as `grounding-accuracy` -- a run that produced no
+  # assessments at all (or no coverage number on any of them) fails the job rather than pass as
+  # a green nothing; the report is uploaded on every outcome (if: always()).
+  grounding-pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - run: uv sync --frozen
+
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL
+
+      - name: Install Ollama
+        run: curl -fsSL https://ollama.com/install.sh | sh
+
+      - name: Start Ollama and wait until it answers
+        # Same keep-alive as `grounding-accuracy`: the review makes many sequential grounding
+        # calls, and a mid-run unload whose cold reload exceeds the gateway's 60 s per-call
+        # timeout would turn into the "measured nothing" case the step below rejects.
+        run: |
+          OLLAMA_KEEP_ALIVE=30m nohup ollama serve > /tmp/ollama-serve.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:11434/api/tags >/dev/null 2>&1; then
+              echo "Ollama is up after ${i} attempt(s)"
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/ollama-serve.log
+          exit 1
+
+      - name: Cache Ollama models
+        uses: actions/cache@v4
+        with:
+          path: ~/.ollama/models
+          key: ollama-grounding-granite4-3b
+
+      - name: Pull granite4:3b (the local grounding model)
+        run: |
+          ollama pull granite4:3b
+          ollama list
+
+      - name: Warm the grounding model so the first review call is not the cold start
+        # Copied from `grounding-accuracy`: the first inference after `ollama pull` loads the
+        # weights, and the gateway's per-call timeout is 60 s; `ollama run` has no such cap and
+        # OLLAMA_KEEP_ALIVE (above) keeps the model resident through the review.
+        timeout-minutes: 15
+        run: |
+          for attempt in 1 2 3; do
+            if out=$(ollama run granite4:3b "Reply with the single word OK." 2>&1); then
+              echo "warm-up answered on attempt ${attempt}: ${out}"
+              ollama ps
+              exit 0
+            fi
+            echo "warm-up attempt ${attempt} failed:"
+            echo "${out}"
+          done
+          echo "the grounding model did not answer three warm-up calls; refusing to start the review cold"
+          exit 1
+
+      - name: Run one grounded review (lenient) and write the pilot report
+        run: |
+          uv run python - <<'PY'
+          import importlib.util
+          import json
+          import os
+          import pathlib
+          import time
+
+          ROOT = pathlib.Path(".").resolve()
+          spec = importlib.util.spec_from_file_location(
+              "measure_slm_slots", ROOT / "scripts" / "measure_slm_slots.py"
+          )
+          harness = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(harness)
+
+          from openreview_cli.review import run_review
+          from openreview_cli.review.playbook import BUNDLED_PLAYBOOKS
+
+          MODE = "indemnitycheck"
+          fixtures = ROOT / "tests" / "fixtures" / "benchmark" / MODE
+          ground_truth = json.loads((fixtures / "ground_truth.json").read_text())
+          paths = [str(ROOT / entry["path"]) for entry in ground_truth]
+
+          # Same local model the grounding arm uses, via the documented env override, and the
+          # same cost-ledger init the measure job needs before its first gateway call.
+          harness._configure_slots(harness._LOCAL_GROUNDING_MODEL)
+          harness._ensure_cost_ledger_database()
+
+          # ONE product review over the tracked fixtures: the measure matrix job's product
+          # review (`--model ollama/granite4:3b --mode indemnitycheck`) with grounding on and
+          # left lenient (see the job comment for why not strict). It is run in-process here
+          # rather than through `measure_slm_slots.py` because that script's review-mode report
+          # carries only aggregate grounding counts; only the live assessments carry the
+          # per-claim coverage number this pilot needs.
+          reports = run_review(
+              paths=paths,
+              playbook_path=str(BUNDLED_PLAYBOOKS[MODE]),
+              extraction_model="extraction",
+              qa_model=None,
+              no_pii=True,
+              grounding_mode="lenient",
+              mode=MODE,
+              allow_password_prompt=False,
+          )
+
+          assessments = [a for r in reports for a in r.assessments]
+          coverages = [a.grounding_presence for a in assessments]
+          measured = [value for value in coverages if value is not None]
+          verdicts = [
+              a.grounding_verdict.value if a.grounding_verdict is not None else None
+              for a in assessments
+          ]
+
+          # Five equal coverage bands over [0.0, 1.0]; the top band is inclusive so a verbatim
+          # (1.0) claim lands in it.
+          BAND_LABELS = ["0.0-0.2", "0.2-0.4", "0.4-0.6", "0.6-0.8", "0.8-1.0"]
+          bands = dict.fromkeys(BAND_LABELS, 0)
+          for value in measured:
+              bands[BAND_LABELS[min(int(value * len(BAND_LABELS)), len(BAND_LABELS) - 1)]] += 1
+
+          report = {
+              "job": "grounding-pilot",
+              "mode": MODE,
+              "model": harness._LOCAL_GROUNDING_MODEL,
+              "grounding_mode": "lenient",
+              "pii_stripped": False,
+              "git_sha": harness._git_sha(),
+              "measured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+              "documents": [r.document.filename for r in reports],
+              "assessments": len(assessments),
+              "with_coverage": len(measured),
+              "accepted": verdicts.count("grounded"),
+              "rejected": verdicts.count("ungrounded"),
+              "uncertain": verdicts.count("uncertain"),
+              "coverage_bands": bands,
+              "coverage_values": sorted(round(value, 4) for value in measured),
+          }
+          out = pathlib.Path("results/grounding-pilot.json")
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text(json.dumps(report, indent=2))
+
+          summary_lines = [
+              f"model: `{report['model']}`; grounding mode: `{report['grounding_mode']}`",
+              f"documents: {len(reports)}; claims assessed: {report['assessments']}; "
+              f"claims with a coverage number: {report['with_coverage']}",
+              "coverage bands (claims): "
+              + ", ".join(f"{label}={bands[label]}" for label in BAND_LABELS),
+              f"accepted (grounded): {report['accepted']}; "
+              f"rejected (ungrounded): {report['rejected']}; uncertain: {report['uncertain']}",
+          ]
+          for line in summary_lines:
+              print(f"[grounding-pilot] {line}")
+          print(f"[grounding-pilot] JSON report written to {out}")
+
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary:
+              with open(summary, "a", encoding="utf-8") as handle:
+                  handle.write("### Grounding pilot (coverage distribution)\n\n")
+                  for line in summary_lines:
+                      handle.write(f"- {line}\n")
+          PY
+
+      - name: Fail when the pilot produced no assessments
+        # Same fail-loud spirit as `grounding-accuracy`: exit 0 is not enough. A run with no
+        # claims, or with no coverage number on any claim (grounding silently skipped), is a
+        # green nothing, not a measurement.
+        if: always()
+        run: |
+          uv run python - <<'PY'
+          import json
+          import pathlib
+
+          path = pathlib.Path("results/grounding-pilot.json")
+          if not path.exists():
+              raise SystemExit(
+                  f"FAIL: no pilot report at {path}: the review wrote nothing, so there is no "
+                  "evidence that a grounded review ran"
+              )
+
+          report = json.loads(path.read_text())
+          problems = []
+          if report.get("assessments", 0) == 0:
+              problems.append(
+                  "assessments == 0: the review produced no claims at all, so there is no "
+                  "coverage distribution and nothing was measured"
+              )
+          if report.get("with_coverage", 0) == 0:
+              problems.append(
+                  "with_coverage == 0: no claim carried a coverage number, so the pilot cannot "
+                  "show whether real citations sit above the line (grounding ran? see the log)"
+              )
+          if report.get("assessments", 0) and report.get("uncertain", 0) == report["assessments"]:
+              problems.append(
+                  "every verdict is 'uncertain': a failed gateway call is swallowed and returned "
+                  "as 'uncertain' (grounding/discriminator.py), so this run almost certainly "
+                  "measured nothing"
+              )
+
+          if problems:
+              print("FAIL: the pilot measured nothing:")
+              for problem in problems:
+                  print(f"  - {problem}")
+              raise SystemExit(1)
+
+          print(
+              f"OK: assessments={report['assessments']} with_coverage={report['with_coverage']} "
+              f"accepted={report['accepted']} rejected={report['rejected']} "
+              f"uncertain={report['uncertain']}"
+          )
+          PY
+
+      - name: Upload the pilot report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grounding-pilot
+          path: results/grounding-pilot.json
+          if-no-files-found: warn

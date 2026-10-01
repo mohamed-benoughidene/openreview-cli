@@ -52,6 +52,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from openreview_cli.grounding import presence
 from openreview_cli.grounding.corruption import (
     GROUNDING_VALID_NEGATIVES,
     ClauseUnit,
@@ -738,6 +739,12 @@ def run_grounding_accuracy(
         started = time.perf_counter()
         error: str | None = None
         confidence = 0.0
+        # How much of this claim's wording is actually in the clause it cites, computed with
+        # the product's own primitive (the harness may import the product; the reverse is
+        # forbidden). The number is recorded only — it never enters a verdict or a count.
+        coverage_value, _wording_absent = presence.measure(
+            label["claim_text"], label["clause_text"]
+        )
         try:
             verdict, _provenances, confidence = discriminator.ground_claim(
                 label["claim_text"], label["unit_id"], label["clause_text"]
@@ -755,6 +762,7 @@ def run_grounding_accuracy(
                 "generator": label["generator"],
                 "verdict": verdict_value,
                 "confidence": confidence,
+                "coverage": round(coverage_value, 6),
                 "seconds": round(time.perf_counter() - started, 6),
                 "error": error,
             }

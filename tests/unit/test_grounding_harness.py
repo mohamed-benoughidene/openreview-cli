@@ -252,6 +252,51 @@ class TestGroundingAccuracyEndToEnd:
         # The same receipt is on disk, in one output format.
         assert json.loads(out.read_text())["negatives_dropped_guard"] == 2
 
+    def test_per_label_rows_carry_a_coverage_number(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Each row records how much of its claim's wording is in the clause it cites.
+
+        The harness computes the number with the product's own ``presence.measure`` (the
+        harness may import the product, never the reverse). A verbatim clause sentence is
+        fully covered (1.0); a claim planted from nowhere is far below it. This only records
+        the number — no verdict, count or label changes.
+        """
+        corpus = _tiny_corpus(tmp_path)
+        out = tmp_path / "ga.json"
+        stub = _StubDiscriminator()
+
+        monkeypatch.setattr(
+            SCRIPT,
+            "_configured_slots",
+            lambda: {"extraction": "s", "reasoning": "s", "grounding": "stub/grounding"},
+        )
+        monkeypatch.setattr(SCRIPT, "_make_discriminator", lambda: stub)
+        monkeypatch.setattr(SCRIPT, "_preflight_arm_reachability", lambda: (True, None))
+        monkeypatch.setattr(SCRIPT, "unsupported_claim", lambda a, b: a.text)
+        monkeypatch.setattr(SCRIPT, "hallucination", lambda claim: FABRICATED)
+
+        receipt = SCRIPT.run_grounding_accuracy(
+            corpus_dir=corpus, limit=2, arm="configured", out=out, no_pii=True
+        )
+
+        rows = receipt["per_label"]
+        assert rows
+        for row in rows:
+            assert "coverage" in row
+            assert isinstance(row["coverage"], float)
+            assert 0.0 <= row["coverage"] <= 1.0
+
+        # A verbatim positive is the clause's own sentence: every word is present.
+        verbatim = [row for row in rows if row["generator"] == "positive"]
+        assert verbatim
+        assert all(row["coverage"] == pytest.approx(1.0) for row in verbatim)
+
+        # A claim planted from nowhere (the fabrication) appears in no clause: well below 1.0.
+        planted = [row for row in rows if row["generator"] == "hallucination"]
+        assert planted
+        assert all(row["coverage"] < 0.5 for row in planted)
+
     def test_cloud_arm_without_a_cloud_model_skips_cleanly(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
