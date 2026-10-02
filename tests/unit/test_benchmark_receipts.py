@@ -57,6 +57,10 @@ EXPECTED_RECEIPTS = frozenset(
         "cuad-rerank-offline.json",
         "grounding-accuracy-local.json",
         "grounding-accuracy-cloud.json",
+        "openweight-grounding-8b.json",
+        "openweight-grounding-27b.json",
+        "openweight-grounding-70b.json",
+        "openweight-grounding-moe.json",
     }
 )
 # Issue #180: `slot-measurement.json` is not a receipt. It dumps a six-slot measurement
@@ -93,6 +97,10 @@ GENERATED_RECEIPTS = frozenset(
         "cuad-rerank-offline.json",
         "grounding-accuracy-local.json",
         "grounding-accuracy-cloud.json",
+        "openweight-grounding-8b.json",
+        "openweight-grounding-27b.json",
+        "openweight-grounding-70b.json",
+        "openweight-grounding-moe.json",
     }
 )
 EXPECTED_MODELS: dict[str, Any] = {
@@ -119,6 +127,10 @@ EXPECTED_MODELS: dict[str, Any] = {
     ),
     "grounding-accuracy-local.json": "ollama/granite4:3b",
     "grounding-accuracy-cloud.json": "openrouter/anthropic/claude-sonnet-4.6",
+    "openweight-grounding-8b.json": "openrouter/meta-llama/llama-3.1-8b-instruct",
+    "openweight-grounding-27b.json": "openrouter/google/gemma-3-27b-it",
+    "openweight-grounding-70b.json": "openrouter/meta-llama/llama-3.3-70b-instruct",
+    "openweight-grounding-moe.json": "openrouter/qwen/qwen3-235b-a22b-2507",
 }
 UNKNOWN_GIT_COMMITS: dict[str, str] = {
     "contractnli-coverage.json": (
@@ -156,6 +168,12 @@ TABLES: dict[str, tuple[str, ...]] = {
     "## Grounding accuracy (local vs cloud)": (
         "grounding-accuracy-local.json",
         "grounding-accuracy-cloud.json",
+    ),
+    "## Open-weight grounding ladder (8B / 27B / 70B / 235B MoE)": (
+        "openweight-grounding-8b.json",
+        "openweight-grounding-27b.json",
+        "openweight-grounding-70b.json",
+        "openweight-grounding-moe.json",
     ),
 }
 

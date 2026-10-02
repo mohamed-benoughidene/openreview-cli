@@ -1,0 +1,59 @@
+{
+ "benchmark": "grounding-accuracy-openweight-70b",
+ "command": "OPENREVIEW_GATEWAY__MODELS__GROUNDING__PRIMARY=openrouter/meta-llama/llama-3.3-70b-instruct uv run python scripts/measure_slm_slots.py --grounding-accuracy --arm cloud --limit 20 --corpus-dir corpus --out results/openweight-grounding-70b.json",
+ "date": "2026-10-02",
+ "git_commit": "42fdf38",
+ "provenance": [
+  {
+   "path": "scripts/measure_slm_slots.py",
+   "sha256": "3bfd03c8eae2453050119f6f1d6c556afeeb24a53581acce325a689a1766fbf1"
+  },
+  {
+   "path": "src/openreview_cli/grounding/corruption.py",
+   "sha256": "5aa83ee640c3949ba253029413d359875c3d81debcb373bcdd8f37edab943b36"
+  },
+  {
+   "path": "src/openreview_cli/grounding/presence.py",
+   "sha256": "34c8ee560ad13247dc88c9bd45ea74190eeb8ba4bf04c887b03d9e24badb74a4"
+  },
+  {
+   "path": "src/openreview_cli/grounding/prompts.py",
+   "sha256": "b11f537adde9877390e0b5b62ed34eb9ab4634436ca2bea8554b36df7eb4c383"
+  },
+  {
+   "path": "src/openreview_cli/grounding/discriminator.py",
+   "sha256": "7ee8ed3534ed8d251193fd05283c4b7f77ae8f8c9f3bcac41a9a92d5525f1291"
+  }
+ ],
+ "models": "openrouter/meta-llama/llama-3.3-70b-instruct",
+ "benchmark_input": "corpus assembled inside CI from the repository's tracked fixtures: 96 clause units from 17 documents (tests/fixtures/**/*.txt verbatim plus fixture PDFs/DOCX parsed with openreview_cli.parsing). The CUAD corpus under data/legalbenchrag/ is not used for this run.",
+ "sample": {
+  "units": 20,
+  "positives": 25,
+  "negatives_kept": 44,
+  "negatives_generated": {
+   "unsupported_claim": 20,
+   "hallucination": 20,
+   "paraphrased_unsupported": 4
+  },
+  "negatives_dropped_guard": 0,
+  "model_calls": 69
+ },
+ "metrics": {
+  "bad_caught": 42,
+  "bad_caught_rate": 0.9545,
+  "bad_missed": 2,
+  "bad_uncertain": 0,
+  "bad_called_grounded": 2,
+  "good_accepted": 23,
+  "good_rejected": 2,
+  "false_reject_rate": 0.08,
+  "good_uncertain": 0,
+  "unreadable_answers": 0,
+  "latency_mean_s": 2.959898,
+  "latency_median_s": 2.82524,
+  "latency_p95_s": 5.918266,
+  "latency_max_s": 8.355979
+ },
+ "notes": "Recorded git_commit 42fdf38 is the branch base the measurement actually ran against (the tree is unchanged since); the receipt is committed later, so the recorded commit is deliberately the base and stays an ancestor of main. The grounding slot was reached through a hosted OpenRouter endpoint; a self-hosted run of the same weights would differ in quantization and serving, so these figures are endpoint-specific. Corpus and items: the 96-unit corpus assembled from the repository's tracked fixtures (17 documents) was used at --limit 20, giving 25 known-good positives and 44 planted-bad negatives over 69 scored calls. The positives are each unit's own qualifying sentence plus a narrow, meaning-preserving rewrite, so both positive classes are supported by the clause by construction and only the bad-claim arm discriminates; no real-world false-positive rate may be quoted from it. unreadable_answers counts answers the answer parser could not decode, which separates a parsing defect from model hesitation. This is a single sample of a non-deterministic model, not a benchmark. Exact model id: openrouter/meta-llama/llama-3.3-70b-instruct. Gateway cost ledger (cost_logs) for this model on the run date: 73 calls / 73 cents; the four ladder runs totalled 292 cents."
+}
