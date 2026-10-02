@@ -59,6 +59,14 @@ EXPECTED_RECEIPTS = frozenset(
         "grounding-accuracy-cloud.json",
     }
 )
+# Issue #180: `slot-measurement.json` is not a receipt. It dumps a six-slot measurement
+# (including an `embedding` slot that has since been removed) whose producer,
+# `scripts/measure_retrieval_slots.py`, was deleted with the dense path, so its provenance can
+# never match and re-pinning it would assert that today's code produced numbers it did not.
+# It is kept as history, and named here so the folder's exact-set test still governs
+# membership without pretending the file is verifiable. Named, never pattern-matched:
+# adding a file to this list is a visible change in review.
+LEGACY_RECEIPT_JSONS = ("slot-measurement.json",)
 # The grounding-accuracy receipt carries a per-finding row, so the finding's own text
 # ("claim_text") and any raw provider error message ("error") are text-bearing keys too. The
 # harness now stores a sha256 under "claim_sha256"/"error_sha256"; a regenerated receipt that
@@ -294,11 +302,28 @@ def provenance_problems(
 
 def test_results_dir_contains_exactly_the_expected_receipts() -> None:
     assert RESULTS_DIR.is_dir(), f"missing {RESULTS_DIR}"
-    present = {path.name for path in RESULTS_DIR.glob("*.json")}
+    present = {
+        path.name for path in RESULTS_DIR.glob("*.json") if path.name not in LEGACY_RECEIPT_JSONS
+    }
     assert present == EXPECTED_RECEIPTS, (
         f"missing: {sorted(EXPECTED_RECEIPTS - present)}, "
         f"unexpected: {sorted(present - EXPECTED_RECEIPTS)}"
     )
+
+
+def test_the_legacy_receipt_json_is_kept_and_tracked() -> None:
+    """#180: the named historical dump stays on the record, and stays tracked.
+
+    Mirrors ``test_legacy_metrics_json_are_gone_and_not_recreated`` for a file that is kept
+    rather than removed: the exemption above must never become a way to hide a deletion.
+    """
+    for name in LEGACY_RECEIPT_JSONS:
+        path = RESULTS_DIR / name
+        relative = str(path.relative_to(REPO_ROOT))
+        assert path.is_file(), f"{relative} is missing from the results dir"
+        ok, tracked = _git(["ls-files", relative])
+        assert ok
+        assert relative in tracked, f"{relative} is no longer tracked"
 
 
 def test_every_cited_receipt_exists_and_is_well_formed() -> None:
