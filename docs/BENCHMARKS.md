@@ -320,9 +320,41 @@ Last verified: 2026-10-01 @ b8fa7077bcd7 (CI run 36905917351, local arm) / b8fa7
 
 **Reproduction:** `uv run python scripts/measure_slm_slots.py --grounding-accuracy --arm local|cloud --limit 20 --corpus-dir <corpus>`. The local arm also runs in CI (`.github/workflows/slm-measurement.yml`, job `grounding-accuracy`); the cloud arm spends on the order of 30 cents per run.
 
+## Open-weight grounding ladder (8B / 27B / 70B / 235B MoE)
+
+The same checker task as [Grounding accuracy (local vs cloud)](#grounding-accuracy-local-vs-cloud), on the identical assembled corpus and items (20 units, 25 known-good positives, 44 planted-bad negatives), run against four open-weight models reached through one hosted endpoint. The two reference rows — the shipped local model and the frontier cloud model already on `main` — were measured the same way on the same items.
+
+| Grounding slot | Size | Caught / 44 | Missed | Unsure | Known-good wrongly rejected | Unreadable |
+|---|---|---|---|---|---|---|
+| `ollama/granite4:3b` (shipped local) | 3B | 32 (72.7%) | 12 | 0 | 0 | 0 |
+| `openrouter/meta-llama/llama-3.1-8b-instruct` | 8B | 33 (75.0%) | 5 | 6 | 5 | 1 |
+| `openrouter/google/gemma-3-27b-it` | 27B | 39 (88.6%) | 4 | 1 | 0 | 0 |
+| `openrouter/meta-llama/llama-3.3-70b-instruct` | 70B | 42 (95.5%) | 2 | 0 | 2 | 0 |
+| `openrouter/qwen/qwen3-235b-a22b-2507` | 235B MoE | 38 (86.4%) | 4 | 2 | 0 | 2 |
+| `openrouter/anthropic/claude-sonnet-4.6` (frontier cloud) | — | 39 (88.6%) | 0 | 5 | 0 | 0 |
+
+Last verified: 2026-10-02 @ 42fdf38 (receipts: docs/benchmarks/results/openweight-grounding-8b.json, docs/benchmarks/results/openweight-grounding-27b.json, docs/benchmarks/results/openweight-grounding-70b.json, docs/benchmarks/results/openweight-grounding-moe.json; references: docs/benchmarks/results/grounding-accuracy-local.json, docs/benchmarks/results/grounding-accuracy-cloud.json).
+
+**The jump happens between 8B and 27B.** The 8B model is **no better at catching than the shipped 3B** — 33 caught against 32 — and it wrongly rejects **5** known-good findings, so an 8B swap regresses the good arm. The 27B model matches the frontier cloud model on catch count (**39 each**) with **no** false rejections.
+
+**Bigger is not strictly better.** The 70B model catches **more than the frontier cloud model** on these items (**42 against 39**), but it wrongly rejects **2** known-good findings, so that trade is not strictly better. The 235B mixture-of-experts point is **worse** than the 70B (**38 against 42**) and produced **2** unreadable answers, so size alone does not decide.
+
+**What this implies for hardware.** Only the 24–32B tier and above changes the outcome; at a 4-bit quantization that is roughly a 24–32 GB machine. That is an estimate, not a specification.
+
+**Which bad findings were missed.** The receipts' `per_label` rows record each finding's `generator` but not the negative construction `kind` (`operand_change` versus `cross_document`) that the harness builds internally, so the two kinds cannot be separated from the committed receipts and are not inferred here. By the recorded generator, every bad finding the model called grounded (a miss) is from the `unsupported_claim` family:
+
+| Model | Missed `unsupported_claim` | Missed `hallucination` | Missed `paraphrased_unsupported` |
+|---|---|---|---|
+| 8B | 5 | 0 | 0 |
+| 27B | 4 | 0 | 0 |
+| 70B | 2 | 0 | 0 |
+| 235B MoE | 4 | 0 | 0 |
+
+So scale here removes some `unsupported_claim` misses, but whether those are the subtle operand changes or the obvious cross-document ones cannot be said from these receipts: the per-row `kind` is not recorded.
+
 ## Measured vs. not measured
 
-**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (96.4% recall, span-level predicate), review accuracy on 12 NDA clauses (90.9% F1; provider not recorded), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale, timing, and clause segmentation), CUAD keyword retrieval over 462 contracts on the full 4,042-query set (both tokenizer arms), CUAD rerank arms over 40 contracts (BM25 baseline vs a lexical rerank and a local cross-encoder, offline), MAUD public benchmark on 150 M&A documents (scale, timing, and clause segmentation), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,935 tests), accuracy-test suite (21 passed, 0 failed), grounding accuracy on both arms (20 units each; local via CI and cloud locally, both over the same assembled corpus).
+**Measured this session:** CLI startup, PDF/DOCX parse, PII corpus + stress (real `PiiEngine`), PII accuracy on 50 seeded contracts (96.4% recall, span-level predicate), review accuracy on 12 NDA clauses (90.9% F1; provider not recorded), live LLM extraction + QA verification on 15 real ContractNLI NDA clauses across 5 NDAs (0 uncertain, 6.67% QA agreement, 93.33% amber, ~7.8 s/clause), CUAD public benchmark on 462 contracts (scale, timing, and clause segmentation), CUAD keyword retrieval over 462 contracts on the full 4,042-query set (both tokenizer arms), CUAD rerank arms over 40 contracts (BM25 baseline vs a lexical rerank and a local cross-encoder, offline), MAUD public benchmark on 150 M&A documents (scale, timing, and clause segmentation), product-mode wiring, 23 named modes (mocked, playbook-aware), test collection (3,935 tests), accuracy-test suite (21 passed, 0 failed), grounding accuracy on both arms (20 units each; local via CI and cloud locally, both over the same assembled corpus), and an open-weight grounding ladder over the same 20-unit corpus and items (8B, 27B, 70B and 235B MoE through one hosted endpoint, against the shipped local and frontier cloud references).
 
 Last verified: 2026-09-25 @ fdea262 (receipt: docs/benchmarks/results/test-collection.json).
 Last verified: 2026-09-24 @ 882568c (receipt: docs/benchmarks/results/accuracy-suite.json).
