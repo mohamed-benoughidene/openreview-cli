@@ -1,6 +1,6 @@
 {
  "benchmark": "grounding-accuracy-openweight-8b",
- "command": "OPENREVIEW_GATEWAY__MODELS__GROUNDING__PRIMARY=openrouter/meta-llama/llama-3.1-8b-instruct uv run python scripts/measure_slm_slots.py --grounding-accuracy --arm cloud --limit 20 --corpus-dir corpus --out results/openweight-grounding-8b.json",
+ "command": "OPENREVIEW_GATEWAY__MODELS__GROUNDING__PRIMARY=openrouter/meta-llama/llama-3.1-8b-instruct uv run python scripts/measure_slm_slots.py --grounding-accuracy --arm cloud --limit 20 --corpus-dir corpus --out ladder-small.json",
  "date": "2026-10-02",
  "git_commit": "42fdf38",
  "provenance": [
@@ -26,7 +26,7 @@
   }
  ],
  "models": "openrouter/meta-llama/llama-3.1-8b-instruct",
- "benchmark_input": "corpus assembled inside CI from the repository's tracked fixtures: 96 clause units from 17 documents (tests/fixtures/**/*.txt verbatim plus fixture PDFs/DOCX parsed with openreview_cli.parsing). The CUAD corpus under data/legalbenchrag/ is not used for this run.",
+ "benchmark_input": "the same assembled corpus the CI local arm builds, from the repository's tracked fixtures: 96 clause units from 17 documents (tests/fixtures/**/*.txt verbatim plus fixture PDFs/DOCX parsed with openreview_cli.parsing). The CUAD corpus under data/legalbenchrag/ is not used for this run.",
  "sample": {
   "units": 20,
   "positives": 25,
@@ -55,5 +55,10 @@
   "latency_p95_s": 6.481681,
   "latency_max_s": 7.501174
  },
- "notes": "Recorded git_commit 42fdf38 is the branch base the measurement actually ran against (the tree is unchanged since); the receipt is committed later, so the recorded commit is deliberately the base and stays an ancestor of main. The grounding slot was reached through a hosted OpenRouter endpoint; a self-hosted run of the same weights would differ in quantization and serving, so these figures are endpoint-specific. Corpus and items: the 96-unit corpus assembled from the repository's tracked fixtures (17 documents) was used at --limit 20, giving 25 known-good positives and 44 planted-bad negatives over 69 scored calls. The positives are each unit's own qualifying sentence plus a narrow, meaning-preserving rewrite, so both positive classes are supported by the clause by construction and only the bad-claim arm discriminates; no real-world false-positive rate may be quoted from it. unreadable_answers counts answers the answer parser could not decode, which separates a parsing defect from model hesitation. This is a single sample of a non-deterministic model, not a benchmark. Exact model id: openrouter/meta-llama/llama-3.1-8b-instruct. Gateway cost ledger (cost_logs) for this model on the run date: 73 calls / 73 cents; the four ladder runs totalled 292 cents."
+ "missed_by_generator": {
+  "unsupported_claim": 5,
+  "hallucination": 0,
+  "paraphrased_unsupported": 0
+ },
+ "notes": "Recorded git_commit 42fdf38 is the branch base the measurement actually ran against (the tree is unchanged since); the receipt is committed later, so the recorded commit is deliberately the base and stays an ancestor of main. The grounding slot was reached through a hosted OpenRouter endpoint; a self-hosted run of the same weights would differ in quantization and serving, so these figures are endpoint-specific. Corpus and items: the same assembled corpus the CI local arm builds -- the 96-unit corpus from the repository's tracked fixtures (17 documents) -- was used at --limit 20, giving 25 known-good positives and 44 planted-bad negatives over 69 scored calls. The positives are each unit's own qualifying sentence plus a narrow, meaning-preserving rewrite, so both positive classes are supported by the clause by construction and only the bad-claim arm discriminates; no real-world false-positive rate may be quoted from it. unreadable_answers counts answers the answer parser could not decode, which separates a parsing defect from model hesitation. This is a single sample of a non-deterministic model, not a benchmark. Exact model id: openrouter/meta-llama/llama-3.1-8b-instruct. Gateway cost ledger (cost_logs) for this model on the run date: 73 calls booked at the one-cent floor (73 cents); the four ladder runs totalled 292 calls at the floor (292 cents). The ledger computes max(1, round(cost_usd * 100)) per call (src/openreview_cli/gateway/cost.py), so these cheap ladder models pin at that floor and the totals are call counts, not real money. This receipt is a curated summary of that run's raw harness JSON: the harness wrote ladder-small.json (a scratch path outside the repo) and the curation step that reshaped it into this receipt is not part of the harness. The run's 69 per_label rows are collapsed into the aggregate metrics and the missed_by_generator counts below; no per-row content is carried."
 }
