@@ -331,13 +331,17 @@ The same checker task as [Grounding accuracy (local vs cloud)](#grounding-accura
 | `openrouter/google/gemma-3-27b-it` | 27B | 39 (88.6%) | 4 | 1 | 0 | 0 |
 | `openrouter/meta-llama/llama-3.3-70b-instruct` | 70B | 42 (95.5%) | 2 | 0 | 2 | 0 |
 | `openrouter/qwen/qwen3-235b-a22b-2507` | 235B MoE | 38 (86.4%) | 4 | 2 | 0 | 2 |
-| `openrouter/anthropic/claude-sonnet-4.6` (frontier cloud) | — | 39 (88.6%) | 0 | 5 | 0 | 0 |
+| `openrouter/anthropic/claude-sonnet-4.6` (frontier cloud) | — | 38 (86.4%) | 0 | 6 | 0 | 0 |
 
 Last verified: 2026-10-02 @ 42fdf38 (receipts: docs/benchmarks/results/openweight-grounding-8b.json, docs/benchmarks/results/openweight-grounding-27b.json, docs/benchmarks/results/openweight-grounding-70b.json, docs/benchmarks/results/openweight-grounding-moe.json; references: docs/benchmarks/results/grounding-accuracy-local.json, docs/benchmarks/results/grounding-accuracy-cloud.json).
 
-**The jump happens between 8B and 27B.** The 8B model is **no better at catching than the shipped 3B** — 33 caught against 32 — and it wrongly rejects **5** known-good findings, so an 8B swap regresses the good arm. The 27B model matches the frontier cloud model on catch count (**39 each**) with **no** false rejections.
+**The jump happens between 8B and 27B.** The 8B model is **no better at catching than the shipped 3B** — 33 caught against 32 — and it wrongly rejects **5** known-good findings, so an 8B swap regresses the good arm. The 27B model matches the frontier cloud model on catch count (**39 against the cloud arm's 38**) with **no** false rejections.
 
-**Bigger is not strictly better.** The 70B model catches **more than the frontier cloud model** on these items (**42 against 39**), but it wrongly rejects **2** known-good findings, so that trade is not strictly better. The 235B mixture-of-experts point is **worse** than the 70B (**38 against 42**) and produced **2** unreadable answers, so size alone does not decide.
+**Bigger is not strictly better.** The 70B model catches **more than the frontier cloud model** on these items (**42 against 38**), but it wrongly rejects **2** known-good findings, so that trade is not strictly better. The 235B mixture-of-experts point is **worse** than the 70B (**38 against 42**) and produced **2** unreadable answers, so size alone does not decide.
+
+**Single samples, and how to read the gaps.** Every row is one run over 20 units, so a one- or two-catch difference is noise: a repeat of the cloud arm on these same items scored one catch higher (39) than the committed receipt's 38. These are single-sample smoke measurements, not benchmark claims, and the receipts' `notes` say so.
+
+**On cost.** The gateway ledger books exactly one cent per call for every model, so its totals count calls rather than money — the four ladder runs appear there as 292 calls. The endpoint's own billing is the only true cost record.
 
 **What this implies for hardware.** Only the 24–32B tier and above changes the outcome; at a 4-bit quantization that is roughly a 24–32 GB machine. That is an estimate, not a specification.
 
