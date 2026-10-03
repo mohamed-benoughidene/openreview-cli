@@ -6,8 +6,8 @@
 This branch closes issues #181, #182 and #183 in code and records the #179 decision as
 by-design. Repo-level housekeeping was done alongside the branch, not as part of its diff: an
 archive tag, a dependabot update and branch pruning. Each of the three code fixes is listed with
-its pinning test; the #179 decision and the docs housekeeping have none. The one known open item
-is recorded plainly.
+its pinning test; the #179 decision and the docs housekeeping have none. The receipts that #183
+invalidated were regenerated on this branch (see below).
 
 ## What ships
 
@@ -43,15 +43,18 @@ is recorded plainly.
   Ollama's API documents no rerank endpoint, and the pinned litellm ships no ollama rerank handler
   (handlers exist only for bedrock, deepinfra, hosted_vllm and vertex_ai).
 
-## Known open item
+## Receipts regenerated
 
-- **#183 is not yet mergeable.** Six committed grounding receipts under `docs/benchmarks/results/`
-  pin `src/openreview_cli/grounding/prompts.py` by sha256, so
-  `tests/unit/test_benchmark_receipts.py::test_every_receipt_pins_its_producing_content` is red on
-  this branch. Regenerating the receipts needs real model runs (Ollama + OpenRouter)
-  (environment note: no Ollama/OpenRouter access at write time), so the regeneration is deferred
-  to a run-backed follow-up. The 235B MoE row's
-  `unreadable_answers` (2) is expected to change.
+- #183 changes `src/openreview_cli/grounding/prompts.py`, which six committed grounding receipts pin
+  by sha256, so it reddened
+  `tests/unit/test_benchmark_receipts.py::test_every_receipt_pins_its_producing_content`. The six were
+  regenerated on 2026-10-03 at `77cab952f508`: the local arm via CI (`slm-measurement.yml` run
+  37110857197, job `grounding-accuracy`) and the cloud plus four ladder arms run locally over the same
+  assembled tracked-fixture corpus. The guard is green again (35 passed).
+- Regenerated points, caught / 44 with known-good wrongly rejected: local 31 / 0, 8B 32 / 2,
+  27B 39 / 0, 70B 42 / 2, 235B MoE 39 / 1 (and `unreadable_answers` 1), cloud 39 / 0. The published
+  `docs/BENCHMARKS.md` sections and `docs/benchmarks/results/slot-measurement.md` were updated to
+  match, including the ladder's `missed_by_generator` table and its bound sentences.
 
 ## Pre-existing, not fixed
 
@@ -65,4 +68,5 @@ is recorded plainly.
 As of writing:
 
 - `uv run pytest tests/unit/test_gateway_router.py tests/unit/test_grounding_prompts.py tests/redteam/test_redteam_egress_guard.py tests/unit/test_gateway_tier_enforcement.py` → 183 passed.
+- `uv run pytest tests/unit/test_benchmark_receipts.py` → 35 passed (receipts regenerated).
 - `uv run ruff check .` clean; `uv run mypy src/ tests/` clean.
