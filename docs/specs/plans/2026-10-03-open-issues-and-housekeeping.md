@@ -55,6 +55,9 @@ invalidated were regenerated on this branch (see below).
   27B 39 / 0, 70B 42 / 2, 235B MoE 39 / 1 (and `unreadable_answers` 1), cloud 39 / 0. The published
   `docs/BENCHMARKS.md` sections and `docs/benchmarks/results/slot-measurement.md` were updated to
   match, including the ladder's `missed_by_generator` table and its bound sentences.
+- Cost: the five paid arms (345 calls) billed about **$0.25** at the OpenRouter endpoint. The gateway
+  ledger books `max(1, round(cost_usd * 100))` per call, a one-cent floor, so it recorded those runs
+  as 357 calls → 357 cents of *notional* cost — a call count, not the real spend.
 
 ## Pre-existing, not fixed
 
