@@ -142,10 +142,10 @@ def _enforce_local_only_params(
     override or a caller-supplied kwarg can point the call at a provider the
     built kwargs never saw. It also RESTORES the requested value for a local
     target, since an earlier non-local dispatch may have stripped it: the gate
-    is per-dispatch, not a permanent mutation. ``restore`` carries the values the
-    caller supplied before the first strip, so a caller kwarg on a slot that
-    declares none still reaches a local leg; the slot's declared ``extra_params``
-    is the fallback source (#182).
+    is per-dispatch, not a permanent mutation. ``restore`` carries the local-only
+    values present before the first strip (caller-supplied or declared) and takes
+    precedence over ``extra_params``, so a value the slot does not declare can
+    still reach a local leg (#182).
 
     Locality reuses ``classify_provider``, the codebase's one notion of local, so
     a localhost custom provider counts as local exactly as it does for tier
@@ -406,6 +406,21 @@ class Gateway:
             if value is not None:
                 kwargs[field.litellm_param] = value
 
+    def _apply_custom_provider_routing(self, info: ProviderInfo, kwargs: dict[str, Any]) -> None:
+        """Route a ``source == "custom"`` provider through litellm's openai provider.
+
+        litellm does not recognize a custom prefix, so the model is rewritten to
+        ``openai/<id>`` — the matching ``api_base`` is set by the caller — and the
+        resolved key is injected, since litellm would otherwise look for
+        ``OPENAI_API_KEY``.
+        """
+        original = kwargs["model"]
+        model_only = original.split("/", 1)[1] if "/" in original else original
+        kwargs["model"] = f"openai/{model_only}"
+        key = (os.environ.get(info.env_key) if info.env_key else None) or self._auth.get(info.name)
+        if key:
+            kwargs["api_key"] = key
+
     def _get_litellm_kwargs(self, slot: str) -> dict[str, Any]:
         cfg = self._get_slot_config(slot)
         kwargs: dict[str, Any] = {"model": cfg["primary"]}
@@ -434,19 +449,9 @@ class Gateway:
         # spec 034: map each declared credential field to its litellm kwarg.
         if info is not None and info.credentials:
             self._apply_provider_credentials(info, kwargs)
-        # Custom OpenAI-compatible provider: litellm does not recognize the
-        # provider prefix, so route via its openai provider with api_base set
-        # above and inject the resolved key (litellm would otherwise look for
-        # OPENAI_API_KEY). Bundled providers keep their real prefix.
+        # Custom OpenAI-compatible provider: litellm does not recognize the prefix.
         if info is not None and info.source == "custom" and info.base_url:
-            original = kwargs["model"]
-            model_only = original.split("/", 1)[1] if "/" in original else original
-            kwargs["model"] = f"openai/{model_only}"
-            key = (os.environ.get(info.env_key) if info.env_key else None) or self._auth.get(
-                info.name
-            )
-            if key:
-                kwargs["api_key"] = key
+            self._apply_custom_provider_routing(info, kwargs)
         return kwargs
 
     def _check_cost_limits(self, session_id: str | None) -> None:
@@ -552,28 +557,34 @@ class Gateway:
         # exhaustion and remains terminal at the recovery layer).
         return UnclassifiedProviderError(_prefix(detail))
 
-    def _retarget_provider(self, call_kwargs: dict[str, Any], slot: str, new_prefix: str) -> None:
-        """Point a built request at ``new_prefix`` instead of the slot's primary.
+    def _retarget_provider(
+        self, call_kwargs: dict[str, Any], from_prefix: str, to_prefix: str
+    ) -> None:
+        """Point a built request at ``to_prefix`` and drop ``from_prefix``'s keystore.
 
-        ``_get_litellm_kwargs`` resolves ``api_base`` and credentials from the
-        slot's configured primary, so a request that ends up at another provider
-        — a dispatch-time ``model=`` override (#181) or the fallback leg — must be
-        re-pointed. Dropping the primary's keys is load-bearing for a
-        ``source == "custom"`` primary: litellm honours an explicit ``api_key``
-        over the provider env var, so leaving it in would send the PRIMARY's
-        credential to the other provider's host (#144).
+        ``_get_litellm_kwargs`` resolves ``api_base`` and credentials from one
+        provider, so a request that ends up at another — a dispatch-time
+        ``model=`` override (#181) or the fallback leg — must be re-pointed.
+        ``from_prefix`` is the provider whose keystore is currently in
+        ``call_kwargs`` (the slot primary, or an override applied on an earlier
+        leg), so removing *its* fields — not always the slot primary's — is what
+        keeps one provider's secrets off another provider's host (#144).
         """
-        primary = self._resolve_provider_info(slot)
-        if primary is not None:
-            for field in primary.credentials:
+        origin = load_registry().get(from_prefix)
+        if origin is not None:
+            for field in origin.credentials:
                 call_kwargs.pop(field.litellm_param, None)
         call_kwargs.pop("api_base", None)
         call_kwargs.pop("api_key", None)
-        info = load_registry().get(new_prefix)
-        if info is not None and info.base_url:
+        info = load_registry().get(to_prefix)
+        if info is None:
+            return
+        if info.base_url:
             call_kwargs["api_base"] = info.base_url
-        if info is not None and info.credentials:
+        if info.credentials:
             self._apply_provider_credentials(info, call_kwargs)
+        if info.source == "custom" and info.base_url:
+            self._apply_custom_provider_routing(info, call_kwargs)
 
     def _call_with_fallback(
         self,
@@ -590,10 +601,10 @@ class Gateway:
         # #181: a dispatch-time `model=` override must reach the override's own
         # host/credentials, not the slot primary's.
         if provider != primary_prefix:
-            self._retarget_provider(call_kwargs, slot, provider)
+            self._retarget_provider(call_kwargs, primary_prefix, provider)
         # Local-only gate for the provider actually dispatched: see _enforce_local_only_params.
         # #182: snapshot the requested local-only values BEFORE the first strip, so a
-        # local leg can restore a caller kwarg the slot itself does not declare.
+        # local leg can restore a value the slot itself does not declare.
         extra_params = cfg.get("extra_params")
         requested_local = {
             key: call_kwargs[key] for key in _LOCAL_ONLY_EXTRA_PARAMS if key in call_kwargs
@@ -641,13 +652,14 @@ class Gateway:
         fallback_prefix = fallback.split("/", 1)[0]
         # Same gate as the primary, against the ACTUAL model (router.py:240-244).
         self._enforce_tier(slot, call_type, provider_prefix=fallback_prefix)
-        # Re-point the reused kwargs at the fallback's own host/credentials (#144),
-        # then re-gate for its own locality: see _enforce_local_only_params.
-        self._retarget_provider(call_kwargs, slot, fallback_prefix)
+        # Re-point the reused kwargs at the fallback's own host, dropping whatever
+        # provider (slot primary or an override) was applied on the previous leg
+        # (#144), then re-gate for the fallback's own locality.
+        call_kwargs["model"] = fallback
+        self._retarget_provider(call_kwargs, provider, fallback_prefix)
         _enforce_local_only_params(
             call_kwargs, extra_params, fallback_prefix, restore=requested_local
         )
-        call_kwargs["model"] = fallback
         self._record_cloud_call(slot, provider_prefix=fallback_prefix)
         try:
             return call_fn(**call_kwargs)

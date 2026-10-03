@@ -549,14 +549,15 @@ def test_a_cloud_fallback_model_never_reaches_dispatch_on_the_strict_tier(
     assert [model for model in runner.models() if "anthropic" in model] == []
 
 
-def test_unknown_override_prefix_is_counted_as_cloud_even_when_the_sink_is_local(
+def test_unknown_override_prefix_is_counted_as_cloud_and_does_not_inherit_the_primarys_host(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """RT-031: a deliberate fail-closed over-count, pinned.
 
-    ``router.py:793-799`` counts an unresolvable override as cloud on purpose.
-    The request below left for ``localhost`` and was still counted — the exact
-    opposite resolution of the same unknown-provider state in RT-027.
+    ``_enforce_tier`` counts an unresolvable override as cloud on purpose. The
+    request must not inherit the slot primary's host for another provider's model
+    name (#181); with no registry entry for the override there is no ``api_base``
+    to re-point to, so none is sent.
     """
     state = _w5.prepare_state(monkeypatch, tmp_path)
     registry = _w5.local_registry()
@@ -568,20 +569,19 @@ def test_unknown_override_prefix_is_counted_as_cloud_even_when_the_sink_is_local
 
     assert gw.chat("extraction", [{"role": "user", "content": "hi"}], model="mystery/model") == "ok"
 
-    assert recorder.records == [_w5.Dispatch("completion", "mystery/model", _w5.OLLAMA_BASE_URL)]
+    assert recorder.records == [_w5.Dispatch("completion", "mystery/model", None)]
     assert gw._cloud_calls_made == 1
     assert get_total_cloud_calls() == 1
 
 
-def test_a_tier_approved_local_override_and_the_destination_disagree(
+def test_a_tier_approved_local_override_is_dispatched_to_that_local_provider(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """RT-032 pinned: the gate judges the override, the request follows the primary.
+    """RT-032 fixed: the request follows the provider the gate judged (#181).
 
-    ``router.py:586-591`` enforces the tier against the ``model=`` override
-    prefix; ``_get_litellm_kwargs`` (``router.py:368-371``) sets ``api_base``
-    from the slot primary. Here the gate approved ``ollama`` (local) and the
-    dispatch carried the primary's cloud host.
+    ``_enforce_tier`` approves the ``model=`` override (``ollama``, local); the
+    dispatch is re-pointed to that provider's host and credentials rather than
+    carrying the slot primary's cloud host.
     """
     state = _w5.prepare_state(monkeypatch, tmp_path)
     registry = {**_w5.cloud_registry(), **_w5.local_registry()}
@@ -593,15 +593,14 @@ def test_a_tier_approved_local_override_and_the_destination_disagree(
     assert classify_provider(registry["ollama"]) == "local"
     assert gw.chat("extraction", [{"role": "user", "content": "hi"}], model="ollama/llama3") == "ok"
 
-    assert recorder.records == [_w5.Dispatch("completion", "ollama/llama3", _w5.ANTHROPIC_BASE_URL)]
+    assert recorder.records == [_w5.Dispatch("completion", "ollama/llama3", _w5.OLLAMA_BASE_URL)]
     assert gw._cloud_calls_made == 0
 
 
-@pytest.mark.xfail(strict=True, reason="RT-032")
 def test_a_tier_approved_local_override_is_not_sent_to_a_cloud_host(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Expected: what the gate approved as local is not sent to a cloud host."""
+    """RT-032 fixed: what the gate approved as local is not sent to a cloud host."""
     state = _w5.prepare_state(monkeypatch, tmp_path)
     registry = {**_w5.cloud_registry(), **_w5.local_registry()}
     monkeypatch.setattr("openreview_cli.gateway.router.load_registry", lambda: registry)
