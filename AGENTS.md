@@ -168,7 +168,7 @@ uv run python scripts/benchmark_pii_stripping.py
 # Labeled NDA corpus: tests/fixtures/review/nda-corpus-v1/nda-corpus-v1.json (12 clauses)
 # The exact models used were not recorded in the source artifact
 # (receipt: docs/benchmarks/results/review-accuracy.json); configure the gateway
-# extraction + reasoning slots (and embedding/reranking, if enabled) as usual.
+# extraction + reasoning slots as usual.
 # scripts/benchmark_review_accuracy.py is STRUCTURAL ONLY — it reads predicted_position
 # from the corpus JSON, does NOT call real LLMs. For real accuracy, use inline:
 uv run python -c "
@@ -240,6 +240,7 @@ Repo `openreview` · PyPI `openreview-cli` · CLI `openreview` · import `openre
 
 - **TDD**: failing test first, minimal code to pass, refactor. No production code without a prior test.
 - Conventional Commits (`feat:`/`fix:`/`docs:`/`test:`/`refactor:`/`chore:`); branches `feat/`/`fix/`/`docs/` (in practice also `chore/`, `ci/`, `test/`).
+- **Never rebase-merge this repo.** Rebasing rewrites commit hashes, and a benchmark receipt records the commit it was produced from; rewriting history drops those hashes out of `main` and turns the receipt ancestry guard (`tests/unit/test_benchmark_receipts.py`) red. Merge with a merge commit or a true fast-forward.
 - GitHub protection (as configured in repo settings, not verifiable from tracked files): `main` needs PR + approval + code-owner review + passing checks; no force-push. Secret scanning + push protection active.
 
 ## Gotchas (hard-earned)
