@@ -299,18 +299,18 @@ The fact-checker slot decides whether each assessment claim is really supported 
 | Metric | local `ollama/granite4:3b` | cloud `openrouter/anthropic/claude-sonnet-4.6` |
 |---|---|---|
 | answers read | 69 / 69 | 69 / 69 |
-| known-good claims accepted | 25 / 25 | 24 / 25 |
-| planted bad claims caught | 32 / 44 | 38 / 44 |
+| known-good claims accepted | 25 / 25 | 25 / 25 |
+| planted bad claims caught | 31 / 44 | 39 / 44 |
 | bad claims called grounded | 12 | 0 |
-| uncertain (good / bad) | 0 / 0 | 1 / 6 |
+| uncertain (good / bad) | 0 / 1 | 0 / 5 |
 | unreadable answers | 0 | 0 |
-| mean latency per call | 17.92 s | 3.33 s |
+| mean latency per call | 17.39 s | 2.98 s |
 
 Sample: 20 units per arm (`--limit 20`). Both arms now keep the same 25 positives (20 clause sentences + 5 paraphrased) and 44 negatives (20 `unsupported_claim` + 20 `hallucination` + 4 `paraphrased_unsupported`) over 69 calls, and run over the same assembled corpus — the tracked fixtures, because CUAD is gitignored and absent in CI — so the arms are compared directly on the negative arm.
 
-Last verified: 2026-10-01 @ 0ece51a44920 (rebased twin of b8fa7077bcd7; CI run 36905917351, local arm) / 0ece51a44920 (cloud arm) (receipts: docs/benchmarks/results/grounding-accuracy-local.json, docs/benchmarks/results/grounding-accuracy-cloud.json).
+Last verified: 2026-10-03 @ 77cab952f508 (CI run 37110857197, local arm) / 77cab952f508 (cloud arm) (receipts: docs/benchmarks/results/grounding-accuracy-local.json, docs/benchmarks/results/grounding-accuracy-cloud.json).
 
-**Both arms read every answer; the arms differ in quality.** An earlier local figure of **1 of 20** accepted was a reader defect, not model behaviour: answers the reader could not parse were recorded as `uncertain` with confidence 0.0, which made the local model look like it refused to decide. With the reader fixed and local models asked for JSON only, the local arm accepts all 25 known-good claims and catches 32 of 44 planted bad ones — but calls 12 of them grounded — while the cloud model catches 38 of 44. The honest reading is that the local 3B model's failure mode is **accepting** planted bad claims, not hesitating over good ones — it is weaker than the cloud model, not merely slower.
+**Both arms read every answer; the arms differ in quality.** An earlier local figure of **1 of 20** accepted was a reader defect, not model behaviour: answers the reader could not parse were recorded as `uncertain` with confidence 0.0, which made the local model look like it refused to decide. With the reader fixed and local models asked for JSON only, the local arm accepts all 25 known-good claims and catches 31 of 44 planted bad ones — but calls 12 of them grounded — while the cloud model catches 39 of 44. The honest reading is that the local 3B model's failure mode is **accepting** planted bad claims, not hesitating over good ones — it is weaker than the cloud model, not merely slower.
 
 **Coverage is a signal, not a verdict.** The hardened labels make the harness record how much of each claim's wording appears in the clause it cites. The supported claims score at or above **0.96** (the paraphrased positives bottom out at 0.962), while planted bad claims reach the same band, so wording overlap on its own cannot separate a real citation from a planted one — which is why no code path makes a verdict from the number. What ships is a wording check the model reads; the decision stays with the model and the reviewer, never a threshold.
 
@@ -322,35 +322,35 @@ Last verified: 2026-10-01 @ 0ece51a44920 (rebased twin of b8fa7077bcd7; CI run 3
 
 ## Open-weight grounding ladder (8B / 27B / 70B / 235B MoE)
 
-The same checker task as [Grounding accuracy (local vs cloud)](#grounding-accuracy-local-vs-cloud), on the assembled corpus the CI local arm builds, with the same counts (20 units, 25 known-good positives, 44 planted-bad negatives — three of the bad ones differ between runs, see below) and the same prompt/harness — the six receipts pin the same five provenance hashes — run against four open-weight models reached through one hosted endpoint. What is not identical: the shipped local reference ran `--no-pii` in CI on raw fixture text, while the cloud reference and the four ladder arms ran PII-stripped (51 entities replaced); the references are dated 2026-10-01 at `0ece51a` and the ladder 2026-10-02 at `42fdf38`; and the four ladder arms are hosted OpenRouter endpoints, not local weights, so a self-hosted run of the same weights would differ in quantization and serving: these figures measure the models, not a local deployment. The two reference rows — the shipped local model and the frontier cloud model already on `main` — are therefore comparable in corpus, items and harness but not in every respect.
+The same checker task as [Grounding accuracy (local vs cloud)](#grounding-accuracy-local-vs-cloud), on the assembled corpus the CI local arm builds, with the same counts (20 units, 25 known-good positives, 44 planted-bad negatives — a few of the bad ones differ between runs, see below) and the same prompt/harness — the six receipts pin the same five provenance hashes — run against four open-weight models reached through one hosted endpoint. What is not identical: the shipped local reference ran `--no-pii` in CI on raw fixture text, while the cloud reference and the four ladder arms ran PII-stripped (51 entities replaced); all six runs are dated 2026-10-03 at `77cab952f508`; and the four ladder arms are hosted OpenRouter endpoints, not local weights, so a self-hosted run of the same weights would differ in quantization and serving: these figures measure the models, not a local deployment. The two reference rows — the shipped local model and the frontier cloud model already on `main` — are therefore comparable in corpus, items and harness but not in every respect.
 
 | Grounding slot | Size | Caught / 44 | Missed | Unsure | Known-good wrongly rejected | Unreadable |
 |---|---|---|---|---|---|---|
-| `ollama/granite4:3b` (shipped local) | 3B | 32 (72.7%) | 12 | 0 | 0 | 0 |
-| `openrouter/meta-llama/llama-3.1-8b-instruct` | 8B | 33 (75.0%) | 5 | 6 | 5 | 1 |
-| `openrouter/google/gemma-3-27b-it` | 27B | 39 (88.6%) | 4 | 1 | 0 | 0 |
+| `ollama/granite4:3b` (shipped local) | 3B | 31 (70.5%) | 12 | 1 | 0 | 0 |
+| `openrouter/meta-llama/llama-3.1-8b-instruct` | 8B | 32 (72.7%) | 7 | 5 | 2 | 0 |
+| `openrouter/google/gemma-3-27b-it` | 27B | 39 (88.6%) | 5 | 0 | 0 | 0 |
 | `openrouter/meta-llama/llama-3.3-70b-instruct` | 70B | 42 (95.5%) | 2 | 0 | 2 | 0 |
-| `openrouter/qwen/qwen3-235b-a22b-2507` | 235B MoE | 38 (86.4%) | 4 | 2 | 0 | 2 |
-| `openrouter/anthropic/claude-sonnet-4.6` (frontier cloud) | — | 38 (86.4%) | 0 | 6 | 0 | 0 |
+| `openrouter/qwen/qwen3-235b-a22b-2507` | 235B MoE | 39 (88.6%) | 4 | 1 | 1 | 1 |
+| `openrouter/anthropic/claude-sonnet-4.6` (frontier cloud) | — | 39 (88.6%) | 0 | 5 | 0 | 0 |
 
-Last verified: 2026-10-02 @ 42fdf38 (receipts: docs/benchmarks/results/openweight-grounding-8b.json, docs/benchmarks/results/openweight-grounding-27b.json, docs/benchmarks/results/openweight-grounding-70b.json, docs/benchmarks/results/openweight-grounding-moe.json; references: docs/benchmarks/results/grounding-accuracy-local.json, docs/benchmarks/results/grounding-accuracy-cloud.json).
+Last verified: 2026-10-03 @ 77cab952f508 (receipts: docs/benchmarks/results/openweight-grounding-8b.json, docs/benchmarks/results/openweight-grounding-27b.json, docs/benchmarks/results/openweight-grounding-70b.json, docs/benchmarks/results/openweight-grounding-moe.json; references: docs/benchmarks/results/grounding-accuracy-local.json, docs/benchmarks/results/grounding-accuracy-cloud.json).
 
-**The largest visible step is 8B to 27B, which this sample cannot resolve.** The 8B model's point estimate is **one catch** better than the shipped 3B's (**33 against 32**) and it wrongly rejects **5** known-good findings, so an 8B swap regresses the good arm. The 27B model's point estimate (**39**) is at or just above the frontier cloud model's (**38**), and the 27B has **no** false rejections — but none of these steps is a resolved difference (see below).
+**The largest visible step is 8B to 27B, which this sample cannot resolve.** The 8B model's point estimate is **one catch** better than the shipped 3B's (**32 against 31**) and it wrongly rejects **2** known-good findings, so an 8B swap regresses the good arm. The 27B model's point estimate (**39**) now matches the frontier cloud model's (**39**), and the 27B has **no** false rejections — but none of these steps is a resolved difference (see below).
 
-**Bigger is not strictly better.** The 70B model's point estimate is **higher than the frontier cloud model's** on these items (**42 against 38**), but that four-catch gap is a point estimate one sample cannot resolve, and the 70B wrongly rejects **2** known-good findings, so that trade is not strictly better. The 235B mixture-of-experts point is **lower** than the 70B (**38 against 42**) and produced **2** unreadable answers, so size alone does not decide.
+**Bigger is not strictly better.** The 70B model's point estimate is **higher than the frontier cloud model's** on these items (**42 against 39**), but that three-catch gap is a point estimate one sample cannot resolve, and the 70B wrongly rejects **2** known-good findings, so that trade is not strictly better. The 235B mixture-of-experts point is **lower** than the 70B (**39 against 42**) and produced **1** unreadable answer, so size alone does not decide.
 
-**Not quite the same items, and how to read the gaps.** Every arm scored the same 20 units, the same 25 known-good findings, and the same unsupported-claim and hallucination negatives (20 each). The four paraphrase-derived negatives are re-drawn on each run, though, so three of the 44 planted-bad findings differ between any two arms — 31 of the 34 distinct bad claims appear in all four. The arms are therefore only approximately paired, and the honest bound is the conservative unpaired one: about **±8 catches** at the 3B/8B arms' ~73% catch rate, and about **±5** for the 70B-versus-cloud contrast (two arms at the same rate sit within about **±4**). On this sample only the largest step, 8B to 70B (nine catches), clears that bound; 8B to 27B (six), 27B to 70B (three) and the 70B-to-235B step (four) do not. The 70B-versus-frontier-cloud gap cannot be tested at all: the cloud arm's per-item verdicts were not kept, so the two runs cannot be paired. These are single-sample smoke measurements, not benchmark claims, and the receipts' `notes` say so. The smallest experiment that would settle the six-catch step is roughly **120 findings per arm** — about three repeats of this one — while a one-catch gap would need thousands, so it is not worth claiming.
+**Not quite the same items, and how to read the gaps.** Every arm scored the same 20 units, the same 25 known-good findings, and the same 20 unsupported-claim and 4 paraphrase-derived negatives. The 20 generated `hallucination` negatives are re-drawn on each run, though, so one to four of the 44 planted-bad findings differ between any two of the five PII-stripped arms — 30 of the 34 distinct bad claims appear in all four ladder arms (29 of 34 across all five). The arms are therefore only approximately paired, and the honest bound is the conservative unpaired one: about **±8 catches** at the 3B/8B arms' ~70–73% catch rate, and about **±5** for the 70B-versus-cloud contrast (two arms at the same rate sit within about **±4**). On this sample only the largest step, 8B to 70B (ten catches), clears that bound; 8B to 27B (seven), 27B to 70B (three) and the 70B-to-235B step (three, downward) do not. The 70B-versus-frontier-cloud gap cannot be tested at all: the cloud arm's per-item verdicts were not kept, so the two runs cannot be paired. These are single-sample smoke measurements, not benchmark claims, and the receipts' `notes` say so. The smallest experiment that would settle the seven-catch step is roughly **120 findings per arm** — about three repeats of this one — while a one-catch gap would need thousands, so it is not worth claiming.
 
-**On cost.** The gateway ledger bills `max(1, round(cost_usd * 100))` per call — a one-cent **floor**, not a flat rate (`src/openreview_cli/gateway/cost.py`). The cheap ladder models pin at that floor, so their ledger totals are effectively call counts: the four ladder runs appear there as **292 calls × the one-cent floor**, not 292 cents of real money. A frontier model's total is closer to real money. The endpoint's own billing is the only true cost record.
+**On cost.** The gateway ledger bills `max(1, round(cost_usd * 100))` per call — a one-cent **floor**, not a flat rate (`src/openreview_cli/gateway/cost.py`). The cheap ladder models pin at that floor, so their ledger totals are effectively call counts: the four ladder runs appear there as **276 calls × the one-cent floor**, not 276 cents of real money, and the ledger booked the whole 2026-10-03 regeneration at 357 calls → 357 cents. The endpoint's own billing is the only true cost record: the five paid arms (the four ladder runs plus the cloud reference, 345 calls) cost about **$0.25** at OpenRouter, so the ledger floor overstates the real spend by more than an order of magnitude. A frontier model's total is closer to real money.
 
 **What this implies for hardware.** *If* that 8B-to-27B step is real, then the tier that matters is 24–32B, roughly a 24–32 GB machine at 4-bit quantization. That is an estimate, not a specification.
 
-**Which bad findings were missed.** Each receipt carries a `missed_by_generator` summary — derived from that run's `per_label` rows — recording, per generator family, how many findings were expected unsupported and came back grounded. The receipts do not record the negative construction `kind` (`operand_change` versus `cross_document`) that the harness builds internally, so the two kinds cannot be separated from the committed receipts and are not inferred here. Every miss is from the `unsupported_claim` family:
+**Which bad findings were missed.** Each receipt carries a `missed_by_generator` summary — derived from that run's `per_label` rows — recording, per generator family, how many findings were expected unsupported and came back grounded. The receipts do not record the negative construction `kind` (`operand_change` versus `cross_document`) that the harness builds internally, so the two kinds cannot be separated from the committed receipts and are not inferred here. Almost every miss is from the `unsupported_claim` family; the 27B also misses one `hallucination`:
 
 | Model | Missed `unsupported_claim` | Missed `hallucination` | Missed `paraphrased_unsupported` |
 |---|---|---|---|
-| 8B | 5 | 0 | 0 |
-| 27B | 4 | 0 | 0 |
+| 8B | 7 | 0 | 0 |
+| 27B | 4 | 1 | 0 |
 | 70B | 2 | 0 | 0 |
 | 235B MoE | 4 | 0 | 0 |
 

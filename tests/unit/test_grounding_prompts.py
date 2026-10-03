@@ -110,16 +110,21 @@ def test_two_arrays_back_to_back_take_the_first() -> None:
     assert _indices(response) == [0]
 
 
-def test_a_pathological_answer_is_treated_as_unreadable_not_as_a_crash() -> None:
-    """Deeply nested brackets must not abort the run that is measuring a model.
+def test_a_bracket_heavy_preamble_still_parses_the_answer() -> None:
+    """#183: a deep bracket run must not make a readable answer count as unreadable.
 
-    `raw_decode` raises `RecursionError` on such input and the scan stops there,
-    so the payload is treated as unreadable — no verdicts — rather than raising
-    out of the parser in the real pipeline.
+    `raw_decode` raises `RecursionError` on the run, but the answer that follows
+    it decodes fine. The scan must skip past the offending run and read the
+    answer instead of abandoning the payload (which inflated `unreadable_answers`).
     """
     response = ("[" * 30_000) + json.dumps([GROUNDED])
 
-    assert parse_grounding_response(response) == []
+    assert _verdicts(response) == [GroundingVerdict.GROUNDED]
+
+
+def test_a_bracket_only_payload_is_unreadable_and_still_bounded() -> None:
+    """The skip must terminate: nothing decodable follows the run, so return empty."""
+    assert parse_grounding_response("[" * 30_000) == []
 
 
 def test_trailing_prose_containing_brackets_still_parses() -> None:

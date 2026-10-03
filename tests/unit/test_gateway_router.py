@@ -17,7 +17,7 @@ from openreview_cli.gateway.errors import (
     SlotNotConfiguredError,
     UnclassifiedProviderError,
 )
-from openreview_cli.gateway.models import Capability, ProviderInfo
+from openreview_cli.gateway.models import Capability, CredentialField, ProviderInfo
 from openreview_cli.gateway.router import Gateway, classify_provider
 
 
@@ -1488,3 +1488,187 @@ class TestLocalOnlyExtraParams:
         assert [e.type for e in events] == ["chunk", "done"]
         assert seen[0]["model"] == "openai/gpt-4"
         assert "response_format" not in seen[0]
+
+    def test_a_caller_supplied_param_reaches_a_local_fallback_when_the_slot_declares_none(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """#182: a caller kwarg must survive to a local fallback.
+
+        The slot declares no ``response_format``, so the local leg can only
+        restore it from the value the caller passed before the cloud dispatch
+        stripped it — not from the slot's (absent) declared value.
+        """
+        seen = _capture_dispatches(monkeypatch, failures_before_success=3)
+        cfg = _config_with(
+            "openai/gpt-4", slot="reasoning", fallback="ollama/granite4:3b", extra_params={}
+        )
+        gw = _gateway(tmp_path, monkeypatch, cfg)
+        assert (
+            gw.chat(
+                "reasoning",
+                [{"role": "user", "content": "Hi"}],
+                response_format={"type": "json_object"},
+            )
+            == "from fallback"
+        )
+        assert all("response_format" not in k for k in seen[:3])
+        assert seen[-1]["response_format"] == {"type": "json_object"}
+
+
+class TestModelOverrideRetargetsProvider:
+    """#181: a dispatch-time ``model=`` override must retarget the provider.
+
+    ``_get_litellm_kwargs`` builds ``api_base`` and credentials from the slot's
+    configured primary. An override replaces only the model string, so the call
+    would reach the primary's host carrying the override's model name. The
+    dispatch must re-resolve the host and credentials for the provider actually
+    dispatched, the way the fallback leg already does.
+    """
+
+    def test_a_cloud_override_retargets_host_and_drops_the_primarys_explicit_key(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A custom primary injects an explicit ``api_key``; the override must not carry it."""
+        import openreview_cli.gateway.router as router_mod
+
+        registry = {
+            "openai": ProviderInfo(
+                name="openai",
+                env_key="OPENAI_API_KEY",
+                base_url="https://api.openai.com/v1",
+                source="custom",
+                is_local=False,
+                capabilities=Capability(reasoning=True),
+            ),
+            "anthropic": ProviderInfo(
+                name="anthropic",
+                env_key="ANTHROPIC_API_KEY",
+                base_url="https://api.anthropic.com/v1",
+                is_local=False,
+                capabilities=Capability(reasoning=True),
+            ),
+        }
+        monkeypatch.setattr(router_mod, "load_registry", lambda: registry)
+
+        seen = _capture_dispatches(monkeypatch)
+        gw = _gateway(tmp_path, monkeypatch, _config_with("openai/gpt-4"))
+        gw.chat("reasoning", [{"role": "user", "content": "Hi"}], model="anthropic/claude-3")
+        assert seen[0]["model"] == "anthropic/claude-3"
+        assert seen[0]["api_base"] == "https://api.anthropic.com/v1"
+        assert seen[0].get("api_key") is None
+
+    def test_a_cloud_override_from_a_local_primary_retargets_the_host(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The local primary's host must not follow the override."""
+        seen = _capture_dispatches(monkeypatch)
+        gw = _gateway(tmp_path, monkeypatch, _config_with("ollama/granite4:3b"))
+        gw.chat("reasoning", [{"role": "user", "content": "Hi"}], model="openai/gpt-4")
+        assert seen[0]["model"] == "openai/gpt-4"
+        assert seen[0]["api_base"] == "https://api.openai.com/v1"
+
+    def test_a_custom_override_gets_its_own_key_and_openai_routing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A custom override must be routed as ``openai/<id>`` with its own key."""
+        import openreview_cli.gateway.router as router_mod
+
+        registry = {
+            "openai": ProviderInfo(
+                name="openai",
+                env_key="OPENAI_API_KEY",
+                base_url="https://api.openai.com/v1",
+                is_local=False,
+                capabilities=Capability(reasoning=True),
+            ),
+            "myprov": ProviderInfo(
+                name="myprov",
+                env_key="MYPROV_API_KEY",
+                base_url="https://myprov.example/v1",
+                source="custom",
+                is_local=False,
+                capabilities=Capability(reasoning=True),
+            ),
+        }
+        monkeypatch.setattr(router_mod, "load_registry", lambda: registry)
+
+        seen = _capture_dispatches(monkeypatch)
+        gw = _gateway(
+            tmp_path,
+            monkeypatch,
+            _config_with("openai/gpt-4"),
+            auth_text=json.dumps({"openai": "sk-test", "myprov": "sk-myprov"}),
+        )
+        gw.chat("reasoning", [{"role": "user", "content": "Hi"}], model="myprov/llama-3")
+        assert seen[0]["model"] == "openai/llama-3"
+        assert seen[0]["api_base"] == "https://myprov.example/v1"
+        assert seen[0]["api_key"] == "sk-myprov"
+
+
+class TestFallbackDropsThePreviouslyAppliedProvider:
+    """#144: the fallback leg must drop the keystore of whatever was applied last.
+
+    With a ``model=`` override, the primary leg applies the OVERRIDE provider's
+    credentials. The fallback leg must remove those — not just the slot
+    primary's — or a declared secret rides to the fallback host.
+    """
+
+    def test_a_fallback_drops_the_overrides_credentials(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import openreview_cli.gateway.router as router_mod
+
+        registry = {
+            "openai": ProviderInfo(
+                name="openai",
+                env_key="OPENAI_API_KEY",
+                base_url="https://api.openai.com/v1",
+                is_local=False,
+                capabilities=Capability(reasoning=True),
+            ),
+            "bedrock": ProviderInfo(
+                name="bedrock",
+                env_key="AWS_ACCESS_KEY_ID",
+                base_url="https://bedrock.example/v1",
+                is_local=False,
+                capabilities=Capability(reasoning=True),
+                credentials=[
+                    CredentialField(
+                        env_key="AWS_ACCESS_KEY_ID",
+                        label="id",
+                        litellm_param="aws_access_key_id",
+                    ),
+                    CredentialField(
+                        env_key="AWS_SECRET_ACCESS_KEY",
+                        label="secret",
+                        secret=True,
+                        litellm_param="aws_secret_access_key",
+                    ),
+                ],
+            ),
+            "anthropic": ProviderInfo(
+                name="anthropic",
+                env_key="ANTHROPIC_API_KEY",
+                base_url="https://api.anthropic.com/v1",
+                is_local=False,
+                capabilities=Capability(reasoning=True),
+            ),
+        }
+        monkeypatch.setattr(router_mod, "load_registry", lambda: registry)
+        monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIA-OVERRIDE")
+        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "SECRET-OVERRIDE")
+
+        seen = _capture_dispatches(monkeypatch, failures_before_success=3)
+        gw = _gateway(tmp_path, monkeypatch, _config_with("openai/gpt-4"))
+        gw.chat(
+            "reasoning",
+            [{"role": "user", "content": "Hi"}],
+            model="bedrock/anthropic.claude-v2",
+        )
+        # The override leg carries the override provider's own credentials.
+        assert seen[0]["api_base"] == "https://bedrock.example/v1"
+        assert seen[0]["aws_access_key_id"] == "AKIA-OVERRIDE"
+        # The fallback leg must not carry them to the fallback host.
+        assert seen[-1]["api_base"] == "https://api.anthropic.com/v1"
+        assert "aws_access_key_id" not in seen[-1]
+        assert "aws_secret_access_key" not in seen[-1]

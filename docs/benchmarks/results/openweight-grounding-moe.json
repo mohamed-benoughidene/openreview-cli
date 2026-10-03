@@ -1,8 +1,30 @@
 {
  "benchmark": "grounding-accuracy-openweight-moe",
+ "benchmark_input": "corpus assembled from the repository's tracked fixtures: 96 clause units from 17 documents (tests/fixtures/**/*.txt verbatim plus fixture PDFs/DOCX parsed with openreview_cli.parsing); the CUAD corpus under data/legalbenchrag/ is not used",
  "command": "OPENREVIEW_GATEWAY__MODELS__GROUNDING__PRIMARY=openrouter/qwen/qwen3-235b-a22b-2507 uv run python scripts/measure_slm_slots.py --grounding-accuracy --arm cloud --limit 20 --corpus-dir corpus --out ladder-moe.json",
- "date": "2026-10-02",
- "git_commit": "42fdf38",
+ "date": "2026-10-03",
+ "git_commit": "77cab952f508",
+ "metrics": {
+  "bad_caught": 39,
+  "bad_caught_rate": 0.8864,
+  "bad_missed": 4,
+  "bad_uncertain": 1,
+  "false_reject_rate": 0.04,
+  "good_accepted": 24,
+  "good_uncertain": 0,
+  "latency_max_s": 8.160583,
+  "latency_mean_s": 2.71039,
+  "latency_median_s": 2.292384,
+  "latency_p95_s": 5.197359,
+  "unreadable_answers": 1
+ },
+ "missed_by_generator": {
+  "hallucination": 0,
+  "paraphrased_unsupported": 0,
+  "unsupported_claim": 4
+ },
+ "models": "openrouter/qwen/qwen3-235b-a22b-2507",
+ "notes": "Regenerated on the open-issues branch from the assembled tracked-fixture corpus. Model openrouter/qwen/qwen3-235b-a22b-2507; arm=cloud. Positives and negatives are the harness's built-in classes (the clause's own qualifying sentence plus a narrow meaning-preserving rewrite; negatives = unsupported_claim, hallucination and paraphrased_unsupported). Both positive classes are supported by the clause by construction, so this positive set is easier than a human-labelled one and no real-world false-positive rate may be quoted from it; the negative arm is the signal. Single-sample smoke measurement, not a benchmark: model replies vary run to run. PII: PII stripped before any model call (51 entity/entities) with the review path's strip_pii_clauses machinery. Clause text and positive claims are the stripped text (PII placeholders), as sent for cloud egress. Latency is machine-specific (69 calls, mean 2.71039s). unreadable_answers counts answers the reader could not parse, which is how a reader defect is separated from model hesitation.",
  "provenance": [
   {
    "path": "scripts/measure_slm_slots.py",
@@ -18,47 +40,23 @@
   },
   {
    "path": "src/openreview_cli/grounding/prompts.py",
-   "sha256": "b11f537adde9877390e0b5b62ed34eb9ab4634436ca2bea8554b36df7eb4c383"
+   "sha256": "dcb49deacba008b8a49222c04a8f1684e541028707386306b624f7671299d41f"
   },
   {
    "path": "src/openreview_cli/grounding/discriminator.py",
    "sha256": "7ee8ed3534ed8d251193fd05283c4b7f77ae8f8c9f3bcac41a9a92d5525f1291"
   }
  ],
- "models": "openrouter/qwen/qwen3-235b-a22b-2507",
- "benchmark_input": "the same assembled corpus the CI local arm builds, from the repository's tracked fixtures: 96 clause units from 17 documents (tests/fixtures/**/*.txt verbatim plus fixture PDFs/DOCX parsed with openreview_cli.parsing). The CUAD corpus under data/legalbenchrag/ is not used for this run.",
  "sample": {
-  "units": 20,
-  "positives": 25,
-  "negatives_kept": 44,
-  "negatives_generated": {
-   "unsupported_claim": 20,
-   "hallucination": 20,
-   "paraphrased_unsupported": 4
-  },
+  "model_calls": 69,
   "negatives_dropped_guard": 0,
-  "model_calls": 69
- },
- "metrics": {
-  "bad_caught": 38,
-  "bad_caught_rate": 0.8636,
-  "bad_missed": 4,
-  "bad_uncertain": 2,
-  "bad_called_grounded": 4,
-  "good_accepted": 23,
-  "good_rejected": 0,
-  "false_reject_rate": 0.0,
-  "good_uncertain": 2,
-  "unreadable_answers": 2,
-  "latency_mean_s": 3.20797,
-  "latency_median_s": 2.72725,
-  "latency_p95_s": 6.746724,
-  "latency_max_s": 9.321678
- },
- "missed_by_generator": {
-  "unsupported_claim": 4,
-  "hallucination": 0,
-  "paraphrased_unsupported": 0
- },
- "notes": "Recorded git_commit 42fdf38 is the branch base the measurement actually ran against (the tree is unchanged since); the receipt is committed later, so the recorded commit is deliberately the base and stays an ancestor of main. The grounding slot was reached through a hosted OpenRouter endpoint; a self-hosted run of the same weights would differ in quantization and serving, so these figures are endpoint-specific. Corpus and items: the same assembled corpus the CI local arm builds -- the 96-unit corpus from the repository's tracked fixtures (17 documents) -- was used at --limit 20, giving 25 known-good positives and 44 planted-bad negatives over 69 scored calls. The positives are each unit's own qualifying sentence plus a narrow, meaning-preserving rewrite, so both positive classes are supported by the clause by construction and only the bad-claim arm discriminates; no real-world false-positive rate may be quoted from it. unreadable_answers counts answers the answer parser could not decode, which separates a parsing defect from model hesitation. This is a single sample of a non-deterministic model, not a benchmark. Exact model id: openrouter/qwen/qwen3-235b-a22b-2507. Gateway cost ledger (cost_logs) for this model on the run date: 73 calls booked at the one-cent floor (73 cents); the four ladder runs totalled 292 calls at the floor (292 cents). The ledger computes max(1, round(cost_usd * 100)) per call (src/openreview_cli/gateway/cost.py), so these cheap ladder models pin at that floor and the totals are call counts, not real money. This receipt is a curated summary of that run's raw harness JSON: the harness wrote ladder-moe.json (a scratch path outside the repo) and the curation step that reshaped it into this receipt is not part of the harness. The run's 69 per_label rows are collapsed into the aggregate metrics and the missed_by_generator counts below; no per-row content is carried."
+  "negatives_generated": {
+   "hallucination": 20,
+   "paraphrased_unsupported": 4,
+   "unsupported_claim": 20
+  },
+  "negatives_kept": 44,
+  "positives": 25,
+  "units": 20
+ }
 }

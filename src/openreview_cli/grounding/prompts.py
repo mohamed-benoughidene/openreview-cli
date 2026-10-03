@@ -200,6 +200,13 @@ def _claim_index(raw: Any, position: int) -> int:
     return position
 
 
+# On a RecursionError the scan re-offers this many positions at the tail of the
+# offending bracket run rather than jumping past it: a readable answer's own
+# leading brackets are contiguous with a bracket-heavy preamble, so skipping the
+# whole run would skip the answer with it (#183).
+_DEEP_RUN_TAIL = 64
+
+
 def _first_json_value(text: str) -> Any | None:
     """Return the first JSON value in ``text``, or None when there is none.
 
@@ -207,22 +214,36 @@ def _first_json_value(text: str) -> Any | None:
     candidate start positions are offered to the standard library decoder. That
     decoder understands quoted strings and escapes, so a bracket or brace inside
     a reason string cannot unbalance the scan, and it stops at the end of the
-    first valid value, so trailing prose is ignored. An answer too deeply nested
-    to decode is treated as unreadable rather than allowed to escape.
+    first valid value, so trailing prose is ignored.
+
+    When a candidate opens a bracket run too deep for the decoder
+    (``RecursionError``), the scan resumes at the run's tail — the run itself is
+    never the answer, but a readable answer that merely follows a bracket-heavy
+    preamble must not be counted as unreadable (#183). A deep error whose run is
+    not longer than :data:`_DEEP_RUN_TAIL` has no run to skip, so the scan stops
+    rather than walking the nested candidates one at a time, which would cost
+    seconds per call.
     """
     candidate_text = strip_fences(text)
     decoder = json.JSONDecoder()
-    for index, char in enumerate(candidate_text):
-        if char not in "[{":
+    index = 0
+    length = len(candidate_text)
+    while index < length:
+        if candidate_text[index] not in "[{":
+            index += 1
             continue
         try:
             value, _ = decoder.raw_decode(candidate_text, index)
         except json.JSONDecodeError:
+            index += 1
             continue
         except RecursionError:
-            # A payload this deep is treated as unreadable rather than decoded:
-            # stop here instead of walking the remaining offsets, which would
-            # spend unbounded time on an answer already this malformed.
-            break
+            run_end = index
+            while run_end < length and candidate_text[run_end] in "[{":
+                run_end += 1
+            if run_end - index <= _DEEP_RUN_TAIL:
+                break
+            index = run_end - _DEEP_RUN_TAIL
+            continue
         return value
     return None
