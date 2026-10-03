@@ -4,16 +4,18 @@
 `8be30ca`
 
 This branch closes issues #181, #182 and #183 in code and records the #179 decision as
-by-design. Companion housekeeping rides along: an archive tag, a dependabot update and branch
-pruning. Each fix below is listed with the test that pins it, and the one known open item is
-recorded plainly.
+by-design. Repo-level housekeeping was done alongside the branch, not as part of its diff: an
+archive tag, a dependabot update and branch pruning. Each of the three code fixes is listed with
+its pinning test; the #179 decision and the docs housekeeping have none. The one known open item
+is recorded plainly.
 
 ## What ships
 
 - **#181, the override rewrites the provider it actually dispatches to** (`fa11da0`, follow-up
-  `9d9bd03`, `src/openreview_cli/gateway/router.py`). A new `Gateway._retarget_provider(call_kwargs,
-  from_prefix, to_prefix)` re-points `api_base` and credentials to the provider actually dispatched
-  when a `model=` override — or the fallback leg — names a different prefix. It scrubs
+  `9d9bd03`, `src/openreview_cli/gateway/router.py`). The extracted
+  `Gateway._retarget_provider(call_kwargs, from_prefix, to_prefix)` re-points `api_base` and
+  credentials to the provider actually dispatched when a `model=` override — or the fallback leg —
+  names a different prefix. It scrubs
   `from_prefix`'s declared credential fields plus `api_base`/`api_key`, then applies `to_prefix`'s
   `base_url`, credentials and, through the extracted `_apply_custom_provider_routing` (shared with
   `_get_litellm_kwargs`), custom-provider `openai/<id>` routing. `_call_with_fallback` calls it on
@@ -38,22 +40,25 @@ recorded plainly.
   note — those sockets were removed in spec 035 — and gained the never-rebase-merge rule under
   Conventions.
 - **#179, closed as not planned / by design.** There is no privacy-safe local reranking route:
-  Ollama exposes no rerank endpoint and litellm has no ollama rerank branch.
+  Ollama's API documents no rerank endpoint, and the pinned litellm ships no ollama rerank handler
+  (handlers exist only for bedrock, deepinfra, hosted_vllm and vertex_ai).
 
 ## Known open item
 
 - **#183 is not yet mergeable.** Six committed grounding receipts under `docs/benchmarks/results/`
   pin `src/openreview_cli/grounding/prompts.py` by sha256, so
   `tests/unit/test_benchmark_receipts.py::test_every_receipt_pins_its_producing_content` is red on
-  this branch. Regenerating the receipts needs real model runs (Ollama + OpenRouter), which were
-  unavailable, so the regeneration is deferred to a run-backed follow-up. The 235B MoE row's
+  this branch. Regenerating the receipts needs real model runs (Ollama + OpenRouter)
+  (environment note: no Ollama/OpenRouter access at write time), so the regeneration is deferred
+  to a run-backed follow-up. The 235B MoE row's
   `unreadable_answers` (2) is expected to change.
 
 ## Pre-existing, not fixed
 
-- A same-provider `model=` override on a `source == "custom"` primary stays unroutable:
-  `_retarget_provider` only fires when the prefix changes, so the `openai/<id>` rewrite does not
-  run. Not introduced by this work.
+- A same-prefix `model=` override on a `source == "custom"` primary stays unroutable: on the
+  OVERRIDE leg `_retarget_provider` is skipped when the prefix is unchanged (`router.py:603`), so
+  the `openai/<id>` rewrite does not re-run; on the fallback leg it is called unconditionally. Not
+  introduced by this work.
 
 ## Verification
 
