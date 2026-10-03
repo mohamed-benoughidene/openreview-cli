@@ -128,6 +128,8 @@ def _enforce_local_only_params(
     kwargs: dict[str, Any],
     extra_params: dict[str, Any] | None,
     provider_prefix: str,
+    *,
+    restore: dict[str, Any] | None = None,
 ) -> None:
     """Enforce local-only request parameters for the provider ACTUALLY dispatched.
 
@@ -138,9 +140,12 @@ def _enforce_local_only_params(
     This runs at dispatch time, against ``provider_prefix`` — not at build time
     against the slot's configured primary — because a dispatch-time ``model=``
     override or a caller-supplied kwarg can point the call at a provider the
-    built kwargs never saw. It also RESTORES the declared value for a local
+    built kwargs never saw. It also RESTORES the requested value for a local
     target, since an earlier non-local dispatch may have stripped it: the gate
-    is per-dispatch, not a permanent mutation.
+    is per-dispatch, not a permanent mutation. ``restore`` carries the values the
+    caller supplied before the first strip, so a caller kwarg on a slot that
+    declares none still reaches a local leg; the slot's declared ``extra_params``
+    is the fallback source (#182).
 
     Locality reuses ``classify_provider``, the codebase's one notion of local, so
     a localhost custom provider counts as local exactly as it does for tier
@@ -161,7 +166,11 @@ def _enforce_local_only_params(
                 logger.debug("Dropped local-only %s for non-local %r", key, provider_prefix)
         return
     for key in _LOCAL_ONLY_EXTRA_PARAMS:
-        if key not in kwargs and extra_params and key in extra_params:
+        if key in kwargs:
+            continue
+        if restore and key in restore:
+            kwargs[key] = restore[key]
+        elif extra_params and key in extra_params:
             kwargs[key] = extra_params[key]
 
 
@@ -543,6 +552,29 @@ class Gateway:
         # exhaustion and remains terminal at the recovery layer).
         return UnclassifiedProviderError(_prefix(detail))
 
+    def _retarget_provider(self, call_kwargs: dict[str, Any], slot: str, new_prefix: str) -> None:
+        """Point a built request at ``new_prefix`` instead of the slot's primary.
+
+        ``_get_litellm_kwargs`` resolves ``api_base`` and credentials from the
+        slot's configured primary, so a request that ends up at another provider
+        — a dispatch-time ``model=`` override (#181) or the fallback leg — must be
+        re-pointed. Dropping the primary's keys is load-bearing for a
+        ``source == "custom"`` primary: litellm honours an explicit ``api_key``
+        over the provider env var, so leaving it in would send the PRIMARY's
+        credential to the other provider's host (#144).
+        """
+        primary = self._resolve_provider_info(slot)
+        if primary is not None:
+            for field in primary.credentials:
+                call_kwargs.pop(field.litellm_param, None)
+        call_kwargs.pop("api_base", None)
+        call_kwargs.pop("api_key", None)
+        info = load_registry().get(new_prefix)
+        if info is not None and info.base_url:
+            call_kwargs["api_base"] = info.base_url
+        if info is not None and info.credentials:
+            self._apply_provider_credentials(info, call_kwargs)
+
     def _call_with_fallback(
         self,
         slot: str,
@@ -553,10 +585,20 @@ class Gateway:
         provider_prefix: str | None = None,  # the prefix of the model actually dispatched
     ) -> Any:
         cfg = self._get_slot_config(slot)
-        provider = provider_prefix or cfg["primary"].split("/", 1)[0]
+        primary_prefix = cfg["primary"].split("/", 1)[0]
+        provider = provider_prefix or primary_prefix
+        # #181: a dispatch-time `model=` override must reach the override's own
+        # host/credentials, not the slot primary's.
+        if provider != primary_prefix:
+            self._retarget_provider(call_kwargs, slot, provider)
         # Local-only gate for the provider actually dispatched: see _enforce_local_only_params.
+        # #182: snapshot the requested local-only values BEFORE the first strip, so a
+        # local leg can restore a caller kwarg the slot itself does not declare.
         extra_params = cfg.get("extra_params")
-        _enforce_local_only_params(call_kwargs, extra_params, provider)
+        requested_local = {
+            key: call_kwargs[key] for key in _LOCAL_ONLY_EXTRA_PARAMS if key in call_kwargs
+        }
+        _enforce_local_only_params(call_kwargs, extra_params, provider, restore=requested_local)
         fallback_cfg = self._config.get("gateway", {}).get("fallback", {})
         retries: int = fallback_cfg.get("retries", 2)
         retry_delay: float = fallback_cfg.get("retry_delay", 1.0)
@@ -599,23 +641,12 @@ class Gateway:
         fallback_prefix = fallback.split("/", 1)[0]
         # Same gate as the primary, against the ACTUAL model (router.py:240-244).
         self._enforce_tier(slot, call_type, provider_prefix=fallback_prefix)
-        # Undo the primary's provider block, then apply the fallback's. Dropping the
-        # primary's keys is load-bearing for a `source == "custom"` primary: litellm
-        # honours an explicit `api_key` over the provider env var, so leaving it in
-        # would send the PRIMARY's credential to the fallback provider's host (#144).
-        primary = self._resolve_provider_info(slot)
-        if primary is not None:
-            for field in primary.credentials:
-                call_kwargs.pop(field.litellm_param, None)
-        call_kwargs.pop("api_base", None)
-        call_kwargs.pop("api_key", None)
-        info = load_registry().get(fallback_prefix)
-        if info is not None and info.base_url:
-            call_kwargs["api_base"] = info.base_url
-        if info is not None and info.credentials:
-            self._apply_provider_credentials(info, call_kwargs)
-        # Re-gated for the fallback's own locality: see _enforce_local_only_params.
-        _enforce_local_only_params(call_kwargs, extra_params, fallback_prefix)
+        # Re-point the reused kwargs at the fallback's own host/credentials (#144),
+        # then re-gate for its own locality: see _enforce_local_only_params.
+        self._retarget_provider(call_kwargs, slot, fallback_prefix)
+        _enforce_local_only_params(
+            call_kwargs, extra_params, fallback_prefix, restore=requested_local
+        )
         call_kwargs["model"] = fallback
         self._record_cloud_call(slot, provider_prefix=fallback_prefix)
         try:
