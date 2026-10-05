@@ -78,7 +78,7 @@ jobs:
 
       - name: Upload result
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: slm-result-${{ matrix.slug }}
           path: results/${{ matrix.slug }}.json
@@ -146,7 +146,7 @@ jobs:
 
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: slm-measurement-report
           path: slm-measurement-report.md
@@ -435,7 +435,7 @@ jobs:
 
       - name: Upload grounding-accuracy receipt
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: grounding-accuracy-local
           path: results/grounding-accuracy-local.json
@@ -677,7 +677,7 @@ jobs:
 
       - name: Upload the pilot report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: grounding-pilot
           path: results/grounding-pilot.json
