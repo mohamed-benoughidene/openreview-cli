@@ -58,7 +58,7 @@ jobs:
           exit 1
 
       - name: Cache Ollama models
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.ollama/models
           key: ollama-measure-${{ matrix.slug }}
@@ -212,7 +212,7 @@ jobs:
           exit 1
 
       - name: Cache Ollama models
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.ollama/models
           key: ollama-grounding-granite4-3b
@@ -495,7 +495,7 @@ jobs:
           exit 1
 
       - name: Cache Ollama models
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.ollama/models
           key: ollama-grounding-granite4-3b

@@ -48,7 +48,7 @@ jobs:
           exit 1
 
       - name: Cache Ollama models
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.ollama/models
           key: ollama-models-${{ runner.os }}-qwen3-4b-nomic-embed-text-qwen3-reranker-0.6b
