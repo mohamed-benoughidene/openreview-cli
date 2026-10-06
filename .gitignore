@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Project-specific
+*.log
+
+# Tool-specific
+.commandcode/
